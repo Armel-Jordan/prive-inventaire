@@ -6,6 +6,32 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 // Mettre à false quand l'API Laravel est prête
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
+const STORAGE_KEY = 'prise_auth';
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const data = JSON.parse(stored);
+      if (data.token) {
+        headers['Authorization'] = `Bearer ${data.token}`;
+      }
+      if (data.tenant?.slug) {
+        headers['X-Tenant-Slug'] = data.tenant.slug;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return headers;
+}
+
 const mockEmployes: Employe[] = [
   { id: 1, numero: 'E001', nom: 'Jean Dupont' },
   { id: 2, numero: 'E002', nom: 'Marie Martin' },
@@ -32,10 +58,7 @@ const mockScans: InventaireScan[] = [
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
+    headers: getAuthHeaders(),
     ...options,
   });
 

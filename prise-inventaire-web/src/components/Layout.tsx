@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -6,9 +6,12 @@ import {
   MapPin, 
   ClipboardList,
   Menu,
-  X
+  X,
+  LogOut,
+  Building2
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -20,7 +23,14 @@ const navItems = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, tenant, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,15 +46,20 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-200
+        fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-200 flex flex-col
         lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 border-b">
-          <h1 className="text-xl font-bold text-gray-800">Prise Inventaire</h1>
-          <p className="text-sm text-gray-500">Administration</p>
+          <div className="flex items-center gap-3 mb-2">
+            <Building2 className="text-blue-600" size={24} />
+            <h1 className="text-xl font-bold text-gray-800">Prise Inventaire</h1>
+          </div>
+          {tenant && (
+            <p className="text-sm text-blue-600 font-medium">{tenant.nom}</p>
+          )}
         </div>
         
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -67,6 +82,23 @@ export default function Layout() {
             );
           })}
         </nav>
+
+        {/* User info & logout */}
+        <div className="p-4 border-t">
+          {user && (
+            <div className="mb-3">
+              <p className="text-sm font-medium text-gray-800">{user.nom}</p>
+              <p className="text-xs text-gray-500">{user.email}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut size={18} />
+            Déconnexion
+          </button>
+        </div>
       </aside>
 
       {/* Overlay for mobile */}
