@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Pencil, Trash2, Search, X, Plus, Download, Calendar, Filter } from 'lucide-react';
+import { Pencil, Trash2, Search, X, Plus, Download, Calendar, Filter, CheckSquare, Square } from 'lucide-react';
 import { getScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
 import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -31,6 +31,44 @@ export default function ScansPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState<ScanForm>(emptyForm);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sélection par lot
+  const toggleSelect = (id: number) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredScans.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredScans.map(s => s.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Supprimer ${selectedIds.size} scan(s) sélectionné(s) ?`)) return;
+    
+    setIsDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => deleteScan(id)));
+      setSelectedIds(new Set());
+      loadData();
+    } catch (error) {
+      console.error('Erreur suppression lot:', error);
+      alert('Erreur lors de la suppression');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Filtrage local des scans
   const filteredScans = useMemo(() => {
@@ -294,6 +332,34 @@ export default function ScansPage() {
         )}
       </div>
 
+      {/* Barre d'actions par lot */}
+      {selectedIds.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="text-blue-600" size={20} />
+            <span className="font-medium text-blue-800">
+              {selectedIds.size} scan(s) sélectionné(s)
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              Désélectionner
+            </button>
+            <button
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
+            >
+              <Trash2 size={14} />
+              {isDeleting ? 'Suppression...' : 'Supprimer la sélection'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {loading ? (
@@ -305,6 +371,19 @@ export default function ScansPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="px-4 py-3 text-left">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      title={selectedIds.size === filteredScans.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    >
+                      {selectedIds.size === filteredScans.length && filteredScans.length > 0 ? (
+                        <CheckSquare size={18} className="text-blue-600" />
+                      ) : (
+                        <Square size={18} className="text-gray-400" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Numéro</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Quantité</th>
@@ -317,7 +396,19 @@ export default function ScansPage() {
               </thead>
               <tbody className="divide-y">
                 {filteredScans.map((scan) => (
-                  <tr key={scan.id} className="hover:bg-gray-50">
+                  <tr key={scan.id} className={`hover:bg-gray-50 ${selectedIds.has(scan.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggleSelect(scan.id)}
+                        className="p-1 hover:bg-gray-200 rounded"
+                      >
+                        {selectedIds.has(scan.id) ? (
+                          <CheckSquare size={18} className="text-blue-600" />
+                        ) : (
+                          <Square size={18} className="text-gray-400" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-sm font-mono">{scan.numero}</td>
                     <td className="px-4 py-3 text-sm">{scan.type}</td>
                     <td className="px-4 py-3 text-sm font-medium">{scan.quantite}</td>
