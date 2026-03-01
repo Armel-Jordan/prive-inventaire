@@ -10,6 +10,7 @@ import RelocalisationPage from '@/pages/RelocalisationPage';
 import StatsPage from '@/pages/StatsPage';
 import AlertesPage from '@/pages/AlertesPage';
 import ComparaisonPage from '@/pages/ComparaisonPage';
+import AuditPage from '@/pages/AuditPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="statistiques" element={<StatsPage />} />
         <Route path="alertes" element={<AlertesPage />} />
         <Route path="comparaison" element={<ComparaisonPage />} />
+        <Route path="audit" element={<AuditPage />} />
       </Route>
       
       {/* Routes Super Admin */}

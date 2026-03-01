@@ -12,7 +12,8 @@ import {
   ArrowRightLeft,
   BarChart3,
   Bell,
-  GitCompare
+  GitCompare,
+  History
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/statistiques', label: 'Statistiques', icon: BarChart3 },
   { path: '/comparaison', label: 'Comparaison', icon: GitCompare },
   { path: '/alertes', label: 'Alertes Stock', icon: Bell },
+  { path: '/audit', label: 'Historique', icon: History },
   { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },

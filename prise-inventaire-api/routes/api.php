@@ -14,6 +14,7 @@ use App\Http\Controllers\ScanTenantController;
 use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\AlerteStockController;
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -101,6 +102,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [AlerteStockController::class, 'stats']);
         Route::put('/produit/{id}/seuil', [AlerteStockController::class, 'updateSeuil']);
         Route::post('/seuils-batch', [AlerteStockController::class, 'updateSeuilsBatch']);
+    });
+
+    // Audit logs (historique des modifications)
+    Route::prefix('audit')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index']);
+        Route::get('/stats', [AuditLogController::class, 'stats']);
+        Route::get('/{modelType}/{modelId}', [AuditLogController::class, 'history']);
     });
 
     // Utilisateurs admin CRUD
