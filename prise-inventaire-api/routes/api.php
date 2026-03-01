@@ -13,6 +13,7 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\ScanTenantController;
 use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\AlerteStockController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -92,6 +93,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/arrivage-lot', [MouvementTenantController::class, 'arrivageLot']);
         Route::get('/produit/{numero}', [MouvementTenantController::class, 'historyByProduit']);
         Route::get('/secteur/{secteur}', [MouvementTenantController::class, 'historyBySecteur']);
+    });
+
+    // Alertes de stock
+    Route::prefix('alertes')->group(function () {
+        Route::get('/', [AlerteStockController::class, 'index']);
+        Route::get('/stats', [AlerteStockController::class, 'stats']);
+        Route::put('/produit/{id}/seuil', [AlerteStockController::class, 'updateSeuil']);
+        Route::post('/seuils-batch', [AlerteStockController::class, 'updateSeuilsBatch']);
     });
 
     // Utilisateurs admin CRUD

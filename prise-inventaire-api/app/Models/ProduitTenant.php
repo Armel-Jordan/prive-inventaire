@@ -17,6 +17,7 @@ class ProduitTenant extends Model
         'categorie',
         'prix_unitaire',
         'actif',
+        'seuil_alerte',
     ];
 
     protected function casts(): array
@@ -24,6 +25,18 @@ class ProduitTenant extends Model
         return [
             'prix_unitaire' => 'decimal:4',
             'actif' => 'boolean',
+            'seuil_alerte' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Vérifie si le stock est en alerte (sous le seuil)
+     */
+    public function isEnAlerte(float $quantiteActuelle): bool
+    {
+        if ($this->seuil_alerte === null || $this->seuil_alerte <= 0) {
+            return false;
+        }
+        return $quantiteActuelle < $this->seuil_alerte;
     }
 }
