@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# API (Laravel)
+prise-inventaire-api/node_modules/
+prise-inventaire-api/vendor/
+prise-inventaire-api/.env
+prise-inventaire-api/storage/*.key
+prise-inventaire-api/phpinfo.txt
+
+# Android
+prise-inventaire-android/.gradle/
+prise-inventaire-android/build/
+prise-inventaire-android/app/build/
+prise-inventaire-android/local.properties
+prise-inventaire-android/.kotlin/
+prise-inventaire-android/*.jks
+prise-inventaire-android/*.key
+
+# Web (futur)
+prise-inventaire-web/node_modules/
+prise-inventaire-web/.env

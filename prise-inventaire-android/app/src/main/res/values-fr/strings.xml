@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">Agrimetal</string>
+
+    <!-- Configuration -->
+    <string name="config">Configuration</string>
+    <string name="config_server">Serveur</string>
+    <string name="config_version">Agrimetal - Inventaire - Version %1$s (Build %2$s)</string>
+
+    <!-- Langue -->
+    <string name="language_selection">Langue</string>
+
+    <!-- Boutons communs -->
+    <string name="common_button_save">Enregistrer</string>
+
+    <!-- Module Prise d'inventaire -->
+    <string name="inventaire_title">Prise d\'inventaire</string>
+    <string name="inventaire_liste_prises_title">Prises d\'inventaire en cours</string>
+    <string name="inventaire_aucune_prise">Aucune prise d\'inventaire en cours</string>
+    <string name="inventaire_charger_prises">Charger les prises</string>
+    <string name="inventaire_erreur_chargement">Erreur lors du chargement des prises</string>
+    <string name="inventaire_demarree_le">Démarrée le %s</string>
+    <string name="inventaire_demarree_il_y_a">Démarrée il y a %s</string>
+    <string name="inventaire_localisation">Localisation : %s</string>
+    <string name="inventaire_sous_localisations">Inclut %d sous-localisation(s)</string>
+    <string name="inventaire_sous_localisations_title">Sélectionner une localisation</string>
+    <string name="inventaire_localisation_principale">Principale</string>
+    <string name="inventaire_reprendre">Reprendre</string>
+
+    <string name="inventaire_scan_title">Scan inventaire</string>
+    <string name="inventaire_changer_localisation">Changer de sous-localisation</string>
+    <string name="inventaire_scan_hint">Scanner ou saisir code-barre / no produit</string>
+    <string name="inventaire_scan_rechercher">Rechercher</string>
+    <string name="inventaire_progression">%1$d / %2$d produits (%3$d%%)</string>
+    <string name="inventaire_duree">Durée : %s</string>
+
+    <string name="inventaire_filtre_tous">Tous</string>
+    <string name="inventaire_filtre_comptes">Comptés</string>
+    <string name="inventaire_filtre_non_comptes">Non comptés</string>
+    <string name="inventaire_filtre_ecarts">Écarts</string>
+
+    <string name="inventaire_produit_theorique">Théo : %.0f</string>
+    <string name="inventaire_produit_reel">Réel : %.0f</string>
+    <string name="inventaire_produit_ecart">Écart : %+.0f</string>
+    <string name="inventaire_produit_non_compte">Non compté</string>
+    <string name="inventaire_produit_compte_il_y_a">Compté il y a %s</string>
+
+    <string name="inventaire_saisie_quantite_title">Saisir la quantité</string>
+    <string name="inventaire_saisie_quantite_message">Quantité comptée physiquement :</string>
+    <string name="inventaire_saisie_quantite_hint">Quantité</string>
+    <string name="inventaire_saisie_quantite_invalide">Quantité invalide</string>
+    <string name="inventaire_saisie_enregistrer">Enregistrer</string>
+
+    <string name="inventaire_code_barre_unique">Code-barre UNIQUE</string>
+    <string name="inventaire_code_barre_multiple">Code-barre MULTIPLE</string>
+    <string name="inventaire_quantite_auto">Quantité : 1 (automatique)</string>
+    <string name="inventaire_quantite_manuelle">Quantité : (saisie manuelle)</string>
+
+    <string name="inventaire_hors_localisation_title">Produit hors localisation</string>
+    <string name="inventaire_hors_localisation_message">Ce produit n\'est pas prévu dans cette localisation.\n\nVoulez-vous quand même l\'enregistrer ?</string>
+    <string name="inventaire_hors_localisation_enregistrer">Enregistrer quand même</string>
+
+    <string name="inventaire_produit_introuvable">Produit introuvable</string>
+    <string name="inventaire_aucun_resultat">Aucun résultat pour \"%s\"</string>
+    <string name="inventaire_scan_enregistre">Scan enregistré</string>
+    <string name="inventaire_erreur_enregistrement">Erreur lors de l\'enregistrement</string>
+
+    <string name="inventaire_validation_title">Validation inventaire</string>
+    <string name="inventaire_validation_resume">Résumé</string>
+    <string name="inventaire_validation_total_produits">Total produits : %d</string>
+    <string name="inventaire_validation_comptes">Comptés : %d</string>
+    <string name="inventaire_validation_non_comptes">Non comptés : %d (ignorés)</string>
+    <string name="inventaire_validation_ecarts">Écarts</string>
+    <string name="inventaire_validation_positifs">Positifs : +%1$.0f unités (%2$d produits)</string>
+    <string name="inventaire_validation_negatifs">Négatifs : %1$.0f unités (%2$d produits)</string>
+    <string name="inventaire_validation_net">Net : %+.0f unités</string>
+    <string name="inventaire_validation_principaux_ecarts">Principaux écarts</string>
+    <string name="inventaire_validation_avertissement">%d produits non comptés seront ignorés (pas d\'ajustement)</string>
+    <string name="inventaire_validation_confirmer">Confirmer validation</string>
+    <string name="inventaire_validation_annuler">Annuler</string>
+
+    <string name="inventaire_bouton_sauvegarder">Sauvegarder</string>
+    <string name="inventaire_bouton_valider">Valider</string>
+
+</resources>
