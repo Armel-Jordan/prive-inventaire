@@ -109,8 +109,8 @@ class SuperAdminController extends Controller
 
         $duree = (int) $validated['duree_abonnement'];
 
-        // Si expiré, partir de maintenant. Sinon, ajouter à la date d'expiration actuelle
-        $baseDate = $tenant->isExpired() ? now() : $tenant->date_expiration;
+        // Si expiré ou pas de date, partir de maintenant. Sinon, ajouter à la date d'expiration actuelle
+        $baseDate = (!$tenant->date_expiration || $tenant->isExpired()) ? now() : $tenant->date_expiration;
         $nouvelleExpiration = $baseDate->copy()->addYears($duree);
 
         $tenant->update([
