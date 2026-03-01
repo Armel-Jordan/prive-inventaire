@@ -8,7 +8,7 @@ Système de gestion d'inventaire complet.
 |--------|-------------|
 | `prise-inventaire-api/` | API Laravel |
 | `prise-inventaire-android/` | Application mobile Android |
-| `prise-inventaire-web/` | Application web (à venir) |
+| `prise-inventaire-web/` | Application web admin gestion|
 
 ## Installation
 
