@@ -171,6 +171,28 @@ fun SecteurScreen(employeNumero: String, employeNom: String) {
                     fontSize = 18.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Bouton Relocalisation
+            Button(
+                onClick = {
+                    val intent = Intent(ctx, RelocalisationActivity::class.java)
+                    intent.putExtra("employe_numero", employeNumero)
+                    intent.putExtra("employe_nom", employeNom)
+                    ctx.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007BFF)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text(
+                    "Relocalisation",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
+            }
         }
     }
 }

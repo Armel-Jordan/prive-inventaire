@@ -47,6 +47,10 @@
             android:name=".HistoriqueActivity"
             android:exported="false"
             android:theme="@style/Theme.TelipsoBonTravail"/>
+        <activity
+            android:name=".RelocalisationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TelipsoBonTravail"/>
     </application>
 
 </manifest>

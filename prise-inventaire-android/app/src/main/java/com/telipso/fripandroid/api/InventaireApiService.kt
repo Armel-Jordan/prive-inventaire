@@ -302,4 +302,143 @@ object InventaireApiService {
             return gson.fromJson(body, SupprimerScanResponse::class.java)
         }
     }
+
+    // ============================================
+    // RELOCALISATION API
+    // ============================================
+
+    data class Mouvement(
+        @SerializedName("id") val id: Int,
+        @SerializedName("type") val type: String,
+        @SerializedName("produit_numero") val produitNumero: String,
+        @SerializedName("produit_nom") val produitNom: String?,
+        @SerializedName("secteur_source") val secteurSource: String?,
+        @SerializedName("secteur_destination") val secteurDestination: String?,
+        @SerializedName("quantite") val quantite: String,
+        @SerializedName("unite_mesure") val uniteMesure: String?,
+        @SerializedName("motif") val motif: String?,
+        @SerializedName("employe") val employe: String,
+        @SerializedName("date_mouvement") val dateMouvement: String
+    )
+
+    data class RelocalisationRequest(
+        val type: String,
+        @SerializedName("produit_numero") val produitNumero: String,
+        @SerializedName("produit_nom") val produitNom: String? = null,
+        @SerializedName("secteur_source") val secteurSource: String? = null,
+        @SerializedName("secteur_destination") val secteurDestination: String? = null,
+        val quantite: Double,
+        @SerializedName("unite_mesure") val uniteMesure: String? = null,
+        val motif: String? = null,
+        val employe: String
+    )
+
+    data class RelocalisationResponse(
+        val success: Boolean,
+        val message: String,
+        val mouvement: Mouvement? = null
+    )
+
+    data class Secteur(
+        @SerializedName("id") val id: Int,
+        @SerializedName("nom") val nom: String,
+        @SerializedName("code") val code: String?
+    )
+
+    /**
+     * GET /api/secteurs
+     * Récupère la liste des secteurs
+     */
+    fun getSecteurs(): List<Secteur> {
+        val request = Request.Builder()
+            .url("$baseUrl/secteurs")
+            .get()
+            .addHeader("Accept", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("Erreur HTTP ${response.code}: ${response.message}")
+            }
+            val body = response.body?.string() ?: throw Exception("Réponse vide")
+            return gson.fromJson(body, Array<Secteur>::class.java).toList()
+        }
+    }
+
+    /**
+     * POST /api/relocalisation
+     * Enregistre un mouvement de relocalisation (arrivage, transfert, sortie)
+     */
+    fun enregistrerRelocalisation(
+        type: String,
+        produitNumero: String,
+        produitNom: String? = null,
+        secteurSource: String? = null,
+        secteurDestination: String? = null,
+        quantite: Double,
+        uniteMesure: String? = null,
+        motif: String? = null,
+        employe: String
+    ): RelocalisationResponse {
+        val requestBody = gson.toJson(
+            RelocalisationRequest(
+                type = type,
+                produitNumero = produitNumero,
+                produitNom = produitNom,
+                secteurSource = secteurSource,
+                secteurDestination = secteurDestination,
+                quantite = quantite,
+                uniteMesure = uniteMesure,
+                motif = motif,
+                employe = employe
+            )
+        )
+
+        android.util.Log.d("InventaireAPI", "POST $baseUrl/relocalisation")
+        android.util.Log.d("InventaireAPI", "Request body: $requestBody")
+
+        val request = Request.Builder()
+            .url("$baseUrl/relocalisation")
+            .post(requestBody.toRequestBody(JSON))
+            .addHeader("Accept", "application/json")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Réponse vide")
+            android.util.Log.d("InventaireAPI", "Response code: ${response.code}")
+            android.util.Log.d("InventaireAPI", "Response body: $body")
+
+            if (!response.isSuccessful && response.code != 422) {
+                throw Exception("Erreur HTTP ${response.code}: ${response.message}")
+            }
+
+            return gson.fromJson(body, RelocalisationResponse::class.java)
+        }
+    }
+
+    /**
+     * GET /api/relocalisation
+     * Récupère l'historique des mouvements
+     */
+    fun getHistoriqueMouvements(type: String? = null, limit: Int = 50): List<Mouvement> {
+        var url = "$baseUrl/relocalisation?limit=$limit"
+        if (type != null) {
+            url += "&type=$type"
+        }
+
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .addHeader("Accept", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("Erreur HTTP ${response.code}: ${response.message}")
+            }
+            val body = response.body?.string() ?: throw Exception("Réponse vide")
+            return gson.fromJson(body, Array<Mouvement>::class.java).toList()
+        }
+    }
 }
