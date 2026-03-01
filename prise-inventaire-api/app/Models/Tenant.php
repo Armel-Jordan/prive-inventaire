@@ -40,6 +40,11 @@ class Tenant extends Model
         return $this->hasMany(AdminUser::class);
     }
 
+    public function adminUsers(): HasMany
+    {
+        return $this->hasMany(AdminUser::class)->where('role', '!=', 'super_admin');
+    }
+
     public function isExpired(): bool
     {
         if (!$this->date_expiration) {

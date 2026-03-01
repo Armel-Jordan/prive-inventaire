@@ -135,6 +135,7 @@ class SuperAdminController extends Controller
         $tenant = Tenant::findOrFail($tenantId);
 
         $admins = AdminUser::where('tenant_id', $tenantId)
+            ->where('role', '!=', 'super_admin')
             ->orderBy('nom')
             ->get(['id', 'nom', 'email', 'role', 'actif', 'derniere_connexion', 'created_at']);
 
