@@ -1,7 +1,10 @@
 export interface Employe {
-  id?: number;
+  id: number;
   numero: string;
   nom: string;
+  prenom?: string;
+  email?: string;
+  actif?: boolean;
 }
 
 export interface Produit {

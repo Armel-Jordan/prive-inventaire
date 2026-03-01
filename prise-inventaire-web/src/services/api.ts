@@ -75,6 +75,44 @@ export async function getEmployes(): Promise<Employe[]> {
   return fetchApi<Employe[]>('/employes');
 }
 
+export async function createEmploye(employe: Omit<Employe, 'id'>): Promise<Employe> {
+  if (MOCK_MODE) {
+    const newEmploye = { ...employe, id: mockEmployes.length + 1 } as Employe;
+    mockEmployes.push(newEmploye);
+    return newEmploye;
+  }
+  const response = await fetchApi<{ employe: Employe }>('/employes', {
+    method: 'POST',
+    body: JSON.stringify(employe),
+  });
+  return response.employe;
+}
+
+export async function updateEmploye(id: number, employe: Partial<Employe>): Promise<Employe> {
+  if (MOCK_MODE) {
+    const index = mockEmployes.findIndex(e => e.id === id);
+    if (index !== -1) {
+      mockEmployes[index] = { ...mockEmployes[index], ...employe };
+      return mockEmployes[index];
+    }
+    throw new Error('Employé non trouvé');
+  }
+  const response = await fetchApi<{ employe: Employe }>(`/employes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(employe),
+  });
+  return response.employe;
+}
+
+export async function deleteEmploye(id: number): Promise<void> {
+  if (MOCK_MODE) {
+    const index = mockEmployes.findIndex(e => e.id === id);
+    if (index !== -1) mockEmployes.splice(index, 1);
+    return;
+  }
+  await fetchApi(`/employes/${id}`, { method: 'DELETE' });
+}
+
 // === PRODUITS ===
 export async function getProduits(): Promise<Produit[]> {
   if (MOCK_MODE) return mockProduits;

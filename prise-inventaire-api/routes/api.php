@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeController;
+use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\ProduitController;
 use App\Http\Controllers\ScanController;
@@ -36,9 +37,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // ============================================
 // Routes Tenant (avec middleware tenant)
 // ============================================
-Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
-    // Employés
-    Route::get('/employes', [EmployeController::class, 'index']);
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Employés CRUD
+    Route::get('/employes', [EmployeTenantController::class, 'index']);
+    Route::post('/employes', [EmployeTenantController::class, 'store']);
+    Route::get('/employes/{id}', [EmployeTenantController::class, 'show']);
+    Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
+    Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
 
     // Produits
     Route::get('/produits', [ProduitController::class, 'index']);
