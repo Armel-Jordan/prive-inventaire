@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Package, MapPin, Plus, Truck, History, Filter } from 'lucide-react';
+import { ArrowRight, MapPin, Plus, Truck, Filter } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -43,13 +43,6 @@ interface Mouvement {
   date_mouvement: string;
 }
 
-interface Stats {
-  total: number;
-  today: number;
-  this_month: number;
-  by_type: Record<string, number>;
-}
-
 interface Secteur {
   id: number;
   nom: string;
@@ -65,7 +58,6 @@ const typeLabels: Record<string, { label: string; color: string; icon: string }>
 
 export default function RelocalisationPage() {
   const [mouvements, setMouvements] = useState<Mouvement[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -93,13 +85,11 @@ export default function RelocalisationPage() {
     setLoading(true);
     try {
       const params = filterType ? `?type=${filterType}` : '';
-      const [mouvementsRes, statsRes, secteursRes] = await Promise.all([
+      const [mouvementsRes, secteursRes] = await Promise.all([
         fetchApi<Mouvement[]>(`/relocalisation${params}`),
-        fetchApi<Stats>('/relocalisation/stats'),
         fetchApi<Secteur[]>('/secteurs'),
       ]);
       setMouvements(mouvementsRes);
-      setStats(statsRes);
       setSecteurs(secteursRes);
     } catch (error) {
       console.error('Erreur chargement:', error);
@@ -183,55 +173,6 @@ export default function RelocalisationPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <History className="text-purple-600" size={20} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-gray-500">Total mouvements</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Truck className="text-green-600" size={20} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.by_type?.arrivage || 0}</p>
-                <p className="text-sm text-gray-500">Arrivages</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ArrowRight className="text-blue-600" size={20} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.by_type?.transfert || 0}</p>
-                <p className="text-sm text-gray-500">Transferts</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Package className="text-orange-600" size={20} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.today}</p>
-                <p className="text-sm text-gray-500">Aujourd'hui</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters & List */}
       <div className="bg-white rounded-xl shadow-sm">
