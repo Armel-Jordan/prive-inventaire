@@ -9,6 +9,7 @@ import EmployesPage from '@/pages/EmployesPage';
 import RelocalisationPage from '@/pages/RelocalisationPage';
 import StatsPage from '@/pages/StatsPage';
 import AlertesPage from '@/pages/AlertesPage';
+import ComparaisonPage from '@/pages/ComparaisonPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="relocalisation" element={<RelocalisationPage />} />
         <Route path="statistiques" element={<StatsPage />} />
         <Route path="alertes" element={<AlertesPage />} />
+        <Route path="comparaison" element={<ComparaisonPage />} />
       </Route>
       
       {/* Routes Super Admin */}
