@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\EmployeController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\MouvementInventaireController;
@@ -17,16 +18,21 @@ use Illuminate\Support\Facades\Route;
 // Routes publiques (sans authentification)
 // ============================================
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
 
 // ============================================
 // Routes Super Admin (gestion des tenants)
 // ============================================
-Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
-    Route::get('/tenants', [TenantController::class, 'index']);
-    Route::post('/tenants', [TenantController::class, 'store']);
-    Route::get('/tenants/{id}', [TenantController::class, 'show']);
-    Route::put('/tenants/{id}', [TenantController::class, 'update']);
-    Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
+Route::prefix('super-admin')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/stats', [SuperAdminController::class, 'getStats']);
+    Route::get('/tenants', [SuperAdminController::class, 'getTenants']);
+    Route::post('/tenants', [SuperAdminController::class, 'createTenant']);
+    Route::put('/tenants/{id}', [SuperAdminController::class, 'updateTenant']);
+    Route::delete('/tenants/{id}', [SuperAdminController::class, 'deleteTenant']);
+    Route::get('/tenants/{tenantId}/admins', [SuperAdminController::class, 'getTenantAdmins']);
+    Route::post('/tenants/{tenantId}/admins', [SuperAdminController::class, 'createTenantAdmin']);
+    Route::put('/tenants/{tenantId}/admins/{adminId}', [SuperAdminController::class, 'updateTenantAdmin']);
+    Route::delete('/tenants/{tenantId}/admins/{adminId}', [SuperAdminController::class, 'deleteTenantAdmin']);
 });
 
 // ============================================

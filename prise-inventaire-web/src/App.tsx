@@ -8,6 +8,10 @@ import SecteursPage from '@/pages/SecteursPage';
 import EmployesPage from '@/pages/EmployesPage';
 import UsersPage from '@/pages/UsersPage';
 import LoginPage from '@/pages/LoginPage';
+import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
+import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
+import SuperAdminTenantPage from '@/pages/SuperAdminTenantPage';
+import SuperAdminNewTenantPage from '@/pages/SuperAdminNewTenantPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +50,12 @@ function AppRoutes() {
         <Route path="employes" element={<EmployesPage />} />
         <Route path="users" element={<UsersPage />} />
       </Route>
+      
+      {/* Routes Super Admin */}
+      <Route path="/super-admin" element={<SuperAdminLoginPage />} />
+      <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+      <Route path="/super-admin/tenants/new" element={<SuperAdminNewTenantPage />} />
+      <Route path="/super-admin/tenants/:tenantId" element={<SuperAdminTenantPage />} />
     </Routes>
   );
 }
