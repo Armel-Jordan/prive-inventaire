@@ -9,7 +9,8 @@ import {
   X,
   LogOut,
   Building2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  BarChart3
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const navItems = [
   { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { path: '/scans', label: 'Inventaires', icon: ClipboardList },
+  { path: '/statistiques', label: 'Statistiques', icon: BarChart3 },
   { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },
