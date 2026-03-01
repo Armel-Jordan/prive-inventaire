@@ -9,7 +9,8 @@ interface TenantForm {
   nom: string;
   slug: string;
   plan: 'starter' | 'pro' | 'enterprise';
-  date_expiration: string;
+  duree_abonnement: 1 | 3 | 5;
+  renouvelable: boolean;
 }
 
 function getAuth() {
@@ -31,7 +32,8 @@ export default function SuperAdminNewTenantPage() {
     nom: '',
     slug: '',
     plan: 'starter',
-    date_expiration: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    duree_abonnement: 1,
+    renouvelable: true,
   });
 
   function generateSlug(nom: string) {
@@ -156,15 +158,38 @@ export default function SuperAdminNewTenantPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date d'expiration
+                Durée de l'abonnement *
               </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[1, 3, 5].map((duree) => (
+                  <button
+                    key={duree}
+                    type="button"
+                    onClick={() => setForm({ ...form, duree_abonnement: duree as 1 | 3 | 5 })}
+                    className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                      form.duree_abonnement === duree
+                        ? 'border-purple-600 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {duree} an{duree > 1 ? 's' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
               <input
-                type="date"
-                value={form.date_expiration}
-                onChange={(e) => setForm({ ...form, date_expiration: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                min={new Date().toISOString().split('T')[0]}
+                type="checkbox"
+                id="renouvelable"
+                checked={form.renouvelable}
+                onChange={(e) => setForm({ ...form, renouvelable: e.target.checked })}
+                className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
+              <label htmlFor="renouvelable" className="text-sm">
+                <span className="font-medium text-gray-800">Abonnement renouvelable</span>
+                <p className="text-gray-500">Le client pourra renouveler son abonnement à l'expiration</p>
+              </label>
             </div>
 
             <div className="flex gap-3 pt-4">

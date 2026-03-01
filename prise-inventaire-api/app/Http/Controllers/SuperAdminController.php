@@ -72,21 +72,59 @@ class SuperAdminController extends Controller
             'nom' => 'required|string|max:100',
             'slug' => 'required|string|max:50|unique:tenants,slug|alpha_dash',
             'plan' => 'required|in:starter,pro,enterprise',
-            'date_expiration' => 'nullable|date|after:today',
+            'duree_abonnement' => 'required|in:1,3,5',
+            'renouvelable' => 'required|boolean',
         ]);
+
+        $duree = (int) $validated['duree_abonnement'];
+        $dateExpiration = now()->addYears($duree);
 
         $tenant = Tenant::create([
             'nom' => $validated['nom'],
             'slug' => strtolower($validated['slug']),
             'plan' => $validated['plan'],
             'actif' => true,
-            'date_expiration' => $validated['date_expiration'] ?? now()->addYear(),
+            'date_expiration' => $dateExpiration,
+            'duree_abonnement' => $duree,
+            'renouvelable' => $validated['renouvelable'],
         ]);
 
         return response()->json([
             'message' => 'Tenant créé avec succès',
             'tenant' => $tenant,
         ], 201);
+    }
+
+    /**
+     * Renouveler un tenant
+     */
+    public function renewTenant(Request $request, $id): JsonResponse
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        $validated = $request->validate([
+            'duree_abonnement' => 'required|in:1,3,5',
+            'renouvelable' => 'sometimes|boolean',
+        ]);
+
+        $duree = (int) $validated['duree_abonnement'];
+
+        // Si expiré, partir de maintenant. Sinon, ajouter à la date d'expiration actuelle
+        $baseDate = $tenant->isExpired() ? now() : $tenant->date_expiration;
+        $nouvelleExpiration = $baseDate->copy()->addYears($duree);
+
+        $tenant->update([
+            'date_expiration' => $nouvelleExpiration,
+            'duree_abonnement' => $duree,
+            'renouvelable' => $validated['renouvelable'] ?? $tenant->renouvelable,
+            'actif' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'Abonnement renouvelé avec succès',
+            'tenant' => $tenant,
+            'nouvelle_expiration' => $nouvelleExpiration->format('Y-m-d'),
+        ]);
     }
 
     /**

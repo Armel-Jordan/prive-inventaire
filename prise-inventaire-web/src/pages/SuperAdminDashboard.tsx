@@ -20,6 +20,22 @@ interface Tenant {
   actif: boolean;
   date_expiration: string;
   admin_users_count: number;
+  renouvelable: boolean;
+  duree_abonnement: number;
+}
+
+function getExpirationStatus(dateStr: string): { label: string; color: string; isExpired: boolean; isWarning: boolean } {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return { label: 'Expiré', color: 'bg-red-100 text-red-700', isExpired: true, isWarning: false };
+  } else if (diffDays <= 30) {
+    return { label: `${diffDays}j restants`, color: 'bg-orange-100 text-orange-700', isExpired: false, isWarning: true };
+  } else {
+    return { label: new Date(dateStr).toLocaleDateString('fr-FR'), color: 'text-gray-500', isExpired: false, isWarning: false };
+  }
 }
 
 function getAuth() {
@@ -206,8 +222,20 @@ export default function SuperAdminDashboard() {
                         {tenant.actif ? 'Actif' : 'Inactif'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {new Date(tenant.date_expiration).toLocaleDateString('fr-FR')}
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const status = getExpirationStatus(tenant.date_expiration);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>
+                              {status.label}
+                            </span>
+                            {tenant.renouvelable && (
+                              <span className="text-xs text-gray-400" title="Renouvelable">↻</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <Link

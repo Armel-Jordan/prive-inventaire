@@ -28,6 +28,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/tenants', [SuperAdminController::class, 'getTenants']);
     Route::post('/tenants', [SuperAdminController::class, 'createTenant']);
     Route::put('/tenants/{id}', [SuperAdminController::class, 'updateTenant']);
+    Route::post('/tenants/{id}/renew', [SuperAdminController::class, 'renewTenant']);
     Route::delete('/tenants/{id}', [SuperAdminController::class, 'deleteTenant']);
     Route::get('/tenants/{tenantId}/admins', [SuperAdminController::class, 'getTenantAdmins']);
     Route::post('/tenants/{tenantId}/admins', [SuperAdminController::class, 'createTenantAdmin']);

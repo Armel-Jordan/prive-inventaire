@@ -12,6 +12,8 @@ interface Tenant {
   plan: string;
   actif: boolean;
   date_expiration: string;
+  renouvelable: boolean;
+  duree_abonnement: number;
 }
 
 interface Admin {
@@ -32,6 +34,13 @@ interface AdminForm {
 
 const emptyForm: AdminForm = { nom: '', email: '', password: '', role: 'admin' };
 
+function getExpirationInfo(dateStr: string): { isExpired: boolean; daysLeft: number } {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return { isExpired: diffDays < 0, daysLeft: diffDays };
+}
+
 function getAuth() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return null;
@@ -49,8 +58,10 @@ export default function SuperAdminTenantPage() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showRenewModal, setShowRenewModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<AdminForm>(emptyForm);
+  const [renewDuree, setRenewDuree] = useState<1 | 3 | 5>(1);
   const auth = getAuth();
 
   useEffect(() => {
@@ -152,6 +163,21 @@ export default function SuperAdminTenantPage() {
     }
   }
 
+  async function handleRenew() {
+    try {
+      await fetchApi(`/super-admin/tenants/${tenantId}/renew`, {
+        method: 'POST',
+        body: JSON.stringify({ duree_abonnement: renewDuree }),
+      });
+      setShowRenewModal(false);
+      loadData();
+      alert('Abonnement renouvelé avec succès !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors du renouvellement');
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -174,7 +200,7 @@ export default function SuperAdminTenantPage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Tenant Info */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">{tenant?.nom}</h1>
               <p className="text-gray-500">
@@ -196,6 +222,47 @@ export default function SuperAdminTenantPage() {
               </span>
             </div>
           </div>
+          
+          {/* Expiration Info */}
+          {tenant && (
+            <div className="mt-4 pt-4 border-t">
+              {(() => {
+                const expInfo = getExpirationInfo(tenant.date_expiration);
+                return (
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Expiration:</span>{' '}
+                        {new Date(tenant.date_expiration).toLocaleDateString('fr-FR')}
+                        {expInfo.isExpired && (
+                          <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            Expiré
+                          </span>
+                        )}
+                        {!expInfo.isExpired && expInfo.daysLeft <= 30 && (
+                          <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                            {expInfo.daysLeft}j restants
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Durée: {tenant.duree_abonnement} an{tenant.duree_abonnement > 1 ? 's' : ''} 
+                        {tenant.renouvelable ? ' • Renouvelable' : ' • Non renouvelable'}
+                      </p>
+                    </div>
+                    {tenant.renouvelable && (
+                      <button
+                        onClick={() => setShowRenewModal(true)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                      >
+                        Renouveler l'abonnement
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
 
         {/* Admins List */}
@@ -347,6 +414,56 @@ export default function SuperAdminTenantPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Renouvellement */}
+      {showRenewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Renouveler l'abonnement</h2>
+              <button onClick={() => setShowRenewModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                Choisissez la nouvelle durée d'abonnement pour <strong>{tenant?.nom}</strong>
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[1, 3, 5].map((duree) => (
+                  <button
+                    key={duree}
+                    type="button"
+                    onClick={() => setRenewDuree(duree as 1 | 3 | 5)}
+                    className={`py-4 rounded-lg border-2 font-medium transition-all ${
+                      renewDuree === duree
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {duree} an{duree > 1 ? 's' : ''}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewModal(false)}
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleRenew}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Renouveler
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

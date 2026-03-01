@@ -20,6 +20,8 @@ class Tenant extends Model
         'actif',
         'date_expiration',
         'plan',
+        'renouvelable',
+        'duree_abonnement',
     ];
 
     protected $hidden = [
@@ -30,9 +32,23 @@ class Tenant extends Model
     {
         return [
             'actif' => 'boolean',
+            'renouvelable' => 'boolean',
             'date_expiration' => 'date',
             'db_password' => 'encrypted',
         ];
+    }
+
+    public function joursRestants(): int
+    {
+        if (!$this->date_expiration) {
+            return 999;
+        }
+        return max(0, now()->diffInDays($this->date_expiration, false));
+    }
+
+    public function estProcheDExpiration(): bool
+    {
+        return $this->joursRestants() <= 30 && $this->joursRestants() > 0;
     }
 
     public function users(): HasMany
