@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Search, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload } from 'lucide-react';
 import { getProduits, createProduit, updateProduit, deleteProduit } from '@/services/api';
 import type { Produit } from '@/types';
 
@@ -19,6 +19,8 @@ export default function ProduitsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
     try {
@@ -84,17 +86,99 @@ export default function ProduitsPage() {
     }
   }
 
+  function exportToCSV() {
+    const headers = ['numero', 'description', 'mesure', 'type'];
+    const csvContent = [
+      headers.join(';'),
+      ...produits.map(p => [p.numero, p.description, p.mesure, p.type || ''].join(';'))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `produits_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
+      
+      let imported = 0;
+      let errors = 0;
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(';').map(v => v.trim());
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+        
+        if (row.numero && row.description) {
+          try {
+            await createProduit({
+              numero: row.numero,
+              description: row.description,
+              mesure: row.mesure || 'UN',
+              type: row.type || '',
+            });
+            imported++;
+          } catch {
+            errors++;
+          }
+        }
+      }
+      
+      alert(`Import terminé: ${imported} produits importés, ${errors} erreurs`);
+      loadData();
+    } catch (error) {
+      console.error('Erreur import:', error);
+      alert('Erreur lors de l\'import du fichier');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Produits</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Plus size={20} />
-          Ajouter un produit
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={produits.length === 0}
+          >
+            <Download size={18} />
+            Exporter
+          </button>
+          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+            <Upload size={18} />
+            {importing ? 'Import...' : 'Importer'}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
+          </label>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus size={20} />
+            Ajouter
+          </button>
+        </div>
       </div>
 
       {/* Recherche */}
