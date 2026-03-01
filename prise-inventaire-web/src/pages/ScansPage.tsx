@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Trash2, Search, X, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, X, Plus, Download } from 'lucide-react';
 import { getScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
 import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -53,6 +53,30 @@ export default function ScansPage() {
     setShowCreateModal(true);
   }
 
+  function exportToCSV() {
+    const headers = ['numero', 'type', 'quantite', 'unite_mesure', 'employe', 'secteur', 'date_saisie'];
+    const csvContent = [
+      headers.join(';'),
+      ...scans.map(s => [
+        s.numero,
+        s.type || '',
+        s.quantite,
+        s.unite_mesure,
+        s.employe,
+        s.secteur,
+        s.date_saisie
+      ].join(';'))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `inventaire_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleCreateScan(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -102,13 +126,23 @@ export default function ScansPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Gestion des Inventaires</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Nouveau scan
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={scans.length === 0}
+          >
+            <Download size={18} />
+            Exporter
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={20} />
+            Nouveau scan
+          </button>
+        </div>
       </div>
 
       {/* Filtres */}

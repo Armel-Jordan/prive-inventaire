@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Pencil, Trash2, Download, Upload } from 'lucide-react';
 import { getSecteurs, createSecteur, updateSecteur, deleteSecteur } from '@/services/api';
 import type { Secteur } from '@/types';
 
@@ -9,6 +9,8 @@ export default function SecteursPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingSecteur, setEditingSecteur] = useState<Secteur | null>(null);
   const [form, setForm] = useState({ code: '', nom: '', description: '' });
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
     try {
@@ -62,17 +64,98 @@ export default function SecteursPage() {
     }
   }
 
+  function exportToCSV() {
+    const headers = ['code', 'nom', 'description'];
+    const csvContent = [
+      headers.join(';'),
+      ...secteurs.map(s => [s.code, s.nom, s.description || ''].join(';'))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `secteurs_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
+      
+      let imported = 0;
+      let errors = 0;
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(';').map(v => v.trim());
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+        
+        if (row.code && row.nom) {
+          try {
+            await createSecteur({
+              code: row.code,
+              nom: row.nom,
+              description: row.description || '',
+            });
+            imported++;
+          } catch {
+            errors++;
+          }
+        }
+      }
+      
+      alert(`Import terminé: ${imported} secteurs importés, ${errors} erreurs`);
+      loadData();
+    } catch (error) {
+      console.error('Erreur import:', error);
+      alert('Erreur lors de l\'import du fichier');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Secteurs</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          Ajouter
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={secteurs.length === 0}
+          >
+            <Download size={18} />
+            Exporter
+          </button>
+          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+            <Upload size={18} />
+            {importing ? 'Import...' : 'Importer'}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
+          </label>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Plus size={20} />
+            Ajouter
+          </button>
+        </div>
       </div>
 
       {/* Table */}
