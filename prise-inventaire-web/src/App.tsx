@@ -6,6 +6,7 @@ import ScansPage from '@/pages/ScansPage';
 import ProduitsPage from '@/pages/ProduitsPage';
 import SecteursPage from '@/pages/SecteursPage';
 import EmployesPage from '@/pages/EmployesPage';
+import RelocalisationPage from '@/pages/RelocalisationPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -47,6 +48,7 @@ function AppRoutes() {
         <Route path="produits" element={<ProduitsPage />} />
         <Route path="secteurs" element={<SecteursPage />} />
         <Route path="employes" element={<EmployesPage />} />
+        <Route path="relocalisation" element={<RelocalisationPage />} />
       </Route>
       
       {/* Routes Super Admin */}

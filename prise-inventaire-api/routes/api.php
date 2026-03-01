@@ -6,6 +6,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\EmployeController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\MouvementInventaireController;
+use App\Http\Controllers\MouvementTenantController;
 use App\Http\Controllers\ProduitController;
 use App\Http\Controllers\ProduitTenantController;
 use App\Http\Controllers\ScanController;
@@ -75,11 +76,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/secteurs/{id}', [SecteurController::class, 'update']);
     Route::delete('/secteurs/{id}', [SecteurController::class, 'destroy']);
 
-    // Mouvements d'inventaire
+    // Mouvements d'inventaire (ancien système)
     Route::get('/mouvements', [MouvementInventaireController::class, 'index']);
     Route::post('/mouvements', [MouvementInventaireController::class, 'store']);
     Route::get('/mouvements/{id}', [MouvementInventaireController::class, 'show']);
     Route::get('/mouvements/scan/{scanId}', [MouvementInventaireController::class, 'getByScan']);
+
+    // Relocalisation (nouveau système)
+    Route::prefix('relocalisation')->group(function () {
+        Route::get('/', [MouvementTenantController::class, 'index']);
+        Route::post('/', [MouvementTenantController::class, 'store']);
+        Route::get('/stats', [MouvementTenantController::class, 'stats']);
+        Route::get('/{id}', [MouvementTenantController::class, 'show']);
+        Route::post('/par-secteur', [MouvementTenantController::class, 'relocalisationParSecteur']);
+        Route::post('/arrivage-lot', [MouvementTenantController::class, 'arrivageLot']);
+        Route::get('/produit/{numero}', [MouvementTenantController::class, 'historyByProduit']);
+        Route::get('/secteur/{secteur}', [MouvementTenantController::class, 'historyBySecteur']);
+    });
 
     // Utilisateurs admin CRUD
     Route::get('/users', [AdminUserController::class, 'index']);
