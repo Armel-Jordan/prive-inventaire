@@ -1,34 +1,74 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Trash2, Search, X } from 'lucide-react';
-import { getScans, updateScan, deleteScan, getSecteurs, getEmployes } from '@/services/api';
-import type { InventaireScan, Secteur, Employe } from '@/types';
+import { Pencil, Trash2, Search, X, Plus } from 'lucide-react';
+import { getScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
+import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
+
+interface ScanForm {
+  numero: string;
+  type: string;
+  quantite: string;
+  unite_mesure: string;
+  employe: string;
+  secteur: string;
+}
+
+const emptyForm: ScanForm = { numero: '', type: '', quantite: '', unite_mesure: 'UN', employe: '', secteur: '' };
 
 export default function ScansPage() {
   const [scans, setScans] = useState<InventaireScan[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
+  const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingScan, setEditingScan] = useState<InventaireScan | null>(null);
   const [editQuantite, setEditQuantite] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
   const [filterEmploye, setFilterEmploye] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [form, setForm] = useState<ScanForm>(emptyForm);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [scansData, secteursData, employesData] = await Promise.all([
+      const [scansData, secteursData, employesData, produitsData] = await Promise.all([
         getScans({ secteur: filterSecteur || undefined, employe: filterEmploye || undefined }),
         getSecteurs(),
         getEmployes(),
+        getProduits(),
       ]);
       setScans(scansData);
       setSecteurs(secteursData);
       setEmployes(employesData);
+      setProduits(produitsData);
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function openCreate() {
+    setForm(emptyForm);
+    setShowCreateModal(true);
+  }
+
+  async function handleCreateScan(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await createScan({
+        numero: form.numero,
+        type: form.type,
+        quantite: parseFloat(form.quantite),
+        unite_mesure: form.unite_mesure,
+        employe: form.employe,
+        secteur: form.secteur,
+      });
+      setShowCreateModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de la création');
     }
   }
 
@@ -60,7 +100,16 @@ export default function ScansPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Gestion des Inventaires</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Gestion des Inventaires</h1>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus size={20} />
+          Nouveau scan
+        </button>
+      </div>
 
       {/* Filtres */}
       <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -199,6 +248,108 @@ export default function ScansPage() {
                 Enregistrer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal création */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Nouveau scan d'inventaire</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateScan} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Produit *</label>
+                <select
+                  value={form.numero}
+                  onChange={(e) => {
+                    const prod = produits.find(p => p.numero === e.target.value);
+                    setForm({ ...form, numero: e.target.value, type: prod?.type || '', unite_mesure: prod?.mesure || 'UN' });
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                >
+                  <option value="">Sélectionner un produit</option>
+                  {produits.map(p => (
+                    <option key={p.id} value={p.numero}>{p.numero} - {p.description}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantité *</label>
+                  <input
+                    type="number"
+                    value={form.quantite}
+                    onChange={(e) => setForm({ ...form, quantite: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unité</label>
+                  <input
+                    type="text"
+                    value={form.unite_mesure}
+                    onChange={(e) => setForm({ ...form, unite_mesure: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+                    readOnly
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Secteur *</label>
+                  <select
+                    value={form.secteur}
+                    onChange={(e) => setForm({ ...form, secteur: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Sélectionner</option>
+                    {secteurs.map(s => (
+                      <option key={s.id} value={s.code}>{s.code} - {s.nom}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Employé *</label>
+                  <select
+                    value={form.employe}
+                    onChange={(e) => setForm({ ...form, employe: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Sélectionner</option>
+                    {employes.map(e => (
+                      <option key={e.id} value={e.numero}>{e.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -119,6 +119,44 @@ export async function getProduits(): Promise<Produit[]> {
   return fetchApi<Produit[]>('/produits');
 }
 
+export async function createProduit(produit: Omit<Produit, 'id'>): Promise<Produit> {
+  if (MOCK_MODE) {
+    const newProduit = { ...produit, id: mockProduits.length + 1 } as Produit;
+    mockProduits.push(newProduit);
+    return newProduit;
+  }
+  const response = await fetchApi<{ produit: Produit }>('/produits', {
+    method: 'POST',
+    body: JSON.stringify(produit),
+  });
+  return response.produit;
+}
+
+export async function updateProduit(id: number, produit: Partial<Produit>): Promise<Produit> {
+  if (MOCK_MODE) {
+    const index = mockProduits.findIndex(p => p.id === id);
+    if (index !== -1) {
+      mockProduits[index] = { ...mockProduits[index], ...produit };
+      return mockProduits[index];
+    }
+    throw new Error('Produit non trouvé');
+  }
+  const response = await fetchApi<{ produit: Produit }>(`/produits/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(produit),
+  });
+  return response.produit;
+}
+
+export async function deleteProduit(id: number): Promise<void> {
+  if (MOCK_MODE) {
+    const index = mockProduits.findIndex(p => p.id === id);
+    if (index !== -1) mockProduits.splice(index, 1);
+    return;
+  }
+  await fetchApi(`/produits/${id}`, { method: 'DELETE' });
+}
+
 // === SECTEURS ===
 export async function getSecteurs(): Promise<Secteur[]> {
   if (MOCK_MODE) return mockSecteurs;
@@ -173,6 +211,19 @@ export async function getScans(filters?: { employe?: string; secteur?: string })
   if (filters?.employe) params.append('employe', filters.employe);
   if (filters?.secteur) params.append('secteur', filters.secteur);
   return fetchApi<InventaireScan[]>(`/scan/historique?${params}`);
+}
+
+export async function createScan(scan: Omit<InventaireScan, 'id' | 'date_saisie'>): Promise<InventaireScan> {
+  if (MOCK_MODE) {
+    const newScan = { ...scan, id: mockScans.length + 1, date_saisie: new Date().toISOString() } as InventaireScan;
+    mockScans.push(newScan);
+    return newScan;
+  }
+  const response = await fetchApi<{ scan: InventaireScan }>('/scan/enregistrer', {
+    method: 'POST',
+    body: JSON.stringify(scan),
+  });
+  return response.scan;
 }
 
 export async function updateScan(id: number, quantite: number): Promise<InventaireScan> {
