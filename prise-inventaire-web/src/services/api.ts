@@ -3,7 +3,8 @@ import type { Employe, Produit, Secteur, InventaireScan } from '@/types';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Mock data pour le développement (à remplacer par les vrais appels API)
-const MOCK_MODE = true;
+// Mettre à false quand l'API Laravel est prête
+const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
 const mockEmployes: Employe[] = [
   { id: 1, numero: 'E001', nom: 'Jean Dupont' },
