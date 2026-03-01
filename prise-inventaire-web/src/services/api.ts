@@ -1,4 +1,4 @@
-import type { Employe, Produit, Secteur, InventaireScan } from '@/types';
+import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -249,4 +249,29 @@ export async function deleteScan(id: number): Promise<void> {
     return;
   }
   await fetchApi(`/scan/${id}`, { method: 'DELETE' });
+}
+
+// === UTILISATEURS ADMIN ===
+export async function getUsers(): Promise<AdminUser[]> {
+  return fetchApi<AdminUser[]>('/users');
+}
+
+export async function createUser(user: Omit<AdminUser, 'id' | 'derniere_connexion' | 'created_at'> & { password: string }): Promise<AdminUser> {
+  const response = await fetchApi<{ user: AdminUser }>('/users', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  });
+  return response.user;
+}
+
+export async function updateUser(id: number, data: Partial<AdminUser> & { password?: string }): Promise<AdminUser> {
+  const response = await fetchApi<{ user: AdminUser }>(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return response.user;
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  await fetchApi(`/users/${id}`, { method: 'DELETE' });
 }

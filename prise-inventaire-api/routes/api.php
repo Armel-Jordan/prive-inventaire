@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeController;
 use App\Http\Controllers\EmployeTenantController;
@@ -72,4 +73,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/mouvements', [MouvementInventaireController::class, 'store']);
     Route::get('/mouvements/{id}', [MouvementInventaireController::class, 'show']);
     Route::get('/mouvements/scan/{scanId}', [MouvementInventaireController::class, 'getByScan']);
+
+    // Utilisateurs admin CRUD
+    Route::get('/users', [AdminUserController::class, 'index']);
+    Route::post('/users', [AdminUserController::class, 'store']);
+    Route::put('/users/{id}', [AdminUserController::class, 'update']);
+    Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
 });

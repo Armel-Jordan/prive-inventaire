@@ -8,7 +8,8 @@ import {
   Menu,
   X,
   LogOut,
-  Building2
+  Building2,
+  UserCog
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +20,7 @@ const navItems = [
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },
   { path: '/employes', label: 'Employés', icon: Users },
+  { path: '/users', label: 'Utilisateurs', icon: UserCog },
 ];
 
 export default function Layout() {

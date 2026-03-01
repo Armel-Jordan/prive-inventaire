@@ -46,3 +46,13 @@ export interface MouvementInventaire {
   utilisateur: string;
   date_mouvement: string;
 }
+
+export interface AdminUser {
+  id: number;
+  nom: string;
+  email: string;
+  role: 'super_admin' | 'admin' | 'manager' | 'user';
+  actif: boolean;
+  derniere_connexion?: string;
+  created_at?: string;
+}
