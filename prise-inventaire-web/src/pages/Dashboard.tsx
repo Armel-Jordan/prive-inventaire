@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Package, Users, MapPin, ClipboardList, ArrowRightLeft, Truck } from 'lucide-react';
 import { getScans, getProduits, getSecteurs, getEmployes } from '@/services/api';
 
@@ -32,6 +33,7 @@ interface RelocStats {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({ scans: 0, produits: 0, secteurs: 0, employes: 0 });
   const [relocStats, setRelocStats] = useState<RelocStats>({ total: 0, today: 0, by_type: {} });
   const [loading, setLoading] = useState(true);
@@ -72,17 +74,17 @@ export default function Dashboard() {
   }, []);
 
   const cards = [
-    { label: 'Scans', value: stats.scans, icon: ClipboardList, color: 'bg-blue-500' },
-    { label: 'Produits', value: stats.produits, icon: Package, color: 'bg-green-500' },
-    { label: 'Secteurs', value: stats.secteurs, icon: MapPin, color: 'bg-purple-500' },
-    { label: 'Employés', value: stats.employes, icon: Users, color: 'bg-orange-500' },
+    { label: 'Scans', value: stats.scans, icon: ClipboardList, color: 'bg-blue-500', path: '/scans' },
+    { label: 'Produits', value: stats.produits, icon: Package, color: 'bg-green-500', path: '/produits' },
+    { label: 'Secteurs', value: stats.secteurs, icon: MapPin, color: 'bg-purple-500', path: '/secteurs' },
+    { label: 'Employés', value: stats.employes, icon: Users, color: 'bg-orange-500', path: '/employes' },
   ];
 
   const relocCards = [
-    { label: 'Mouvements', value: relocStats.total, icon: ArrowRightLeft, color: 'bg-indigo-500' },
-    { label: 'Arrivages', value: relocStats.by_type?.arrivage || 0, icon: Truck, color: 'bg-emerald-500' },
-    { label: 'Transferts', value: relocStats.by_type?.transfert || 0, icon: ArrowRightLeft, color: 'bg-sky-500' },
-    { label: "Aujourd'hui", value: relocStats.today, icon: ClipboardList, color: 'bg-amber-500' },
+    { label: 'Mouvements', value: relocStats.total, icon: ArrowRightLeft, color: 'bg-indigo-500', path: '/relocalisation' },
+    { label: 'Arrivages', value: relocStats.by_type?.arrivage || 0, icon: Truck, color: 'bg-emerald-500', path: '/relocalisation?type=arrivage' },
+    { label: 'Transferts', value: relocStats.by_type?.transfert || 0, icon: ArrowRightLeft, color: 'bg-sky-500', path: '/relocalisation?type=transfert' },
+    { label: "Aujourd'hui", value: relocStats.today, icon: ClipboardList, color: 'bg-amber-500', path: '/relocalisation' },
   ];
 
   return (
@@ -99,7 +101,11 @@ export default function Dashboard() {
             {cards.map((card) => {
               const Icon = card.icon;
               return (
-                <div key={card.label} className="bg-white rounded-xl shadow-sm p-6">
+                <div 
+                  key={card.label} 
+                  onClick={() => navigate(card.path)}
+                  className="bg-white rounded-xl shadow-sm p-6 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+                >
                   <div className="flex items-center gap-4">
                     <div className={`${card.color} p-3 rounded-lg`}>
                       <Icon className="text-white" size={24} />
@@ -120,7 +126,11 @@ export default function Dashboard() {
             {relocCards.map((card) => {
               const Icon = card.icon;
               return (
-                <div key={card.label} className="bg-white rounded-xl shadow-sm p-6">
+                <div 
+                  key={card.label} 
+                  onClick={() => navigate(card.path)}
+                  className="bg-white rounded-xl shadow-sm p-6 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+                >
                   <div className="flex items-center gap-4">
                     <div className={`${card.color} p-3 rounded-lg`}>
                       <Icon className="text-white" size={24} />
