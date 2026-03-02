@@ -31,7 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.telipso.fripandroid.ui.theme.TelipsoBonTravailTheme
+import com.telipso.fripandroid.ui.theme.PriseInventaireTheme
 import com.telipso.fripandroid.ui.theme.seed
 import kotlinx.coroutines.delay
 
@@ -44,7 +44,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            TelipsoBonTravailTheme {
+            PriseInventaireTheme {
                 SplashScreen(
                     onSplashFinished = {
                         startActivity(Intent(this, EmployeLoginActivity::class.java))

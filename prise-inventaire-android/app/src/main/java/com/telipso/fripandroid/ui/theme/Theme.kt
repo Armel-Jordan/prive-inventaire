@@ -188,7 +188,7 @@ private val AppTypography = Typography(
 )
 
 @Composable
-fun TelipsoBonTravailTheme(
+fun PriseInventaireTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable() () -> Unit
 ) {

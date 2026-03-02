@@ -61,7 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.telipso.fripandroid.api.InventaireApiService
-import com.telipso.fripandroid.ui.theme.TelipsoBonTravailTheme
+import com.telipso.fripandroid.ui.theme.PriseInventaireTheme
 import com.telipso.fripandroid.ui.theme.seed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -187,7 +187,7 @@ class InventaireScanActivity : AppCompatActivity() {
         viewModel.secteur = intent.getStringExtra("secteur") ?: ""
 
         setContent {
-            TelipsoBonTravailTheme {
+            PriseInventaireTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

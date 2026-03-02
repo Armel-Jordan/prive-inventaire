@@ -53,7 +53,7 @@ import com.telipso.fripandroid.offline.OfflineRepository
 import com.telipso.fripandroid.offline.PendingScan
 import com.telipso.fripandroid.offline.SyncStatus
 import com.telipso.fripandroid.offline.SyncWorker
-import com.telipso.fripandroid.ui.theme.TelipsoBonTravailTheme
+import com.telipso.fripandroid.ui.theme.PriseInventaireTheme
 import com.telipso.fripandroid.ui.theme.seed
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,7 +85,7 @@ class HistoriqueLocalActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            TelipsoBonTravailTheme {
+            PriseInventaireTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -207,7 +207,7 @@ fun ScanCard(scan: PendingScan) {
                 modifier = Modifier
                     .size(40.dp)
                     .background(
-                        color = when (scan.status) {
+                        color = when (scan.syncStatus) {
                             SyncStatus.PENDING -> Color(0xFFFF9800)
                             SyncStatus.SYNCING -> Color(0xFF2196F3)
                             SyncStatus.SYNCED -> Color(0xFF4CAF50)
@@ -218,7 +218,7 @@ fun ScanCard(scan: PendingScan) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = when (scan.status) {
+                    imageVector = when (scan.syncStatus) {
                         SyncStatus.PENDING -> Icons.Filled.CloudOff
                         SyncStatus.SYNCING -> Icons.Filled.Sync
                         SyncStatus.SYNCED -> Icons.Filled.CheckCircle
@@ -257,7 +257,7 @@ fun ScanCard(scan: PendingScan) {
                     color = Color.Gray
                 )
                 Text(
-                    text = when (scan.status) {
+                    text = when (scan.syncStatus) {
                         SyncStatus.PENDING -> "En attente"
                         SyncStatus.SYNCING -> "Sync..."
                         SyncStatus.SYNCED -> "Synchronisé"
@@ -265,7 +265,7 @@ fun ScanCard(scan: PendingScan) {
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = when (scan.status) {
+                    color = when (scan.syncStatus) {
                         SyncStatus.PENDING -> Color(0xFFFF9800)
                         SyncStatus.SYNCING -> Color(0xFF2196F3)
                         SyncStatus.SYNCED -> Color(0xFF4CAF50)
