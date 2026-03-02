@@ -24,6 +24,7 @@ use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RolePermissionController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -81,6 +82,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+
+    // Permissions utilisateur
+    Route::get('/permissions/me', [RolePermissionController::class, 'userPermissions']);
+    Route::get('/permissions/modules', [RolePermissionController::class, 'modules']);
+
+    // Gestion des rôles (admin seulement)
+    Route::get('/roles-custom', [RolePermissionController::class, 'index']);
+    Route::post('/roles-custom', [RolePermissionController::class, 'store']);
+    Route::get('/roles-custom/{id}', [RolePermissionController::class, 'show']);
+    Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update']);
+    Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy']);
+    Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole']);
 
     // Scans
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);

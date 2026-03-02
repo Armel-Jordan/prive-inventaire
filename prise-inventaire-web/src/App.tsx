@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { PermissionsProvider } from '@/contexts/PermissionsContext';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
 import ScansPage from '@/pages/ScansPage';
@@ -88,7 +89,9 @@ function App() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <AppRoutes />
+            <PermissionsProvider>
+              <AppRoutes />
+            </PermissionsProvider>
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

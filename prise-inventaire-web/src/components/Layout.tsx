@@ -23,27 +23,28 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
-  { path: '/', label: t.nav.dashboard, icon: LayoutDashboard },
-  { path: '/scans', label: t.nav.scans, icon: ClipboardList },
-  { path: '/statistiques', label: t.nav.statistics, icon: BarChart3 },
-  { path: '/comparaison', label: t.nav.comparison, icon: GitCompare },
-  { path: '/alertes', label: t.nav.alerts, icon: Bell },
-  { path: '/audit', label: t.nav.history, icon: History },
-  { path: '/tracabilite', label: t.nav.traceability, icon: Route },
-  { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft },
-  { path: '/planification', label: t.nav.planning, icon: CalendarClock },
-  { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck },
-  { path: '/rapports', label: t.nav.reports, icon: FileBarChart },
-  { path: '/inventaire-tournant', label: t.nav.rotatingInventory, icon: RotateCcw },
-  { path: '/produits', label: t.nav.products, icon: Package },
-  { path: '/secteurs', label: t.nav.sectors, icon: MapPin },
-  { path: '/employes', label: t.nav.employees, icon: Users },
+  { path: '/', label: t.nav.dashboard, icon: LayoutDashboard, module: 'dashboard' },
+  { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
+  { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
+  { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
+  { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
+  { path: '/audit', label: t.nav.history, icon: History, module: 'historique' },
+  { path: '/tracabilite', label: t.nav.traceability, icon: Route, module: 'tracabilite' },
+  { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft, module: 'relocalisation' },
+  { path: '/planification', label: t.nav.planning, icon: CalendarClock, module: 'planification' },
+  { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck, module: 'approbations' },
+  { path: '/rapports', label: t.nav.reports, icon: FileBarChart, module: 'rapports' },
+  { path: '/inventaire-tournant', label: t.nav.rotatingInventory, icon: RotateCcw, module: 'inventaire_tournant' },
+  { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
+  { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
+  { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
 ];
 
 export default function Layout() {
@@ -51,8 +52,14 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, tenant, logout } = useAuth();
   const { t } = useLanguage();
+  const { canView, loading: permissionsLoading } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const navItems = getNavItems(t);
+  const allNavItems = getNavItems(t);
+  
+  // Filtrer les modules selon les permissions
+  const navItems = permissionsLoading 
+    ? allNavItems 
+    : allNavItems.filter(item => canView(item.module));
 
   const handleLogout = () => {
     logout();
