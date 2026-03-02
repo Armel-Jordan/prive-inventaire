@@ -14,6 +14,7 @@ import AuditPage from '@/pages/AuditPage';
 import PlanificationPage from '@/pages/PlanificationPage';
 import ApprobationsPage from '@/pages/ApprobationsPage';
 import TracabilitePage from '@/pages/TracabilitePage';
+import RapportsPage from '@/pages/RapportsPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="planification" element={<PlanificationPage />} />
         <Route path="approbations" element={<ApprobationsPage />} />
         <Route path="tracabilite" element={<TracabilitePage />} />
+        <Route path="rapports" element={<RapportsPage />} />
       </Route>
       
       {/* Routes Super Admin */}

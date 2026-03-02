@@ -19,6 +19,7 @@ use App\Http\Controllers\TransfertPlanifieController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RapportController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -157,6 +158,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
         Route::post('/cleanup', [NotificationController::class, 'cleanup']);
+    });
+
+    // Rapports
+    Route::prefix('rapports')->group(function () {
+        Route::get('/mouvements-secteur', [RapportController::class, 'mouvementsParSecteur']);
+        Route::get('/activite-employe', [RapportController::class, 'activiteParEmploye']);
+        Route::get('/evolution-annuelle', [RapportController::class, 'evolutionAnnuelle']);
+        Route::get('/top-produits', [RapportController::class, 'topProduits']);
     });
 
     // Utilisateurs admin CRUD
