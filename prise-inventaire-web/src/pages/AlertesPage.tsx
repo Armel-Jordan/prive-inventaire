@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw, Plus, X, Save } from 'lucide-react';
+import { getProduits } from '@/services/api';
+import type { Produit } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -38,11 +40,23 @@ interface AlerteStats {
   ok: number;
 }
 
+interface ProduitAvecSeuil {
+  id: number;
+  numero: string;
+  description: string;
+  seuil_alerte: number | null;
+}
+
 export default function AlertesPage() {
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [stats, setStats] = useState<AlerteStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterCriticite, setFilterCriticite] = useState<string>('');
+  const [showConfig, setShowConfig] = useState(false);
+  const [produits, setProduits] = useState<ProduitAvecSeuil[]>([]);
+  const [loadingProduits, setLoadingProduits] = useState(false);
+  const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
+  const [saving, setSaving] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -69,6 +83,54 @@ export default function AlertesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  async function loadProduits() {
+    setLoadingProduits(true);
+    try {
+      const data = await getProduits();
+      setProduits(data.filter((p: Produit) => p.id !== undefined).map((p: Produit) => ({
+        id: p.id as number,
+        numero: p.numero,
+        description: p.description,
+        seuil_alerte: null,
+      })));
+    } catch (error) {
+      console.error('Erreur chargement produits:', error);
+    } finally {
+      setLoadingProduits(false);
+    }
+  }
+
+  function openConfig() {
+    setShowConfig(true);
+    loadProduits();
+  }
+
+  async function saveSeuil(produitId: number) {
+    const seuil = seuilEdits[produitId];
+    if (seuil === undefined) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/alertes/seuil/${produitId}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0 }),
+      });
+      if (res.ok) {
+        loadData();
+        setSeuilEdits(prev => {
+          const copy = { ...prev };
+          delete copy[produitId];
+          return copy;
+        });
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde seuil:', error);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const filteredAlertes = filterCriticite
     ? alertes.filter(a => a.criticite === filterCriticite)
@@ -107,14 +169,81 @@ export default function AlertesPage() {
           <h1 className="text-2xl font-bold text-gray-800">Alertes de Stock</h1>
           <p className="text-gray-500">Produits en dessous du seuil d'alerte</p>
         </div>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          <RefreshCw size={18} />
-          Actualiser
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openConfig}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus size={18} />
+            Configurer seuils
+          </button>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw size={18} />
+            Actualiser
+          </button>
+        </div>
       </div>
+
+      {/* Modal de configuration des seuils */}
+      {showConfig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Configurer les seuils d'alerte</h2>
+              <button onClick={() => setShowConfig(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {loadingProduits ? (
+                <p className="text-gray-500 text-center py-8">Chargement des produits...</p>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Numéro</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Description</th>
+                      <th className="px-4 py-2 text-right text-sm font-medium text-gray-600">Seuil minimum</th>
+                      <th className="px-4 py-2 text-center text-sm font-medium text-gray-600">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {produits.map((produit) => (
+                      <tr key={produit.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 text-sm font-mono">{produit.numero}</td>
+                        <td className="px-4 py-2 text-sm">{produit.description}</td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-24 px-2 py-1 border rounded text-right"
+                            placeholder="0"
+                            value={seuilEdits[produit.id] ?? ''}
+                            onChange={(e) => setSeuilEdits(prev => ({ ...prev, [produit.id]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <button
+                            onClick={() => saveSeuil(produit.id)}
+                            disabled={saving || seuilEdits[produit.id] === undefined}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Save size={14} className="inline mr-1" />
+                            Sauver
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       {stats && (
