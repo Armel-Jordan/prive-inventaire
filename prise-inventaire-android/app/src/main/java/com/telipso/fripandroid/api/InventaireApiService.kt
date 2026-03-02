@@ -99,11 +99,11 @@ object InventaireApiService {
     // --- API Methods ---
 
     /**
-     * GET /api/employes
+     * GET /api/mobile/employes
      * Récupère la liste de tous les employés
      */
     fun getEmployes(): List<Employe> {
-        val url = "$baseUrl/employes"
+        val url = "$baseUrl/mobile/employes"
         android.util.Log.d("InventaireAPI", "GET $url")
         
         val request = Request.Builder()
@@ -128,12 +128,12 @@ object InventaireApiService {
     }
 
     /**
-     * GET /api/produits
+     * GET /api/mobile/produits
      * Récupère la liste complète des produits
      */
     fun getProduits(): List<Produit> {
         val request = Request.Builder()
-            .url("$baseUrl/produits")
+            .url("$baseUrl/mobile/produits")
             .get()
             .addHeader("Accept", "application/json")
             .build()
@@ -148,13 +148,13 @@ object InventaireApiService {
     }
 
     /**
-     * POST /api/produit/valider
+     * POST /api/mobile/produit/valider
      * Valide qu'un code-barres scanné existe dans la base
      */
     fun validerProduit(numero: String): ValiderProduitResponse {
         val requestBody = gson.toJson(ValiderProduitRequest(numero))
         val request = Request.Builder()
-            .url("$baseUrl/produit/valider")
+            .url("$baseUrl/mobile/produit/valider")
             .post(requestBody.toRequestBody(JSON))
             .addHeader("Accept", "application/json")
             .addHeader("Content-Type", "application/json")
@@ -198,13 +198,13 @@ object InventaireApiService {
         )
         
         val request = Request.Builder()
-            .url("$baseUrl/scan/enregistrer")
+            .url("$baseUrl/mobile/scan/enregistrer")
             .post(requestBody.toRequestBody(JSON))
             .addHeader("Accept", "application/json")
             .addHeader("Content-Type", "application/json")
             .build()
 
-        android.util.Log.d("InventaireAPI", "POST $baseUrl/scan/enregistrer")
+        android.util.Log.d("InventaireAPI", "POST $baseUrl/mobile/scan/enregistrer")
         android.util.Log.d("InventaireAPI", "Request body: $requestBody")
 
         client.newCall(request).execute().use { response ->
@@ -230,7 +230,7 @@ object InventaireApiService {
      * Récupère les 50 derniers scans pour un employé et secteur
      */
     fun getHistorique(employe: String, secteur: String): List<Scan> {
-        val url = "$baseUrl/scan/historique?employe=$employe&secteur=$secteur"
+        val url = "$baseUrl/mobile/scan/historique?employe=$employe&secteur=$secteur"
         val request = Request.Builder()
             .url(url)
             .get()
@@ -252,11 +252,11 @@ object InventaireApiService {
      */
     fun modifierScan(id: Int, quantite: Double): ModifierScanResponse {
         val requestBody = gson.toJson(ModifierScanRequest(quantite))
-        android.util.Log.d("InventaireAPI", "PUT $baseUrl/scan/$id")
+        android.util.Log.d("InventaireAPI", "PUT $baseUrl/mobile/scan/$id")
         android.util.Log.d("InventaireAPI", "Request body: $requestBody")
 
         val request = Request.Builder()
-            .url("$baseUrl/scan/$id")
+            .url("$baseUrl/mobile/scan/$id")
             .put(requestBody.toRequestBody(JSON))
             .addHeader("Accept", "application/json")
             .addHeader("Content-Type", "application/json")
@@ -281,10 +281,10 @@ object InventaireApiService {
      * Supprime logiquement un scan (soft delete)
      */
     fun supprimerScan(id: Int): SupprimerScanResponse {
-        android.util.Log.d("InventaireAPI", "DELETE $baseUrl/scan/$id")
+        android.util.Log.d("InventaireAPI", "DELETE $baseUrl/mobile/scan/$id")
 
         val request = Request.Builder()
-            .url("$baseUrl/scan/$id")
+            .url("$baseUrl/mobile/scan/$id")
             .delete()
             .addHeader("Accept", "application/json")
             .build()
@@ -351,7 +351,7 @@ object InventaireApiService {
      */
     fun getSecteurs(): List<Secteur> {
         val request = Request.Builder()
-            .url("$baseUrl/secteurs")
+            .url("$baseUrl/mobile/secteurs")
             .get()
             .addHeader("Accept", "application/json")
             .build()
@@ -394,11 +394,11 @@ object InventaireApiService {
             )
         )
 
-        android.util.Log.d("InventaireAPI", "POST $baseUrl/relocalisation")
+        android.util.Log.d("InventaireAPI", "POST $baseUrl/mobile/relocalisation")
         android.util.Log.d("InventaireAPI", "Request body: $requestBody")
 
         val request = Request.Builder()
-            .url("$baseUrl/relocalisation")
+            .url("$baseUrl/mobile/relocalisation")
             .post(requestBody.toRequestBody(JSON))
             .addHeader("Accept", "application/json")
             .addHeader("Content-Type", "application/json")
@@ -422,7 +422,7 @@ object InventaireApiService {
      * Récupère l'historique des mouvements
      */
     fun getHistoriqueMouvements(type: String? = null, limit: Int = 50): List<Mouvement> {
-        var url = "$baseUrl/relocalisation?limit=$limit"
+        var url = "$baseUrl/mobile/relocalisation?limit=$limit"
         if (type != null) {
             url += "&type=$type"
         }

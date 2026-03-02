@@ -34,6 +34,33 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
 
 // ============================================
+// Routes Mobile (sans authentification JWT)
+// Ces routes sont utilisées par l'app Android
+// ============================================
+Route::prefix('mobile')->group(function () {
+    // Employés (lecture seule)
+    Route::get('/employes', [EmployeTenantController::class, 'index']);
+
+    // Secteurs (lecture seule)
+    Route::get('/secteurs', [SecteurController::class, 'index']);
+    Route::post('/secteurs/validate-qr', [SecteurController::class, 'validateQrCode']);
+
+    // Produits
+    Route::get('/produits', [ProduitTenantController::class, 'index']);
+    Route::post('/produit/valider', [ProduitTenantController::class, 'valider']);
+
+    // Scans
+    Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);
+    Route::get('/scan/historique', [ScanTenantController::class, 'historique']);
+    Route::put('/scan/{id}', [ScanTenantController::class, 'modifier']);
+    Route::delete('/scan/{id}', [ScanTenantController::class, 'supprimer']);
+
+    // Relocalisation
+    Route::get('/relocalisation', [MouvementTenantController::class, 'index']);
+    Route::post('/relocalisation', [MouvementTenantController::class, 'store']);
+});
+
+// ============================================
 // Routes Super Admin (gestion des tenants)
 // ============================================
 Route::prefix('super-admin')->middleware(['auth:sanctum'])->group(function () {
