@@ -20,6 +20,7 @@ import TracabilitePage from '@/pages/TracabilitePage';
 import RapportsPage from '@/pages/RapportsPage';
 import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import ProfilPage from '@/pages/ProfilPage';
+import RolesPage from '@/pages/RolesPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="rapports" element={<RapportsPage />} />
         <Route path="inventaire-tournant" element={<InventaireTournantPage />} />
         <Route path="profil" element={<ProfilPage />} />
+        <Route path="roles" element={<RolesPage />} />
       </Route>
       
       {/* Routes Super Admin */}

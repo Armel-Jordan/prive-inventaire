@@ -19,7 +19,8 @@ import {
   Route,
   FileBarChart,
   RotateCcw,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +46,7 @@ const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
   { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
   { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
   { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
+  { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
 ];
 
 export default function Layout() {
