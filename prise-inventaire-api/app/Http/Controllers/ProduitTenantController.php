@@ -85,4 +85,35 @@ class ProduitTenantController extends Controller
             'message' => 'Produit désactivé avec succès',
         ]);
     }
+
+    /**
+     * Valide qu'un numéro de produit existe dans la base
+     * Utilisé par l'app mobile pour vérifier un code-barres scanné
+     */
+    public function valider(Request $request): JsonResponse
+    {
+        $request->validate([
+            'numero' => 'required|string',
+        ]);
+
+        $numero = $request->input('numero');
+        $produit = ProduitTenant::where('numero', $numero)
+            ->where('actif', true)
+            ->first();
+
+        if (!$produit) {
+            return response()->json([
+                'valide' => false,
+                'message' => 'Produit introuvable',
+            ], 404);
+        }
+
+        return response()->json([
+            'valide' => true,
+            'numero' => $produit->numero,
+            'description' => $produit->description,
+            'unite_mesure' => $produit->mesure,
+            'type' => $produit->type,
+        ]);
+    }
 }
