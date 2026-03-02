@@ -193,7 +193,20 @@ class TestDataSeeder extends Seeder
             foreach ($items as $item) {
                 $numero = $prefix . str_pad($produitId, 5, '0', STR_PAD_LEFT);
 
-                // Les produits sont créés via les scans, pas besoin de table produits séparée
+                // Créer le produit dans la table produits
+                $exists = DB::table('produits')->where('numero', $numero)->exists();
+                if (!$exists) {
+                    DB::table('produits')->insert([
+                        'numero' => $numero,
+                        'description' => $item,
+                        'mesure' => 'UN',
+                        'type' => $prefix,
+                        'categorie' => $prefix,
+                        'actif' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
                 $this->produits[] = ['numero' => $numero, 'nom' => $item];
                 $produitId++;
             }
