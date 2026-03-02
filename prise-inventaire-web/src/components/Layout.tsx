@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Route,
   FileBarChart,
-  RotateCcw
+  RotateCcw,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -142,6 +143,13 @@ export default function Layout() {
           <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
+          <Link
+            to="/profil"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            title="Mon profil"
+          >
+            <User size={20} className="text-gray-600 dark:text-gray-300" />
+          </Link>
         </div>
         <div className="p-6 lg:p-8">
           <Outlet />

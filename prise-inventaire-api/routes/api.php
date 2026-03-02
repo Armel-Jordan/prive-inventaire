@@ -23,6 +23,7 @@ use App\Http\Controllers\RapportController;
 use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -75,6 +76,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Dashboard stats
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // Profil utilisateur
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
 
     // Scans
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);

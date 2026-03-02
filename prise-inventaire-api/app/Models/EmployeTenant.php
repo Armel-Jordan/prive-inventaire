@@ -15,6 +15,17 @@ class EmployeTenant extends Model
         'prenom',
         'email',
         'actif',
+        'photo',
+        'sexe',
+        'date_naissance',
+        'telephone',
+        'adresse',
+        'ville',
+        'code_postal',
+        'pays',
+        'poste',
+        'departement',
+        'date_embauche',
     ];
 
     protected function casts(): array
