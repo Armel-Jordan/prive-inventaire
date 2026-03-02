@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
+import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/i18n/useLanguage';
 
 const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
@@ -58,7 +59,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -71,13 +72,13 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-200 flex flex-col
+        fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 flex flex-col
         lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="p-6 border-b">
+        <div className="p-6 border-b dark:border-gray-700">
           <div className="flex items-center gap-3 mb-2">
             <Building2 className="text-blue-600" size={24} />
-            <h1 className="text-xl font-bold text-gray-800">Prise Inventaire</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white">Prise Inventaire</h1>
           </div>
           {tenant && (
             <p className="text-sm text-blue-600 font-medium">{tenant.nom}</p>
@@ -96,8 +97,8 @@ export default function Layout() {
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                   ${isActive 
-                    ? 'bg-blue-50 text-blue-700 font-medium' 
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }
                 `}
               >
@@ -109,16 +110,16 @@ export default function Layout() {
         </nav>
 
         {/* User info & logout */}
-        <div className="p-4 border-t">
+        <div className="p-4 border-t dark:border-gray-700">
           {user && (
             <div className="mb-3">
-              <p className="text-sm font-medium text-gray-800">{user.nom}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white">{user.nom}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
           >
             <LogOut size={18} />
             {t.nav.logout}
@@ -137,7 +138,8 @@ export default function Layout() {
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen">
         {/* Top bar with notifications */}
-        <div className="sticky top-0 z-20 bg-white border-b px-6 py-3 flex items-center justify-end gap-4">
+        <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-3 flex items-center justify-end gap-4">
+          <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
         </div>
