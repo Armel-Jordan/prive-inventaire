@@ -22,6 +22,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -72,9 +73,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
     Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
 
+    // Dashboard stats
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
     // Scans
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);
     Route::get('/scan/historique', [ScanTenantController::class, 'historique']);
+    Route::get('/scan/stats', [ScanTenantController::class, 'stats']);
     Route::put('/scan/{id}', [ScanTenantController::class, 'modifier']);
     Route::delete('/scan/{id}', [ScanTenantController::class, 'supprimer']);
 

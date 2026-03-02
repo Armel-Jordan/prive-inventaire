@@ -86,4 +86,17 @@ class ScanTenantController extends Controller
             'message' => 'Scan supprimé avec succès',
         ]);
     }
+
+    public function stats(): JsonResponse
+    {
+        $total = ScanTenant::whereNull('deleted_at')->count();
+        $today = ScanTenant::whereNull('deleted_at')
+            ->whereDate('date_saisie', today())
+            ->count();
+
+        return response()->json([
+            'total' => $total,
+            'today' => $today,
+        ]);
+    }
 }

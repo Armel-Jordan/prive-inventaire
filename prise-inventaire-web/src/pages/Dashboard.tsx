@@ -63,37 +63,45 @@ export default function Dashboard() {
 
   const loadStats = useCallback(async () => {
     try {
-      const [scans, produits, secteurs, employes] = await Promise.all([
-        getScans(),
-        getProduits(),
-        getSecteurs(),
-        getEmployes(),
-      ]);
-      setStats({
-        scans: scans.length,
-        produits: produits.length,
-        secteurs: secteurs.length,
-        employes: employes.length,
-      });
-
-      // Charger stats relocalisation
-      const relocRes = await fetch(`${API_BASE_URL}/relocalisation/stats`, {
+      // Charger toutes les stats du dashboard en une seule requête
+      const dashboardRes = await fetch(`${API_BASE_URL}/dashboard/stats`, {
         headers: getAuthHeaders(),
       });
-      if (relocRes.ok) {
-        setRelocStats(await relocRes.json());
+      
+      if (dashboardRes.ok) {
+        const data = await dashboardRes.json();
+        setStats({
+          scans: data.inventaire?.scans || 0,
+          produits: data.inventaire?.produits || 0,
+          secteurs: data.inventaire?.secteurs || 0,
+          employes: data.inventaire?.employes || 0,
+        });
+        setRelocStats({
+          total: data.relocalisation?.total || 0,
+          today: data.relocalisation?.today || 0,
+          by_type: data.relocalisation?.by_type || {},
+        });
+        setAlertes({ count: data.actions?.alertes || 0 });
+        setNotifications({ count: data.actions?.notifications || 0 });
+        setPlanifications({ upcoming: data.actions?.planifications || 0 });
+        setApprobations({ en_attente: data.actions?.approbations || 0 });
+      } else {
+        // Fallback: charger les données individuellement
+        const [scans, produits, secteurs, employes] = await Promise.all([
+          getScans(),
+          getProduits(),
+          getSecteurs(),
+          getEmployes(),
+        ]);
+        setStats({
+          scans: scans.length,
+          produits: produits.length,
+          secteurs: secteurs.length,
+          employes: employes.length,
+        });
       }
 
-      // Charger alertes stock
-      const alertesRes = await fetch(`${API_BASE_URL}/alertes/stats`, {
-        headers: getAuthHeaders(),
-      });
-      if (alertesRes.ok) {
-        const data = await alertesRes.json();
-        setAlertes({ count: data.en_alerte || 0 });
-      }
-
-      // Charger notifications non lues
+      // Charger notifications non lues (fallback)
       const notifRes = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
         headers: getAuthHeaders(),
       });
