@@ -250,7 +250,7 @@ fun HistoriqueScreen(viewModel: HistoriqueViewModel) {
             onDismissRequest = { scanToDelete = null },
             title = { Text("Confirmer la suppression") },
             text = {
-                Text("Voulez-vous vraiment supprimer ce scan ?\n\nProduit: ${scanToDelete?.numero}\nQuantité: ${scanToDelete?.quantite} ${scanToDelete?.uniteMesure}")
+                Text("Voulez-vous vraiment supprimer ce scan ?\n\nProduit: ${scanToDelete?.numero}\nQuantité: ${scanToDelete?.quantite} ${scanToDelete?.uniteMesure ?: "UN"}")
             },
             confirmButton = {
                 Button(
@@ -397,11 +397,11 @@ fun HistoriqueScreen(viewModel: HistoriqueViewModel) {
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "Qté: ${scan.quantite} ${scan.uniteMesure}",
+                                        text = "Qté: ${scan.quantite} ${scan.uniteMesure ?: "UN"}",
                                         fontSize = 14.sp
                                     )
                                     Text(
-                                        text = scan.type,
+                                        text = scan.type ?: "",
                                         fontSize = 12.sp,
                                         color = Color.Gray
                                     )

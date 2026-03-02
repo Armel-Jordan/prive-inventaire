@@ -87,9 +87,9 @@ object InventaireApiService {
     data class Scan(
         @SerializedName("id") val id: Int,
         @SerializedName("numero") val numero: String,
-        @SerializedName("type") val type: String,
+        @SerializedName("type") val type: String? = null,
         @SerializedName("quantite") val quantite: String,
-        @SerializedName("unite_mesure") val uniteMesure: String,
+        @SerializedName("unite_mesure") val uniteMesure: String? = null,
         @SerializedName("employe") val employe: String,
         @SerializedName("secteur") val secteur: String,
         @SerializedName("date_saisie") val dateSaisie: String,
