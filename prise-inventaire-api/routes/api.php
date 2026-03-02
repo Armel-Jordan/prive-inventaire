@@ -17,6 +17,7 @@ use App\Http\Controllers\AlerteStockController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TransfertPlanifieController;
 use App\Http\Controllers\ApprobationController;
+use App\Http\Controllers\TracabiliteController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -135,6 +136,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [ApprobationController::class, 'store']);
         Route::post('/{id}/approve', [ApprobationController::class, 'approve']);
         Route::post('/{id}/reject', [ApprobationController::class, 'reject']);
+    });
+
+    // Traçabilité produit
+    Route::prefix('tracabilite')->group(function () {
+        Route::get('/search', [TracabiliteController::class, 'search']);
+        Route::get('/produit/{numero}', [TracabiliteController::class, 'produitHistory']);
+        Route::get('/timeline/{numero}', [TracabiliteController::class, 'timeline']);
     });
 
     // Utilisateurs admin CRUD

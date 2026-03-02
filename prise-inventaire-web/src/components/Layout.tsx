@@ -15,7 +15,8 @@ import {
   GitCompare,
   History,
   CalendarClock,
-  ShieldCheck
+  ShieldCheck,
+  Route
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/comparaison', label: 'Comparaison', icon: GitCompare },
   { path: '/alertes', label: 'Alertes Stock', icon: Bell },
   { path: '/audit', label: 'Historique', icon: History },
+  { path: '/tracabilite', label: 'Traçabilité', icon: Route },
   { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
   { path: '/planification', label: 'Planification', icon: CalendarClock },
   { path: '/approbations', label: 'Approbations', icon: ShieldCheck },
