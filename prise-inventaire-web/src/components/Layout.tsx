@@ -84,7 +84,7 @@ export default function Layout() {
           )}
         </div>
         
-        <nav className="p-4 space-y-1 flex-1">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
