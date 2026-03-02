@@ -20,6 +20,7 @@ use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RapportController;
+use App\Http\Controllers\InventaireTournantController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -166,6 +167,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/activite-employe', [RapportController::class, 'activiteParEmploye']);
         Route::get('/evolution-annuelle', [RapportController::class, 'evolutionAnnuelle']);
         Route::get('/top-produits', [RapportController::class, 'topProduits']);
+    });
+
+    // Inventaire tournant
+    Route::prefix('inventaire-tournant')->group(function () {
+        Route::get('/suggestions', [InventaireTournantController::class, 'suggestions']);
+        Route::get('/stats', [InventaireTournantController::class, 'stats']);
+        Route::get('/planning', [InventaireTournantController::class, 'planning']);
+        Route::get('/secteur/{secteur}', [InventaireTournantController::class, 'historiqueSecteur']);
     });
 
     // Utilisateurs admin CRUD

@@ -17,7 +17,8 @@ import {
   CalendarClock,
   ShieldCheck,
   Route,
-  FileBarChart
+  FileBarChart,
+  RotateCcw
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +36,7 @@ const navItems = [
   { path: '/planification', label: 'Planification', icon: CalendarClock },
   { path: '/approbations', label: 'Approbations', icon: ShieldCheck },
   { path: '/rapports', label: 'Rapports', icon: FileBarChart },
+  { path: '/inventaire-tournant', label: 'Inv. Tournant', icon: RotateCcw },
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },
   { path: '/employes', label: 'Employés', icon: Users },

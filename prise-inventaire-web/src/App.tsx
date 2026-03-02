@@ -15,6 +15,7 @@ import PlanificationPage from '@/pages/PlanificationPage';
 import ApprobationsPage from '@/pages/ApprobationsPage';
 import TracabilitePage from '@/pages/TracabilitePage';
 import RapportsPage from '@/pages/RapportsPage';
+import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -65,6 +66,7 @@ function AppRoutes() {
         <Route path="approbations" element={<ApprobationsPage />} />
         <Route path="tracabilite" element={<TracabilitePage />} />
         <Route path="rapports" element={<RapportsPage />} />
+        <Route path="inventaire-tournant" element={<InventaireTournantPage />} />
       </Route>
       
       {/* Routes Super Admin */}
