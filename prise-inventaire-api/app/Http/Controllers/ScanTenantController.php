@@ -33,7 +33,7 @@ class ScanTenantController extends Controller
             'numero' => 'required|string|max:50',
             'quantite' => 'required|numeric|min:0',
             'employe' => 'required|string|max:50',
-            'secteur' => 'required|string|max:10',
+            'secteur' => 'required|string|max:100',
             'type' => 'nullable|string|max:50',
             'unite_mesure' => 'sometimes|string|max:20',
             'scanneur' => 'nullable|string|max:50',
