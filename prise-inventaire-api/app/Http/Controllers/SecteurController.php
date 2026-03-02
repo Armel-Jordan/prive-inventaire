@@ -88,4 +88,71 @@ class SecteurController extends Controller
             'message' => 'Secteur désactivé avec succès',
         ]);
     }
+
+    /**
+     * Valider un QR code secteur
+     */
+    public function validateQrCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'qr_code' => 'required|string',
+        ]);
+
+        $secteur = Secteur::where('qr_code', $request->qr_code)
+            ->where('actif', true)
+            ->first();
+
+        if (!$secteur) {
+            return response()->json([
+                'valide' => false,
+                'message' => 'QR code secteur non reconnu',
+            ], 404);
+        }
+
+        return response()->json([
+            'valide' => true,
+            'secteur' => $secteur,
+        ]);
+    }
+
+    /**
+     * Générer un QR code pour un secteur
+     */
+    public function generateQrCode($id): JsonResponse
+    {
+        $secteur = Secteur::findOrFail($id);
+
+        // Générer un code unique basé sur le code secteur
+        $qrCode = 'SECT-' . strtoupper($secteur->code) . '-' . substr(md5($secteur->id . time()), 0, 8);
+
+        $secteur->qr_code = $qrCode;
+        $secteur->save();
+
+        return response()->json([
+            'success' => true,
+            'qr_code' => $qrCode,
+            'secteur' => $secteur,
+        ]);
+    }
+
+    /**
+     * Mettre à jour le QR code d'un secteur
+     */
+    public function updateQrCode(Request $request, $id): JsonResponse
+    {
+        $secteur = Secteur::findOrFail($id);
+
+        $request->validate([
+            'qr_code' => 'required|string|max:100|unique:secteurs,qr_code,' . $id,
+        ]);
+
+        $secteur->qr_code = $request->qr_code;
+        $secteur->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'QR code mis à jour',
+            'secteur' => $secteur,
+        ]);
+    }
 }

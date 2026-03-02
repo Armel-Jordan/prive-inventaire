@@ -80,6 +80,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/secteurs/{id}', [SecteurController::class, 'show']);
     Route::put('/secteurs/{id}', [SecteurController::class, 'update']);
     Route::delete('/secteurs/{id}', [SecteurController::class, 'destroy']);
+    Route::post('/secteurs/validate-qr', [SecteurController::class, 'validateQrCode']);
+    Route::post('/secteurs/{id}/generate-qr', [SecteurController::class, 'generateQrCode']);
+    Route::put('/secteurs/{id}/qr-code', [SecteurController::class, 'updateQrCode']);
 
     // Mouvements d'inventaire (ancien système)
     Route::get('/mouvements', [MouvementInventaireController::class, 'index']);
