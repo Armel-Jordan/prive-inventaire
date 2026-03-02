@@ -1,9 +1,11 @@
 package com.telipso.fripandroid
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,7 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -24,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,12 +43,43 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.telipso.fripandroid.api.InventaireApiService
 import com.telipso.fripandroid.ui.theme.TelipsoBonTravailTheme
 import com.telipso.fripandroid.ui.theme.seed
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class SecteurViewModel(application: Application) : AndroidViewModel(application) {
+    var secteurs by mutableStateOf<List<InventaireApiService.Secteur>>(emptyList())
+    var selectedSecteur by mutableStateOf<InventaireApiService.Secteur?>(null)
+    var isLoading by mutableStateOf(false)
+    var errorMessage by mutableStateOf<String?>(null)
+
+    fun chargerSecteurs() {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    InventaireApiService.getSecteurs()
+                }
+                secteurs = result.sortedBy { it.nom }
+            } catch (e: Exception) {
+                errorMessage = "Erreur de connexion: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+}
 
 class SecteurActivity : AppCompatActivity() {
     private var employeNumero: String = ""
     private var employeNom: String = ""
+    private val viewModel by viewModels<SecteurViewModel>()
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleManager.applyLocale(newBase))
@@ -59,7 +97,7 @@ class SecteurActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SecteurScreen(employeNumero, employeNom)
+                    SecteurScreen(employeNumero, employeNom, viewModel)
                 }
             }
         }
@@ -68,13 +106,13 @@ class SecteurActivity : AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SecteurScreen(employeNumero: String, employeNom: String) {
+fun SecteurScreen(employeNumero: String, employeNom: String, viewModel: SecteurViewModel) {
     val ctx = LocalContext.current
-    var secteur by remember { mutableStateOf("") }
-    var erreur by remember { mutableStateOf<String?>(null) }
+    var expanded by remember { mutableStateOf(false) }
 
-    // Regex pour valider le format : une lettre suivie de 1 à 2 chiffres
-    val secteurRegex = Regex("^[A-Za-z]\\d{1,2}$")
+    LaunchedEffect(Unit) {
+        viewModel.chargerSecteurs()
+    }
 
     Scaffold(
         topBar = {
@@ -121,45 +159,67 @@ fun SecteurScreen(employeNumero: String, employeNom: String) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = secteur,
-                onValueChange = { newValue ->
-                    // Limiter à 3 caractères max (1 lettre + 2 chiffres)
-                    if (newValue.length <= 3) {
-                        secteur = newValue.uppercase()
-                        erreur = null
-                    }
-                },
-                placeholder = { Text("Ex: C12") },
-                singleLine = true,
-                isError = erreur != null,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (erreur != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+            if (viewModel.isLoading) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Chargement des secteurs...")
+            } else if (viewModel.errorMessage != null) {
                 Text(
-                    text = erreur ?: "",
+                    text = viewModel.errorMessage ?: "",
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp
+                    textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.chargerSecteurs() }) {
+                    Text("Réessayer")
+                }
+            } else {
+                // Dropdown des secteurs
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = viewModel.selectedSecteur?.nom ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Sélectionner un secteur") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        viewModel.secteurs.forEach { secteur ->
+                            DropdownMenuItem(
+                                text = { Text(secteur.nom) },
+                                onClick = {
+                                    viewModel.selectedSecteur = secteur
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(48.dp))
 
             Button(
                 onClick = {
-                    if (secteurRegex.matches(secteur)) {
+                    viewModel.selectedSecteur?.let { secteur ->
                         val intent = Intent(ctx, InventaireScanActivity::class.java)
                         intent.putExtra("employe_numero", employeNumero)
                         intent.putExtra("employe_nom", employeNom)
-                        intent.putExtra("secteur", secteur)
+                        intent.putExtra("secteur", secteur.nom)
                         ctx.startActivity(intent)
-                    } else {
-                        erreur = "Format invalide. Saisir une lettre suivie de 1 à 2 chiffres (ex: C12)"
                     }
                 },
-                enabled = secteur.isNotBlank(),
+                enabled = viewModel.selectedSecteur != null,
                 colors = ButtonDefaults.buttonColors(containerColor = seed),
                 modifier = Modifier
                     .fillMaxWidth()
