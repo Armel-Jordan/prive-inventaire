@@ -15,6 +15,7 @@ use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\AlerteStockController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\TransfertPlanifieController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -109,6 +110,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [AuditLogController::class, 'index']);
         Route::get('/stats', [AuditLogController::class, 'stats']);
         Route::get('/{modelType}/{modelId}', [AuditLogController::class, 'history']);
+    });
+
+    // Transferts planifiés
+    Route::prefix('transferts-planifies')->group(function () {
+        Route::get('/', [TransfertPlanifieController::class, 'index']);
+        Route::get('/stats', [TransfertPlanifieController::class, 'stats']);
+        Route::get('/upcoming', [TransfertPlanifieController::class, 'upcoming']);
+        Route::post('/', [TransfertPlanifieController::class, 'store']);
+        Route::get('/{id}', [TransfertPlanifieController::class, 'show']);
+        Route::put('/{id}', [TransfertPlanifieController::class, 'update']);
+        Route::post('/{id}/execute', [TransfertPlanifieController::class, 'execute']);
+        Route::post('/{id}/cancel', [TransfertPlanifieController::class, 'cancel']);
+        Route::delete('/{id}', [TransfertPlanifieController::class, 'destroy']);
     });
 
     // Utilisateurs admin CRUD

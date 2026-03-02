@@ -13,7 +13,8 @@ import {
   BarChart3,
   Bell,
   GitCompare,
-  History
+  History,
+  CalendarClock
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/alertes', label: 'Alertes Stock', icon: Bell },
   { path: '/audit', label: 'Historique', icon: History },
   { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
+  { path: '/planification', label: 'Planification', icon: CalendarClock },
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },
   { path: '/employes', label: 'Employés', icon: Users },
