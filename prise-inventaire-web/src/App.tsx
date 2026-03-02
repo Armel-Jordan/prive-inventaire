@@ -12,6 +12,7 @@ import AlertesPage from '@/pages/AlertesPage';
 import ComparaisonPage from '@/pages/ComparaisonPage';
 import AuditPage from '@/pages/AuditPage';
 import PlanificationPage from '@/pages/PlanificationPage';
+import ApprobationsPage from '@/pages/ApprobationsPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -59,6 +60,7 @@ function AppRoutes() {
         <Route path="comparaison" element={<ComparaisonPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="planification" element={<PlanificationPage />} />
+        <Route path="approbations" element={<ApprobationsPage />} />
       </Route>
       
       {/* Routes Super Admin */}

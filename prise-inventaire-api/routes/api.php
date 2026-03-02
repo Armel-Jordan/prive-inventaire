@@ -16,6 +16,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\AlerteStockController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TransfertPlanifieController;
+use App\Http\Controllers\ApprobationController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -123,6 +124,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{id}/execute', [TransfertPlanifieController::class, 'execute']);
         Route::post('/{id}/cancel', [TransfertPlanifieController::class, 'cancel']);
         Route::delete('/{id}', [TransfertPlanifieController::class, 'destroy']);
+    });
+
+    // Approbations (workflow pour gros mouvements)
+    Route::prefix('approbations')->group(function () {
+        Route::get('/', [ApprobationController::class, 'index']);
+        Route::get('/stats', [ApprobationController::class, 'stats']);
+        Route::get('/settings', [ApprobationController::class, 'getSettings']);
+        Route::put('/settings', [ApprobationController::class, 'updateSettings']);
+        Route::post('/', [ApprobationController::class, 'store']);
+        Route::post('/{id}/approve', [ApprobationController::class, 'approve']);
+        Route::post('/{id}/reject', [ApprobationController::class, 'reject']);
     });
 
     // Utilisateurs admin CRUD

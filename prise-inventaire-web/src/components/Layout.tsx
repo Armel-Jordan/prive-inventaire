@@ -14,7 +14,8 @@ import {
   Bell,
   GitCompare,
   History,
-  CalendarClock
+  CalendarClock,
+  ShieldCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/audit', label: 'Historique', icon: History },
   { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
   { path: '/planification', label: 'Planification', icon: CalendarClock },
+  { path: '/approbations', label: 'Approbations', icon: ShieldCheck },
   { path: '/produits', label: 'Produits', icon: Package },
   { path: '/secteurs', label: 'Secteurs', icon: MapPin },
   { path: '/employes', label: 'Employés', icon: Users },
