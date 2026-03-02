@@ -89,12 +89,18 @@ Tenant
 - Refresh token automatique
 
 ### Autorisation (Rôles)
-| Rôle | Permissions |
-|------|-------------|
-| **Admin** | Accès complet, gestion utilisateurs |
-| **Manager** | Lecture/écriture, approbations |
-| **User** | Opérations de base (scans, mouvements) |
-| **Readonly** | Consultation uniquement |
+| Rôle | Modules visibles | Permissions |
+|------|------------------|-------------|
+| **Admin** | Tous (16 modules) | Voir, Créer, Modifier, Supprimer, Gérer rôles |
+| **Manager** | 15 modules (pas Rôles) | Voir, Créer, Modifier (pas Supprimer) |
+| **User** | 6 modules (Dashboard, Inventaires, Stats, Relocalisation, Produits, Secteurs) | Voir, Créer limité |
+| **Readonly** | 4 modules (Dashboard, Inventaires, Stats, Rapports) | Voir uniquement |
+
+### Système de permissions avancé
+- **Rôles personnalisables** : L'admin peut créer des rôles avec des permissions spécifiques
+- **Permissions par module** : Voir, Créer, Modifier, Supprimer pour chaque module
+- **Filtrage automatique** : Le menu s'adapte aux permissions de l'utilisateur
+- **Page de gestion** : Interface dédiée pour créer/modifier les rôles
 
 ### Protection des données
 - Isolation des données par tenant
@@ -157,4 +163,4 @@ Pour toute question technique ou demande de support :
 
 ---
 
-*Document généré le 1er mars 2026*
+*Document mis à jour le 2 mars 2026*

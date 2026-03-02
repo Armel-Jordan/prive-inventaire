@@ -14,10 +14,12 @@
 10. [Comparaison de périodes](#10-comparaison-de-périodes)
 11. [Audit et historique](#11-audit-et-historique)
 12. [Gestion des utilisateurs et rôles](#12-gestion-des-utilisateurs-et-rôles)
-13. [Support QR Code](#13-support-qr-code)
-14. [Dashboard temps réel](#14-dashboard-temps-réel)
-15. [Multi-langue](#15-multi-langue)
-16. [API publique](#16-api-publique)
+13. [Profil employé](#13-profil-employé)
+14. [Support QR Code](#14-support-qr-code)
+15. [Dashboard temps réel](#15-dashboard-temps-réel)
+16. [Multi-langue](#16-multi-langue)
+17. [Thème sombre/clair](#17-thème-sombreclair)
+18. [API publique](#18-api-publique)
 
 ---
 
@@ -311,31 +313,71 @@ Journal complet de toutes les actions effectuées dans le système.
 ## 12. Gestion des utilisateurs et rôles
 
 ### Description
-Système de permissions basé sur les rôles pour contrôler l'accès aux fonctionnalités.
+Système de permissions avancé basé sur les rôles pour contrôler l'accès aux fonctionnalités par module.
 
-### Rôles disponibles
+### Rôles par défaut
 
-| Rôle | Description | Permissions principales |
-|------|-------------|------------------------|
-| **Admin** | Administrateur | Accès complet, gestion utilisateurs |
-| **Manager** | Responsable | Lecture/écriture, approbations, rapports |
-| **User** | Utilisateur | Scans, mouvements basiques |
-| **Readonly** | Consultation | Lecture seule, rapports |
+| Rôle | Modules visibles | Permissions |
+|------|------------------|-------------|
+| **Admin** | Tous (16 modules) | Voir, Créer, Modifier, Supprimer, Gérer rôles |
+| **Manager** | 15 modules (pas Rôles) | Voir, Créer, Modifier (pas Supprimer) |
+| **User** | 6 modules | Voir, Créer limité |
+| **Readonly** | 4 modules | Voir uniquement |
 
-### Permissions détaillées
-- `scans.read/write/delete`
-- `produits.read/write/delete`
-- `secteurs.read/write/delete`
-- `employes.read/write/delete`
-- `relocalisation.read/write`
-- `approbations.read/approve`
-- `rapports.read`
-- `users.read/write`
-- `settings.write`
+### Système de permissions par module
+
+Chaque rôle peut avoir des permissions spécifiques pour chaque module :
+
+| Permission | Description |
+|------------|-------------|
+| **Voir** | Accès en lecture au module |
+| **Créer** | Possibilité d'ajouter des éléments |
+| **Modifier** | Possibilité de modifier des éléments |
+| **Supprimer** | Possibilité de supprimer des éléments |
+
+### Modules disponibles
+- Dashboard, Inventaires, Statistiques, Comparaison
+- Alertes, Historique, Traçabilité, Relocalisation
+- Planification, Approbations, Rapports, Inventaire Tournant
+- Produits, Secteurs, Employés, Rôles
+
+### Fonctionnalités de gestion
+- **Création de rôles personnalisés** : L'admin peut créer de nouveaux rôles
+- **Édition des permissions** : Matrice de permissions par module
+- **Filtrage automatique du menu** : Les utilisateurs ne voient que les modules autorisés
+- **Protection des rôles système** : Les rôles par défaut ne peuvent pas être supprimés
 
 ---
 
-## 13. Support QR Code
+## 13. Profil employé
+
+### Description
+Permet aux employés de compléter leur profil avec des informations personnelles et professionnelles.
+
+### Fonctionnalités
+- **Photo de profil** : Upload d'image (JPG, PNG, GIF - max 2MB)
+- **Informations personnelles** : Sexe, date de naissance, téléphone
+- **Adresse complète** : Adresse, ville, code postal, pays
+- **Informations professionnelles** : Poste, département
+
+### Workflow
+1. L'admin/manager crée l'employé avec les infos de base (numéro, nom, prénom)
+2. L'employé se connecte et accède à son profil via l'icône utilisateur
+3. L'employé complète ses informations personnelles
+4. Les modifications sont sauvegardées en base de données
+
+### Champs du profil
+
+| Catégorie | Champs |
+|-----------|--------|
+| **Base (lecture seule)** | Numéro employé, Nom, Prénom, Email |
+| **Personnel** | Sexe, Date de naissance, Téléphone |
+| **Adresse** | Adresse, Ville, Code postal, Pays |
+| **Professionnel** | Poste, Département |
+
+---
+
+## 14. Support QR Code
 
 ### Description
 Utilisation de QR codes pour faciliter l'identification des secteurs.
@@ -351,7 +393,7 @@ Le QR code contient un identifiant unique lié au secteur, permettant une identi
 
 ---
 
-## 14. Dashboard temps réel
+## 15. Dashboard temps réel
 
 ### Description
 Tableau de bord avec mise à jour automatique des statistiques.
@@ -370,7 +412,7 @@ Tableau de bord avec mise à jour automatique des statistiques.
 
 ---
 
-## 15. Multi-langue
+## 16. Multi-langue
 
 ### Description
 Support de plusieurs langues pour l'interface utilisateur.
@@ -381,13 +423,31 @@ Support de plusieurs langues pour l'interface utilisateur.
 
 ### Fonctionnalités
 - **Détection automatique** : Basée sur la langue du navigateur
-- **Changement manuel** : Sélecteur de langue
-- **Persistance** : Mémorisation du choix utilisateur
+- **Changement manuel** : Sélecteur de langue dans la barre supérieure
+- **Persistance** : Mémorisation du choix utilisateur en localStorage
 - **Couverture complète** : Tous les textes de l'interface
 
 ---
 
-## 16. API publique
+## 17. Thème sombre/clair
+
+### Description
+Support du mode sombre et clair pour le confort visuel des utilisateurs.
+
+### Fonctionnalités
+- **Toggle rapide** : Bouton dans la barre supérieure
+- **Détection système** : Utilise la préférence du système par défaut
+- **Persistance** : Mémorisation du choix utilisateur
+- **Application globale** : Tous les composants s'adaptent au thème
+
+### Implémentation
+- Utilisation de TailwindCSS avec la classe `dark`
+- Stockage en localStorage (`prise_theme`)
+- Context React pour la gestion d'état
+
+---
+
+## 18. API publique
 
 ### Description
 API REST documentée pour permettre les intégrations avec d'autres systèmes.
@@ -432,13 +492,15 @@ API REST documentée pour permettre les intégrations avec d'autres systèmes.
 | **Planification** | Transferts programmés, suivi statut |
 | **Approbation** | Workflow validation, seuils |
 | **Traçabilité** | Historique produit, timeline |
-| **Alertes** | Seuils stock, notifications |
+| **Alertes** | Seuils stock configurables, notifications |
 | **Rapports** | Secteur, employé, évolution, top produits |
 | **Inv. tournant** | Suggestions, planning, couverture |
 | **Audit** | Journal actions, historique |
-| **Utilisateurs** | Rôles, permissions |
+| **Utilisateurs** | Rôles personnalisables, permissions par module |
+| **Profil** | Photo, infos personnelles, adresse |
+| **Thème** | Mode sombre/clair, persistance |
 | **API** | REST, Swagger, intégrations |
 
 ---
 
-*Document mis à jour le 1er mars 2026*
+*Document mis à jour le 2 mars 2026*

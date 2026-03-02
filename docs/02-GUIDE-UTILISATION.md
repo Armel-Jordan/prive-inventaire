@@ -4,11 +4,13 @@
 
 1. [Connexion](#connexion)
 2. [Tableau de bord](#tableau-de-bord)
-3. [Gestion des inventaires](#gestion-des-inventaires)
-4. [Relocalisation](#relocalisation)
-5. [Alertes et notifications](#alertes-et-notifications)
-6. [Rapports](#rapports)
-7. [Administration](#administration)
+3. [Mon profil](#mon-profil)
+4. [Gestion des inventaires](#gestion-des-inventaires)
+5. [Relocalisation](#relocalisation)
+6. [Alertes et notifications](#alertes-et-notifications)
+7. [Rapports](#rapports)
+8. [Gestion des rôles](#gestion-des-rôles)
+9. [Administration](#administration)
 
 ---
 
@@ -28,6 +30,39 @@ Lors de votre première connexion, un administrateur doit vous créer un compte.
 ### Déconnexion
 
 Cliquez sur **Déconnexion** en bas du menu latéral pour vous déconnecter en toute sécurité.
+
+---
+
+## Mon profil
+
+### Accéder à mon profil
+
+1. Cliquez sur l'icône **utilisateur** dans la barre supérieure (à côté de la cloche)
+2. Vous accédez à la page de votre profil
+
+### Informations modifiables
+
+Vous pouvez compléter votre profil avec :
+
+| Section | Champs |
+|---------|--------|
+| **Photo** | Photo de profil (JPG, PNG, GIF - max 2MB) |
+| **Informations personnelles** | Sexe, Date de naissance, Téléphone |
+| **Adresse** | Adresse, Ville, Code postal, Pays |
+| **Informations professionnelles** | Poste, Département |
+
+### Modifier ma photo
+
+1. Cliquez sur l'icône **caméra** sur votre photo de profil
+2. Sélectionnez une image depuis votre ordinateur
+3. Cliquez sur **Enregistrer la photo**
+
+### Sauvegarder les modifications
+
+1. Remplissez les champs souhaités
+2. Cliquez sur **Enregistrer les modifications** en bas de page
+
+> **Note** : Les informations de base (numéro employé, nom, prénom, email) sont gérées par l'administrateur et ne peuvent pas être modifiées.
 
 ---
 
@@ -222,6 +257,49 @@ Identifiez les produits les plus actifs :
 
 ---
 
+## Gestion des rôles
+
+*(Réservé aux administrateurs)*
+
+### Accéder à la gestion des rôles
+
+1. Cliquez sur **Rôles** dans le menu latéral
+2. Vous accédez à la liste des rôles existants
+
+### Rôles par défaut
+
+| Rôle | Description |
+|------|-------------|
+| **Admin** | Accès complet à tous les modules |
+| **Manager** | Accès étendu sans suppression ni gestion des rôles |
+| **User** | Accès limité aux opérations de base |
+| **Readonly** | Consultation uniquement |
+
+### Créer un nouveau rôle
+
+1. Cliquez sur **Nouveau rôle**
+2. Remplissez le **nom** et la **description**
+3. Cochez les permissions pour chaque module :
+   - **Voir** : Accès en lecture
+   - **Créer** : Possibilité d'ajouter des éléments
+   - **Modifier** : Possibilité de modifier des éléments
+   - **Supprimer** : Possibilité de supprimer des éléments
+4. Cliquez sur **Créer le rôle**
+
+### Modifier un rôle
+
+1. Cliquez sur l'icône **Modifier** (crayon) à côté du rôle
+2. Modifiez les permissions souhaitées
+3. Cliquez sur **Enregistrer**
+
+> **Note** : Les rôles système (admin, manager, user, readonly) ne peuvent pas être supprimés.
+
+### Assigner un rôle à un utilisateur
+
+Pour assigner un rôle à un utilisateur, modifiez le champ `role_custom_id` de l'utilisateur dans la base de données ou contactez votre administrateur système.
+
+---
+
 ## Administration
 
 ### Gestion des utilisateurs
@@ -286,4 +364,4 @@ Pour toute question ou problème :
 
 ---
 
-*Document mis à jour le 1er mars 2026*
+*Document mis à jour le 2 mars 2026*

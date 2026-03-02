@@ -429,25 +429,78 @@ Le module Employés centralise la gestion des **membres de votre équipe** opér
 
 ---
 
+# 👤 Profil Employé
+
+## Complétez vos informations
+
+Chaque employé peut personnaliser son profil avec ses informations personnelles.
+
+### Informations modifiables
+
+| Section | Champs |
+|---------|--------|
+| **Photo** | Photo de profil (JPG, PNG, GIF) |
+| **Personnel** | Sexe, Date de naissance, Téléphone |
+| **Adresse** | Adresse, Ville, Code postal, Pays |
+| **Professionnel** | Poste, Département |
+
+### Workflow
+
+1. L'admin crée l'employé avec les infos de base
+2. L'employé se connecte et complète son profil
+3. Les informations sont sauvegardées automatiquement
+
+### Bénéfices
+
+- 👤 Profils personnalisés
+- 📷 Photos pour identification
+- 📊 Données RH centralisées
+
+---
+
 # 🔐 Sécurité et Accès
 
 ## Protection de vos données
 
-### Système de rôles
+### Système de rôles avancé
 
-| Rôle | Accès |
-|------|-------|
-| **Admin** | Accès complet, gestion utilisateurs |
-| **Manager** | Lecture/écriture, approbations |
-| **Utilisateur** | Opérations de base |
-| **Lecture seule** | Consultation uniquement |
+| Rôle | Modules visibles | Permissions |
+|------|------------------|-------------|
+| **Admin** | Tous (16 modules) | Voir, Créer, Modifier, Supprimer |
+| **Manager** | 15 modules | Voir, Créer, Modifier |
+| **Utilisateur** | 6 modules | Voir, Créer limité |
+| **Lecture seule** | 4 modules | Voir uniquement |
+
+### Rôles personnalisables
+
+L'administrateur peut créer des **rôles sur mesure** avec des permissions spécifiques par module :
+
+- ✅ **Voir** : Accès en lecture
+- ✅ **Créer** : Ajout d'éléments
+- ✅ **Modifier** : Modification d'éléments
+- ✅ **Supprimer** : Suppression d'éléments
 
 ### Sécurité
 
-- 🔒 **Authentification** : Connexion sécurisée
+- 🔒 **Authentification** : Connexion sécurisée JWT
 - 🔐 **Chiffrement** : Données protégées
 - 📋 **Audit** : Toutes les actions tracées
 - 🏢 **Multi-tenant** : Isolation des données par entreprise
+- 🎭 **Filtrage automatique** : Menu adapté aux permissions
+
+---
+
+# 🌙 Thème sombre/clair
+
+## Confort visuel
+
+Basculez entre le mode clair et sombre selon vos préférences.
+
+### Fonctionnalités
+
+- 🌙 **Toggle rapide** : Un clic dans la barre supérieure
+- 💾 **Persistance** : Votre choix est mémorisé
+- 🖥️ **Détection système** : Utilise la préférence de votre OS
 
 ---
 
