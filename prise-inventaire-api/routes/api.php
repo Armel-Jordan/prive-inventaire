@@ -21,6 +21,7 @@ use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\InventaireTournantController;
+use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -182,4 +183,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/users', [AdminUserController::class, 'store']);
     Route::put('/users/{id}', [AdminUserController::class, 'update']);
     Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+
+    // Rôles et permissions
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [RoleController::class, 'roles']);
+        Route::get('/permissions', [RoleController::class, 'allPermissions']);
+        Route::get('/my-permissions', [RoleController::class, 'myPermissions']);
+        Route::get('/check', [RoleController::class, 'check']);
+        Route::get('/{role}/permissions', [RoleController::class, 'permissions']);
+    });
 });
