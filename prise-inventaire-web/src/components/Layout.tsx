@@ -23,30 +23,34 @@ import {
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationBell from './NotificationBell';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '@/i18n/useLanguage';
 
-const navItems = [
-  { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-  { path: '/scans', label: 'Inventaires', icon: ClipboardList },
-  { path: '/statistiques', label: 'Statistiques', icon: BarChart3 },
-  { path: '/comparaison', label: 'Comparaison', icon: GitCompare },
-  { path: '/alertes', label: 'Alertes Stock', icon: Bell },
-  { path: '/audit', label: 'Historique', icon: History },
-  { path: '/tracabilite', label: 'Traçabilité', icon: Route },
-  { path: '/relocalisation', label: 'Relocalisation', icon: ArrowRightLeft },
-  { path: '/planification', label: 'Planification', icon: CalendarClock },
-  { path: '/approbations', label: 'Approbations', icon: ShieldCheck },
-  { path: '/rapports', label: 'Rapports', icon: FileBarChart },
-  { path: '/inventaire-tournant', label: 'Inv. Tournant', icon: RotateCcw },
-  { path: '/produits', label: 'Produits', icon: Package },
-  { path: '/secteurs', label: 'Secteurs', icon: MapPin },
-  { path: '/employes', label: 'Employés', icon: Users },
+const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
+  { path: '/', label: t.nav.dashboard, icon: LayoutDashboard },
+  { path: '/scans', label: t.nav.scans, icon: ClipboardList },
+  { path: '/statistiques', label: t.nav.statistics, icon: BarChart3 },
+  { path: '/comparaison', label: t.nav.comparison, icon: GitCompare },
+  { path: '/alertes', label: t.nav.alerts, icon: Bell },
+  { path: '/audit', label: t.nav.history, icon: History },
+  { path: '/tracabilite', label: t.nav.traceability, icon: Route },
+  { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft },
+  { path: '/planification', label: t.nav.planning, icon: CalendarClock },
+  { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck },
+  { path: '/rapports', label: t.nav.reports, icon: FileBarChart },
+  { path: '/inventaire-tournant', label: t.nav.rotatingInventory, icon: RotateCcw },
+  { path: '/produits', label: t.nav.products, icon: Package },
+  { path: '/secteurs', label: t.nav.sectors, icon: MapPin },
+  { path: '/employes', label: t.nav.employees, icon: Users },
 ];
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, tenant, logout } = useAuth();
+  const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navItems = getNavItems(t);
 
   const handleLogout = () => {
     logout();
@@ -117,7 +121,7 @@ export default function Layout() {
             className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             <LogOut size={18} />
-            Déconnexion
+            {t.nav.logout}
           </button>
         </div>
       </aside>
@@ -133,7 +137,8 @@ export default function Layout() {
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen">
         {/* Top bar with notifications */}
-        <div className="sticky top-0 z-20 bg-white border-b px-6 py-3 flex items-center justify-end lg:justify-end">
+        <div className="sticky top-0 z-20 bg-white border-b px-6 py-3 flex items-center justify-end gap-4">
+          <LanguageSelector />
           <NotificationBell />
         </div>
         <div className="p-6 lg:p-8">
