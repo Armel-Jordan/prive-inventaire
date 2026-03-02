@@ -1,22 +1,34 @@
 package com.telipso.fripandroid
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -110,6 +122,20 @@ fun SecteurScreen(employeNumero: String, employeNom: String, viewModel: SecteurV
     val ctx = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
 
+    // Scanner QR code
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { scannedCode ->
+            // Chercher le secteur correspondant au code scanné
+            val secteur = viewModel.secteurs.find { 
+                it.nom.equals(scannedCode, ignoreCase = true) || 
+                it.code?.equals(scannedCode, ignoreCase = true) == true 
+            }
+            if (secteur != null) {
+                viewModel.selectedSecteur = secteur
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.chargerSecteurs()
     }
@@ -174,35 +200,60 @@ fun SecteurScreen(employeNumero: String, employeNom: String, viewModel: SecteurV
                     Text("Réessayer")
                 }
             } else {
-                // Dropdown des secteurs
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
-                    modifier = Modifier.fillMaxWidth()
+                // Dropdown des secteurs avec bouton scan QR
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = viewModel.selectedSecteur?.nom ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Sélectionner un secteur") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+                    ExposedDropdownMenuBox(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        viewModel.secteurs.forEach { secteur ->
-                            DropdownMenuItem(
-                                text = { Text(secteur.nom) },
-                                onClick = {
-                                    viewModel.selectedSecteur = secteur
-                                    expanded = false
-                                }
-                            )
+                        OutlinedTextField(
+                            value = viewModel.selectedSecteur?.nom ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Sélectionner un secteur") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            viewModel.secteurs.forEach { secteur ->
+                                DropdownMenuItem(
+                                    text = { Text(secteur.nom) },
+                                    onClick = {
+                                        viewModel.selectedSecteur = secteur
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Bouton Scanner QR
+                    IconButton(
+                        onClick = {
+                            val options = ScanOptions()
+                            options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            options.setPrompt("Scanner le QR code du secteur")
+                            options.setBeepEnabled(true)
+                            options.setOrientationLocked(false)
+                            scanLauncher.launch(options)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.QrCodeScanner,
+                            contentDescription = "Scanner QR",
+                            tint = seed
+                        )
                     }
                 }
             }
