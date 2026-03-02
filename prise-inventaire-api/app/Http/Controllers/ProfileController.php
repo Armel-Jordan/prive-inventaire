@@ -16,10 +16,25 @@ class ProfileController extends Controller
         // Trouver l'employé associé à l'utilisateur
         $employe = EmployeTenant::where('email', $user->email)->first();
 
+        // Si pas d'employé, en créer un automatiquement
         if (!$employe) {
-            return response()->json([
-                'message' => 'Profil employé non trouvé',
-            ], 404);
+            // Générer un numéro unique
+            $lastEmploye = EmployeTenant::orderByDesc('id')->first();
+            $nextNum = $lastEmploye ? ((int) filter_var($lastEmploye->numero, FILTER_SANITIZE_NUMBER_INT) + 1) : 1;
+            $numero = 'EMP' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+
+            // Extraire nom/prénom de l'utilisateur
+            $nameParts = explode(' ', $user->nom ?? $user->name ?? 'Utilisateur');
+            $prenom = $nameParts[0] ?? '';
+            $nom = isset($nameParts[1]) ? implode(' ', array_slice($nameParts, 1)) : $prenom;
+
+            $employe = EmployeTenant::create([
+                'numero' => $numero,
+                'nom' => $nom ?: 'Utilisateur',
+                'prenom' => $prenom,
+                'email' => $user->email,
+                'actif' => true,
+            ]);
         }
 
         return response()->json([
