@@ -1,0 +1,749 @@
+openapi: 3.0.3
+info:
+  title: Prise Inventaire API
+  description: |
+    API REST pour le système de gestion d'inventaire multi-tenant Prise Inventaire.
+
+    ## Authentification
+    L'API utilise l'authentification Bearer Token. Obtenez un token via `/auth/login` et incluez-le dans le header `Authorization: Bearer {token}`.
+
+    ## Multi-tenant
+    Incluez le header `X-Tenant-Slug` avec le slug du tenant pour accéder aux données spécifiques.
+
+    ## Codes de réponse
+    - `200` - Succès
+    - `201` - Créé avec succès
+    - `400` - Requête invalide
+    - `401` - Non authentifié
+    - `403` - Permission refusée
+    - `404` - Ressource non trouvée
+    - `422` - Erreur de validation
+    - `500` - Erreur serveur
+  version: 1.0.0
+  contact:
+    name: Support Prise Inventaire
+    email: support@prise-inventaire.com
+
+servers:
+  - url: https://api.prise-inventaire.com/api
+    description: Production
+  - url: http://localhost:8000/api
+    description: Développement local
+
+tags:
+  - name: Authentification
+    description: Endpoints d'authentification
+  - name: Scans
+    description: Gestion des scans d'inventaire
+  - name: Produits
+    description: Gestion des produits
+  - name: Secteurs
+    description: Gestion des secteurs/zones
+  - name: Employés
+    description: Gestion des employés
+  - name: Relocalisation
+    description: Mouvements de stock
+  - name: Alertes
+    description: Alertes de stock
+  - name: Rapports
+    description: Rapports et statistiques
+  - name: Notifications
+    description: Système de notifications
+  - name: Approbations
+    description: Workflow d'approbation
+
+paths:
+  /auth/login:
+    post:
+      tags: [Authentification]
+      summary: Connexion utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, tenant_slug]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@example.com
+                password:
+                  type: string
+                  example: password123
+                tenant_slug:
+                  type: string
+                  example: mon-entreprise
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tenant:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          description: Identifiants invalides
+
+  /scans:
+    get:
+      tags: [Scans]
+      summary: Liste des scans
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: secteur
+          in: query
+          schema:
+            type: string
+        - name: employe
+          in: query
+          schema:
+            type: string
+        - name: date_debut
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_fin
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des scans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scan'
+    post:
+      tags: [Scans]
+      summary: Créer un scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanInput'
+      responses:
+        '201':
+          description: Scan créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+
+  /scans/{id}:
+    get:
+      tags: [Scans]
+      summary: Détail d'un scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détail du scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+    put:
+      tags: [Scans]
+      summary: Modifier un scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanInput'
+      responses:
+        '200':
+          description: Scan modifié
+    delete:
+      tags: [Scans]
+      summary: Supprimer un scan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Scan supprimé
+
+  /produits:
+    get:
+      tags: [Produits]
+      summary: Liste des produits
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des produits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Produit'
+
+  /secteurs:
+    get:
+      tags: [Secteurs]
+      summary: Liste des secteurs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Liste des secteurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Secteur'
+    post:
+      tags: [Secteurs]
+      summary: Créer un secteur
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecteurInput'
+      responses:
+        '201':
+          description: Secteur créé
+
+  /employes:
+    get:
+      tags: [Employés]
+      summary: Liste des employés
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Liste des employés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employe'
+
+  /relocalisation:
+    get:
+      tags: [Relocalisation]
+      summary: Liste des mouvements
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [arrivage, sortie, transfert]
+        - name: date_debut
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_fin
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des mouvements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Mouvement'
+    post:
+      tags: [Relocalisation]
+      summary: Créer un mouvement
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MouvementInput'
+      responses:
+        '201':
+          description: Mouvement créé
+
+  /relocalisation/stats:
+    get:
+      tags: [Relocalisation]
+      summary: Statistiques des mouvements
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Statistiques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  today:
+                    type: integer
+                  by_type:
+                    type: object
+
+  /alertes:
+    get:
+      tags: [Alertes]
+      summary: Liste des alertes de stock
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Liste des alertes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alerte'
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Liste des notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Liste des notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Nombre de notifications non lues
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Compteur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /rapports/mouvements-secteur:
+    get:
+      tags: [Rapports]
+      summary: Rapport mensuel par secteur
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: mois
+          in: query
+          schema:
+            type: integer
+        - name: annee
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rapport
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mois:
+                    type: integer
+                  annee:
+                    type: integer
+                  rapport:
+                    type: array
+                    items:
+                      type: object
+                  totaux:
+                    type: object
+
+  /approbations:
+    get:
+      tags: [Approbations]
+      summary: Liste des approbations
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: statut
+          in: query
+          schema:
+            type: string
+            enum: [en_attente, approuve, rejete]
+      responses:
+        '200':
+          description: Liste des approbations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Approbation'
+
+  /approbations/{id}/approve:
+    post:
+      tags: [Approbations]
+      summary: Approuver une demande
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Approuvé
+
+  /approbations/{id}/reject:
+    post:
+      tags: [Approbations]
+      summary: Rejeter une demande
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motif:
+                  type: string
+      responses:
+        '200':
+          description: Rejeté
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantSlug:
+      name: X-Tenant-Slug
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Slug du tenant
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, user, readonly]
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        slug:
+          type: string
+
+    Scan:
+      type: object
+      properties:
+        id:
+          type: integer
+        numero:
+          type: string
+        nom:
+          type: string
+        quantite:
+          type: number
+        secteur:
+          type: string
+        employe:
+          type: string
+        date_saisie:
+          type: string
+          format: date-time
+
+    ScanInput:
+      type: object
+      required: [numero, quantite, secteur, employe]
+      properties:
+        numero:
+          type: string
+        nom:
+          type: string
+        quantite:
+          type: number
+        secteur:
+          type: string
+        employe:
+          type: string
+
+    Produit:
+      type: object
+      properties:
+        id:
+          type: integer
+        numero:
+          type: string
+        nom:
+          type: string
+        description:
+          type: string
+
+    Secteur:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        nom:
+          type: string
+        actif:
+          type: boolean
+        qr_code:
+          type: string
+
+    SecteurInput:
+      type: object
+      required: [code, nom]
+      properties:
+        code:
+          type: string
+        nom:
+          type: string
+        actif:
+          type: boolean
+          default: true
+
+    Employe:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        nom:
+          type: string
+        actif:
+          type: boolean
+
+    Mouvement:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [arrivage, sortie, transfert]
+        produit_numero:
+          type: string
+        produit_nom:
+          type: string
+        quantite:
+          type: number
+        secteur_source:
+          type: string
+        secteur_destination:
+          type: string
+        employe:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    MouvementInput:
+      type: object
+      required: [type, produit_numero, quantite, employe]
+      properties:
+        type:
+          type: string
+          enum: [arrivage, sortie, transfert]
+        produit_numero:
+          type: string
+        produit_nom:
+          type: string
+        quantite:
+          type: number
+        secteur_source:
+          type: string
+        secteur_destination:
+          type: string
+        employe:
+          type: string
+        notes:
+          type: string
+
+    Alerte:
+      type: object
+      properties:
+        id:
+          type: integer
+        produit_numero:
+          type: string
+        produit_nom:
+          type: string
+        seuil_min:
+          type: number
+        quantite_actuelle:
+          type: number
+        statut:
+          type: string
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        titre:
+          type: string
+        message:
+          type: string
+        lu:
+          type: boolean
+        lien:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Approbation:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        donnees:
+          type: object
+        statut:
+          type: string
+          enum: [en_attente, approuve, rejete]
+        demandeur:
+          type: string
+        approbateur:
+          type: string
+        created_at:
+          type: string
+          format: date-time
