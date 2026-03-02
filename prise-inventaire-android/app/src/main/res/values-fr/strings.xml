@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">Agrimetal</string>
+    <string name="app_name">Prise Inventaire</string>
 
     <!-- Configuration -->
     <string name="config">Configuration</string>
     <string name="config_server">Serveur</string>
-    <string name="config_version">Agrimetal - Inventaire - Version %1$s (Build %2$s)</string>
+    <string name="config_version">Prise Inventaire - Version %1$s (Build %2$s)</string>
 
     <!-- Langue -->
     <string name="language_selection">Langue</string>

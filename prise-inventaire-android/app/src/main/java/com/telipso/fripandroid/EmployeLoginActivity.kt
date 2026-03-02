@@ -41,11 +41,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -151,21 +149,22 @@ fun EmployeLoginScreen(viewModel: EmployeLoginViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.logo_agrimetal),
-            contentDescription = "Logo AgriMetal",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         Text(
-            text = "Inventaire",
-            fontSize = 28.sp,
+            text = "Prise Inventaire",
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
+            color = seed,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Gestion d'inventaire",
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            color = Color.Gray,
             modifier = Modifier.fillMaxWidth()
         )
 
