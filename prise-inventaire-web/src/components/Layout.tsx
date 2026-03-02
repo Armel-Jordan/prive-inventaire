@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const navItems = [
   { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -127,6 +128,10 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen">
+        {/* Top bar with notifications */}
+        <div className="sticky top-0 z-20 bg-white border-b px-6 py-3 flex items-center justify-end lg:justify-end">
+          <NotificationBell />
+        </div>
         <div className="p-6 lg:p-8">
           <Outlet />
         </div>

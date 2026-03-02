@@ -18,6 +18,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TransfertPlanifieController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\TracabiliteController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -146,6 +147,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/search', [TracabiliteController::class, 'search']);
         Route::get('/produit/{numero}', [TracabiliteController::class, 'produitHistory']);
         Route::get('/timeline/{numero}', [TracabiliteController::class, 'timeline']);
+    });
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+        Route::post('/cleanup', [NotificationController::class, 'cleanup']);
     });
 
     // Utilisateurs admin CRUD
