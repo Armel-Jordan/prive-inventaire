@@ -65,6 +65,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   function canView(module: string): boolean {
@@ -111,6 +112,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePermissions() {
   const context = useContext(PermissionsContext);
   if (!context) {
