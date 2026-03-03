@@ -81,15 +81,28 @@
 | **Configuration** | Single Instance |
 | **Statut** | ✅ Ready (Green) |
 
-### URL de l'API
+### URL de l'API (HTTPS via CloudFront)
+```
+https://dbc2l049bcvke.cloudfront.net
+```
+
+### URL de l'API (HTTP direct)
 ```
 http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
 ```
 
-### CNAME
+### CNAME Elastic Beanstalk
 ```
 prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
 ```
+
+### CloudFront Distribution
+| Paramètre | Valeur |
+|-----------|--------|
+| **Distribution ID** | `E2IDRGWHHBQA1Z` |
+| **Domain** | `dbc2l049bcvke.cloudfront.net` |
+| **Origin** | `prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
+| **Protocol** | HTTPS (CloudFront) → HTTP (Origin) |
 
 ### Structure des fichiers de configuration
 
