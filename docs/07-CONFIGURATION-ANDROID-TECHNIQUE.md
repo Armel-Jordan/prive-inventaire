@@ -160,7 +160,7 @@ keytool -list -v -keystore Tircis.key -storepass Tircis2024
 
 | Environnement | URL |
 |---------------|-----|
-| **Production** | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| **Production** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
 | **Local** | `http://10.0.2.2:8000/api` (émulateur) |
 | **Local** | `http://192.168.x.x:8000/api` (appareil physique) |
 
@@ -171,7 +171,7 @@ Fichier : `app/src/main/java/com/telipso/fripandroid/api/InventaireApiService.kt
 ```kotlin
 companion object {
     // URL de production
-    private const val BASE_URL = "http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api"
+    private const val BASE_URL = "http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api"
     
     // URL locale pour développement
     // private const val BASE_URL = "http://10.0.2.2:8000/api"
@@ -372,7 +372,7 @@ cd prise-inventaire-android
 
 ---
 
-## �🔐 Récapitulatif complet des accès
+## � Récapitulatif complet des accès
 
 ### Keystore (Signature APK)
 | Paramètre | Valeur |
@@ -388,8 +388,8 @@ cd prise-inventaire-android
 ### API Production
 | Paramètre | Valeur |
 |-----------|--------|
-| **URL API** | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
-| **URL Base** | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
+| **URL API** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| **URL Base** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
 | **Plateforme** | AWS Elastic Beanstalk |
 | **Région** | us-east-1 |
 

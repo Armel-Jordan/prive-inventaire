@@ -74,7 +74,7 @@
 | Paramètre | Valeur |
 |-----------|--------|
 | **Application** | `prise-api` |
-| **Environnement** | `prise-api-production` |
+| **Environnement** | `prise-api-prod` |
 | **Environment ID** | `e-jq8xu8pz3c` |
 | **Plateforme** | PHP 8.2 running on 64bit Amazon Linux 2023/4.10.0 |
 | **Type d'instance** | `t3.small` |
@@ -83,12 +83,12 @@
 
 ### URL de l'API
 ```
-http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
+http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
 ```
 
 ### CNAME
 ```
-prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
+prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
 ```
 
 ### Structure des fichiers de configuration
@@ -239,7 +239,7 @@ https://main.d3ph830gn7z155.amplifyapp.com
 |-----|--------|
 | `AMPLIFY_DIFF_DEPLOY` | `false` |
 | `AMPLIFY_MONOREPO_APP_ROOT` | `prise-inventaire-web` |
-| `VITE_API_URL` | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| `VITE_API_URL` | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
 
 ### Fichier `amplify.yml`
 ```yaml
@@ -297,7 +297,7 @@ mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p p
 APP_NAME="Prise Inventaire"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
+APP_URL=http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com
 LOG_CHANNEL=stderr
 
 # Base de données
@@ -315,7 +315,7 @@ eb setenv \
   APP_NAME="Prise Inventaire" \
   APP_ENV=production \
   APP_DEBUG=false \
-  APP_URL="http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com" \
+  APP_URL="http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com" \
   LOG_CHANNEL=stderr \
   DB_CONNECTION=mysql \
   DB_HOST=prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com \
@@ -343,7 +343,7 @@ eb setenv \
 
 | Service | URL |
 |---------|-----|
-| **API** | http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com |
+| **API** | http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com |
 | **Frontend** | https://main.d3ph830gn7z155.amplifyapp.com |
 | **Console EB** | https://console.aws.amazon.com/elasticbeanstalk |
 | **Console Amplify** | https://console.aws.amazon.com/amplify |
@@ -407,10 +407,10 @@ eb open
 eb setenv KEY=value
 
 # Terminer l'environnement
-eb terminate prise-api-production
+eb terminate prise-api-prod
 
 # Recréer l'environnement
-eb create prise-api-production --single --instance-type t3.small
+eb create prise-api-prod --single --instance-type t3.small
 ```
 
 ### AWS CLI
