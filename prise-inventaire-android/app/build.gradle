@@ -16,6 +16,15 @@ android {
     versionProps['VERSION_CODE'] = code.toString()
     versionProps.store(versionPropsFile.newWriter(), null)
 
+    signingConfigs {
+        release {
+            storeFile file('../Tircis.key')
+            storePassword 'Tircis2024'
+            keyAlias 'tircis'
+            keyPassword 'Tircis2024'
+        }
+    }
+
     defaultConfig {
         applicationId "com.prise.inventaire"
         minSdk 26
@@ -36,7 +45,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {
