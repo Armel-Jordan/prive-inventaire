@@ -356,9 +356,9 @@ data class Scan(
 
 ### Keystore
 - **Fichier** : `Tircis.key`
-- **Store Password** : `Tircis2024`
+- **Store Password** : `tircis`
 - **Key Alias** : `tircis`
-- **Key Password** : `Tircis2024`
+- **Key Password** : `tircis`
 
 ### API Production
 - **URL** : `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api`

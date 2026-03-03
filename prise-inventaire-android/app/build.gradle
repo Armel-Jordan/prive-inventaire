@@ -19,9 +19,9 @@ android {
     signingConfigs {
         release {
             storeFile file('../Tircis.key')
-            storePassword 'Tircis2024'
+            storePassword 'tircis'
             keyAlias 'tircis'
-            keyPassword 'Tircis2024'
+            keyPassword 'tircis'
         }
     }
 
