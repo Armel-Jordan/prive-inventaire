@@ -388,9 +388,11 @@ cd prise-inventaire-android
 ### API Production
 | Paramètre | Valeur |
 |-----------|--------|
-| **URL API** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
-| **URL Base** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
-| **Plateforme** | AWS Elastic Beanstalk |
+| **URL API (HTTPS)** | `https://dbc2l049bcvke.cloudfront.net/api` |
+| **URL API (HTTP)** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| **CloudFront** | `https://dbc2l049bcvke.cloudfront.net` |
+| **Elastic Beanstalk** | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
+| **Plateforme** | AWS Elastic Beanstalk + CloudFront |
 | **Région** | us-east-1 |
 
 ### Frontend Web

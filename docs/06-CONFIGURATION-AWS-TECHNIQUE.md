@@ -239,7 +239,7 @@ https://main.d3ph830gn7z155.amplifyapp.com
 |-----|--------|
 | `AMPLIFY_DIFF_DEPLOY` | `false` |
 | `AMPLIFY_MONOREPO_APP_ROOT` | `prise-inventaire-web` |
-| `VITE_API_URL` | `http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| `VITE_API_URL` | `https://dbc2l049bcvke.cloudfront.net/api` |
 
 ### Fichier `amplify.yml`
 ```yaml
@@ -343,7 +343,8 @@ eb setenv \
 
 | Service | URL |
 |---------|-----|
-| **API** | http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com |
+| **API (HTTP)** | http://prise-api-prod.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com |
+| **API (HTTPS via CloudFront)** | https://dbc2l049bcvke.cloudfront.net |
 | **Frontend** | https://main.d3ph830gn7z155.amplifyapp.com |
 | **Console EB** | https://console.aws.amazon.com/elasticbeanstalk |
 | **Console Amplify** | https://console.aws.amazon.com/amplify |
