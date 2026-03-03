@@ -352,22 +352,77 @@ data class Scan(
 
 ---
 
-## 🔐 Récapitulatif des accès
+## � APK Généré
 
-### Keystore
-- **Fichier** : `Tircis.key`
-- **Store Password** : `tircis`
-- **Key Alias** : `tircis`
-- **Key Password** : `tircis`
+### Fichier APK Release
+| Paramètre | Valeur |
+|-----------|--------|
+| **Nom du fichier** | `prise-inventaire-v1.0.apk` |
+| **Emplacement** | `/Users/armeljordan/Documents/prise/prise-inventaire-v1.0.apk` |
+| **Emplacement build** | `prise-inventaire-android/app/build/outputs/apk/release/app-release.apk` |
+| **Taille** | ~4 MB |
+| **Version** | 1.0 |
+| **Signé** | ✅ Oui (Release) |
+
+### Commande pour régénérer l'APK
+```bash
+cd prise-inventaire-android
+./gradlew clean assembleRelease
+```
+
+---
+
+## �🔐 Récapitulatif complet des accès
+
+### Keystore (Signature APK)
+| Paramètre | Valeur |
+|-----------|--------|
+| **Fichier** | `Tircis.key` |
+| **Emplacement** | `/Users/armeljordan/Documents/prise/prise-inventaire-android/Tircis.key` |
+| **Type** | PKCS12 |
+| **Store Password** | `tircis` |
+| **Key Alias** | `tircis` |
+| **Key Password** | `tircis` |
+| **Date de création** | 17 Juin 2022 |
 
 ### API Production
-- **URL** : `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api`
+| Paramètre | Valeur |
+|-----------|--------|
+| **URL API** | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com/api` |
+| **URL Base** | `http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com` |
+| **Plateforme** | AWS Elastic Beanstalk |
+| **Région** | us-east-1 |
 
-### Base de données (pour référence)
-- **Host** : `prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com`
-- **Database** : `prise_central`
-- **User** : `admin`
-- **Password** : `PriseInv2026!`
+### Frontend Web
+| Paramètre | Valeur |
+|-----------|--------|
+| **URL** | `https://main.d3ph830gn7z155.amplifyapp.com` |
+| **Plateforme** | AWS Amplify |
+| **Repository** | `Armel-Jordan/prive-inventaire` |
+| **Branche** | `main` |
+
+### Base de données MySQL (Amazon RDS)
+| Paramètre | Valeur |
+|-----------|--------|
+| **Host** | `prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com` |
+| **Port** | `3306` |
+| **Database** | `prise_central` |
+| **User** | `admin` |
+| **Password** | `PriseInv2026!` |
+| **Connexion** | `mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p prise_central` |
+
+### Compte AWS
+| Paramètre | Valeur |
+|-----------|--------|
+| **Région** | `us-east-1` |
+| **IAM User** | `prise-inventaire-deploy` |
+| **Console** | https://console.aws.amazon.com |
+
+### Repository GitHub
+| Paramètre | Valeur |
+|-----------|--------|
+| **URL** | `https://github.com/Armel-Jordan/prive-inventaire` |
+| **Branche principale** | `main` |
 
 ---
 

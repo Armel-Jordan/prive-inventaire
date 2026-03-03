@@ -230,9 +230,8 @@ phpunit.xml
 
 ### URL du Frontend
 ```
-https://main.<app-id>.amplifyapp.com
+https://main.d3ph830gn7z155.amplifyapp.com
 ```
-*(L'URL exacte sera disponible après le déploiement)*
 
 ### Variables d'environnement Amplify
 
@@ -345,10 +344,42 @@ eb setenv \
 | Service | URL |
 |---------|-----|
 | **API** | http://prise-api-production.eba-ghrnc2uz.us-east-1.elasticbeanstalk.com |
-| **Frontend** | *(URL Amplify après déploiement)* |
+| **Frontend** | https://main.d3ph830gn7z155.amplifyapp.com |
 | **Console EB** | https://console.aws.amazon.com/elasticbeanstalk |
 | **Console Amplify** | https://console.aws.amazon.com/amplify |
 | **Console RDS** | https://console.aws.amazon.com/rds |
+
+### Accès complets
+
+#### Base de données MySQL (Amazon RDS)
+| Paramètre | Valeur |
+|-----------|--------|
+| **Host** | `prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com` |
+| **Port** | `3306` |
+| **Database** | `prise_central` |
+| **User** | `admin` |
+| **Password** | `PriseInv2026!` |
+
+#### Commande de connexion MySQL
+```bash
+mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p prise_central
+# Mot de passe : PriseInv2026!
+```
+
+#### Repository GitHub
+| Paramètre | Valeur |
+|-----------|--------|
+| **URL** | https://github.com/Armel-Jordan/prive-inventaire |
+| **Branche** | `main` |
+
+#### Application Android
+| Paramètre | Valeur |
+|-----------|--------|
+| **APK** | `/Users/armeljordan/Documents/prise/prise-inventaire-v1.0.apk` |
+| **Keystore** | `Tircis.key` |
+| **Store Password** | `tircis` |
+| **Key Alias** | `tircis` |
+| **Key Password** | `tircis` |
 
 ---
 
