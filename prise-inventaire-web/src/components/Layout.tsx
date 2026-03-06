@@ -87,11 +87,21 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: HandCoins,
     items: [
       { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
+      { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
       { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
       { path: '/tournees', label: 'Tournées', icon: Route, module: 'tournees' },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
+    icon: BarChart3,
+    items: [
+      { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
+      { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
     ],
   },
   {

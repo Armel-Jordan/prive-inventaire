@@ -30,6 +30,9 @@ import CommandesClientPage from '@/pages/CommandesClientPage';
 import FacturesPage from '@/pages/FacturesPage';
 import BonsLivraisonPage from '@/pages/BonsLivraisonPage';
 import TourneesPage from '@/pages/TourneesPage';
+import ComptabilitePage from '@/pages/ComptabilitePage';
+import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
+import DevisPage from '@/pages/DevisPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -92,6 +95,9 @@ function AppRoutes() {
         <Route path="factures" element={<FacturesPage />} />
         <Route path="bons-livraison" element={<BonsLivraisonPage />} />
         <Route path="tournees" element={<TourneesPage />} />
+        <Route path="comptabilite" element={<ComptabilitePage />} />
+        <Route path="previsions-stock" element={<PrevisionsStockPage />} />
+        <Route path="devis" element={<DevisPage />} />
       </Route>
       
       {/* Routes Super Admin */}

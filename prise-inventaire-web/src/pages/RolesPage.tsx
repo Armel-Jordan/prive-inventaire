@@ -60,6 +60,9 @@ const MODULE_LABELS: Record<string, string> = {
   camions: 'Camions',
   tournees: 'Tournées',
   zones_preparation: 'Zones Préparation',
+  devis: 'Devis',
+  comptabilite: 'Comptabilité',
+  previsions_stock: 'Prévisions Stock',
 };
 
 const MODULES = Object.keys(MODULE_LABELS);
