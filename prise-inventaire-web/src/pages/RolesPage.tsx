@@ -50,6 +50,16 @@ const MODULE_LABELS: Record<string, string> = {
   secteurs: 'Secteurs',
   employes: 'Employés',
   roles: 'Gestion des rôles',
+  fournisseurs: 'Fournisseurs',
+  commandes_fournisseur: 'Commandes Fournisseur',
+  receptions: 'Réceptions',
+  clients: 'Clients',
+  commandes_client: 'Commandes Client',
+  factures: 'Factures',
+  bons_livraison: 'Bons de Livraison',
+  camions: 'Camions',
+  tournees: 'Tournées',
+  zones_preparation: 'Zones Préparation',
 };
 
 const MODULES = Object.keys(MODULE_LABELS);
