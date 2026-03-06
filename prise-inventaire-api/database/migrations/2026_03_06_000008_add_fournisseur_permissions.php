@@ -7,49 +7,53 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $permissions = [
-            // Admin a toutes les permissions (déjà géré dans le code)
+        // Les nouveaux modules pour les commandes fournisseurs
+        $newModules = ['fournisseurs', 'commandes_fournisseur', 'receptions'];
 
-            // Manager
-            ['role' => 'manager', 'permission' => 'fournisseurs.read'],
-            ['role' => 'manager', 'permission' => 'fournisseurs.write'],
-            ['role' => 'manager', 'permission' => 'commandes_fournisseur.read'],
-            ['role' => 'manager', 'permission' => 'commandes_fournisseur.write'],
-            ['role' => 'manager', 'permission' => 'commandes_fournisseur.valider'],
-            ['role' => 'manager', 'permission' => 'receptions.read'],
-            ['role' => 'manager', 'permission' => 'receptions.write'],
+        // Récupérer les rôles existants
+        $roles = DB::table('roles_custom')->get();
 
-            // User
-            ['role' => 'user', 'permission' => 'fournisseurs.read'],
-            ['role' => 'user', 'permission' => 'commandes_fournisseur.read'],
-            ['role' => 'user', 'permission' => 'receptions.read'],
-            ['role' => 'user', 'permission' => 'receptions.write'],
+        foreach ($roles as $role) {
+            foreach ($newModules as $module) {
+                // Définir les permissions selon le rôle
+                $canView = true; // Tous peuvent voir
+                $canCreate = false;
+                $canEdit = false;
+                $canDelete = false;
 
-            // Readonly
-            ['role' => 'readonly', 'permission' => 'fournisseurs.read'],
-            ['role' => 'readonly', 'permission' => 'commandes_fournisseur.read'],
-            ['role' => 'readonly', 'permission' => 'receptions.read'],
-        ];
+                if ($role->nom === 'admin') {
+                    $canCreate = true;
+                    $canEdit = true;
+                    $canDelete = true;
+                } elseif ($role->nom === 'manager') {
+                    $canCreate = true;
+                    $canEdit = true;
+                    $canDelete = false;
+                } elseif ($role->nom === 'user') {
+                    // User peut créer des réceptions
+                    $canCreate = ($module === 'receptions');
+                    $canEdit = false;
+                    $canDelete = false;
+                }
+                // readonly = lecture seule (valeurs par défaut)
 
-        foreach ($permissions as $permission) {
-            DB::table('role_permissions')->insertOrIgnore($permission);
+                DB::table('role_permissions')->insertOrIgnore([
+                    'role_id' => $role->id,
+                    'module' => $module,
+                    'can_view' => $canView,
+                    'can_create' => $canCreate,
+                    'can_edit' => $canEdit,
+                    'can_delete' => $canDelete,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
     }
 
     public function down(): void
     {
-        $permissions = [
-            'fournisseurs.read',
-            'fournisseurs.write',
-            'fournisseurs.delete',
-            'commandes_fournisseur.read',
-            'commandes_fournisseur.write',
-            'commandes_fournisseur.valider',
-            'commandes_fournisseur.annuler',
-            'receptions.read',
-            'receptions.write',
-        ];
-
-        DB::table('role_permissions')->whereIn('permission', $permissions)->delete();
+        $modules = ['fournisseurs', 'commandes_fournisseur', 'receptions'];
+        DB::table('role_permissions')->whereIn('module', $modules)->delete();
     }
 };

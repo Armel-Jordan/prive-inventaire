@@ -371,4 +371,23 @@ Pour toute question technique :
 
 ---
 
+Réception vs Relocalisation (Arrivages)
+Aspect	Réception (nouveau module)	Relocalisation (existant)
+Source	Commande fournisseur externe	Stock interne existant
+Action	Recevoir des produits achetés	Déplacer des produits entre secteurs
+Impact stock	Augmente le stock (entrée)	Déplace le stock (transfert)
+Lien	Lié à une commande fournisseur (com_four_ligne)	Lié aux secteurs internes
+Exemple	Réceptionner 100 unités commandées chez un fournisseur	Déplacer 50 unités de l'entrepôt A vers le rayon B
+Flux simplifié
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  FOURNISSEUR ──► RÉCEPTION ──► STOCK ──► RELOCALISATION    │
+│     (externe)      (entrée)    (interne)    (transfert)    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+En résumé
+Réception = Entrée de marchandise depuis un fournisseur (augmente le stock total)
+Relocalisation = Mouvement interne entre secteurs (stock total inchangé)
+Les deux sont complémentaires : vous commandez chez un fournisseur → vous réceptionnez → puis vous relocalisez dans les différents secteurs de stockage si nécessaire.
+
 *Document généré le 6 Mars 2026*
