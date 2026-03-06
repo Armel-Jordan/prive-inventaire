@@ -29,6 +29,14 @@ use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\BonCommandePdfController;
+use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\CommandeClientController;
+use App\Http\Controllers\Api\FactureController;
+use App\Http\Controllers\Api\BonLivraisonController;
+use App\Http\Controllers\Api\CamionController;
+use App\Http\Controllers\Api\TourneeController;
+use App\Http\Controllers\Api\ZonePreparationController;
+use App\Http\Controllers\Api\LocalisationController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -285,4 +293,98 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [ReceptionController::class, 'store']);
         Route::post('/multiple', [ReceptionController::class, 'receptionMultiple']);
     });
+
+    // ============================================
+    // GESTION CLIENTS & VENTES
+    // ============================================
+
+    // Clients
+    Route::prefix('clients')->group(function () {
+        Route::get('/', [ClientController::class, 'index']);
+        Route::get('/actifs', [ClientController::class, 'actifs']);
+        Route::get('/{id}', [ClientController::class, 'show']);
+        Route::post('/', [ClientController::class, 'store']);
+        Route::put('/{id}', [ClientController::class, 'update']);
+        Route::delete('/{id}', [ClientController::class, 'destroy']);
+        Route::get('/{id}/conditions-paiement', [ClientController::class, 'getConditionsPaiement']);
+        Route::post('/{id}/conditions-paiement', [ClientController::class, 'setConditionsPaiement']);
+    });
+
+    // Commandes Clients
+    Route::prefix('commandes-client')->group(function () {
+        Route::get('/', [CommandeClientController::class, 'index']);
+        Route::get('/{id}', [CommandeClientController::class, 'show']);
+        Route::post('/', [CommandeClientController::class, 'store']);
+        Route::put('/{id}', [CommandeClientController::class, 'update']);
+        Route::post('/{id}/soumettre', [CommandeClientController::class, 'soumettre']);
+        Route::post('/{id}/accepter', [CommandeClientController::class, 'accepter']);
+        Route::post('/{id}/refuser', [CommandeClientController::class, 'refuser']);
+        Route::delete('/{id}', [CommandeClientController::class, 'destroy']);
+    });
+
+    // Factures
+    Route::prefix('factures')->group(function () {
+        Route::get('/', [FactureController::class, 'index']);
+        Route::get('/{id}', [FactureController::class, 'show']);
+        Route::post('/commande/{commandeId}', [FactureController::class, 'creerDepuisCommande']);
+        Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
+        Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
+        Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
+    });
+
+    // Bons de Livraison
+    Route::prefix('bons-livraison')->group(function () {
+        Route::get('/', [BonLivraisonController::class, 'index']);
+        Route::get('/{id}', [BonLivraisonController::class, 'show']);
+        Route::post('/{id}/preparer', [BonLivraisonController::class, 'demarrerPreparation']);
+        Route::put('/{id}/lignes', [BonLivraisonController::class, 'updateLignes']);
+        Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);
+        Route::post('/{id}/livrer', [BonLivraisonController::class, 'enregistrerLivraison']);
+    });
+
+    // Camions
+    Route::prefix('camions')->group(function () {
+        Route::get('/', [CamionController::class, 'index']);
+        Route::get('/disponibles', [CamionController::class, 'disponibles']);
+        Route::get('/{id}', [CamionController::class, 'show']);
+        Route::post('/', [CamionController::class, 'store']);
+        Route::put('/{id}', [CamionController::class, 'update']);
+        Route::delete('/{id}', [CamionController::class, 'destroy']);
+    });
+
+    // Tournées
+    Route::prefix('tournees')->group(function () {
+        Route::get('/', [TourneeController::class, 'index']);
+        Route::get('/{id}', [TourneeController::class, 'show']);
+        Route::post('/', [TourneeController::class, 'store']);
+        Route::post('/{id}/ajouter-bon', [TourneeController::class, 'ajouterBon']);
+        Route::delete('/{id}/bon/{bonId}', [TourneeController::class, 'retirerBon']);
+        Route::put('/{id}/ordre', [TourneeController::class, 'updateOrdre']);
+        Route::post('/{id}/demarrer', [TourneeController::class, 'demarrer']);
+        Route::post('/{id}/terminer', [TourneeController::class, 'terminer']);
+    });
+
+    // Zones de Préparation
+    Route::prefix('zones-preparation')->group(function () {
+        Route::get('/', [ZonePreparationController::class, 'index']);
+        Route::get('/{id}', [ZonePreparationController::class, 'show']);
+        Route::post('/', [ZonePreparationController::class, 'store']);
+        Route::put('/{id}', [ZonePreparationController::class, 'update']);
+        Route::delete('/{id}', [ZonePreparationController::class, 'destroy']);
+    });
+
+    // Mouvements d'inventaire et Localisations
+    Route::prefix('mouvements-inventaire')->group(function () {
+        Route::get('/', [LocalisationController::class, 'mouvements']);
+    });
+
+    Route::prefix('localisations')->group(function () {
+        Route::get('/produits', [LocalisationController::class, 'produits']);
+        Route::get('/secteur/{id}', [LocalisationController::class, 'parSecteur']);
+        Route::get('/camion/{id}', [LocalisationController::class, 'parCamion']);
+        Route::get('/zone-preparation/{id}', [LocalisationController::class, 'parZonePreparation']);
+    });
+
+    Route::get('/produits/{id}/localisation', [LocalisationController::class, 'produitLocalisation']);
+    Route::get('/produits/{id}/mouvements', [LocalisationController::class, 'mouvementsProduit']);
 });

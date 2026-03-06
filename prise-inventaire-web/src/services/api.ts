@@ -489,3 +489,413 @@ export async function createReceptionMultiple(data: {
     body: JSON.stringify(data),
   });
 }
+
+// ============================================
+// GESTION CLIENTS & VENTES
+// ============================================
+
+// Types
+export interface Client {
+  id: number;
+  code: string;
+  raison_sociale: string;
+  adresse_facturation: string;
+  adresse_livraison?: string;
+  ville: string;
+  code_postal: string;
+  telephone?: string;
+  email?: string;
+  contact_nom?: string;
+  contact_telephone?: string;
+  encours_max?: number;
+  encours_actuel: number;
+  taux_remise_global: number;
+  actif: boolean;
+  conditions_paiement?: ConditionPaiement[];
+}
+
+export interface ConditionPaiement {
+  id: number;
+  client_id: number;
+  libelle: string;
+  nb_jours: number;
+  pourcentage: number;
+  ordre: number;
+}
+
+export interface ComClientEntete {
+  id: number;
+  numero: string;
+  client_id: number;
+  client?: Client;
+  date_commande: string;
+  date_livraison_souhaitee?: string;
+  statut: 'brouillon' | 'en_attente' | 'acceptee' | 'refusee' | 'facturee' | 'annulee';
+  remise_globale: number;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  notes?: string;
+  motif_refus?: string;
+  lignes?: ComClientLigne[];
+}
+
+export interface ComClientLigne {
+  id: number;
+  com_entete_id: number;
+  produit_id: number;
+  quantite: number;
+  prix_unitaire_ht: number;
+  taux_tva: number;
+  remise_ligne: number;
+  montant_ht: number;
+  montant_ttc: number;
+}
+
+export interface Facture {
+  id: number;
+  numero: string;
+  commande_id?: number;
+  client_id: number;
+  client?: Client;
+  facture_mere_id?: number;
+  date_facture: string;
+  date_echeance?: string;
+  statut: 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'annulee';
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  montant_paye: number;
+  reste_a_payer: number;
+  lignes?: FactureLigne[];
+  echeances?: FactureEcheance[];
+  bon_livraison?: BonLivraison;
+}
+
+export interface FactureLigne {
+  id: number;
+  facture_id: number;
+  produit_id: number;
+  quantite: number;
+  prix_unitaire_ht: number;
+  taux_tva: number;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+}
+
+export interface FactureEcheance {
+  id: number;
+  facture_id: number;
+  date_echeance: string;
+  montant: number;
+  montant_paye: number;
+  statut: 'en_attente' | 'partiellement_payee' | 'payee';
+  ordre: number;
+}
+
+export interface BonLivraison {
+  id: number;
+  numero: string;
+  facture_id: number;
+  facture?: Facture;
+  mode_livraison: 'entreprise' | 'retrait_client';
+  statut: 'cree' | 'en_preparation' | 'pret' | 'en_livraison' | 'livre_complet' | 'livre_partiel' | 'annule';
+  date_preparation?: string;
+  date_pret?: string;
+  date_livraison?: string;
+  lignes?: BonLivraisonLigne[];
+}
+
+export interface BonLivraisonLigne {
+  id: number;
+  bon_id: number;
+  produit_id: number;
+  quantite_a_livrer: number;
+  quantite_preparee: number;
+  quantite_livree: number;
+  statut_ligne: 'a_preparer' | 'en_cours' | 'prepare' | 'charge' | 'livre';
+}
+
+export interface Camion {
+  id: number;
+  immatriculation: string;
+  marque?: string;
+  modele?: string;
+  type: 'camionnette' | 'camion' | 'semi_remorque';
+  capacite_kg?: number;
+  capacite_m3?: number;
+  date_controle_technique?: string;
+  actif: boolean;
+}
+
+export interface Tournee {
+  id: number;
+  numero: string;
+  date_tournee: string;
+  camion_id?: number;
+  camion?: Camion;
+  livreur_id?: number;
+  zone?: string;
+  statut: 'planifiee' | 'en_cours' | 'terminee' | 'annulee';
+  heure_depart?: string;
+  heure_retour?: string;
+  tournee_bons?: TourneeBon[];
+}
+
+export interface TourneeBon {
+  id: number;
+  tournee_id: number;
+  bon_livraison_id: number;
+  bon_livraison?: BonLivraison;
+  ordre_livraison: number;
+  heure_livraison?: string;
+  statut: 'en_attente' | 'livre' | 'echec';
+}
+
+export interface ZonePreparation {
+  id: number;
+  code: string;
+  nom: string;
+  description?: string;
+  actif: boolean;
+}
+
+// Clients API
+export async function getClients(params?: { search?: string; actif?: boolean }): Promise<{ data: Client[] }> {
+  const queryParams = new URLSearchParams();
+  if (params?.search) queryParams.append('search', params.search);
+  if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
+  return fetchApi(`/clients?${queryParams.toString()}`);
+}
+
+export async function getClientsActifs(): Promise<Client[]> {
+  return fetchApi('/clients/actifs');
+}
+
+export async function getClient(id: number): Promise<Client> {
+  return fetchApi(`/clients/${id}`);
+}
+
+export async function createClient(data: Partial<Client>): Promise<Client> {
+  return fetchApi('/clients', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateClient(id: number, data: Partial<Client>): Promise<Client> {
+  return fetchApi(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteClient(id: number): Promise<void> {
+  return fetchApi(`/clients/${id}`, { method: 'DELETE' });
+}
+
+export async function getConditionsPaiement(clientId: number): Promise<ConditionPaiement[]> {
+  return fetchApi(`/clients/${clientId}/conditions-paiement`);
+}
+
+export async function setConditionsPaiement(clientId: number, conditions: Partial<ConditionPaiement>[]): Promise<ConditionPaiement[]> {
+  return fetchApi(`/clients/${clientId}/conditions-paiement`, {
+    method: 'POST',
+    body: JSON.stringify({ conditions }),
+  });
+}
+
+// Commandes Clients API
+export async function getCommandesClient(params?: { statut?: string; client_id?: number }): Promise<{ data: ComClientEntete[] }> {
+  const queryParams = new URLSearchParams();
+  if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  return fetchApi(`/commandes-client?${queryParams.toString()}`);
+}
+
+export async function getCommandeClient(id: number): Promise<ComClientEntete> {
+  return fetchApi(`/commandes-client/${id}`);
+}
+
+export async function createCommandeClient(data: {
+  client_id: number;
+  date_commande: string;
+  date_livraison_souhaitee?: string;
+  remise_globale?: number;
+  notes?: string;
+  lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
+}): Promise<ComClientEntete> {
+  return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateCommandeClient(id: number, data: Partial<ComClientEntete>): Promise<ComClientEntete> {
+  return fetchApi(`/commandes-client/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function soumettreCommandeClient(id: number): Promise<ComClientEntete> {
+  return fetchApi(`/commandes-client/${id}/soumettre`, { method: 'POST' });
+}
+
+export async function accepterCommandeClient(id: number): Promise<ComClientEntete> {
+  return fetchApi(`/commandes-client/${id}/accepter`, { method: 'POST' });
+}
+
+export async function refuserCommandeClient(id: number, motif_refus: string): Promise<ComClientEntete> {
+  return fetchApi(`/commandes-client/${id}/refuser`, { method: 'POST', body: JSON.stringify({ motif_refus }) });
+}
+
+export async function deleteCommandeClient(id: number): Promise<void> {
+  return fetchApi(`/commandes-client/${id}`, { method: 'DELETE' });
+}
+
+// Factures API
+export async function getFactures(params?: { statut?: string; client_id?: number }): Promise<{ data: Facture[] }> {
+  const queryParams = new URLSearchParams();
+  if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  return fetchApi(`/factures?${queryParams.toString()}`);
+}
+
+export async function getFacture(id: number): Promise<Facture> {
+  return fetchApi(`/factures/${id}`);
+}
+
+export async function creerFactureDepuisCommande(commandeId: number): Promise<Facture> {
+  return fetchApi(`/factures/commande/${commandeId}`, { method: 'POST' });
+}
+
+export async function emettreFacture(id: number): Promise<Facture> {
+  return fetchApi(`/factures/${id}/emettre`, { method: 'POST' });
+}
+
+export async function enregistrerPaiement(id: number, data: {
+  montant: number;
+  date_paiement: string;
+  mode_paiement: string;
+  reference?: string;
+}): Promise<Facture> {
+  return fetchApi(`/factures/${id}/paiement`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function creerBonLivraison(factureId: number): Promise<BonLivraison> {
+  return fetchApi(`/factures/${factureId}/creer-bl`, { method: 'POST' });
+}
+
+// Bons de Livraison API
+export async function getBonsLivraison(params?: { statut?: string }): Promise<{ data: BonLivraison[] }> {
+  const queryParams = new URLSearchParams();
+  if (params?.statut) queryParams.append('statut', params.statut);
+  return fetchApi(`/bons-livraison?${queryParams.toString()}`);
+}
+
+export async function getBonLivraison(id: number): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}`);
+}
+
+export async function demarrerPreparation(id: number): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}/preparer`, { method: 'POST' });
+}
+
+export async function updateLignesBL(id: number, lignes: { id: number; quantite_preparee: number }[]): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}/lignes`, { method: 'PUT', body: JSON.stringify({ lignes }) });
+}
+
+export async function marquerBLPret(id: number): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}/pret`, { method: 'POST' });
+}
+
+export async function enregistrerLivraison(id: number, data: {
+  lignes: { id: number; quantite_livree: number }[];
+  signature_client?: string;
+  notes_livraison?: string;
+}): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}/livrer`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Camions API
+export async function getCamions(params?: { actif?: boolean }): Promise<Camion[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
+  return fetchApi(`/camions?${queryParams.toString()}`);
+}
+
+export async function getCamionsDisponibles(date: string): Promise<Camion[]> {
+  return fetchApi(`/camions/disponibles?date=${date}`);
+}
+
+export async function getCamion(id: number): Promise<Camion> {
+  return fetchApi(`/camions/${id}`);
+}
+
+export async function createCamion(data: Partial<Camion>): Promise<Camion> {
+  return fetchApi('/camions', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateCamion(id: number, data: Partial<Camion>): Promise<Camion> {
+  return fetchApi(`/camions/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteCamion(id: number): Promise<void> {
+  return fetchApi(`/camions/${id}`, { method: 'DELETE' });
+}
+
+// Tournées API
+export async function getTournees(params?: { statut?: string; date?: string }): Promise<{ data: Tournee[] }> {
+  const queryParams = new URLSearchParams();
+  if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.date) queryParams.append('date', params.date);
+  return fetchApi(`/tournees?${queryParams.toString()}`);
+}
+
+export async function getTournee(id: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${id}`);
+}
+
+export async function createTournee(data: {
+  date_tournee: string;
+  camion_id: number;
+  livreur_id?: number;
+  zone?: string;
+}): Promise<Tournee> {
+  return fetchApi('/tournees', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function ajouterBonATournee(tourneeId: number, bonLivraisonId: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${tourneeId}/ajouter-bon`, {
+    method: 'POST',
+    body: JSON.stringify({ bon_livraison_id: bonLivraisonId }),
+  });
+}
+
+export async function demarrerTournee(id: number, km_depart?: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${id}/demarrer`, { method: 'POST', body: JSON.stringify({ km_depart }) });
+}
+
+export async function terminerTournee(id: number, km_retour?: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${id}/terminer`, { method: 'POST', body: JSON.stringify({ km_retour }) });
+}
+
+// Zones de Préparation API
+export async function getZonesPreparation(): Promise<ZonePreparation[]> {
+  return fetchApi('/zones-preparation');
+}
+
+export async function createZonePreparation(data: Partial<ZonePreparation>): Promise<ZonePreparation> {
+  return fetchApi('/zones-preparation', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateZonePreparation(id: number, data: Partial<ZonePreparation>): Promise<ZonePreparation> {
+  return fetchApi(`/zones-preparation/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteZonePreparation(id: number): Promise<void> {
+  return fetchApi(`/zones-preparation/${id}`, { method: 'DELETE' });
+}
+
+// Localisations API
+export async function getProduitLocalisation(produitId: number): Promise<{
+  produit_id: number;
+  localisations: unknown[];
+  resume: { disponible: number; reserve: number; en_preparation: number; en_transit: number; total: number };
+}> {
+  return fetchApi(`/produits/${produitId}/localisation`);
+}
+
+export async function getMouvementsProduit(produitId: number): Promise<unknown[]> {
+  return fetchApi(`/produits/${produitId}/mouvements`);
+}

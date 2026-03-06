@@ -51,8 +51,10 @@ const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
   { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
   { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
   { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
-  { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
+  { path: '/commandes-fournisseur', label: 'Cmd Fournisseur', icon: ShoppingCart, module: 'commandes_fournisseur' },
   { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
+  { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
+  { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
 ];
 
 export default function Layout() {
