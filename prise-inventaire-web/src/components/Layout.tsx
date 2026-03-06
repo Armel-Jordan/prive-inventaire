@@ -23,7 +23,12 @@ import {
   Shield,
   Truck,
   ShoppingCart,
-  PackageCheck
+  PackageCheck,
+  ChevronDown,
+  ChevronRight,
+  Warehouse,
+  HandCoins,
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,28 +38,69 @@ import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/i18n/useLanguage';
 
-const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
-  { path: '/', label: t.nav.dashboard, icon: LayoutDashboard, module: 'dashboard' },
-  { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
-  { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
-  { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
-  { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
-  { path: '/audit', label: t.nav.history, icon: History, module: 'historique' },
-  { path: '/tracabilite', label: t.nav.traceability, icon: Route, module: 'tracabilite' },
-  { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft, module: 'relocalisation' },
-  { path: '/planification', label: t.nav.planning, icon: CalendarClock, module: 'planification' },
-  { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck, module: 'approbations' },
-  { path: '/rapports', label: t.nav.reports, icon: FileBarChart, module: 'rapports' },
-  { path: '/inventaire-tournant', label: t.nav.rotatingInventory, icon: RotateCcw, module: 'inventaire_tournant' },
-  { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
-  { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
-  { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
-  { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
-  { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
-  { path: '/commandes-fournisseur', label: 'Cmd Fournisseur', icon: ShoppingCart, module: 'commandes_fournisseur' },
-  { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
-  { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
-  { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number }>;
+  module: string;
+}
+
+interface NavCategory {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number }>;
+  items: NavItem[];
+}
+
+const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[] => [
+  {
+    id: 'inventaire',
+    label: 'Inventaire',
+    icon: ClipboardList,
+    items: [
+      { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
+      { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
+      { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
+      { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
+      { path: '/audit', label: t.nav.history, icon: History, module: 'historique' },
+      { path: '/tracabilite', label: t.nav.traceability, icon: Route, module: 'tracabilite' },
+      { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft, module: 'relocalisation' },
+      { path: '/planification', label: t.nav.planning, icon: CalendarClock, module: 'planification' },
+      { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck, module: 'approbations' },
+      { path: '/rapports', label: t.nav.reports, icon: FileBarChart, module: 'rapports' },
+      { path: '/inventaire-tournant', label: 'Inv. Tournant', icon: RotateCcw, module: 'inventaire_tournant' },
+    ],
+  },
+  {
+    id: 'achats',
+    label: 'Achats',
+    icon: Warehouse,
+    items: [
+      { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
+      { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
+      { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
+    ],
+  },
+  {
+    id: 'ventes',
+    label: 'Ventes',
+    icon: HandCoins,
+    items: [
+      { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
+      { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
+    ],
+  },
+  {
+    id: 'parametres',
+    label: 'Paramètres',
+    icon: Settings,
+    items: [
+      { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
+      { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
+      { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
+      { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -64,12 +110,22 @@ export default function Layout() {
   const { t } = useLanguage();
   const { canView, loading: permissionsLoading } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const allNavItems = getNavItems(t);
-  
-  // Filtrer les modules selon les permissions
-  const navItems = permissionsLoading 
-    ? allNavItems 
-    : allNavItems.filter(item => canView(item.module));
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['inventaire']);
+  const allCategories = getNavCategories(t);
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  // Filtrer les catégories selon les permissions
+  const categories = allCategories.map(cat => ({
+    ...cat,
+    items: permissionsLoading ? cat.items : cat.items.filter(item => canView(item.module))
+  })).filter(cat => cat.items.length > 0);
 
   const handleLogout = () => {
     logout();
@@ -104,25 +160,73 @@ export default function Layout() {
         </div>
         
         <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+          {/* Dashboard - always visible */}
+          <Link
+            to="/"
+            onClick={() => setSidebarOpen(false)}
+            className={`
+              flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors
+              ${location.pathname === '/'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }
+            `}
+          >
+            <LayoutDashboard size={20} />
+            {t.nav.dashboard}
+          </Link>
+
+          {/* Categories */}
+          {categories.map((category) => {
+            const CategoryIcon = category.icon;
+            const isExpanded = expandedCategories.includes(category.id);
+            const hasActiveItem = category.items.some(item => location.pathname === item.path);
+
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  ${isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' 
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }
-                `}
-              >
-                <Icon size={20} />
-                {item.label}
-              </Link>
+              <div key={category.id}>
+                <button
+                  onClick={() => toggleCategory(category.id)}
+                  className={`
+                    w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors
+                    ${hasActiveItem
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <CategoryIcon size={20} />
+                    <span className="font-medium">{category.label}</span>
+                  </div>
+                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
+
+                {isExpanded && (
+                  <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-gray-200 dark:border-gray-700">
+                    {category.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`
+                            flex items-center gap-3 px-4 py-2 ml-2 rounded-lg transition-colors text-sm
+                            ${isActive
+                              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }
+                          `}
+                        >
+                          <Icon size={16} />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
