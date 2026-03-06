@@ -122,10 +122,22 @@ export default function Layout() {
   };
 
   // Filtrer les catégories selon les permissions
+  // Pendant le chargement, afficher tout. Sinon filtrer selon canView
   const categories = allCategories.map(cat => ({
     ...cat,
-    items: permissionsLoading ? cat.items : cat.items.filter(item => canView(item.module))
+    items: permissionsLoading 
+      ? cat.items 
+      : cat.items.filter(item => {
+          try {
+            return canView(item.module);
+          } catch {
+            return true; // Si erreur, afficher par défaut
+          }
+        })
   })).filter(cat => cat.items.length > 0);
+  
+  // Si aucune catégorie après filtrage, afficher tout (fallback)
+  const displayCategories = categories.length > 0 ? categories : allCategories;
 
   const handleLogout = () => {
     logout();
@@ -177,7 +189,7 @@ export default function Layout() {
           </Link>
 
           {/* Categories */}
-          {categories.map((category) => {
+          {displayCategories.map((category) => {
             const CategoryIcon = category.icon;
             const isExpanded = expandedCategories.includes(category.id);
             const hasActiveItem = category.items.some(item => location.pathname === item.path);
