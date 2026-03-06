@@ -26,6 +26,10 @@ import CommandesFournisseurPage from '@/pages/CommandesFournisseurPage';
 import ReceptionsPage from '@/pages/ReceptionsPage';
 import ClientsPage from '@/pages/ClientsPage';
 import CamionsPage from '@/pages/CamionsPage';
+import CommandesClientPage from '@/pages/CommandesClientPage';
+import FacturesPage from '@/pages/FacturesPage';
+import BonsLivraisonPage from '@/pages/BonsLivraisonPage';
+import TourneesPage from '@/pages/TourneesPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -84,6 +88,10 @@ function AppRoutes() {
         <Route path="receptions" element={<ReceptionsPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="camions" element={<CamionsPage />} />
+        <Route path="commandes-client" element={<CommandesClientPage />} />
+        <Route path="factures" element={<FacturesPage />} />
+        <Route path="bons-livraison" element={<BonsLivraisonPage />} />
+        <Route path="tournees" element={<TourneesPage />} />
       </Route>
       
       {/* Routes Super Admin */}
