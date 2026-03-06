@@ -21,6 +21,9 @@ import RapportsPage from '@/pages/RapportsPage';
 import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import ProfilPage from '@/pages/ProfilPage';
 import RolesPage from '@/pages/RolesPage';
+import FournisseursPage from '@/pages/FournisseursPage';
+import CommandesFournisseurPage from '@/pages/CommandesFournisseurPage';
+import ReceptionsPage from '@/pages/ReceptionsPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -74,6 +77,9 @@ function AppRoutes() {
         <Route path="inventaire-tournant" element={<InventaireTournantPage />} />
         <Route path="profil" element={<ProfilPage />} />
         <Route path="roles" element={<RolesPage />} />
+        <Route path="fournisseurs" element={<FournisseursPage />} />
+        <Route path="commandes-fournisseur" element={<CommandesFournisseurPage />} />
+        <Route path="receptions" element={<ReceptionsPage />} />
       </Route>
       
       {/* Routes Super Admin */}

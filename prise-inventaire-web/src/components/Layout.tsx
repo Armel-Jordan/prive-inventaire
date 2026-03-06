@@ -20,7 +20,10 @@ import {
   FileBarChart,
   RotateCcw,
   User,
-  Shield
+  Shield,
+  Truck,
+  ShoppingCart,
+  PackageCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,6 +50,9 @@ const getNavItems = (t: ReturnType<typeof useLanguage>['t']) => [
   { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
   { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
   { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
+  { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
+  { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
+  { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
 ];
 
 export default function Layout() {

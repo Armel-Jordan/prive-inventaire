@@ -25,6 +25,9 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\Api\FournisseurController;
+use App\Http\Controllers\Api\CommandeFournisseurController;
+use App\Http\Controllers\Api\ReceptionController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -242,5 +245,41 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/my-permissions', [RoleController::class, 'myPermissions']);
         Route::get('/check', [RoleController::class, 'check']);
         Route::get('/{role}/permissions', [RoleController::class, 'permissions']);
+    });
+
+    // ============================================
+    // Fournisseurs
+    // ============================================
+    Route::prefix('fournisseurs')->group(function () {
+        Route::get('/', [FournisseurController::class, 'index']);
+        Route::get('/actifs', [FournisseurController::class, 'listActifs']);
+        Route::post('/', [FournisseurController::class, 'store']);
+        Route::get('/{fournisseur}', [FournisseurController::class, 'show']);
+        Route::put('/{fournisseur}', [FournisseurController::class, 'update']);
+        Route::delete('/{fournisseur}', [FournisseurController::class, 'destroy']);
+    });
+
+    // ============================================
+    // Commandes Fournisseurs
+    // ============================================
+    Route::prefix('commandes-fournisseur')->group(function () {
+        Route::get('/', [CommandeFournisseurController::class, 'index']);
+        Route::post('/', [CommandeFournisseurController::class, 'store']);
+        Route::get('/{commande}', [CommandeFournisseurController::class, 'show']);
+        Route::put('/{commande}', [CommandeFournisseurController::class, 'update']);
+        Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
+        Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);
+        Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy']);
+    });
+
+    // ============================================
+    // Réceptions / Arrivages
+    // ============================================
+    Route::prefix('receptions')->group(function () {
+        Route::get('/', [ReceptionController::class, 'index']);
+        Route::get('/commandes-en-attente', [ReceptionController::class, 'commandesEnAttente']);
+        Route::get('/commande/{commande}/lignes', [ReceptionController::class, 'lignesEnAttente']);
+        Route::post('/', [ReceptionController::class, 'store']);
+        Route::post('/multiple', [ReceptionController::class, 'receptionMultiple']);
     });
 });

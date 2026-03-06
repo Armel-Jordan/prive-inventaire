@@ -275,3 +275,202 @@ export async function updateUser(id: number, data: Partial<AdminUser> & { passwo
 export async function deleteUser(id: number): Promise<void> {
   await fetchApi(`/users/${id}`, { method: 'DELETE' });
 }
+
+// === FOURNISSEURS ===
+export interface Fournisseur {
+  id: number;
+  code: string;
+  raison_sociale: string;
+  adresse?: string;
+  telephone?: string;
+  email?: string;
+  contact_nom?: string;
+  contact_telephone?: string;
+  conditions_paiement?: string;
+  actif: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getFournisseurs(params?: { search?: string; actif?: boolean }): Promise<{ data: Fournisseur[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.search) searchParams.append('search', params.search);
+  if (params?.actif !== undefined) searchParams.append('actif', params.actif.toString());
+  return fetchApi(`/fournisseurs?${searchParams}`);
+}
+
+export async function getFournisseursActifs(): Promise<Fournisseur[]> {
+  return fetchApi('/fournisseurs/actifs');
+}
+
+export async function getFournisseur(id: number): Promise<Fournisseur> {
+  return fetchApi(`/fournisseurs/${id}`);
+}
+
+export async function createFournisseur(data: Omit<Fournisseur, 'id' | 'created_at' | 'updated_at'>): Promise<Fournisseur> {
+  return fetchApi('/fournisseurs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateFournisseur(id: number, data: Partial<Fournisseur>): Promise<Fournisseur> {
+  return fetchApi(`/fournisseurs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteFournisseur(id: number): Promise<void> {
+  await fetchApi(`/fournisseurs/${id}`, { method: 'DELETE' });
+}
+
+// === COMMANDES FOURNISSEUR ===
+export interface ComFourLigne {
+  id?: number;
+  com_four_entete_id?: number;
+  produit_id: number;
+  produit?: Produit;
+  quantite_commandee: number;
+  quantite_recue: number;
+  prix_unitaire: number;
+  montant_ligne: number;
+}
+
+export interface ComFourEntete {
+  id: number;
+  numero: string;
+  fournisseur_id: number;
+  fournisseur?: Fournisseur;
+  date_commande: string;
+  date_livraison_prevue?: string;
+  statut: 'brouillon' | 'envoyee' | 'partielle' | 'complete' | 'annulee';
+  montant_total: number;
+  notes?: string;
+  created_by: number;
+  lignes?: ComFourLigne[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getCommandesFournisseur(params?: { 
+  statut?: string; 
+  fournisseur_id?: number;
+  search?: string;
+}): Promise<{ data: ComFourEntete[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.statut) searchParams.append('statut', params.statut);
+  if (params?.fournisseur_id) searchParams.append('fournisseur_id', params.fournisseur_id.toString());
+  if (params?.search) searchParams.append('search', params.search);
+  return fetchApi(`/commandes-fournisseur?${searchParams}`);
+}
+
+export async function getCommandeFournisseur(id: number): Promise<ComFourEntete> {
+  return fetchApi(`/commandes-fournisseur/${id}`);
+}
+
+export async function createCommandeFournisseur(data: {
+  fournisseur_id: number;
+  date_commande: string;
+  date_livraison_prevue?: string;
+  notes?: string;
+  lignes: { produit_id: number; quantite_commandee: number; prix_unitaire: number }[];
+}): Promise<ComFourEntete> {
+  return fetchApi('/commandes-fournisseur', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCommandeFournisseur(id: number, data: {
+  fournisseur_id: number;
+  date_commande: string;
+  date_livraison_prevue?: string;
+  notes?: string;
+  lignes: { id?: number; produit_id: number; quantite_commandee: number; prix_unitaire: number }[];
+}): Promise<ComFourEntete> {
+  return fetchApi(`/commandes-fournisseur/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function validerCommandeFournisseur(id: number): Promise<{ message: string; commande: ComFourEntete }> {
+  return fetchApi(`/commandes-fournisseur/${id}/valider`, { method: 'POST' });
+}
+
+export async function annulerCommandeFournisseur(id: number): Promise<{ message: string }> {
+  return fetchApi(`/commandes-fournisseur/${id}/annuler`, { method: 'POST' });
+}
+
+export async function deleteCommandeFournisseur(id: number): Promise<void> {
+  await fetchApi(`/commandes-fournisseur/${id}`, { method: 'DELETE' });
+}
+
+// === RECEPTIONS ===
+export interface ReceptionLigne {
+  id: number;
+  com_four_ligne_id: number;
+  date_reception: string;
+  quantite_recue: number;
+  secteur_id?: number;
+  lot_numero?: string;
+  date_peremption?: string;
+  notes?: string;
+  received_by: number;
+  ligne_commande?: ComFourLigne;
+  secteur?: Secteur;
+}
+
+export async function getReceptions(params?: { 
+  commande_id?: number;
+  date_debut?: string;
+  date_fin?: string;
+}): Promise<{ data: ReceptionLigne[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.commande_id) searchParams.append('commande_id', params.commande_id.toString());
+  if (params?.date_debut) searchParams.append('date_debut', params.date_debut);
+  if (params?.date_fin) searchParams.append('date_fin', params.date_fin);
+  return fetchApi(`/receptions?${searchParams}`);
+}
+
+export async function getCommandesEnAttente(): Promise<ComFourEntete[]> {
+  return fetchApi('/receptions/commandes-en-attente');
+}
+
+export async function getLignesEnAttente(commandeId: number): Promise<ComFourLigne[]> {
+  return fetchApi(`/receptions/commande/${commandeId}/lignes`);
+}
+
+export async function createReception(data: {
+  com_four_ligne_id: number;
+  date_reception: string;
+  quantite_recue: number;
+  secteur_id?: number;
+  lot_numero?: string;
+  date_peremption?: string;
+  notes?: string;
+}): Promise<{ message: string; reception: ReceptionLigne }> {
+  return fetchApi('/receptions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createReceptionMultiple(data: {
+  commande_id: number;
+  date_reception: string;
+  receptions: {
+    com_four_ligne_id: number;
+    quantite_recue: number;
+    secteur_id?: number;
+    lot_numero?: string;
+    date_peremption?: string;
+    notes?: string;
+  }[];
+}): Promise<{ message: string; receptions: ReceptionLigne[] }> {
+  return fetchApi('/receptions/multiple', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}

@@ -98,6 +98,21 @@ class RoleController extends Controller
             'settings' => [
                 ['id' => 'settings.write', 'nom' => 'Modifier les paramètres'],
             ],
+            'fournisseurs' => [
+                ['id' => 'fournisseurs.read', 'nom' => 'Voir les fournisseurs'],
+                ['id' => 'fournisseurs.write', 'nom' => 'Créer/modifier les fournisseurs'],
+                ['id' => 'fournisseurs.delete', 'nom' => 'Supprimer les fournisseurs'],
+            ],
+            'commandes_fournisseur' => [
+                ['id' => 'commandes_fournisseur.read', 'nom' => 'Voir les commandes fournisseur'],
+                ['id' => 'commandes_fournisseur.write', 'nom' => 'Créer/modifier les commandes'],
+                ['id' => 'commandes_fournisseur.valider', 'nom' => 'Valider/envoyer les commandes'],
+                ['id' => 'commandes_fournisseur.annuler', 'nom' => 'Annuler les commandes'],
+            ],
+            'receptions' => [
+                ['id' => 'receptions.read', 'nom' => 'Voir les réceptions'],
+                ['id' => 'receptions.write', 'nom' => 'Enregistrer les réceptions'],
+            ],
         ];
 
         return response()->json($permissions);
