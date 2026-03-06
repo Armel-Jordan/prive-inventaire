@@ -28,6 +28,7 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ReceptionController;
+use App\Http\Controllers\Api\BonCommandePdfController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -270,6 +271,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
         Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);
         Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy']);
+        Route::get('/{commande}/pdf', [BonCommandePdfController::class, 'generate']);
+        Route::get('/{commande}/pdf/preview', [BonCommandePdfController::class, 'preview']);
     });
 
     // ============================================

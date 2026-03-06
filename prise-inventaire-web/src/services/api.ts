@@ -407,6 +407,21 @@ export async function deleteCommandeFournisseur(id: number): Promise<void> {
   await fetchApi(`/commandes-fournisseur/${id}`, { method: 'DELETE' });
 }
 
+export function getCommandePdfUrl(id: number): string {
+  const stored = localStorage.getItem('prise_auth');
+  let token = '';
+  if (stored) {
+    try {
+      const data = JSON.parse(stored);
+      token = data.token || '';
+    } catch {
+      // ignore
+    }
+  }
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  return `${API_BASE_URL}/commandes-fournisseur/${id}/pdf?token=${token}`;
+}
+
 // === RECEPTIONS ===
 export interface ReceptionLigne {
   id: number;

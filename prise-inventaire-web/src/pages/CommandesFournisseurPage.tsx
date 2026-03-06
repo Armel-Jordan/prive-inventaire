@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, X, Eye, Send, Ban, Trash2, Package } from 'lucide-react';
+import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
 import { 
   getCommandesFournisseur, 
   getFournisseursActifs, 
@@ -7,7 +7,8 @@ import {
   createCommandeFournisseur, 
   validerCommandeFournisseur, 
   annulerCommandeFournisseur,
-  deleteCommandeFournisseur 
+  deleteCommandeFournisseur,
+  getCommandePdfUrl
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
@@ -246,6 +247,15 @@ export default function CommandesFournisseurPage() {
                       >
                         <Eye size={16} />
                       </button>
+                      <a
+                        href={getCommandePdfUrl(commande.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 text-purple-600 hover:bg-purple-50 rounded mr-1 inline-block"
+                        title="Télécharger PDF"
+                      >
+                        <FileText size={16} />
+                      </a>
                       {commande.statut === 'brouillon' && (
                         <>
                           <button
