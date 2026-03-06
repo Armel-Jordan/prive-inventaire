@@ -146,7 +146,7 @@ export default function FacturesPage() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Client</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Date</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Montant TTC</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Montant</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Reste à payer</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">Statut</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">Actions</th>
@@ -159,7 +159,7 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.date_facture}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {facture.montant_ttc?.toFixed(2)} €
+                    {facture.montant_ht?.toFixed(2)} €
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     <span className={facture.reste_a_payer > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
@@ -268,17 +268,9 @@ export default function FacturesPage() {
               )}
 
               <div className="border-t pt-4 dark:border-gray-700">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Montant HT:</span>
-                  <span className="dark:text-white">{selectedFacture.montant_ht?.toFixed(2)} €</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">TVA:</span>
-                  <span className="dark:text-white">{selectedFacture.montant_tva?.toFixed(2)} €</span>
-                </div>
                 <div className="flex justify-between font-bold text-lg">
-                  <span className="dark:text-white">Total TTC:</span>
-                  <span className="dark:text-white">{selectedFacture.montant_ttc?.toFixed(2)} €</span>
+                  <span className="dark:text-white">Total:</span>
+                  <span className="dark:text-white">{selectedFacture.montant_ht?.toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-gray-500">Payé:</span>
