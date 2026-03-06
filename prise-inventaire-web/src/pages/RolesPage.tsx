@@ -63,6 +63,8 @@ const MODULE_LABELS: Record<string, string> = {
   devis: 'Devis',
   comptabilite: 'Comptabilité',
   previsions_stock: 'Prévisions Stock',
+  gestion_prix: 'Gestion des Prix',
+  alertes_config: 'Configuration Alertes',
 };
 
 const MODULES = Object.keys(MODULE_LABELS);

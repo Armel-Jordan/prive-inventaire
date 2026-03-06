@@ -102,6 +102,8 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     items: [
       { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
+      { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
+      { path: '/alertes-config', label: 'Alertes', icon: Bell, module: 'alertes_config' },
     ],
   },
   {
