@@ -460,6 +460,214 @@ AND factures.statut IN ('emise', 'partiellement_payee')
 
 ---
 
+## 5bis. Mouvements d'inventaire et Localisation
+
+### 5bis.1 Principe de traçabilité
+
+Chaque produit doit avoir une **localisation connue à tout moment**. Le système enregistre automatiquement les mouvements de stock et les changements de localisation à chaque étape du processus.
+
+### 5bis.2 Types de localisation
+
+| Type | Description | Exemple |
+|------|-------------|---------|
+| `secteur` | Emplacement fixe dans l'entrepôt | Entrepôt A - Zone B - Rayon 3 |
+| `zone_preparation` | Zone de picking/préparation | Zone Préparation Nord |
+| `camion` | Véhicule de livraison | Camion AB-123-CD |
+| `client` | Livré au client | Client XYZ |
+| `retour` | Zone de retour/litige | Zone Retours |
+
+### 5bis.3 Flux de localisation par étape
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    TRAÇABILITÉ LOCALISATION PRODUIT                              │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ÉTAPE 1 : COMMANDE ACCEPTÉE                                                    │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Réservation du stock                                        │   │
+│  │ Mouvement : RESERVATION (stock disponible → stock réservé)              │   │
+│  │ Localisation : Inchangée (produit toujours dans son secteur)            │   │
+│  │ Stock dispo : -N unités                                                  │   │
+│  │ Stock réservé : +N unités                                                │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                   │
+│                              ▼                                                   │
+│  ÉTAPE 2 : PRÉPARATION EN COURS                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Picking des produits                                         │   │
+│  │ Mouvement : SORTIE_PREPARATION                                           │   │
+│  │ Localisation : Secteur → Zone de préparation                             │   │
+│  │ Stock réservé : -N unités                                                │   │
+│  │ Stock en préparation : +N unités                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                   │
+│                              ▼                                                   │
+│  ÉTAPE 3 : CHARGEMENT CAMION                                                    │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Chargement dans le véhicule                                  │   │
+│  │ Mouvement : CHARGEMENT_CAMION                                            │   │
+│  │ Localisation : Zone préparation → Camion (immatriculation)               │   │
+│  │ Stock en préparation : -N unités                                         │   │
+│  │ Stock en transit : +N unités                                             │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                   │
+│                              ▼                                                   │
+│  ÉTAPE 4a : LIVRAISON COMPLÈTE                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Livraison au client                                          │   │
+│  │ Mouvement : LIVRAISON_CLIENT                                             │   │
+│  │ Localisation : Camion → Client (sorti du stock)                          │   │
+│  │ Stock en transit : -N unités                                             │   │
+│  │ Stock total : -N unités (sortie définitive)                              │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ÉTAPE 4b : LIVRAISON PARTIELLE                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Livraison partielle + retour                                 │   │
+│  │ Mouvement 1 : LIVRAISON_CLIENT (quantité livrée)                         │   │
+│  │ Mouvement 2 : RETOUR_CAMION (quantité non livrée)                        │   │
+│  │ Localisation livrée : Camion → Client                                    │   │
+│  │ Localisation reste : Camion → Zone retour ou Secteur origine             │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  CAS SPÉCIAL : RETRAIT CLIENT                                                   │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │ Action    : Client vient chercher                                        │   │
+│  │ Mouvement : RETRAIT_CLIENT                                               │   │
+│  │ Localisation : Zone préparation → Client (direct, sans camion)           │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5bis.4 Table des mouvements d'inventaire
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | bigint | Identifiant unique |
+| `produit_id` | FK | Produit concerné |
+| `type_mouvement` | enum | Voir types ci-dessous |
+| `quantite` | int | Quantité (positive ou négative) |
+| `localisation_source_type` | enum | secteur, zone_preparation, camion |
+| `localisation_source_id` | int | ID du secteur/camion source |
+| `localisation_dest_type` | enum | secteur, zone_preparation, camion, client |
+| `localisation_dest_id` | int | ID de la destination |
+| `reference_type` | varchar | Type de document (commande, bl, facture) |
+| `reference_id` | int | ID du document lié |
+| `motif` | text | Description du mouvement |
+| `effectue_par` | FK | Employé qui a fait le mouvement |
+| `created_at` | datetime | Date/heure du mouvement |
+
+### 5bis.5 Types de mouvements
+
+| Type | Description | Impact stock |
+|------|-------------|--------------|
+| `reservation` | Réservation pour commande | Dispo → Réservé |
+| `annulation_reservation` | Annulation commande | Réservé → Dispo |
+| `sortie_preparation` | Picking pour préparation | Réservé → En prépa |
+| `chargement_camion` | Chargement véhicule | En prépa → Transit |
+| `livraison_client` | Livraison effective | Transit → Sorti |
+| `retour_camion` | Retour après livraison partielle | Transit → Dispo |
+| `retrait_client` | Client vient chercher | En prépa → Sorti |
+
+### 5bis.6 Table de localisation produit (temps réel)
+
+Pour savoir où est chaque unité de produit à tout moment :
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | bigint | Identifiant |
+| `produit_id` | FK | Produit |
+| `localisation_type` | enum | secteur, zone_preparation, camion |
+| `localisation_id` | int | ID du lieu |
+| `quantite` | int | Quantité à cet endroit |
+| `statut` | enum | disponible, reserve, en_preparation, en_transit |
+| `commande_id` | FK | Si réservé, pour quelle commande |
+| `updated_at` | datetime | Dernière mise à jour |
+
+### 5bis.7 Règles métier localisation
+
+```
+RÈGLE 1 : Réservation à la commande
+─────────────────────────────────────
+QUAND commande.statut passe à 'acceptee'
+ALORS
+    POUR CHAQUE ligne de commande :
+        Créer mouvement (type: 'reservation')
+        produit_localisation.statut = 'reserve'
+        produit_localisation.commande_id = commande.id
+    FIN POUR
+FIN
+
+RÈGLE 2 : Préparation
+─────────────────────────────────────
+QUAND bon_livraison_ligne.statut passe à 'en_preparation'
+ALORS
+    Créer mouvement (type: 'sortie_preparation')
+    localisation_source = secteur actuel
+    localisation_dest = zone_preparation
+    Mettre à jour produit_localisation
+FIN
+
+RÈGLE 3 : Chargement camion
+─────────────────────────────────────
+QUAND bon_livraison.statut passe à 'en_livraison'
+ALORS
+    POUR CHAQUE ligne préparée :
+        Créer mouvement (type: 'chargement_camion')
+        localisation_source = zone_preparation
+        localisation_dest = camion (tournee.camion_id)
+        produit_localisation.localisation_type = 'camion'
+        produit_localisation.localisation_id = camion.id
+        produit_localisation.statut = 'en_transit'
+    FIN POUR
+FIN
+
+RÈGLE 4 : Livraison
+─────────────────────────────────────
+QUAND tournee_bon.statut passe à 'livre'
+ALORS
+    POUR CHAQUE ligne livrée :
+        Créer mouvement (type: 'livraison_client')
+        Supprimer produit_localisation (sorti du stock)
+    FIN POUR
+    
+    SI livraison partielle :
+        POUR CHAQUE ligne non livrée :
+            Créer mouvement (type: 'retour_camion')
+            produit_localisation.localisation_type = 'secteur'
+            produit_localisation.statut = 'disponible'
+        FIN POUR
+    FIN SI
+FIN
+```
+
+### 5bis.8 Vue temps réel : Où est mon produit ?
+
+Le système permet de répondre instantanément à la question "Où sont les X unités du produit Y ?"
+
+```
+Exemple : Produit "Café Premium" - 150 unités totales
+
+┌─────────────────────────────────────────────────────────┐
+│ LOCALISATION TEMPS RÉEL                                 │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  📦 Entrepôt A - Zone B      : 80 unités (disponible)  │
+│  📦 Entrepôt A - Zone C      : 20 unités (disponible)  │
+│  🔒 Réservé CMD-2026-0045    : 15 unités               │
+│  📋 Zone Préparation Nord    : 10 unités (en prépa)    │
+│  🚚 Camion AB-123-CD         : 25 unités (en transit)  │
+│                                                         │
+│  TOTAL EN STOCK              : 150 unités              │
+│  DISPONIBLE À LA VENTE       : 100 unités              │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 6. Schéma de base de données
 
 ### Tables à créer
@@ -479,6 +687,9 @@ AND factures.statut IN ('emise', 'partiellement_payee')
 | `camions` | Flotte de véhicules |
 | `tournees` | Tournées de livraison |
 | `tournee_bons` | Bons dans une tournée |
+| `mouvements_inventaire` | Historique de tous les mouvements de stock |
+| `produit_localisations` | Localisation temps réel de chaque produit |
+| `zones_preparation` | Zones de préparation/picking |
 
 ### Relations principales
 
@@ -494,6 +705,15 @@ bons_livraison (1) ────────────── (N) bon_livraison_
 camions (1) ───────────────────── (N) tournees
 tournees (1) ──────────────────── (N) tournee_bons
 tournee_bons (N) ──────────────── (1) bons_livraison
+
+-- Relations mouvements et localisation
+produits (1) ──────────────────── (N) mouvements_inventaire
+produits (1) ──────────────────── (N) produit_localisations
+secteurs (1) ──────────────────── (N) produit_localisations
+camions (1) ───────────────────── (N) produit_localisations (quand en transit)
+zones_preparation (1) ─────────── (N) produit_localisations
+com_client_entete (1) ─────────── (N) mouvements_inventaire (référence)
+bons_livraison (1) ────────────── (N) mouvements_inventaire (référence)
 ```
 
 ---
@@ -570,6 +790,28 @@ tournee_bons (N) ──────────────── (1) bons_livra
 | POST | `/api/tournees/{id}/terminer` | Terminer tournée |
 | PUT | `/api/tournees/{id}/ordre` | Réorganiser l'ordre |
 
+### 7.7 Mouvements d'inventaire
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/mouvements-inventaire` | Liste avec filtres (date, produit, type) |
+| GET | `/api/mouvements-inventaire/{id}` | Détail d'un mouvement |
+| GET | `/api/produits/{id}/mouvements` | Historique mouvements d'un produit |
+| GET | `/api/produits/{id}/localisation` | Localisation temps réel d'un produit |
+
+### 7.8 Localisations
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/localisations/produits` | Vue globale : où sont tous les produits |
+| GET | `/api/localisations/secteur/{id}` | Produits dans un secteur |
+| GET | `/api/localisations/camion/{id}` | Produits dans un camion |
+| GET | `/api/localisations/zone-preparation/{id}` | Produits en zone de préparation |
+| GET | `/api/zones-preparation` | Liste des zones de préparation |
+| POST | `/api/zones-preparation` | Créer une zone |
+| PUT | `/api/zones-preparation/{id}` | Modifier une zone |
+| DELETE | `/api/zones-preparation/{id}` | Supprimer une zone |
+
 ---
 
 ## 8. Permissions
@@ -595,6 +837,10 @@ tournee_bons (N) ──────────────── (1) bons_livra
 | `camions` | write | Gérer la flotte |
 | `tournees` | read | Voir les tournées |
 | `tournees` | write | Planifier tournées |
+| `mouvements_inventaire` | read | Voir l'historique des mouvements |
+| `localisations` | read | Voir les localisations produits |
+| `zones_preparation` | read | Voir les zones de préparation |
+| `zones_preparation` | write | Gérer les zones de préparation |
 
 ### Attribution par rôle
 
