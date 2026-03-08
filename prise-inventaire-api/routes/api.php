@@ -46,22 +46,6 @@ use Illuminate\Support\Facades\Route;
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
 
-// Route temporaire pour exécuter les migrations (à supprimer après utilisation)
-Route::get('/run-migrations-secret-key-2026', function () {
-    try {
-        \Artisan::call('migrate', ['--force' => true]);
-        return response()->json([
-            'success' => true,
-            'output' => \Artisan::output()
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
 // ============================================
 // Routes Mobile (sans authentification JWT)
 // Ces routes sont utilisées par l'app Android
