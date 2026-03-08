@@ -36,6 +36,41 @@ Brève description de la modification.
 
 ---
 
+## [2026-03-07] - Module Configuration des numéros
+
+**Auteur:** Développeur  
+**Type:** Feature  
+**Impact:** All (Frontend + Backend + Database)  
+
+### Description
+Nouveau module permettant aux administrateurs de configurer le format des numéros pour les produits, employés et secteurs. Chaque entité peut avoir son propre préfixe, suffixe, longueur, séparateur et numérotation automatique.
+
+### Fichiers modifiés
+
+#### Frontend
+- `src/pages/ConfigurationPage.tsx` - Page de configuration avec onglets, aperçu en temps réel
+- `src/App.tsx` - Ajout route `/configuration`
+- `src/components/Layout.tsx` - Ajout menu "Configuration" dans Paramètres
+- `src/pages/RolesPage.tsx` - Ajout module `configuration` aux permissions
+- `src/services/api.ts` - Fonctions API: `getConfigurations`, `updateConfiguration`, `genererNumero`, `consommerNumero`
+
+#### Backend
+- `database/migrations/2026_03_07_232500_create_configurations_table.php` - Table configurations
+- `app/Models/Configuration.php` - Model avec méthodes `genererNumero()` et `incrementer()`
+- `app/Http/Controllers/Api/ConfigurationController.php` - CRUD + génération de numéros
+- `routes/api.php` - Routes `/configurations/*`
+
+### Migration requise
+- [x] Oui
+- Commande: `php artisan migrate`
+- Exécutée le: 2026-03-07 23:29
+
+### Tests
+- [x] Testé en local
+- [ ] Testé en production
+
+---
+
 ## [2026-03-07] - Secteur obligatoire pour les produits
 
 **Auteur:** Développeur  
