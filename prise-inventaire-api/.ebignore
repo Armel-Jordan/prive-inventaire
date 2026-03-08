@@ -12,12 +12,16 @@ vendor/
 *.swp
 *.swo
 
-# Ignore logs and cache
-storage/logs/*
-storage/framework/cache/*
+# Ignore logs and cache contents but keep directories
+storage/logs/*.log
+storage/framework/cache/data/*
 storage/framework/sessions/*
-storage/framework/views/*
-bootstrap/cache/*
+storage/framework/views/*.php
+!storage/logs/.gitignore
+!storage/framework/cache/.gitignore
+!storage/framework/sessions/.gitignore
+!storage/framework/views/.gitignore
+!bootstrap/cache/.gitignore
 
 # Ignore node modules if any
 node_modules/
