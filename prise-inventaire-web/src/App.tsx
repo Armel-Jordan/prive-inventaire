@@ -35,6 +35,7 @@ import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
+import ConfigurationPage from '@/pages/ConfigurationPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -102,6 +103,7 @@ function AppRoutes() {
         <Route path="devis" element={<DevisPage />} />
         <Route path="gestion-prix" element={<GestionPrixPage />} />
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
+        <Route path="configuration" element={<ConfigurationPage />} />
       </Route>
       
       {/* Routes Super Admin */}

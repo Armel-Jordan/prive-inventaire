@@ -899,3 +899,35 @@ export async function getProduitLocalisation(produitId: number): Promise<{
 export async function getMouvementsProduit(produitId: number): Promise<unknown[]> {
   return fetchApi(`/produits/${produitId}/mouvements`);
 }
+
+// === CONFIGURATIONS ===
+export interface ConfigurationFormat {
+  id?: number;
+  entite: string;
+  prefixe: string;
+  suffixe: string;
+  longueur: number;
+  separateur: string;
+  auto_increment: boolean;
+  prochain_numero: number;
+}
+
+export async function getConfigurations(): Promise<ConfigurationFormat[]> {
+  return fetchApi('/configurations');
+}
+
+export async function getConfiguration(entite: string): Promise<ConfigurationFormat> {
+  return fetchApi(`/configurations/${entite}`);
+}
+
+export async function updateConfiguration(entite: string, data: Partial<ConfigurationFormat>): Promise<{ success: boolean; configuration: ConfigurationFormat }> {
+  return fetchApi(`/configurations/${entite}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function genererNumero(entite: string): Promise<{ numero: string; prochain: number }> {
+  return fetchApi(`/configurations/${entite}/generer`);
+}
+
+export async function consommerNumero(entite: string): Promise<{ numero: string }> {
+  return fetchApi(`/configurations/${entite}/consommer`, { method: 'POST' });
+}

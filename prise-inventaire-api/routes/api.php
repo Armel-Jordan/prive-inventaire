@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\TourneeController;
 use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\ConfigurationController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -387,4 +388,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/produits/{id}/localisation', [LocalisationController::class, 'produitLocalisation']);
     Route::get('/produits/{id}/mouvements', [LocalisationController::class, 'mouvementsProduit']);
+
+    // Configuration des numéros
+    Route::prefix('configurations')->group(function () {
+        Route::get('/', [ConfigurationController::class, 'index']);
+        Route::get('/{entite}', [ConfigurationController::class, 'show']);
+        Route::put('/{entite}', [ConfigurationController::class, 'update']);
+        Route::get('/{entite}/generer', [ConfigurationController::class, 'genererNumero']);
+        Route::post('/{entite}/consommer', [ConfigurationController::class, 'consommerNumero']);
+    });
 });
