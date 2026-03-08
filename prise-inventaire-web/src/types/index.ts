@@ -13,6 +13,8 @@ export interface Produit {
   description: string;
   mesure: string;
   type: string;
+  secteur_id?: number;
+  secteur?: Secteur;
 }
 
 export interface Secteur {
