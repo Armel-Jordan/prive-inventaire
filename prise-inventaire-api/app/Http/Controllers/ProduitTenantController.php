@@ -10,7 +10,8 @@ class ProduitTenantController extends Controller
 {
     public function index(): JsonResponse
     {
-        $produits = ProduitTenant::where('actif', true)
+        $produits = ProduitTenant::with('secteur')
+            ->where('actif', true)
             ->orderBy('numero')
             ->get();
 
@@ -24,6 +25,7 @@ class ProduitTenantController extends Controller
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'type' => 'nullable|string|max:50',
+            'secteur_id' => 'required|exists:secteurs,id',
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
         ]);
@@ -33,9 +35,12 @@ class ProduitTenantController extends Controller
             'description' => $request->description,
             'mesure' => $request->mesure ?? 'UN',
             'type' => $request->type,
+            'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
             'prix_unitaire' => $request->prix_unitaire,
         ]);
+
+        $produit->load('secteur');
 
         return response()->json([
             'success' => true,
@@ -46,7 +51,7 @@ class ProduitTenantController extends Controller
 
     public function show($id): JsonResponse
     {
-        $produit = ProduitTenant::findOrFail($id);
+        $produit = ProduitTenant::with('secteur')->findOrFail($id);
         return response()->json($produit);
     }
 
@@ -59,12 +64,13 @@ class ProduitTenantController extends Controller
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'type' => 'nullable|string|max:50',
+            'secteur_id' => 'sometimes|exists:secteurs,id',
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
             'actif' => 'sometimes|boolean',
         ]);
 
-        $produit->fill($request->only(['numero', 'description', 'mesure', 'type', 'categorie', 'prix_unitaire', 'actif']));
+        $produit->fill($request->only(['numero', 'description', 'mesure', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']));
         $produit->save();
 
         return response()->json([

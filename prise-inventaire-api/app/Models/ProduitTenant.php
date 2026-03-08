@@ -16,6 +16,7 @@ class ProduitTenant extends Model
         'description',
         'mesure',
         'type',
+        'secteur_id',
         'categorie',
         'prix_unitaire',
         'actif',
@@ -41,6 +42,11 @@ class ProduitTenant extends Model
             return false;
         }
         return $quantiteActuelle < $this->seuil_alerte;
+    }
+
+    public function secteur(): BelongsTo
+    {
+        return $this->belongsTo(Secteur::class);
     }
 
     public function fournisseurPrincipal(): BelongsTo
