@@ -2,7 +2,6 @@
 vendor/
 
 # Ignore local environment files
-.env
 .env.local
 .env.*.local
 
@@ -12,23 +11,11 @@ vendor/
 *.swp
 *.swo
 
-# Ignore logs and cache contents but keep directories
-storage/logs/*.log
-storage/framework/cache/data/*
-storage/framework/sessions/*
-storage/framework/views/*.php
-!storage/logs/.gitignore
-!storage/framework/cache/.gitignore
-!storage/framework/sessions/.gitignore
-!storage/framework/views/.gitignore
-!bootstrap/cache/.gitignore
-
-# Ignore node modules if any
+# Ignore node modules
 node_modules/
 
 # Ignore git
 .git/
-.gitignore
 
 # Ignore tests
 tests/
