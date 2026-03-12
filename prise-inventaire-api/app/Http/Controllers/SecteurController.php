@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Configuration;
 use App\Models\Secteur;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,13 +21,28 @@ class SecteurController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'code' => ['required', 'string', 'max:10', 'unique:secteurs,code', 'regex:/^[A-Za-z]\d{1,2}$/'],
+            'code' => ['nullable', 'string', 'max:10', 'unique:secteurs,code'],
             'nom' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);
 
+        // Générer le code automatiquement si non fourni
+        $code = $request->code;
+        if (empty($code)) {
+            $config = Configuration::pourEntite('secteur');
+            if ($config && $config->auto_increment) {
+                $code = $config->genererNumero();
+                $config->incrementer();
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le code est requis (pas de configuration auto-increment)',
+                ], 422);
+            }
+        }
+
         $secteur = Secteur::create([
-            'code' => strtoupper($request->code),
+            'code' => strtoupper($code),
             'nom' => $request->nom,
             'description' => $request->description,
         ]);

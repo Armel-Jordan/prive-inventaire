@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload } from 'lucide-react';
-import { getEmployes, createEmploye, updateEmploye, deleteEmploye } from '@/services/api';
+import { getEmployes, createEmploye, updateEmploye, deleteEmploye, getConfiguration } from '@/services/api';
 import type { Employe } from '@/types';
 
 interface EmployeForm {
@@ -12,6 +12,15 @@ interface EmployeForm {
 
 const emptyForm: EmployeForm = { numero: '', nom: '', prenom: '', email: '' };
 
+interface ConfigNumero {
+  auto_increment: boolean;
+  prefixe: string;
+  suffixe: string;
+  longueur: number;
+  separateur: string;
+  prochain_numero: number;
+}
+
 export default function EmployesPage() {
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +29,7 @@ export default function EmployesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EmployeForm>(emptyForm);
   const [importing, setImporting] = useState(false);
+  const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
@@ -35,7 +45,17 @@ export default function EmployesPage() {
 
   useEffect(() => {
     loadData();
+    loadConfig();
   }, []);
+
+  async function loadConfig() {
+    try {
+      const config = await getConfiguration('employe');
+      setConfigNumero(config);
+    } catch (error) {
+      console.error('Erreur chargement config:', error);
+    }
+  }
 
   const filtered = employes.filter(e => 
     e.numero.toLowerCase().includes(search.toLowerCase()) ||
@@ -256,15 +276,23 @@ export default function EmployesPage() {
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Numéro *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Numéro {!editingId && configNumero?.auto_increment ? '(auto-généré)' : '*'}
+                </label>
                 <input
                   type="text"
                   value={form.numero}
                   onChange={(e) => setForm({ ...form, numero: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
+                  className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
+                  required={!!editingId || !configNumero?.auto_increment}
                   disabled={!!editingId}
+                  placeholder={!editingId && configNumero?.auto_increment ? 'Généré automatiquement' : ''}
                 />
+                {!editingId && configNumero?.auto_increment && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Format: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>

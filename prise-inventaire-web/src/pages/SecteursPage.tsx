@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Pencil, Trash2, Download, Upload } from 'lucide-react';
-import { getSecteurs, createSecteur, updateSecteur, deleteSecteur } from '@/services/api';
+import { getSecteurs, createSecteur, updateSecteur, deleteSecteur, getConfiguration } from '@/services/api';
 import type { Secteur } from '@/types';
 
 export default function SecteursPage() {
@@ -10,6 +10,14 @@ export default function SecteursPage() {
   const [editingSecteur, setEditingSecteur] = useState<Secteur | null>(null);
   const [form, setForm] = useState({ code: '', nom: '', description: '' });
   const [importing, setImporting] = useState(false);
+  const [configNumero, setConfigNumero] = useState<{
+    auto_increment: boolean;
+    prefixe: string;
+    suffixe: string;
+    longueur: number;
+    separateur: string;
+    prochain_numero: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
@@ -25,7 +33,17 @@ export default function SecteursPage() {
 
   useEffect(() => {
     loadData();
+    loadConfig();
   }, []);
+
+  async function loadConfig() {
+    try {
+      const config = await getConfiguration('secteur');
+      setConfigNumero(config);
+    } catch (error) {
+      console.error('Erreur chargement config:', error);
+    }
+  }
 
   function openCreate() {
     setEditingSecteur(null);
@@ -220,16 +238,23 @@ export default function SecteursPage() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Code {!editingSecteur && configNumero?.auto_increment ? '(auto-généré)' : '*'}
+                </label>
                 <input
                   type="text"
                   value={form.code}
                   onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="Ex: A1, B2..."
-                  pattern="[A-Za-z]\d{1,2}"
-                  required
+                  className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-100"
+                  placeholder={!editingSecteur && configNumero?.auto_increment ? 'Généré automatiquement' : 'Ex: A1, B2...'}
+                  required={!!editingSecteur || !configNumero?.auto_increment}
+                  disabled={!!editingSecteur}
                 />
+                {!editingSecteur && configNumero?.auto_increment && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Format: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>

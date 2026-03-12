@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload } from 'lucide-react';
-import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs } from '@/services/api';
+import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
 
 interface ProduitForm {
@@ -13,6 +13,15 @@ interface ProduitForm {
 
 const emptyForm: ProduitForm = { numero: '', description: '', mesure: 'UN', type: '', secteur_id: '' };
 
+interface ConfigNumero {
+  auto_increment: boolean;
+  prefixe: string;
+  suffixe: string;
+  longueur: number;
+  separateur: string;
+  prochain_numero: number;
+}
+
 export default function ProduitsPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
@@ -22,6 +31,7 @@ export default function ProduitsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
   const [importing, setImporting] = useState(false);
+  const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
@@ -41,7 +51,17 @@ export default function ProduitsPage() {
 
   useEffect(() => {
     loadData();
+    loadConfig();
   }, []);
+
+  async function loadConfig() {
+    try {
+      const config = await getConfiguration('produit');
+      setConfigNumero(config);
+    } catch (error) {
+      console.error('Erreur chargement config:', error);
+    }
+  }
 
   const filtered = produits.filter(p => 
     p.numero.toLowerCase().includes(search.toLowerCase()) ||
@@ -286,15 +306,23 @@ export default function ProduitsPage() {
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Numéro *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Numéro {!editingId && configNumero?.auto_increment ? '(auto-généré)' : '*'}
+                </label>
                 <input
                   type="text"
                   value={form.numero}
                   onChange={(e) => setForm({ ...form, numero: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
+                  className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
+                  required={!!editingId || !configNumero?.auto_increment}
                   disabled={!!editingId}
+                  placeholder={!editingId && configNumero?.auto_increment ? 'Généré automatiquement' : ''}
                 />
+                {!editingId && configNumero?.auto_increment && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Format: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>

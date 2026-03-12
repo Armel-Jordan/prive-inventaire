@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Configuration;
 use App\Models\ProduitTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class ProduitTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => 'required|string|max:50|unique:produits,numero',
+            'numero' => 'nullable|string|max:50|unique:produits,numero',
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'type' => 'nullable|string|max:50',
@@ -30,8 +31,23 @@ class ProduitTenantController extends Controller
             'prix_unitaire' => 'nullable|numeric|min:0',
         ]);
 
+        // Générer le numéro automatiquement si non fourni
+        $numero = $request->numero;
+        if (empty($numero)) {
+            $config = Configuration::pourEntite('produit');
+            if ($config && $config->auto_increment) {
+                $numero = $config->genererNumero();
+                $config->incrementer();
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le numéro est requis (pas de configuration auto-increment)',
+                ], 422);
+            }
+        }
+
         $produit = ProduitTenant::create([
-            'numero' => $request->numero,
+            'numero' => $numero,
             'description' => $request->description,
             'mesure' => $request->mesure ?? 'UN',
             'type' => $request->type,

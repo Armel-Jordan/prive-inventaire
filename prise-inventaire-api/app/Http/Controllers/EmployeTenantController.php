@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Configuration;
 use App\Models\EmployeTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,14 +21,29 @@ class EmployeTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => 'required|string|max:20|unique:employes,numero',
+            'numero' => 'nullable|string|max:20|unique:employes,numero',
             'nom' => 'required|string|max:100',
             'prenom' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:100',
         ]);
 
+        // Générer le numéro automatiquement si non fourni
+        $numero = $request->numero;
+        if (empty($numero)) {
+            $config = Configuration::pourEntite('employe');
+            if ($config && $config->auto_increment) {
+                $numero = $config->genererNumero();
+                $config->incrementer();
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le numéro est requis (pas de configuration auto-increment)',
+                ], 422);
+            }
+        }
+
         $employe = EmployeTenant::create([
-            'numero' => $request->numero,
+            'numero' => $numero,
             'nom' => $request->nom,
             'prenom' => $request->prenom,
             'email' => $request->email,
