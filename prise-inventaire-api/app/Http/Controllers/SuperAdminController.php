@@ -79,9 +79,11 @@ class SuperAdminController extends Controller
         $duree = (int) $validated['duree_abonnement'];
         $dateExpiration = now()->addYears($duree);
 
+        $slug = strtolower($validated['slug']);
         $tenant = Tenant::create([
             'nom' => $validated['nom'],
-            'slug' => strtolower($validated['slug']),
+            'slug' => $slug,
+            'db_name' => 'tenant_' . str_replace('-', '_', $slug),
             'plan' => $validated['plan'],
             'actif' => true,
             'date_expiration' => $dateExpiration,
