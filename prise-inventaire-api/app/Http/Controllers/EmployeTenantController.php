@@ -12,6 +12,7 @@ class EmployeTenantController extends Controller
     public function index(): JsonResponse
     {
         $employes = EmployeTenant::where('actif', true)
+            ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('nom')
             ->get();
 
@@ -43,6 +44,7 @@ class EmployeTenantController extends Controller
         }
 
         $employe = EmployeTenant::create([
+            'tenant_id' => auth()->user()->tenant_id,
             'numero' => $numero,
             'nom' => $request->nom,
             'prenom' => $request->prenom,

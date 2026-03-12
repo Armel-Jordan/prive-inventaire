@@ -9,6 +9,7 @@ class Secteur extends Model
     protected $table = 'secteurs';
 
     protected $fillable = [
+        'tenant_id',
         'code',
         'nom',
         'description',

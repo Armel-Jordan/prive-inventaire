@@ -13,6 +13,7 @@ class ProduitTenantController extends Controller
     {
         $produits = ProduitTenant::with('secteur')
             ->where('actif', true)
+            ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')
             ->get();
 
@@ -47,6 +48,7 @@ class ProduitTenantController extends Controller
         }
 
         $produit = ProduitTenant::create([
+            'tenant_id' => auth()->user()->tenant_id,
             'numero' => $numero,
             'description' => $request->description,
             'mesure' => $request->mesure ?? 'UN',

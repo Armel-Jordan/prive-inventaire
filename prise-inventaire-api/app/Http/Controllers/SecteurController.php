@@ -12,6 +12,7 @@ class SecteurController extends Controller
     public function index(): JsonResponse
     {
         $secteurs = Secteur::where('actif', true)
+            ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('code')
             ->get();
 
@@ -42,6 +43,7 @@ class SecteurController extends Controller
         }
 
         $secteur = Secteur::create([
+            'tenant_id' => auth()->user()->tenant_id,
             'code' => strtoupper($code),
             'nom' => $request->nom,
             'description' => $request->description,

@@ -12,6 +12,7 @@ class ProduitTenant extends Model
     protected $table = 'produits';
 
     protected $fillable = [
+        'tenant_id',
         'numero',
         'description',
         'mesure',

@@ -10,6 +10,7 @@ class EmployeTenant extends Model
     protected $table = 'employes';
 
     protected $fillable = [
+        'tenant_id',
         'numero',
         'nom',
         'prenom',
