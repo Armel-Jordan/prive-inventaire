@@ -42,6 +42,15 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
+          <li className="mobile-nav-actions">
+            <button className="lang-toggle mobile-lang" onClick={toggleLanguage}>
+              <Globe size={18} />
+              <span>{language === 'fr' ? 'English' : 'Français'}</span>
+            </button>
+            <Link to="/contact" className="btn btn-primary mobile-cta" onClick={() => setIsOpen(false)}>
+              {t.nav.demo}
+            </Link>
+          </li>
         </ul>
 
         <div className="navbar-actions">

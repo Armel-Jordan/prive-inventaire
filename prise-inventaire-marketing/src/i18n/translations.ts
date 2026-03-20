@@ -617,6 +617,13 @@ export const translations = {
           content: 'Les présentes CGV sont régies par le droit camerounais. Tout litige sera soumis aux tribunaux compétents de Douala, Cameroun.'
         }
       }
+    },
+    // 404 Page
+    notFound: {
+      title: 'Page non trouvée',
+      description: 'Désolé, la page que vous recherchez n\'existe pas ou a été déplacée.',
+      homeButton: 'Retour à l\'accueil',
+      backButton: 'Page précédente'
     }
   },
   en: {
@@ -1235,8 +1242,16 @@ export const translations = {
           content: 'These Terms are governed by Cameroonian law. Any dispute will be submitted to the competent courts of Douala, Cameroon.'
         }
       }
+    },
+    // 404 Page
+    notFound: {
+      title: 'Page Not Found',
+      description: 'Sorry, the page you are looking for does not exist or has been moved.',
+      homeButton: 'Back to Home',
+      backButton: 'Go Back'
     }
   }
 };
 
 export type Translations = typeof translations.fr;
+

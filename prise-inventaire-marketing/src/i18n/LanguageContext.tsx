@@ -4,10 +4,21 @@ import { translations } from './translations';
 import type { Language } from './translations';
 import { LanguageContext } from './context';
 
+function detectBrowserLanguage(): Language {
+  const browserLang = navigator.language.split('-')[0];
+  const supportedLanguages: Language[] = ['fr', 'en'];
+  return supportedLanguages.includes(browserLang as Language) 
+    ? (browserLang as Language) 
+    : 'fr';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('language');
-    return (saved as Language) || 'fr';
+    if (saved && ['fr', 'en'].includes(saved)) {
+      return saved as Language;
+    }
+    return detectBrowserLanguage();
   });
 
   useEffect(() => {
