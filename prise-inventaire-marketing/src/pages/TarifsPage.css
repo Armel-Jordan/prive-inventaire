@@ -1,0 +1,286 @@
+/* Tarifs Hero */
+.tarifs-hero {
+  padding: 160px 0 80px;
+  background: var(--gradient);
+  text-align: center;
+  color: var(--white);
+}
+
+.tarifs-hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--white);
+}
+
+.tarifs-hero p {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+/* Plans Section */
+.plans-section {
+  background: var(--gray-lighter);
+  padding-top: 60px;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: -120px;
+}
+
+.plan-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: var(--shadow);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+}
+
+.plan-card.popular {
+  border: 2px solid var(--primary);
+  transform: scale(1.05);
+  z-index: 1;
+}
+
+.plan-card.popular:hover {
+  transform: scale(1.05) translateY(-8px);
+}
+
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: var(--white);
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.plan-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.plan-header h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+
+.plan-header p {
+  color: var(--gray);
+  font-size: 14px;
+}
+
+.plan-price {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--gray-lighter);
+}
+
+.plan-price .price {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.plan-price .currency {
+  font-size: 16px;
+  color: var(--gray);
+  margin-left: 4px;
+}
+
+.plan-price .period {
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.plan-features {
+  flex: 1;
+  margin-bottom: 24px;
+}
+
+.plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--gray-lighter);
+}
+
+.plan-features li:last-child {
+  border-bottom: none;
+}
+
+.plan-features li.included {
+  color: var(--dark);
+}
+
+.plan-features li.included svg {
+  color: var(--secondary);
+}
+
+.plan-features li.excluded {
+  color: var(--gray-light);
+}
+
+.plan-features li.excluded svg {
+  color: var(--gray-light);
+}
+
+.plan-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Included Section */
+.included-section {
+  background: var(--white);
+}
+
+.included-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+
+.included-item {
+  text-align: center;
+  padding: 32px 24px;
+  background: var(--gray-lighter);
+  border-radius: 16px;
+}
+
+.included-item svg {
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.included-item h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+
+.included-item p {
+  color: var(--gray);
+  font-size: 14px;
+}
+
+/* FAQ Section */
+.faq-section {
+  background: var(--gray-lighter);
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.faq-item {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.faq-item h4 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 12px;
+}
+
+.faq-item h4 svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.faq-item p {
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Tarifs CTA */
+.tarifs-cta {
+  padding: 80px 0;
+  background: var(--dark);
+  text-align: center;
+  color: var(--white);
+}
+
+.tarifs-cta h2 {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--white);
+}
+
+.tarifs-cta p {
+  font-size: 18px;
+  opacity: 0.8;
+  margin-bottom: 32px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .plan-card.popular {
+    transform: none;
+  }
+
+  .plan-card.popular:hover {
+    transform: translateY(-8px);
+  }
+
+  .included-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .tarifs-hero h1 {
+    font-size: 32px;
+  }
+
+  .included-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-price .price {
+    font-size: 32px;
+  }
+}

@@ -1,0 +1,495 @@
+/* Hero Section */
+.hero {
+  padding: 140px 0 80px;
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+  overflow: hidden;
+}
+
+.hero .container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--white);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.hero-content h1 {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  color: var(--dark);
+}
+
+.gradient-text {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-content p {
+  font-size: 18px;
+  color: var(--gray);
+  margin-bottom: 32px;
+  line-height: 1.7;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Hero Mockup */
+.hero-visual {
+  position: relative;
+}
+
+.hero-mockup {
+  display: flex;
+  gap: 20px;
+  transform: perspective(1000px) rotateY(-5deg);
+}
+
+.mockup-phone {
+  width: 180px;
+  height: 360px;
+  background: var(--dark);
+  border-radius: 24px;
+  padding: 8px;
+  box-shadow: var(--shadow-lg);
+}
+
+.mockup-screen {
+  width: 100%;
+  height: 100%;
+  background: var(--white);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.mockup-header {
+  height: 40px;
+  background: var(--primary);
+}
+
+.mockup-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mockup-card {
+  height: 60px;
+  background: var(--gray-lighter);
+  border-radius: 8px;
+}
+
+.mockup-card.small {
+  height: 40px;
+}
+
+.mockup-dashboard {
+  width: 320px;
+  height: 220px;
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-top: 40px;
+}
+
+.mockup-nav {
+  height: 32px;
+  background: var(--primary);
+}
+
+.mockup-main {
+  padding: 16px;
+}
+
+.mockup-chart {
+  height: 80px;
+  background: linear-gradient(90deg, var(--primary-light) 0%, var(--secondary) 100%);
+  border-radius: 8px;
+  opacity: 0.3;
+  margin-bottom: 12px;
+}
+
+.mockup-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.mockup-stat {
+  flex: 1;
+  height: 50px;
+  background: var(--gray-lighter);
+  border-radius: 6px;
+}
+
+/* Stats Section */
+.stats-section {
+  padding: 40px 0;
+  background: var(--primary);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+
+.stat-item {
+  text-align: center;
+  color: var(--white);
+}
+
+.stat-value {
+  display: block;
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* Solutions Section */
+.solutions-section {
+  background: var(--gray-lighter);
+}
+
+.solutions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.solution-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.solution-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+}
+
+.solution-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--white);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.solution-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.solution-card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--dark);
+}
+
+.solution-card p {
+  color: var(--gray);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.solution-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 14px;
+  transition: gap 0.3s ease;
+}
+
+.solution-link:hover {
+  gap: 10px;
+}
+
+/* Features Section */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.feature-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--primary);
+  color: var(--white);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.feature-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--dark);
+}
+
+.feature-card p {
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Africa Section */
+.africa-section {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  color: var(--white);
+}
+
+.africa-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.africa-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.africa-text h2 {
+  font-size: 40px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--white);
+}
+
+.africa-text p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.africa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.africa-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.africa-list svg {
+  color: var(--secondary);
+}
+
+.africa-countries {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.country-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.country-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+.country-card.coming {
+  grid-column: span 2;
+  opacity: 0.7;
+}
+
+.country-flag {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.country-card h4 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.country-card p {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* CTA Section */
+.cta-section {
+  padding: 80px 0;
+  background: var(--gradient);
+}
+
+.cta-content {
+  text-align: center;
+  color: var(--white);
+}
+
+.cta-content h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--white);
+}
+
+.cta-content p {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-bottom: 32px;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cta-buttons .btn-secondary {
+  border-color: var(--white);
+  color: var(--white);
+}
+
+.cta-buttons .btn-secondary:hover {
+  background: var(--white);
+  color: var(--primary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .hero .container {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .hero-content h1 {
+    font-size: 40px;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .solutions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .africa-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .africa-list {
+    align-items: center;
+  }
+
+  .africa-countries {
+    grid-template-columns: 1fr;
+  }
+
+  .country-card.coming {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 120px 0 60px;
+  }
+
+  .hero-content h1 {
+    font-size: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cta-content h2 {
+    font-size: 28px;
+  }
+}

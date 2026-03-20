@@ -1,0 +1,382 @@
+/* Vision Hero */
+.vision-hero {
+  padding: 160px 0 80px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  text-align: center;
+  color: var(--white);
+}
+
+.vision-badge {
+  display: inline-block;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.vision-hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.vision-hero p {
+  font-size: 20px;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Mission Section */
+.mission-section {
+  background: var(--gray-lighter);
+}
+
+.mission-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 60px;
+  align-items: start;
+}
+
+.mission-text h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: var(--dark);
+}
+
+.mission-lead {
+  font-size: 20px;
+  color: var(--dark);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.mission-text p {
+  color: var(--gray);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.mission-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.mission-stat {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.mission-stat .stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.mission-stat .stat-label {
+  font-size: 13px;
+  color: var(--gray);
+}
+
+/* Values Section */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.value-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.value-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.value-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--gradient);
+  color: var(--white);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.value-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--dark);
+}
+
+.value-card p {
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Countries Section */
+.countries-section {
+  background: var(--gray-lighter);
+}
+
+.countries-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.country-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.country-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.country-card.prochainement {
+  opacity: 0.7;
+}
+
+.country-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.country-header .country-flag {
+  font-size: 48px;
+}
+
+.country-header h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.country-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.country-status.actif {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.country-status.expansion {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.country-status.prochainement {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.country-card > p {
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.country-cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.city-tag {
+  padding: 4px 12px;
+  background: var(--gray-lighter);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--gray);
+}
+
+/* Why Africa */
+.why-africa {
+  background: var(--dark);
+  color: var(--white);
+}
+
+.why-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.why-text h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--white);
+}
+
+.why-text > p {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.why-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.why-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+}
+
+.why-list svg {
+  color: var(--secondary);
+  flex-shrink: 0;
+}
+
+.why-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.africa-map {
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-light);
+}
+
+/* Vision CTA */
+.vision-cta {
+  padding: 80px 0;
+  background: var(--gradient);
+  text-align: center;
+  color: var(--white);
+}
+
+.vision-cta h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--white);
+}
+
+.vision-cta p {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-bottom: 32px;
+}
+
+.vision-cta .cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.vision-cta .btn-secondary {
+  border-color: var(--white);
+  color: var(--white);
+}
+
+.vision-cta .btn-secondary:hover {
+  background: var(--white);
+  color: var(--primary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .mission-content {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .values-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .countries-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .why-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .why-list {
+    align-items: center;
+  }
+
+  .why-visual {
+    order: -1;
+  }
+
+  .africa-map {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .vision-hero h1 {
+    font-size: 32px;
+  }
+
+  .mission-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .values-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-text h2,
+  .why-text h2 {
+    font-size: 28px;
+  }
+}
