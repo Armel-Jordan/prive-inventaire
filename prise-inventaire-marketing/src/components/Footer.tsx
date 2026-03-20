@@ -65,9 +65,9 @@ export default function Footer() {
         <div className="footer-bottom">
           <p>{t.footer.copyright.replace('{year}', new Date().getFullYear().toString())}</p>
           <div className="footer-bottom-links">
-            <a href="#">{t.footer.legal}</a>
-            <a href="#">{t.footer.privacy}</a>
-            <a href="#">{t.footer.terms}</a>
+            <Link to="/mentions-legales">{t.footer.legal}</Link>
+            <Link to="/confidentialite">{t.footer.privacy}</Link>
+            <Link to="/cgv">{t.footer.terms}</Link>
           </div>
         </div>
       </div>

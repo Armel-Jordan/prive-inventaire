@@ -468,6 +468,155 @@ export const translations = {
         title: 'Suivez-nous',
         description: 'Restez informé de nos actualités et nouveautés'
       }
+    },
+    // Legal Page
+    legal: {
+      title: 'Mentions Légales',
+      lastUpdated: 'Dernière mise à jour',
+      sections: {
+        editor: {
+          title: 'Éditeur du site',
+          companyName: 'Raison sociale',
+          address: 'Adresse',
+          email: 'Email',
+          phone: 'Téléphone',
+          capital: 'Capital social',
+          rcs: 'RCS'
+        },
+        director: {
+          title: 'Directeur de la publication',
+          content: 'Le directeur de la publication est le représentant légal de la société Prise Inventaire SARL.'
+        },
+        hosting: {
+          title: 'Hébergement',
+          provider: 'Hébergeur',
+          address: 'Adresse',
+          website: 'Site web'
+        },
+        intellectual: {
+          title: 'Propriété intellectuelle',
+          content: 'L\'ensemble du contenu de ce site (textes, images, vidéos, logos, icônes, sons, logiciels, etc.) est la propriété exclusive de Prise Inventaire SARL ou de ses partenaires. Toute reproduction, représentation, modification, publication, adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite, sauf autorisation écrite préalable de Prise Inventaire SARL.'
+        },
+        liability: {
+          title: 'Limitation de responsabilité',
+          content: 'Prise Inventaire SARL ne pourra être tenue responsable des dommages directs et indirects causés au matériel de l\'utilisateur, lors de l\'accès au site, et résultant soit de l\'utilisation d\'un matériel ne répondant pas aux spécifications techniques requises, soit de l\'apparition d\'un bug ou d\'une incompatibilité.'
+        },
+        links: {
+          title: 'Liens hypertextes',
+          content: 'Le site peut contenir des liens hypertextes vers d\'autres sites. Prise Inventaire SARL n\'exerce aucun contrôle sur ces sites et décline toute responsabilité quant à leur contenu.'
+        },
+        law: {
+          title: 'Droit applicable',
+          content: 'Les présentes mentions légales sont régies par le droit camerounais. En cas de litige, les tribunaux camerounais seront seuls compétents.'
+        }
+      }
+    },
+    // Privacy Page
+    privacy: {
+      title: 'Politique de Confidentialité',
+      lastUpdated: 'Dernière mise à jour',
+      sections: {
+        intro: {
+          title: 'Introduction',
+          content: 'Prise Inventaire SARL s\'engage à protéger la vie privée des utilisateurs de ses services. Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos données personnelles.'
+        },
+        dataCollected: {
+          title: 'Données collectées',
+          intro: 'Nous collectons les données suivantes :',
+          items: [
+            'Informations d\'identification (nom, prénom, email, téléphone)',
+            'Informations professionnelles (entreprise, fonction)',
+            'Données de connexion et d\'utilisation',
+            'Données d\'inventaire saisies dans l\'application'
+          ]
+        },
+        usage: {
+          title: 'Utilisation des données',
+          intro: 'Vos données sont utilisées pour :',
+          items: [
+            'Fournir et améliorer nos services',
+            'Gérer votre compte et votre abonnement',
+            'Vous contacter concernant votre compte ou nos services',
+            'Assurer la sécurité de nos services',
+            'Respecter nos obligations légales'
+          ]
+        },
+        storage: {
+          title: 'Conservation des données',
+          content: 'Vos données sont conservées pendant la durée de votre abonnement et jusqu\'à 3 ans après la fin de celui-ci, sauf obligation légale contraire. Les données de facturation sont conservées 10 ans conformément aux obligations comptables.'
+        },
+        sharing: {
+          title: 'Partage des données',
+          content: 'Nous ne vendons jamais vos données personnelles. Nous pouvons partager vos données avec nos sous-traitants techniques (hébergement, paiement) dans le strict cadre de la fourniture de nos services, et avec les autorités si la loi l\'exige.'
+        },
+        rights: {
+          title: 'Vos droits',
+          intro: 'Conformément à la réglementation applicable, vous disposez des droits suivants :',
+          items: [
+            'Droit d\'accès à vos données',
+            'Droit de rectification',
+            'Droit à l\'effacement',
+            'Droit à la portabilité',
+            'Droit d\'opposition'
+          ],
+          contact: 'Pour exercer ces droits, contactez-nous à : privacy@prise-inventaire.com'
+        },
+        cookies: {
+          title: 'Cookies',
+          content: 'Notre site utilise des cookies essentiels au fonctionnement du service et des cookies analytiques pour améliorer votre expérience. Vous pouvez configurer votre navigateur pour refuser les cookies.'
+        },
+        changes: {
+          title: 'Modifications',
+          content: 'Nous nous réservons le droit de modifier cette politique de confidentialité à tout moment. Les modifications entrent en vigueur dès leur publication sur le site.'
+        },
+        contact: {
+          title: 'Contact',
+          content: 'Pour toute question concernant cette politique, contactez-nous à : privacy@prise-inventaire.com'
+        }
+      }
+    },
+    // Terms Page
+    terms: {
+      title: 'Conditions Générales de Vente',
+      lastUpdated: 'Dernière mise à jour',
+      sections: {
+        object: {
+          title: 'Objet',
+          content: 'Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre Prise Inventaire SARL et ses clients pour l\'utilisation des services de gestion d\'inventaire proposés.'
+        },
+        services: {
+          title: 'Description des services',
+          content: 'Prise Inventaire propose une solution de gestion d\'inventaire comprenant une application mobile, un dashboard web et un portail client (à venir). Les fonctionnalités disponibles dépendent du plan souscrit.'
+        },
+        subscription: {
+          title: 'Abonnement',
+          content: 'L\'accès aux services est soumis à la souscription d\'un abonnement mensuel ou annuel. L\'abonnement est renouvelé automatiquement sauf résiliation par le client avant la date d\'échéance.'
+        },
+        pricing: {
+          title: 'Tarifs',
+          content: 'Les tarifs sont indiqués en FCFA et hors taxes. Prise Inventaire se réserve le droit de modifier ses tarifs à tout moment. Les modifications de tarifs seront communiquées aux clients avec un préavis de 30 jours.'
+        },
+        payment: {
+          title: 'Paiement',
+          content: 'Le paiement s\'effectue par Mobile Money (Orange Money, MTN MoMo), virement bancaire ou carte de crédit. Le paiement est dû à la date de renouvellement de l\'abonnement. En cas de retard de paiement, l\'accès aux services pourra être suspendu.'
+        },
+        obligations: {
+          title: 'Obligations du client',
+          content: 'Le client s\'engage à utiliser les services conformément à leur destination, à ne pas tenter de contourner les mesures de sécurité, et à maintenir la confidentialité de ses identifiants de connexion.'
+        },
+        liability: {
+          title: 'Responsabilité',
+          content: 'Prise Inventaire s\'engage à fournir les services avec diligence. Toutefois, sa responsabilité est limitée au montant des sommes versées par le client au cours des 12 derniers mois. Prise Inventaire ne saurait être tenue responsable des dommages indirects.'
+        },
+        termination: {
+          title: 'Résiliation',
+          content: 'Le client peut résilier son abonnement à tout moment depuis son espace client. La résiliation prend effet à la fin de la période d\'abonnement en cours. En cas de manquement grave aux présentes CGV, Prise Inventaire peut résilier l\'abonnement sans préavis.'
+        },
+        law: {
+          title: 'Droit applicable',
+          content: 'Les présentes CGV sont régies par le droit camerounais. Tout litige sera soumis aux tribunaux compétents de Douala, Cameroun.'
+        }
+      }
     }
   },
   en: {
@@ -936,6 +1085,155 @@ export const translations = {
       social: {
         title: 'Follow us',
         description: 'Stay informed about our news and updates'
+      }
+    },
+    // Legal Page
+    legal: {
+      title: 'Legal Notice',
+      lastUpdated: 'Last updated',
+      sections: {
+        editor: {
+          title: 'Site Publisher',
+          companyName: 'Company name',
+          address: 'Address',
+          email: 'Email',
+          phone: 'Phone',
+          capital: 'Share capital',
+          rcs: 'Registration'
+        },
+        director: {
+          title: 'Publication Director',
+          content: 'The publication director is the legal representative of Prise Inventaire SARL.'
+        },
+        hosting: {
+          title: 'Hosting',
+          provider: 'Host',
+          address: 'Address',
+          website: 'Website'
+        },
+        intellectual: {
+          title: 'Intellectual Property',
+          content: 'All content on this site (texts, images, videos, logos, icons, sounds, software, etc.) is the exclusive property of Prise Inventaire SARL or its partners. Any reproduction, representation, modification, publication, adaptation of all or part of the elements of the site, by any means or process, is prohibited without prior written authorization from Prise Inventaire SARL.'
+        },
+        liability: {
+          title: 'Limitation of Liability',
+          content: 'Prise Inventaire SARL cannot be held responsible for direct and indirect damages caused to the user\'s equipment when accessing the site, resulting either from the use of equipment that does not meet the required technical specifications, or from the appearance of a bug or incompatibility.'
+        },
+        links: {
+          title: 'Hyperlinks',
+          content: 'The site may contain hyperlinks to other sites. Prise Inventaire SARL has no control over these sites and disclaims all responsibility for their content.'
+        },
+        law: {
+          title: 'Applicable Law',
+          content: 'These legal notices are governed by Cameroonian law. In case of dispute, Cameroonian courts will have sole jurisdiction.'
+        }
+      }
+    },
+    // Privacy Page
+    privacy: {
+      title: 'Privacy Policy',
+      lastUpdated: 'Last updated',
+      sections: {
+        intro: {
+          title: 'Introduction',
+          content: 'Prise Inventaire SARL is committed to protecting the privacy of users of its services. This privacy policy explains how we collect, use and protect your personal data.'
+        },
+        dataCollected: {
+          title: 'Data Collected',
+          intro: 'We collect the following data:',
+          items: [
+            'Identification information (name, email, phone)',
+            'Professional information (company, position)',
+            'Connection and usage data',
+            'Inventory data entered in the application'
+          ]
+        },
+        usage: {
+          title: 'Use of Data',
+          intro: 'Your data is used to:',
+          items: [
+            'Provide and improve our services',
+            'Manage your account and subscription',
+            'Contact you regarding your account or our services',
+            'Ensure the security of our services',
+            'Comply with our legal obligations'
+          ]
+        },
+        storage: {
+          title: 'Data Retention',
+          content: 'Your data is retained for the duration of your subscription and up to 3 years after its end, unless otherwise required by law. Billing data is retained for 10 years in accordance with accounting obligations.'
+        },
+        sharing: {
+          title: 'Data Sharing',
+          content: 'We never sell your personal data. We may share your data with our technical subcontractors (hosting, payment) strictly within the framework of providing our services, and with authorities if required by law.'
+        },
+        rights: {
+          title: 'Your Rights',
+          intro: 'In accordance with applicable regulations, you have the following rights:',
+          items: [
+            'Right of access to your data',
+            'Right of rectification',
+            'Right to erasure',
+            'Right to portability',
+            'Right to object'
+          ],
+          contact: 'To exercise these rights, contact us at: privacy@prise-inventaire.com'
+        },
+        cookies: {
+          title: 'Cookies',
+          content: 'Our site uses essential cookies for the operation of the service and analytical cookies to improve your experience. You can configure your browser to refuse cookies.'
+        },
+        changes: {
+          title: 'Changes',
+          content: 'We reserve the right to modify this privacy policy at any time. Changes take effect upon publication on the site.'
+        },
+        contact: {
+          title: 'Contact',
+          content: 'For any questions regarding this policy, contact us at: privacy@prise-inventaire.com'
+        }
+      }
+    },
+    // Terms Page
+    terms: {
+      title: 'Terms of Service',
+      lastUpdated: 'Last updated',
+      sections: {
+        object: {
+          title: 'Purpose',
+          content: 'These Terms of Service govern the contractual relationship between Prise Inventaire SARL and its customers for the use of the inventory management services offered.'
+        },
+        services: {
+          title: 'Description of Services',
+          content: 'Prise Inventaire offers an inventory management solution including a mobile application, a web dashboard and a client portal (coming soon). Available features depend on the subscribed plan.'
+        },
+        subscription: {
+          title: 'Subscription',
+          content: 'Access to services requires a monthly or annual subscription. The subscription is automatically renewed unless cancelled by the customer before the due date.'
+        },
+        pricing: {
+          title: 'Pricing',
+          content: 'Prices are indicated in FCFA and exclude taxes. Prise Inventaire reserves the right to modify its prices at any time. Price changes will be communicated to customers with 30 days notice.'
+        },
+        payment: {
+          title: 'Payment',
+          content: 'Payment is made by Mobile Money (Orange Money, MTN MoMo), bank transfer or credit card. Payment is due on the subscription renewal date. In case of late payment, access to services may be suspended.'
+        },
+        obligations: {
+          title: 'Customer Obligations',
+          content: 'The customer agrees to use the services in accordance with their intended purpose, not to attempt to circumvent security measures, and to maintain the confidentiality of their login credentials.'
+        },
+        liability: {
+          title: 'Liability',
+          content: 'Prise Inventaire is committed to providing services with diligence. However, its liability is limited to the amount paid by the customer in the last 12 months. Prise Inventaire cannot be held liable for indirect damages.'
+        },
+        termination: {
+          title: 'Termination',
+          content: 'The customer may terminate their subscription at any time from their customer area. Termination takes effect at the end of the current subscription period. In case of serious breach of these Terms, Prise Inventaire may terminate the subscription without notice.'
+        },
+        law: {
+          title: 'Applicable Law',
+          content: 'These Terms are governed by Cameroonian law. Any dispute will be submitted to the competent courts of Douala, Cameroon.'
+        }
       }
     }
   }

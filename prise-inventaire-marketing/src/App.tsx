@@ -8,6 +8,9 @@ import VisionPage from './pages/VisionPage';
 import TarifsPage from './pages/TarifsPage';
 import FormationsPage from './pages/FormationsPage';
 import ContactPage from './pages/ContactPage';
+import LegalPage from './pages/LegalPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import './index.css';
 
 function ScrollToTop() {
@@ -28,6 +31,9 @@ function App() {
             <Route path="/tarifs" element={<TarifsPage />} />
             <Route path="/formations" element={<FormationsPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/mentions-legales" element={<LegalPage />} />
+            <Route path="/confidentialite" element={<PrivacyPage />} />
+            <Route path="/cgv" element={<TermsPage />} />
           </Routes>
         </main>
         <Footer />
