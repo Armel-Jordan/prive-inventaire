@@ -50,7 +50,10 @@ return new class extends Migration
             'dashboard', 'inventaires', 'statistiques', 'comparaison', 'alertes',
             'historique', 'tracabilite', 'relocalisation', 'planification',
             'approbations', 'rapports', 'inventaire_tournant', 'produits',
-            'secteurs', 'employes', 'roles'
+            'secteurs', 'employes', 'roles', 'fournisseurs', 'commandes_fournisseur',
+            'receptions', 'clients', 'commandes_client', 'factures', 'bons_livraison',
+            'camions', 'tournees', 'zones_preparation', 'devis', 'comptabilite',
+            'previsions_stock', 'gestion_prix', 'alertes_config', 'configuration',
         ];
 
         // Admin - Tout accès

@@ -12,7 +12,10 @@ class RolePermissionController extends Controller
         'dashboard', 'inventaires', 'statistiques', 'comparaison', 'alertes',
         'historique', 'tracabilite', 'relocalisation', 'planification',
         'approbations', 'rapports', 'inventaire_tournant', 'produits',
-        'secteurs', 'employes', 'roles'
+        'secteurs', 'employes', 'roles', 'fournisseurs', 'commandes_fournisseur',
+        'receptions', 'clients', 'commandes_client', 'factures', 'bons_livraison',
+        'camions', 'tournees', 'zones_preparation', 'devis', 'comptabilite',
+        'previsions_stock', 'gestion_prix', 'alertes_config', 'configuration',
     ];
 
     public function index(): JsonResponse
@@ -107,17 +110,19 @@ class RolePermissionController extends Controller
 
         // Mettre à jour les permissions si fournies
         if ($request->has('permissions')) {
-            foreach ($request->permissions as $module => $perm) {
-                DB::table('role_permissions')
-                    ->where('role_id', $id)
-                    ->where('module', $module)
-                    ->update([
+            foreach ($this->allModules as $module) {
+                $perm = $request->permissions[$module] ?? [];
+                DB::table('role_permissions')->updateOrInsert(
+                    ['role_id' => $id, 'module' => $module],
+                    [
                         'can_view' => $perm['can_view'] ?? false,
                         'can_create' => $perm['can_create'] ?? false,
                         'can_edit' => $perm['can_edit'] ?? false,
                         'can_delete' => $perm['can_delete'] ?? false,
                         'updated_at' => now(),
-                    ]);
+                        'created_at' => now(),
+                    ]
+                );
             }
         }
 
@@ -174,6 +179,22 @@ class RolePermissionController extends Controller
             'secteurs' => 'Secteurs',
             'employes' => 'Employés',
             'roles' => 'Gestion des rôles',
+            'fournisseurs' => 'Fournisseurs',
+            'commandes_fournisseur' => 'Commandes Fournisseur',
+            'receptions' => 'Réceptions',
+            'clients' => 'Clients',
+            'commandes_client' => 'Commandes Client',
+            'factures' => 'Factures',
+            'bons_livraison' => 'Bons de Livraison',
+            'camions' => 'Camions',
+            'tournees' => 'Tournées',
+            'zones_preparation' => 'Zones Préparation',
+            'devis' => 'Devis',
+            'comptabilite' => 'Comptabilité',
+            'previsions_stock' => 'Prévisions Stock',
+            'gestion_prix' => 'Gestion des Prix',
+            'alertes_config' => 'Configuration Alertes',
+            'configuration' => 'Configuration Système',
         ];
 
         return response()->json($moduleLabels);
