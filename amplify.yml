@@ -15,10 +15,9 @@ applications:
       cache:
         paths:
           - node_modules/**/*
-      buildSpec: |
-        customHeaders:
-          - pattern: '**/*'
-            headers:
-              - key: 'Access-Control-Allow-Origin'
-                value: '*'
+      customHeaders:
+        - pattern: '**/*'
+          headers:
+            - key: 'Access-Control-Allow-Origin'
+              value: '*'
     appRoot: prise-inventaire-web

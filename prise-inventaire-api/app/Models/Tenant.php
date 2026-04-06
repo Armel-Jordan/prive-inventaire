@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tenant extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'tenants';
 
     protected $fillable = [
@@ -58,7 +61,7 @@ class Tenant extends Model
 
     public function adminUsers(): HasMany
     {
-        return $this->hasMany(AdminUser::class)->where('role', '!=', 'super_admin');
+        return $this->hasMany(AdminUser::class);
     }
 
     public function isExpired(): bool

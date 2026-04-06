@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
+use App\Models\SuperAdmin;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,9 +12,6 @@ use Illuminate\Validation\Rule;
 
 class SuperAdminController extends Controller
 {
-    /**
-     * Login Super Admin (sans tenant_slug)
-     */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -21,8 +19,7 @@ class SuperAdminController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = AdminUser::where('email', $request->email)
-            ->where('role', 'super_admin')
+        $user = SuperAdmin::where('email', $request->email)
             ->where('actif', true)
             ->first();
 
@@ -45,15 +42,12 @@ class SuperAdminController extends Controller
                 'id' => $user->id,
                 'nom' => $user->nom,
                 'email' => $user->email,
-                'role' => $user->role,
+                'role' => 'super_admin',
             ],
             'token' => $token,
         ]);
     }
 
-    /**
-     * Liste tous les tenants
-     */
     public function getTenants(): JsonResponse
     {
         $tenants = Tenant::withCount('adminUsers')
@@ -63,9 +57,6 @@ class SuperAdminController extends Controller
         return response()->json($tenants);
     }
 
-    /**
-     * Créer un nouveau tenant
-     */
     public function createTenant(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -77,16 +68,15 @@ class SuperAdminController extends Controller
         ]);
 
         $duree = (int) $validated['duree_abonnement'];
-        $dateExpiration = now()->addYears($duree);
-
         $slug = strtolower($validated['slug']);
+
         $tenant = Tenant::create([
             'nom' => $validated['nom'],
             'slug' => $slug,
             'db_name' => 'tenant_' . str_replace('-', '_', $slug),
             'plan' => $validated['plan'],
             'actif' => true,
-            'date_expiration' => $dateExpiration,
+            'date_expiration' => now()->addYears($duree),
             'duree_abonnement' => $duree,
             'renouvelable' => $validated['renouvelable'],
         ]);
@@ -97,9 +87,6 @@ class SuperAdminController extends Controller
         ], 201);
     }
 
-    /**
-     * Renouveler un tenant
-     */
     public function renewTenant(Request $request, $id): JsonResponse
     {
         $tenant = Tenant::findOrFail($id);
@@ -110,13 +97,10 @@ class SuperAdminController extends Controller
         ]);
 
         $duree = (int) $validated['duree_abonnement'];
-
-        // Si expiré ou pas de date, partir de maintenant. Sinon, ajouter à la date d'expiration actuelle
         $baseDate = (!$tenant->date_expiration || $tenant->isExpired()) ? now() : $tenant->date_expiration;
-        $nouvelleExpiration = $baseDate->copy()->addYears($duree);
 
         $tenant->update([
-            'date_expiration' => $nouvelleExpiration,
+            'date_expiration' => $baseDate->copy()->addYears($duree),
             'duree_abonnement' => $duree,
             'renouvelable' => $validated['renouvelable'] ?? $tenant->renouvelable,
             'actif' => true,
@@ -125,13 +109,9 @@ class SuperAdminController extends Controller
         return response()->json([
             'message' => 'Abonnement renouvelé avec succès',
             'tenant' => $tenant,
-            'nouvelle_expiration' => $nouvelleExpiration->format('Y-m-d'),
         ]);
     }
 
-    /**
-     * Modifier un tenant
-     */
     public function updateTenant(Request $request, $id): JsonResponse
     {
         $tenant = Tenant::findOrFail($id);
@@ -156,9 +136,6 @@ class SuperAdminController extends Controller
         ]);
     }
 
-    /**
-     * Supprimer un tenant
-     */
     public function deleteTenant($id): JsonResponse
     {
         $tenant = Tenant::findOrFail($id);
@@ -167,15 +144,11 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Tenant supprimé']);
     }
 
-    /**
-     * Liste les admins d'un tenant
-     */
     public function getTenantAdmins($tenantId): JsonResponse
     {
         $tenant = Tenant::findOrFail($tenantId);
 
         $admins = AdminUser::where('tenant_id', $tenantId)
-            ->where('role', '!=', 'super_admin')
             ->orderBy('nom')
             ->get(['id', 'nom', 'email', 'role', 'actif', 'derniere_connexion', 'created_at']);
 
@@ -185,9 +158,6 @@ class SuperAdminController extends Controller
         ]);
     }
 
-    /**
-     * Créer un admin pour un tenant
-     */
     public function createTenantAdmin(Request $request, $tenantId): JsonResponse
     {
         $tenant = Tenant::findOrFail($tenantId);
@@ -214,9 +184,6 @@ class SuperAdminController extends Controller
         ], 201);
     }
 
-    /**
-     * Modifier un admin
-     */
     public function updateTenantAdmin(Request $request, $tenantId, $adminId): JsonResponse
     {
         $admin = AdminUser::where('tenant_id', $tenantId)->findOrFail($adminId);
@@ -241,9 +208,6 @@ class SuperAdminController extends Controller
         ]);
     }
 
-    /**
-     * Supprimer un admin
-     */
     public function deleteTenantAdmin($tenantId, $adminId): JsonResponse
     {
         $admin = AdminUser::where('tenant_id', $tenantId)->findOrFail($adminId);
@@ -252,15 +216,12 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Admin supprimé']);
     }
 
-    /**
-     * Statistiques globales
-     */
     public function getStats(): JsonResponse
     {
         return response()->json([
             'total_tenants' => Tenant::count(),
             'tenants_actifs' => Tenant::where('actif', true)->count(),
-            'total_admins' => AdminUser::where('role', '!=', 'super_admin')->count(),
+            'total_admins' => AdminUser::count(),
             'tenants_expires' => Tenant::where('date_expiration', '<', now())->count(),
         ]);
     }
