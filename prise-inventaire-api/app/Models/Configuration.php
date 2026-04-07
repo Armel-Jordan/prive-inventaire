@@ -3,13 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Configuration extends Model
 {
+    use SoftDeletes;
+
     protected $connection = 'mysql';
     protected $table = 'configurations';
 
     protected $fillable = [
+        'tenant_id',
         'entite',
         'prefixe',
         'suffixe',
@@ -18,6 +23,11 @@ class Configuration extends Model
         'auto_increment',
         'prochain_numero',
     ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
     protected function casts(): array
     {
@@ -62,8 +72,8 @@ class Configuration extends Model
     /**
      * Récupère la configuration pour une entité donnée
      */
-    public static function pourEntite(string $entite): ?self
+    public static function pourEntite(string $entite, int $tenantId): ?self
     {
-        return self::where('entite', $entite)->first();
+        return self::where('tenant_id', $tenantId)->where('entite', $entite)->first();
     }
 }
