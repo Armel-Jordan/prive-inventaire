@@ -134,16 +134,26 @@ class EmployeTenantController extends Controller
                         $employe->adminUser->update(['password' => Hash::make($request->password)]);
                     }
                 } else {
-                    // Créer l'accès
-                    $adminUser = AdminUser::create([
-                        'tenant_id' => $employe->tenant_id,
-                        'nom'       => trim(($request->nom ?? $employe->nom) . ' ' . ($request->prenom ?? $employe->prenom ?? '')),
-                        'email'     => $request->email ?? $employe->email,
-                        'password'  => Hash::make($request->password ?? str()->random(12)),
-                        'role'      => $request->role,
-                        'actif'     => true,
-                    ]);
-                    $employe->admin_user_id = $adminUser->id;
+                    // Chercher un AdminUser existant avec cet email
+                    $email = $request->email ?? $employe->email;
+                    $existing = $email
+                        ? AdminUser::where('email', $email)->where('tenant_id', $employe->tenant_id)->first()
+                        : null;
+
+                    if ($existing) {
+                        $existing->update(['role' => $request->role]);
+                        $employe->admin_user_id = $existing->id;
+                    } else {
+                        $adminUser = AdminUser::create([
+                            'tenant_id' => $employe->tenant_id,
+                            'nom'       => trim(($request->nom ?? $employe->nom) . ' ' . ($request->prenom ?? $employe->prenom ?? '')),
+                            'email'     => $email,
+                            'password'  => Hash::make($request->password ?? str()->random(12)),
+                            'role'      => $request->role,
+                            'actif'     => true,
+                        ]);
+                        $employe->admin_user_id = $adminUser->id;
+                    }
                 }
             }
         }
