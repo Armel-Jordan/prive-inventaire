@@ -30,7 +30,7 @@ class SecteurController extends Controller
         // Générer le code automatiquement si non fourni
         $code = $request->code;
         if (empty($code)) {
-            $config = Configuration::pourEntite('secteur');
+            $config = Configuration::pourEntite('secteur', $request->attributes->get('tenant')->id);
             if ($config && $config->auto_increment) {
                 $code = $config->genererNumero();
                 $config->incrementer();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
+use App\Models\Configuration;
 use App\Models\HistoriquePrixAchat;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -60,9 +61,17 @@ class CommandeFournisseurController extends Controller
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
 
-        $commande = DB::transaction(function () use ($validated, $request) {
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('commande', $tenantId);
+        if (!$config || !$config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
+        $numero = $config->genererNumero();
+        $config->incrementer();
+
+        $commande = DB::transaction(function () use ($validated, $request, $numero) {
             $commande = ComFourEntete::create([
-                'numero' => ComFourEntete::generateNumero(),
+                'numero' => $numero,
                 'fournisseur_id' => $validated['fournisseur_id'],
                 'date_commande' => $validated['date_commande'],
                 'date_livraison_prevue' => $validated['date_livraison_prevue'] ?? null,

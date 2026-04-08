@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Configuration;
 use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -47,7 +48,14 @@ class FournisseurController extends Controller
         ]);
 
         if (empty($validated['code'])) {
-            $validated['code'] = Fournisseur::generateCode();
+            $tenantId = $request->attributes->get('tenant')->id;
+            $config = Configuration::pourEntite('fournisseur', $tenantId);
+            if ($config && $config->auto_increment) {
+                $validated['code'] = $config->genererNumero();
+                $config->incrementer();
+            } else {
+                return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            }
         }
 
         $fournisseur = Fournisseur::create($validated);

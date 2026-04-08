@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ClientConditionPaiement;
+use App\Models\Configuration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,14 @@ class ClientController extends Controller
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $validated['code'] = Client::generateCode();
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('client', $tenantId);
+        if ($config && $config->auto_increment) {
+            $validated['code'] = $config->genererNumero();
+            $config->incrementer();
+        } else {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
         $validated['actif'] = true;
 
         $client = Client::create($validated);

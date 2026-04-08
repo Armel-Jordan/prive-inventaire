@@ -31,7 +31,7 @@ class EmployeTenantController extends Controller
         // Générer le numéro automatiquement si non fourni
         $numero = $request->numero;
         if (empty($numero)) {
-            $config = Configuration::pourEntite('employe');
+            $config = Configuration::pourEntite('employe', $request->attributes->get('tenant')->id);
             if ($config && $config->auto_increment) {
                 $numero = $config->genererNumero();
                 $config->incrementer();

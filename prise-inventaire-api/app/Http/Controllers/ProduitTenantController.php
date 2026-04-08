@@ -35,7 +35,7 @@ class ProduitTenantController extends Controller
         // Générer le numéro automatiquement si non fourni
         $numero = $request->numero;
         if (empty($numero)) {
-            $config = Configuration::pourEntite('produit');
+            $config = Configuration::pourEntite('produit', $request->attributes->get('tenant')->id);
             if ($config && $config->auto_increment) {
                 $numero = $config->genererNumero();
                 $config->incrementer();

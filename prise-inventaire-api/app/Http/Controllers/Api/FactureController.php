@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BonLivraison;
 use App\Models\BonLivraisonLigne;
 use App\Models\ComClientEntete;
+use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
@@ -43,7 +44,7 @@ class FactureController extends Controller
         return response()->json($facture);
     }
 
-    public function creerDepuisCommande(int $commandeId): JsonResponse
+    public function creerDepuisCommande(Request $request, int $commandeId): JsonResponse
     {
         $commande = ComClientEntete::with(['client', 'lignes'])->findOrFail($commandeId);
 
@@ -55,9 +56,17 @@ class FactureController extends Controller
             return response()->json(['message' => 'Une facture existe déjà pour cette commande'], 422);
         }
 
-        $facture = DB::transaction(function () use ($commande) {
+        $tenantId = $request->attributes->get('tenant')->id;
+        $configFacture = Configuration::pourEntite('facture', $tenantId);
+        if (!$configFacture || !$configFacture->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
+        $numeroFacture = $configFacture->genererNumero();
+        $configFacture->incrementer();
+
+        $facture = DB::transaction(function () use ($commande, $numeroFacture) {
             $facture = Facture::create([
-                'numero' => Facture::generateNumero(),
+                'numero' => $numeroFacture,
                 'commande_id' => $commande->id,
                 'client_id' => $commande->client_id,
                 'date_facture' => now(),
@@ -163,7 +172,7 @@ class FactureController extends Controller
         return response()->json($facture->fresh(['paiements']));
     }
 
-    public function creerBonLivraison(int $id): JsonResponse
+    public function creerBonLivraison(Request $request, int $id): JsonResponse
     {
         $facture = Facture::with('lignes')->findOrFail($id);
 
@@ -175,9 +184,17 @@ class FactureController extends Controller
             return response()->json(['message' => 'La facture doit être émise'], 422);
         }
 
-        $bon = DB::transaction(function () use ($facture) {
+        $tenantId = $request->attributes->get('tenant')->id;
+        $configBon = Configuration::pourEntite('bon_livraison', $tenantId);
+        if (!$configBon || !$configBon->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
+        $numeroBon = $configBon->genererNumero();
+        $configBon->incrementer();
+
+        $bon = DB::transaction(function () use ($facture, $numeroBon) {
             $bon = BonLivraison::create([
-                'numero' => BonLivraison::generateNumero(),
+                'numero' => $numeroBon,
                 'facture_id' => $facture->id,
                 'mode_livraison' => 'entreprise',
                 'statut' => 'cree',

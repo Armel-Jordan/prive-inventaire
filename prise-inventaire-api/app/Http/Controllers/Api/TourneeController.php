@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BonLivraison;
+use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
@@ -47,8 +48,16 @@ class TourneeController extends Controller
             'heure_depart' => 'nullable|date_format:H:i',
         ]);
 
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('tournee', $tenantId);
+        if (!$config || !$config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
+        $numero = $config->genererNumero();
+        $config->incrementer();
+
         $tournee = Tournee::create([
-            'numero' => Tournee::generateNumero(),
+            'numero' => $numero,
             'date_tournee' => $validated['date_tournee'],
             'camion_id' => $validated['camion_id'],
             'livreur_id' => $validated['livreur_id'] ?? null,
