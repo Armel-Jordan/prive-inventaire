@@ -96,6 +96,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/complete-profile', [AuthController::class, 'completeProfile']);
+    Route::post('/auth/photo', [AuthController::class, 'uploadPhoto']);
 });
 
 // ============================================
@@ -108,6 +109,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/employes/{id}', [EmployeTenantController::class, 'show']);
     Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
     Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
+    Route::post('/employes/{id}/photo', [EmployeTenantController::class, 'uploadPhoto']);
 
     // Produits CRUD
     Route::get('/produits', [ProduitTenantController::class, 'index']);

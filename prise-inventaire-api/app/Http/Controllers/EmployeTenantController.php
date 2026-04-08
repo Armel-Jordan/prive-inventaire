@@ -8,6 +8,7 @@ use App\Models\EmployeTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeTenantController extends Controller
 {
@@ -176,6 +177,28 @@ class EmployeTenantController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Employé désactivé avec succès',
+        ]);
+    }
+
+    public function uploadPhoto(Request $request, $id): JsonResponse
+    {
+        $employe = EmployeTenant::findOrFail($id);
+
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        if ($employe->photo && Storage::disk('public')->exists($employe->photo)) {
+            Storage::disk('public')->delete($employe->photo);
+        }
+
+        $path = $request->file('photo')->store('photos/employes', 'public');
+        $employe->photo = $path;
+        $employe->save();
+
+        return response()->json([
+            'success'   => true,
+            'photo_url' => Storage::url($path),
         ]);
     }
 }

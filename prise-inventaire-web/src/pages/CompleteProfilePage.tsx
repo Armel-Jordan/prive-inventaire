@@ -1,16 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCheck, Building2, AlertCircle } from 'lucide-react';
+import { UserCheck, Building2, AlertCircle, Camera, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
 
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+function getAuthHeaders(json = true): Record<string, string> {
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (json) headers['Content-Type'] = 'application/json';
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
@@ -45,6 +43,17 @@ export default function CompleteProfilePage() {
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,22 +61,33 @@ export default function CompleteProfilePage() {
     setLoading(true);
 
     try {
+      // 1. Compléter le profil (données texte)
       const response = await fetch(`${API_BASE_URL}/auth/complete-profile`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(form),
       });
-
       const data = await response.json();
 
-      if (data.success) {
-        if (user) {
-          updateUser({ ...user, profil_complete: true });
-        }
-        navigate('/');
-      } else {
+      if (!data.success) {
         setError(data.message || 'Une erreur est survenue');
+        setLoading(false);
+        return;
       }
+
+      // 2. Upload photo si sélectionnée
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+        await fetch(`${API_BASE_URL}/auth/photo`, {
+          method: 'POST',
+          headers: getAuthHeaders(false),
+          body: formData,
+        });
+      }
+
+      if (user) updateUser({ ...user, profil_complete: true });
+      navigate('/');
     } catch {
       setError('Erreur de connexion au serveur');
     } finally {
@@ -76,18 +96,34 @@ export default function CompleteProfilePage() {
   }
 
   function handleSkip() {
-    if (user) {
-      updateUser({ ...user, profil_complete: true });
-    }
+    if (user) updateUser({ ...user, profil_complete: true });
     navigate('/');
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
+
+        {/* Photo + titre */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-            <UserCheck className="w-8 h-8 text-green-600" />
+          <div className="relative inline-block mb-4">
+            <div
+              onClick={() => fileRef.current?.click()}
+              className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity overflow-hidden mx-auto"
+            >
+              {photoPreview
+                ? <img src={photoPreview} alt="photo" className="w-full h-full object-cover" />
+                : <User className="w-10 h-10 text-green-600" />
+              }
+            </div>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors"
+            >
+              <Camera size={13} className="text-white" />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
             <Building2 size={16} className="text-blue-600" />

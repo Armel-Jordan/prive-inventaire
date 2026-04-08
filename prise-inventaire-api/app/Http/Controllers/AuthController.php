@@ -9,6 +9,7 @@ use App\Services\TenantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -150,5 +151,32 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json(['success' => true, 'message' => 'Profil complété']);
+    }
+
+    public function uploadPhoto(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
+
+        if (!$employe) {
+            return response()->json(['success' => false, 'message' => 'Fiche employé non trouvée'], 404);
+        }
+
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        if ($employe->photo && Storage::disk('public')->exists($employe->photo)) {
+            Storage::disk('public')->delete($employe->photo);
+        }
+
+        $path = $request->file('photo')->store('photos/employes', 'public');
+        $employe->photo = $path;
+        $employe->save();
+
+        return response()->json([
+            'success'   => true,
+            'photo_url' => Storage::url($path),
+        ]);
     }
 }

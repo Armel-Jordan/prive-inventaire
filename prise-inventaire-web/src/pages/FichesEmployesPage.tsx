@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Search, User, Phone, MapPin, Briefcase, Calendar } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Search, User, Phone, MapPin, Briefcase, Calendar, Camera } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const SERVER_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
 const STORAGE_KEY = 'prise_auth';
 
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+function getAuthHeaders(json = true): Record<string, string> {
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (json) headers['Content-Type'] = 'application/json';
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
@@ -18,6 +17,12 @@ function getAuthHeaders(): Record<string, string> {
     } catch { /* ignore */ }
   }
   return headers;
+}
+
+function photoUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${SERVER_BASE}/storage/${path}`;
 }
 
 interface FicheEmploye {
@@ -35,13 +40,9 @@ interface FicheEmploye {
   sexe?: string;
   poste?: string;
   departement?: string;
+  photo?: string | null;
   actif?: boolean;
-  admin_user?: {
-    id: number;
-    role: string;
-    actif: boolean;
-    profil_complete?: boolean;
-  };
+  admin_user?: { id: number; role: string; actif: boolean };
 }
 
 const roleLabels: Record<string, { label: string; color: string }> = {
@@ -50,29 +51,64 @@ const roleLabels: Record<string, { label: string; color: string }> = {
   user:    { label: 'Utilisateur', color: 'bg-blue-100 text-blue-700' },
 };
 
+function Avatar({ photo, nom, size = 'md' }: { photo?: string | null; nom: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClass = size === 'lg' ? 'w-20 h-20' : size === 'md' ? 'w-12 h-12' : 'w-10 h-10';
+  const iconSize = size === 'lg' ? 36 : size === 'md' ? 24 : 20;
+  const url = photoUrl(photo);
+  if (url) {
+    return <img src={url} alt={nom} className={`${sizeClass} rounded-full object-cover shrink-0`} />;
+  }
+  return (
+    <div className={`${sizeClass} rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0`}>
+      <User size={iconSize} className="text-blue-600 dark:text-blue-400" />
+    </div>
+  );
+}
+
 export default function FichesEmployesPage() {
   const [employes, setEmployes] = useState<FicheEmploye[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<FicheEmploye | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
-      const response = await fetch(`${API_BASE_URL}/employes`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEmployes(data);
-      }
-    } catch (error) {
-      console.error('Erreur chargement:', error);
+      const res = await fetch(`${API_BASE_URL}/employes`, { headers: getAuthHeaders() });
+      if (res.ok) setEmployes(await res.json());
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePhotoUpload(empId: number, file: File) {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('photo', file);
+      const res = await fetch(`${API_BASE_URL}/employes/${empId}/photo`, {
+        method: 'POST',
+        headers: getAuthHeaders(false),
+        body: form,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmployes(prev => prev.map(e =>
+          e.id === empId ? { ...e, photo: data.photo_url } : e
+        ));
+        if (selected?.id === empId) {
+          setSelected(prev => prev ? { ...prev, photo: data.photo_url } : null);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -89,11 +125,7 @@ export default function FichesEmployesPage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Chargement...</div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64 text-gray-500">Chargement...</div>;
   }
 
   return (
@@ -126,9 +158,7 @@ export default function FichesEmployesPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                    <User size={20} className="text-blue-600 dark:text-blue-400" />
-                  </div>
+                  <Avatar photo={emp.photo} nom={emp.nom} size="md" />
                   <div>
                     <p className="font-semibold text-gray-800 dark:text-white">
                       {emp.nom} {emp.prenom ?? ''}
@@ -146,7 +176,7 @@ export default function FichesEmployesPage() {
               <div className="space-y-1.5 text-sm">
                 {emp.poste && (
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <Briefcase size={14} className="text-gray-400 flex-shrink-0" />
+                    <Briefcase size={14} className="text-gray-400 shrink-0" />
                     <span>{emp.poste}{emp.departement ? ` — ${emp.departement}` : ''}</span>
                   </div>
                 )}
@@ -158,13 +188,13 @@ export default function FichesEmployesPage() {
                 )}
                 {emp.telephone && (
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <Phone size={14} className="text-gray-400 flex-shrink-0" />
+                    <Phone size={14} className="text-gray-400 shrink-0" />
                     <span>{emp.telephone}</span>
                   </div>
                 )}
                 {emp.ville && (
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+                    <MapPin size={14} className="text-gray-400 shrink-0" />
                     <span>{emp.ville}{emp.pays ? `, ${emp.pays}` : ''}</span>
                   </div>
                 )}
@@ -182,9 +212,30 @@ export default function FichesEmployesPage() {
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+
+            {/* Header avec photo */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                <User size={28} className="text-blue-600 dark:text-blue-400" />
+              <div className="relative">
+                <Avatar photo={selected.photo} nom={selected.nom} size="lg" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+                  disabled={uploading}
+                  className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-md transition-colors"
+                  title="Changer la photo"
+                >
+                  <Camera size={13} className="text-white" />
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePhotoUpload(selected.id, file);
+                    e.target.value = '';
+                  }}
+                />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">
@@ -199,10 +250,14 @@ export default function FichesEmployesPage() {
               </div>
             </div>
 
+            {uploading && (
+              <p className="text-xs text-blue-500 mb-3 text-center">Téléchargement en cours...</p>
+            )}
+
             <div className="space-y-3 text-sm">
               {(selected.poste || selected.departement) && (
                 <div className="flex gap-3">
-                  <Briefcase size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <Briefcase size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium text-gray-700 dark:text-gray-300">{selected.poste ?? '—'}</p>
                     {selected.departement && <p className="text-gray-500">{selected.departement}</p>}
@@ -217,13 +272,13 @@ export default function FichesEmployesPage() {
               )}
               {selected.telephone && (
                 <div className="flex gap-3">
-                  <Phone size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <Phone size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <p className="text-gray-700 dark:text-gray-300">{selected.telephone}</p>
                 </div>
               )}
               {(selected.adresse || selected.ville) && (
                 <div className="flex gap-3">
-                  <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     {selected.adresse && <p className="text-gray-700 dark:text-gray-300">{selected.adresse}</p>}
                     <p className="text-gray-500">
@@ -234,7 +289,7 @@ export default function FichesEmployesPage() {
               )}
               {selected.date_naissance && (
                 <div className="flex gap-3">
-                  <Calendar size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <Calendar size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <p className="text-gray-700 dark:text-gray-300">
                     {new Date(selected.date_naissance).toLocaleDateString('fr-CA')}
                     {selected.sexe && ` · ${selected.sexe === 'M' ? 'Masculin' : selected.sexe === 'F' ? 'Féminin' : 'Autre'}`}
