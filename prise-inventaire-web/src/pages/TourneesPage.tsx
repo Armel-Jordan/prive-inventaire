@@ -7,6 +7,7 @@ import {
   getCamionsDisponibles,
   demarrerTournee,
   terminerTournee,
+  getConfiguration,
 } from '../services/api';
 import type { Tournee, Camion } from '../services/api';
 
@@ -25,6 +26,7 @@ export default function TourneesPage() {
     camion_id: '',
     zone: '',
   });
+  const [configNumero, setConfigNumero] = useState<{ prefixe: string; separateur: string; longueur: number; prochain_numero: number; suffixe: string } | null>(null);
 
   const loadTournees = useCallback(async () => {
     try {
@@ -43,6 +45,7 @@ export default function TourneesPage() {
 
   useEffect(() => {
     loadTournees();
+    getConfiguration('tournee').then(setConfigNumero).catch(() => {});
   }, [loadTournees]);
 
   const loadCamionsDisponibles = async (date: string) => {
@@ -235,7 +238,14 @@ export default function TourneesPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 dark:text-white">Nouvelle tournée</h2>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold dark:text-white">Nouvelle tournée</h2>
+              {configNumero && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Numéro auto: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                </p>
+              )}
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Date *</label>

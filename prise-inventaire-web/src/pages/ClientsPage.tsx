@@ -5,8 +5,18 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  getConfiguration,
 } from '../services/api';
 import type { Client } from '../services/api';
+
+interface ConfigNumero {
+  auto_increment: boolean;
+  prefixe: string;
+  suffixe: string;
+  longueur: number;
+  separateur: string;
+  prochain_numero: number;
+}
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -14,7 +24,9 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [formData, setFormData] = useState({
+    code: '',
     raison_sociale: '',
     adresse_facturation: '',
     adresse_livraison: '',
@@ -28,8 +40,18 @@ export default function ClientsPage() {
     taux_remise_global: '0',
   });
 
+  async function loadConfig() {
+    try {
+      const config = await getConfiguration('client');
+      setConfigNumero(config);
+    } catch (error) {
+      console.error('Erreur chargement config:', error);
+    }
+  }
+
   useEffect(() => {
     loadClients();
+    loadConfig();
   }, []);
 
   const loadClients = async () => {
@@ -76,6 +98,7 @@ export default function ClientsPage() {
   const handleEdit = (client: Client) => {
     setEditingClient(client);
     setFormData({
+      code: client.code,
       raison_sociale: client.raison_sociale,
       adresse_facturation: client.adresse_facturation,
       adresse_livraison: client.adresse_livraison || '',
@@ -104,6 +127,7 @@ export default function ClientsPage() {
   const resetForm = () => {
     setEditingClient(null);
     setFormData({
+      code: '',
       raison_sociale: '',
       adresse_facturation: '',
       adresse_livraison: '',
@@ -246,7 +270,26 @@ export default function ClientsPage() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">
+                    Code {!editingClient && configNumero?.auto_increment ? '(auto-généré)' : '*'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                    required={!!editingClient || !configNumero?.auto_increment}
+                    disabled={!!editingClient}
+                    placeholder={!editingClient && configNumero?.auto_increment ? 'Généré automatiquement' : ''}
+                  />
+                  {!editingClient && configNumero?.auto_increment && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Format: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                    </p>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1 dark:text-gray-300">Raison sociale *</label>
                   <input
                     type="text"

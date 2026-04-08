@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-react';
-import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur } from '@/services/api';
+import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur, getConfiguration } from '@/services/api';
 import type { Fournisseur } from '@/services/api';
+
+interface ConfigNumero {
+  auto_increment: boolean;
+  prefixe: string;
+  suffixe: string;
+  longueur: number;
+  separateur?: string;
+  prochain_numero: number;
+}
 
 interface FournisseurForm {
   code: string;
@@ -34,6 +43,7 @@ export default function FournisseursPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FournisseurForm>(emptyForm);
+  const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
 
   async function loadData() {
     try {
@@ -46,8 +56,18 @@ export default function FournisseursPage() {
     }
   }
 
+  async function loadConfig() {
+    try {
+      const config = await getConfiguration('fournisseur');
+      setConfigNumero(config);
+    } catch (error) {
+      console.error('Erreur chargement config:', error);
+    }
+  }
+
   useEffect(() => {
     loadData();
+    loadConfig();
   }, []);
 
   useEffect(() => {
@@ -220,14 +240,23 @@ export default function FournisseursPage() {
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Code {!editingId && configNumero?.auto_increment ? '(auto-généré)' : '*'}
+                  </label>
                   <input
                     type="text"
                     value={form.code}
                     onChange={(e) => setForm({ ...form, code: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="Auto-généré si vide"
+                    className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
+                    required={!!editingId || !configNumero?.auto_increment}
+                    disabled={!!editingId}
+                    placeholder={!editingId && configNumero?.auto_increment ? 'Généré automatiquement' : ''}
                   />
+                  {!editingId && configNumero?.auto_increment && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Format: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Raison sociale *</label>

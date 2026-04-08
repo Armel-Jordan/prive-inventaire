@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
-import { 
-  getCommandesFournisseur, 
-  getFournisseursActifs, 
+import {
+  getCommandesFournisseur,
+  getFournisseursActifs,
   getProduits,
-  createCommandeFournisseur, 
-  validerCommandeFournisseur, 
+  createCommandeFournisseur,
+  validerCommandeFournisseur,
   annulerCommandeFournisseur,
   deleteCommandeFournisseur,
-  getCommandePdfUrl
+  getCommandePdfUrl,
+  getConfiguration,
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
@@ -43,6 +44,7 @@ export default function CommandesFournisseurPage() {
   const [formDateLivraison, setFormDateLivraison] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
+  const [configNumero, setConfigNumero] = useState<{ prefixe: string; separateur: string; longueur: number; prochain_numero: number; suffixe: string } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -63,6 +65,7 @@ export default function CommandesFournisseurPage() {
 
   useEffect(() => {
     loadData();
+    getConfiguration('commande').then(setConfigNumero).catch(() => {});
   }, [loadData]);
 
   function openCreate() {
@@ -297,7 +300,14 @@ export default function CommandesFournisseurPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-              <h2 className="text-lg font-semibold">Nouvelle commande fournisseur</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Nouvelle commande fournisseur</h2>
+                {configNumero && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Numéro auto: {configNumero.prefixe}{configNumero.separateur || ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')}{configNumero.suffixe ? (configNumero.separateur || '') + configNumero.suffixe : ''}
+                  </p>
+                )}
+              </div>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X size={20} />
               </button>
