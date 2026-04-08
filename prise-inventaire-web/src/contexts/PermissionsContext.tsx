@@ -70,24 +70,28 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   function canView(module: string): boolean {
     if (!permissions) return false;
+    if (permissions.role === 'admin') return true;
     const perm = permissions.permissions[module];
     return perm?.can_view ?? false;
   }
 
   function canCreate(module: string): boolean {
     if (!permissions) return false;
+    if (permissions.role === 'admin') return true;
     const perm = permissions.permissions[module];
     return perm?.can_create ?? false;
   }
 
   function canEdit(module: string): boolean {
     if (!permissions) return false;
+    if (permissions.role === 'admin') return true;
     const perm = permissions.permissions[module];
     return perm?.can_edit ?? false;
   }
 
   function canDelete(module: string): boolean {
     if (!permissions) return false;
+    if (permissions.role === 'admin') return true;
     const perm = permissions.permissions[module];
     return perm?.can_delete ?? false;
   }

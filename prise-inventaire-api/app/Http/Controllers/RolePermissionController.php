@@ -196,6 +196,7 @@ class RolePermissionController extends Controller
             'gestion_prix' => 'Gestion des Prix',
             'alertes_config' => 'Configuration Alertes',
             'configuration' => 'Configuration Système',
+            'fiches_employes' => 'Fiches Employés',
         ];
 
         return response()->json($moduleLabels);
