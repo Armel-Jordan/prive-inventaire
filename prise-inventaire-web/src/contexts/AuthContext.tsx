@@ -2,8 +2,9 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { User, TenantInfo, AuthState } from '@/types/auth';
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string, tenantSlug: string) => Promise<boolean>;
+  login: (email: string, password: string, tenantSlug: string) => Promise<{ success: boolean; needsProfile?: boolean }>;
   logout: () => void;
+  updateUser: (user: User) => void;
   isLoading: boolean;
 }
 
@@ -30,9 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(initial.token);
   const [isLoading] = useState(false);
 
-  const login = async (email: string, password: string, tenantSlug: string): Promise<boolean> => {
+  const login = async (email: string, password: string, tenantSlug: string): Promise<{ success: boolean; needsProfile?: boolean }> => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-    
+
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -60,13 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           token: data.token,
         }));
 
-        return true;
+        const needsProfile = !data.user.profil_complete;
+        return { success: true, needsProfile };
       }
 
-      return false;
+      return { success: false };
     } catch (error) {
       console.error('Erreur login:', error);
-      return false;
+      return { success: false };
     }
   };
 
@@ -75,6 +77,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTenant(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        data.user = updatedUser;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
   };
 
   return (
@@ -86,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!token,
         login,
         logout,
+        updateUser,
         isLoading,
       }}
     >

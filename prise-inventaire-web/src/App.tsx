@@ -36,6 +36,8 @@ import DevisPage from '@/pages/DevisPage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
+import CompleteProfilePage from '@/pages/CompleteProfilePage';
+import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -64,6 +66,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/complete-profile" element={<CompleteProfilePage />} />
       <Route
         path="/"
         element={
@@ -104,6 +107,7 @@ function AppRoutes() {
         <Route path="gestion-prix" element={<GestionPrixPage />} />
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />
+        <Route path="fiches-employes" element={<FichesEmployesPage />} />
       </Route>
       
       {/* Routes Super Admin */}

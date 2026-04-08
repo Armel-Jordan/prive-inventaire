@@ -15,10 +15,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const success = await login(form.email, form.password, form.tenant_slug);
+    const result = await login(form.email, form.password, form.tenant_slug);
 
-    if (success) {
-      navigate('/');
+    if (result.success) {
+      if (result.needsProfile) {
+        navigate('/complete-profile');
+      } else {
+        navigate('/');
+      }
     } else {
       setError('Identifiants invalides ou entreprise non trouvée');
     }

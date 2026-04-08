@@ -3,6 +3,8 @@ export interface User {
   nom: string;
   email: string;
   role: 'super_admin' | 'admin' | 'manager' | 'user';
+  profil_complete?: boolean;
+  employe_id?: number | null;
 }
 
 export interface TenantInfo {

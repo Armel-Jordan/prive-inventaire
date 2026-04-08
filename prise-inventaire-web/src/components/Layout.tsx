@@ -114,6 +114,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
+      { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
     ],
