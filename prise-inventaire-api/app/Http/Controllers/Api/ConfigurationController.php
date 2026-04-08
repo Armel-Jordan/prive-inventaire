@@ -47,7 +47,11 @@ class ConfigurationController extends Controller
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
         if (!$configuration) {
-            return response()->json(['message' => 'Configuration non trouvée'], 404);
+            $default = collect($this->defaults)->firstWhere('entite', $entite);
+            if (!$default) {
+                return response()->json(['message' => 'Configuration non trouvée'], 404);
+            }
+            $configuration = Configuration::create(array_merge($default, ['tenant_id' => $tenantId]));
         }
 
         return response()->json($configuration);

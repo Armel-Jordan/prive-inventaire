@@ -100,7 +100,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // ============================================
 // Routes Tenant (avec middleware tenant)
 // ============================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     // Employés CRUD
     Route::get('/employes', [EmployeTenantController::class, 'index']);
     Route::post('/employes', [EmployeTenantController::class, 'store']);
