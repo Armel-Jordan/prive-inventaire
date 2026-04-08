@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff } from 'lucide-react';
 import { getEmployes, createEmploye, updateEmploye, deleteEmploye, getConfiguration } from '@/services/api';
 import type { Employe } from '@/types';
 
@@ -8,9 +8,17 @@ interface EmployeForm {
   nom: string;
   prenom: string;
   email: string;
+  role: string;
+  password: string;
 }
 
-const emptyForm: EmployeForm = { numero: '', nom: '', prenom: '', email: '' };
+const emptyForm: EmployeForm = { numero: '', nom: '', prenom: '', email: '', role: '', password: '' };
+
+const roleLabels: Record<string, { label: string; color: string }> = {
+  admin:   { label: 'Admin',    color: 'bg-red-100 text-red-700' },
+  manager: { label: 'Manager',  color: 'bg-orange-100 text-orange-700' },
+  user:    { label: 'Utilisateur', color: 'bg-blue-100 text-blue-700' },
+};
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -74,6 +82,8 @@ export default function EmployesPage() {
       nom: employe.nom,
       prenom: employe.prenom || '',
       email: employe.email || '',
+      role: employe.admin_user?.role || '',
+      password: '',
     });
     setEditingId(employe.id);
     setShowModal(true);
@@ -230,6 +240,7 @@ export default function EmployesPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Nom</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Prénom</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Accès app</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
@@ -240,6 +251,17 @@ export default function EmployesPage() {
                     <td className="px-4 py-3 text-sm">{employe.nom}</td>
                     <td className="px-4 py-3 text-sm">{employe.prenom || '-'}</td>
                     <td className="px-4 py-3 text-sm">{employe.email || '-'}</td>
+                    <td className="px-4 py-3">
+                      {employe.admin_user ? (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${roleLabels[employe.admin_user.role]?.color || 'bg-gray-100 text-gray-600'}`}>
+                          {roleLabels[employe.admin_user.role]?.label || employe.admin_user.role}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <ShieldOff size={12} /> Aucun
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => openEdit(employe)}
@@ -322,6 +344,46 @@ export default function EmployesPage() {
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Shield size={16} className="text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">Accès à l'application</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
+                    <select
+                      value={form.role}
+                      onChange={(e) => setForm({ ...form, role: e.target.value, password: '' })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Aucun accès</option>
+                      <option value="user">Utilisateur</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                      {editingId && form.role && <option value="remove">Supprimer l'accès</option>}
+                    </select>
+                  </div>
+                  {form.role && form.role !== 'remove' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mot de passe {!editingId ? '*' : '(laisser vide pour ne pas changer)'}
+                      </label>
+                      <input
+                        type="password"
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        required={!editingId}
+                        minLength={6}
+                        placeholder="Minimum 6 caractères"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"

@@ -5,6 +5,12 @@ export interface Employe {
   prenom?: string;
   email?: string;
   actif?: boolean;
+  admin_user_id?: number;
+  admin_user?: {
+    id: number;
+    role: string;
+    actif: boolean;
+  };
 }
 
 export interface Produit {

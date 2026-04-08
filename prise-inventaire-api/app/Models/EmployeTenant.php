@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmployeTenant extends Model
@@ -14,6 +15,7 @@ class EmployeTenant extends Model
 
     protected $fillable = [
         'tenant_id',
+        'admin_user_id',
         'numero',
         'nom',
         'prenom',
@@ -37,5 +39,10 @@ class EmployeTenant extends Model
         return [
             'actif' => 'boolean',
         ];
+    }
+
+    public function adminUser(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'admin_user_id');
     }
 }
