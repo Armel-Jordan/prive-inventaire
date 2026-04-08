@@ -16,6 +16,7 @@ class RolePermissionController extends Controller
         'receptions', 'clients', 'commandes_client', 'factures', 'bons_livraison',
         'camions', 'tournees', 'zones_preparation', 'devis', 'comptabilite',
         'previsions_stock', 'gestion_prix', 'alertes_config', 'configuration',
+        'fiches_employes',
     ];
 
     public function index(): JsonResponse

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
+use App\Models\EmployeTenant;
 use App\Models\Tenant;
 use App\Services\TenantService;
 use Illuminate\Http\JsonResponse;
@@ -58,18 +59,26 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token', ['*'], now()->addDays(7))->plainTextToken;
 
+        // Chercher la fiche employé liée
+        $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
+
+        // Les admins créés par superadmin ont profil_complete = true par défaut
+        $profilComplete = $user->profil_complete || $user->role === 'admin';
+
         return response()->json([
             'success' => true,
             'message' => 'Connexion réussie',
             'user' => [
-                'id' => $user->id,
-                'nom' => $user->nom,
-                'email' => $user->email,
-                'role' => $user->role,
+                'id'              => $user->id,
+                'nom'             => $user->nom,
+                'email'           => $user->email,
+                'role'            => $user->role,
+                'profil_complete' => $profilComplete,
+                'employe_id'      => $employe?->id,
             ],
             'tenant' => [
-                'id' => $tenant->id,
-                'nom' => $tenant->nom,
+                'id'   => $tenant->id,
+                'nom'  => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
             ],
@@ -91,20 +100,55 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $tenant = $user->tenant;
+        $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
+        $profilComplete = $user->profil_complete || $user->role === 'admin';
 
         return response()->json([
             'user' => [
-                'id' => $user->id,
-                'nom' => $user->nom,
-                'email' => $user->email,
-                'role' => $user->role,
+                'id'              => $user->id,
+                'nom'             => $user->nom,
+                'email'           => $user->email,
+                'role'            => $user->role,
+                'profil_complete' => $profilComplete,
+                'employe_id'      => $employe?->id,
             ],
             'tenant' => [
-                'id' => $tenant->id,
-                'nom' => $tenant->nom,
+                'id'   => $tenant->id,
+                'nom'  => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
             ],
         ]);
+    }
+
+    public function completeProfile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'telephone'      => 'nullable|string|max:20',
+            'adresse'        => 'nullable|string|max:255',
+            'ville'          => 'nullable|string|max:100',
+            'code_postal'    => 'nullable|string|max:10',
+            'pays'           => 'nullable|string|max:100',
+            'date_naissance' => 'nullable|date',
+            'sexe'           => 'nullable|in:M,F,autre',
+            'poste'          => 'nullable|string|max:100',
+            'departement'    => 'nullable|string|max:100',
+        ]);
+
+        $user = $request->user();
+        $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
+
+        if ($employe) {
+            $employe->fill($request->only([
+                'telephone', 'adresse', 'ville', 'code_postal',
+                'pays', 'date_naissance', 'sexe', 'poste', 'departement',
+            ]));
+            $employe->save();
+        }
+
+        $user->profil_complete = true;
+        $user->save();
+
+        return response()->json(['success' => true, 'message' => 'Profil complété']);
     }
 }
