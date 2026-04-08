@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BonLivraison;
 use App\Models\BonLivraisonLigne;
+use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
 use App\Models\MouvementVente;
@@ -135,7 +136,9 @@ class BonLivraisonController extends Controller
             'notes_livraison' => 'nullable|string',
         ]);
 
-        $result = DB::transaction(function () use ($bon, $validated, $request) {
+        $tenantId = $request->attributes->get('tenant')->id;
+
+        $result = DB::transaction(function () use ($bon, $validated, $request, $tenantId) {
             foreach ($validated['lignes'] as $ligneData) {
                 $ligne = BonLivraisonLigne::find($ligneData['id']);
                 if ($ligne->bon_id !== $bon->id) continue;
@@ -164,7 +167,7 @@ class BonLivraisonController extends Controller
                 $bon->statut = 'livre_complet';
             } else {
                 $bon->statut = 'livre_partiel';
-                $this->genererFactureReste($bon);
+                $this->genererFactureReste($bon, $tenantId);
             }
             $bon->save();
 
@@ -174,12 +177,20 @@ class BonLivraisonController extends Controller
         return response()->json($result->fresh(['lignes', 'facture']));
     }
 
-    private function genererFactureReste(BonLivraison $bon): void
+    private function genererFactureReste(BonLivraison $bon, int $tenantId): void
     {
         $factureOrigine = $bon->facture;
 
+        $config = Configuration::pourEntite('facture', $tenantId);
+        if ($config && $config->auto_increment) {
+            $numeroFacture = $config->genererNumero();
+            $config->incrementer();
+        } else {
+            $numeroFacture = Facture::generateNumero();
+        }
+
         $nouvelleFacture = Facture::create([
-            'numero' => Facture::generateNumero(),
+            'numero' => $numeroFacture,
             'commande_id' => $factureOrigine->commande_id,
             'client_id' => $factureOrigine->client_id,
             'facture_mere_id' => $factureOrigine->id,

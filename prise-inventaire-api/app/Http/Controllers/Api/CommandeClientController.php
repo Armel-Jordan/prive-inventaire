@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComClientLigne;
+use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
 use App\Models\MouvementVente;
@@ -59,9 +60,17 @@ class CommandeClientController extends Controller
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $commande = DB::transaction(function () use ($validated, $request) {
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('commande', $tenantId);
+        if (!$config || !$config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Configuration numérotation manquante'], 422);
+        }
+        $numero = $config->genererNumero();
+        $config->incrementer();
+
+        $commande = DB::transaction(function () use ($validated, $request, $numero) {
             $commande = ComClientEntete::create([
-                'numero' => ComClientEntete::generateNumero(),
+                'numero' => $numero,
                 'client_id' => $validated['client_id'],
                 'date_commande' => $validated['date_commande'],
                 'date_livraison_souhaitee' => $validated['date_livraison_souhaitee'] ?? null,
