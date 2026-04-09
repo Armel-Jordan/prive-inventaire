@@ -46,6 +46,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
 
+// PDF routes — auth via ?token= query param
+Route::get('/commandes-fournisseur/{id}/pdf', [BonCommandePdfController::class, 'generate']);
+Route::get('/commandes-fournisseur/{id}/pdf/preview', [BonCommandePdfController::class, 'preview']);
+
 // ============================================
 // Routes Mobile (sans authentification JWT)
 // Ces routes sont utilisées par l'app Android
@@ -283,8 +287,6 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
         Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);
         Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy']);
-        Route::get('/{commande}/pdf', [BonCommandePdfController::class, 'generate']);
-        Route::get('/{commande}/pdf/preview', [BonCommandePdfController::class, 'preview']);
     });
 
     // ============================================
