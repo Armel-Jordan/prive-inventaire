@@ -24,6 +24,7 @@ class Fournisseur extends Model
         'contact_telephone',
         'conditions_paiement',
         'actif',
+        'devise',
     ];
 
     protected $casts = [

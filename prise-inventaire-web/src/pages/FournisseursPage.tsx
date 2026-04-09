@@ -21,6 +21,7 @@ interface FournisseurForm {
   contact_nom: string;
   contact_telephone: string;
   conditions_paiement: string;
+  devise: string;
   actif: boolean;
 }
 
@@ -33,6 +34,7 @@ const emptyForm: FournisseurForm = {
   contact_nom: '',
   contact_telephone: '',
   conditions_paiement: '',
+  devise: 'EUR',
   actif: true,
 };
 
@@ -93,6 +95,7 @@ export default function FournisseursPage() {
       contact_nom: fournisseur.contact_nom || '',
       contact_telephone: fournisseur.contact_telephone || '',
       conditions_paiement: fournisseur.conditions_paiement || '',
+      devise: fournisseur.devise || 'EUR',
       actif: fournisseur.actif,
     });
     setEditingId(fournisseur.id);
@@ -333,7 +336,22 @@ export default function FournisseursPage() {
                     placeholder="ex: 30 jours"
                   />
                 </div>
-                <div className="flex items-center pt-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
+                  <input
+                    type="text"
+                    value={form.devise}
+                    onChange={(e) => setForm({ ...form, devise: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="EUR, USD, XAF, CAD..."
+                    maxLength={10}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Code ISO (EUR, USD, XAF...)</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center pt-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"

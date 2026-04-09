@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
+use App\Http\Controllers\Api\TauxChangeController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -398,6 +399,8 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/produits/{id}/mouvements', [LocalisationController::class, 'mouvementsProduit']);
 
     // Paramètres généraux du tenant
+    Route::get('/taux-change', [TauxChangeController::class, 'getTaux']);
+
     Route::get('/parametres', [TenantParametresController::class, 'show']);
     Route::put('/parametres', [TenantParametresController::class, 'update']);
 

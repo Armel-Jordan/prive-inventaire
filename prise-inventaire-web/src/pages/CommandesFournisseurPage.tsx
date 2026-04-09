@@ -12,6 +12,8 @@ import {
   getCommandePdfUrl,
   getConfiguration,
   cloturerCommandeFournisseur,
+  getTauxChange,
+  getParametres,
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
@@ -46,6 +48,10 @@ export default function CommandesFournisseurPage() {
   const [formDateLivraison, setFormDateLivraison] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
+  const [formDevise, setFormDevise] = useState('EUR');
+  const [formTauxChange, setFormTauxChange] = useState(1);
+  const [deviseLocale, setDeviseLocale] = useState('EUR');
+  const [loadingTaux, setLoadingTaux] = useState(false);
   const [configNumero, setConfigNumero] = useState<{ prefixe: string; separateur: string; longueur: number; prochain_numero: number; suffixe: string } | null>(null);
 
   const loadData = useCallback(async () => {
@@ -68,7 +74,28 @@ export default function CommandesFournisseurPage() {
   useEffect(() => {
     loadData();
     getConfiguration('commande').then(setConfigNumero).catch(() => {});
+    getParametres().then(p => setDeviseLocale(p.devise_code || 'EUR')).catch(() => {});
   }, [loadData]);
+
+  async function handleFournisseurChange(id: number) {
+    setFormFournisseur(id);
+    const fournisseur = fournisseurs.find(f => f.id === id);
+    const devise = fournisseur?.devise || 'EUR';
+    setFormDevise(devise);
+    if (devise !== deviseLocale) {
+      setLoadingTaux(true);
+      try {
+        const res = await getTauxChange(devise, deviseLocale);
+        setFormTauxChange(res.taux);
+      } catch {
+        setFormTauxChange(1);
+      } finally {
+        setLoadingTaux(false);
+      }
+    } else {
+      setFormTauxChange(1);
+    }
+  }
 
   function openCreate() {
     setFormFournisseur(0);
@@ -76,6 +103,8 @@ export default function CommandesFournisseurPage() {
     setFormDateLivraison('');
     setFormNotes('');
     setFormLignes([{ produit_id: 0, quantite_commandee: 1, prix_unitaire: 0 }]);
+    setFormDevise(deviseLocale);
+    setFormTauxChange(1);
     setShowModal(true);
   }
 
@@ -131,6 +160,8 @@ export default function CommandesFournisseurPage() {
         date_commande: formDateCommande,
         date_livraison_prevue: formDateLivraison || undefined,
         notes: formNotes || undefined,
+        devise: formDevise,
+        taux_change: formTauxChange,
         lignes: formLignes,
       });
       setShowModal(false);
@@ -353,15 +384,26 @@ export default function CommandesFournisseurPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur *</label>
                   <select
                     value={formFournisseur}
-                    onChange={(e) => setFormFournisseur(Number(e.target.value))}
+                    onChange={(e) => handleFournisseurChange(Number(e.target.value))}
                     className="w-full px-3 py-2 border rounded-lg"
                     required
                   >
                     <option value={0}>Sélectionner...</option>
                     {fournisseurs.map(f => (
-                      <option key={f.id} value={f.id}>{f.raison_sociale}</option>
+                      <option key={f.id} value={f.id}>
+                        {f.raison_sociale}{f.devise && f.devise !== deviseLocale ? ` (${f.devise})` : ''}
+                      </option>
                     ))}
                   </select>
+                  {formDevise !== deviseLocale && (
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                      {loadingTaux ? (
+                        <span>Récupération du taux...</span>
+                      ) : (
+                        <span>1 {formDevise} = {formTauxChange.toFixed(4)} {deviseLocale} (Frankfurter · aujourd'hui)</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date commande *</label>
@@ -528,6 +570,11 @@ export default function CommandesFournisseurPage() {
                 <div>
                   <p className="text-sm text-gray-500">Fournisseur</p>
                   <p className="font-medium">{selectedCommande.fournisseur?.raison_sociale}</p>
+                  {selectedCommande.devise && selectedCommande.devise !== deviseLocale && (
+                    <p className="text-xs text-orange-600 mt-0.5">
+                      {selectedCommande.devise} · taux {Number(selectedCommande.taux_change).toFixed(4)} {deviseLocale}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Date commande</p>

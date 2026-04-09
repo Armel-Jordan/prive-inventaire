@@ -20,6 +20,8 @@ class ComFourEntete extends Model
         'date_livraison_prevue',
         'statut',
         'montant_total',
+        'devise',
+        'taux_change',
         'notes',
         'created_by',
     ];
@@ -28,6 +30,7 @@ class ComFourEntete extends Model
         'date_commande' => 'date',
         'date_livraison_prevue' => 'date',
         'montant_total' => 'decimal:2',
+        'taux_change'   => 'decimal:6',
     ];
 
     const STATUT_BROUILLON = 'brouillon';

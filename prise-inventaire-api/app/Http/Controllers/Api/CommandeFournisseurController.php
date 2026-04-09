@@ -56,6 +56,8 @@ class CommandeFournisseurController extends Controller
             'date_commande' => 'required|date',
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
+            'devise' => 'nullable|string|max:10',
+            'taux_change' => 'nullable|numeric|min:0',
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => 'required|exists:produits,id',
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
@@ -77,6 +79,8 @@ class CommandeFournisseurController extends Controller
                 'date_commande' => $validated['date_commande'],
                 'date_livraison_prevue' => $validated['date_livraison_prevue'] ?? null,
                 'notes' => $validated['notes'] ?? null,
+                'devise' => $validated['devise'] ?? 'EUR',
+                'taux_change' => $validated['taux_change'] ?? 1.0,
                 'statut' => ComFourEntete::STATUT_BROUILLON,
                 'created_by' => $request->user()->id,
             ]);

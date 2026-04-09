@@ -287,6 +287,7 @@ export interface Fournisseur {
   contact_nom?: string;
   contact_telephone?: string;
   conditions_paiement?: string;
+  devise?: string;
   actif: boolean;
   created_at?: string;
   updated_at?: string;
@@ -348,6 +349,8 @@ export interface ComFourEntete {
   date_livraison_prevue?: string;
   statut: 'brouillon' | 'envoyee' | 'partielle' | 'complete' | 'annulee';
   montant_total: number;
+  devise?: string;
+  taux_change?: number;
   notes?: string;
   created_by: number;
   lignes?: ComFourLigne[];
@@ -376,6 +379,8 @@ export async function createCommandeFournisseur(data: {
   date_commande: string;
   date_livraison_prevue?: string;
   notes?: string;
+  devise?: string;
+  taux_change?: number;
   lignes: { produit_id: number; quantite_commandee: number; prix_unitaire: number }[];
 }): Promise<ComFourEntete> {
   return fetchApi('/commandes-fournisseur', {
@@ -976,6 +981,10 @@ export async function getParametres(): Promise<TenantParametres> {
 
 export async function updateParametres(data: TenantParametres): Promise<{ message: string; parametres: TenantParametres }> {
   return fetchApi('/parametres', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function getTauxChange(from: string, to: string): Promise<{ from: string; to: string; taux: number; date: string }> {
+  return fetchApi(`/taux-change?from=${from}&to=${to}`);
 }
 
 export async function genererNumero(entite: string): Promise<{ numero: string; prochain: number }> {
