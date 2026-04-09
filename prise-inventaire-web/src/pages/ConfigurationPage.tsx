@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Save, RefreshCw, Hash, Eye, Building2, Bell, DollarSign, Clock } from 'lucide-react';
-import { getConfigurations, updateConfiguration, getParametres, updateParametres, type ConfigurationFormat, type TenantParametres } from '@/services/api';
+import { Settings, Save, RefreshCw, Hash, Eye, Building2, Bell, DollarSign, Clock, Plus, Trash2 } from 'lucide-react';
+import { getConfigurations, updateConfiguration, getParametres, updateParametres, getTaxes, createTaxe, updateTaxe, deleteTaxe, type ConfigurationFormat, type TenantParametres, type TenantTaxe } from '@/services/api';
 
 interface FormatConfig {
   entite: string;
@@ -73,9 +73,12 @@ export default function ConfigurationPage() {
     return `${config.prefixe}${numero}${config.suffixe}`;
   }, []);
 
+  const [taxes, setTaxes] = useState<TenantTaxe[]>([]);
+  const [newTaxe, setNewTaxe] = useState({ nom: '', taux: 0, par_defaut: false });
+
   const loadAll = useCallback(async () => {
     try {
-      const [configData, paramData] = await Promise.all([getConfigurations(), getParametres()]);
+      const [configData, paramData, taxesData] = await Promise.all([getConfigurations(), getParametres(), getTaxes()]);
       const mapped: FormatConfig[] = configData.map((c: ConfigurationFormat) => ({
         entite: c.entite,
         label: ENTITY_LABELS[c.entite] || c.entite,
@@ -90,6 +93,7 @@ export default function ConfigurationPage() {
       mapped.forEach(m => { m.format_exemple = generateExemple(m); });
       setConfigs(mapped);
       setParametres(paramData);
+      setTaxes(taxesData);
     } catch (error) {
       console.error('Erreur chargement:', error);
     }
@@ -146,6 +150,33 @@ export default function ConfigurationPage() {
 
   const setParam = (field: keyof TenantParametres, value: string | number) => {
     setParametres(p => ({ ...p, [field]: value }));
+  };
+
+  const handleAddTaxe = async () => {
+    if (!newTaxe.nom || newTaxe.taux < 0) return;
+    try {
+      const created = await createTaxe(newTaxe);
+      setTaxes(prev => newTaxe.par_defaut ? prev.map(t => ({ ...t, par_defaut: false })).concat(created) : [...prev, created]);
+      setNewTaxe({ nom: '', taux: 0, par_defaut: false });
+      showSuccess('Taxe ajoutée !');
+    } catch { alert('Erreur lors de l\'ajout'); }
+  };
+
+  const handleSetDefault = async (taxe: TenantTaxe) => {
+    if (!taxe.id) return;
+    try {
+      await updateTaxe(taxe.id, { ...taxe, par_defaut: true });
+      setTaxes(prev => prev.map(t => ({ ...t, par_defaut: t.id === taxe.id })));
+    } catch { alert('Erreur'); }
+  };
+
+  const handleDeleteTaxe = async (id: number) => {
+    if (!confirm('Supprimer cette taxe ?')) return;
+    try {
+      await deleteTaxe(id);
+      setTaxes(prev => prev.filter(t => t.id !== id));
+      showSuccess('Taxe supprimée !');
+    } catch { alert('Erreur lors de la suppression'); }
   };
 
   const activeConfig = configs.find(c => c.entite === activeEntity)!;
@@ -322,11 +353,12 @@ export default function ConfigurationPage() {
 
       {/* ── Devise & TVA ── */}
       {mainTab === 'devise' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-lg">
-          <h2 className="text-lg font-semibold dark:text-white mb-6 flex items-center gap-2">
-            <DollarSign size={20} className="text-purple-600" /> Devise & TVA
-          </h2>
-          <div className="space-y-4">
+        <div className="space-y-6 max-w-2xl">
+          {/* Devise */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold dark:text-white mb-4 flex items-center gap-2">
+              <DollarSign size={20} className="text-purple-600" /> Devise
+            </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Symbole</label>
@@ -337,19 +369,64 @@ export default function ConfigurationPage() {
                 <input type="text" value={parametres.devise_code || 'EUR'} onChange={(e) => setParam('devise_code', e.target.value.toUpperCase())} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" maxLength={5} placeholder="EUR" />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Taux de TVA par défaut (%)</label>
-              <input type="number" value={parametres.tva_taux ?? 20} onChange={(e) => setParam('tva_taux', parseFloat(e.target.value))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" min={0} max={100} step={0.1} />
-              <p className="text-xs text-gray-500 mt-1">Utilisé comme valeur par défaut lors de la création de factures.</p>
-            </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
               Aperçu : <span className="font-bold text-purple-600">1 250,00 {parametres.devise_symbole || '€'}</span> ({parametres.devise_code || 'EUR'})
             </div>
-          </div>
-          <div className="mt-6">
-            <button onClick={handleSaveParametres} disabled={saving} className="flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50">
-              <Save size={16} /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+            <button onClick={handleSaveParametres} disabled={saving} className="mt-4 flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm">
+              <Save size={14} /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}
             </button>
+          </div>
+
+          {/* Taxes */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold dark:text-white mb-4">Taxes</h2>
+            <p className="text-sm text-gray-500 mb-4">Configurez vos taxes selon votre pays (TVA, TPS, TVQ, etc.)</p>
+
+            {/* Liste des taxes */}
+            {taxes.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {taxes.map(taxe => (
+                  <div key={taxe.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 dark:text-white">{taxe.nom}</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400">{Number(taxe.taux).toFixed(2)}%</span>
+                    </div>
+                    {taxe.par_defaut ? (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">Par défaut</span>
+                    ) : (
+                      <button onClick={() => handleSetDefault(taxe)} className="text-xs text-gray-500 hover:text-purple-600 underline">
+                        Définir par défaut
+                      </button>
+                    )}
+                    <button onClick={() => taxe.id && handleDeleteTaxe(taxe.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ajouter une taxe */}
+            <div className="border-t dark:border-gray-600 pt-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Ajouter une taxe</p>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Nom</label>
+                  <input type="text" value={newTaxe.nom} onChange={(e) => setNewTaxe(p => ({ ...p, nom: e.target.value }))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm" placeholder="Ex: TVA, TPS, TVQ..." />
+                </div>
+                <div className="w-28">
+                  <label className="block text-xs text-gray-500 mb-1">Taux (%)</label>
+                  <input type="number" value={newTaxe.taux} onChange={(e) => setNewTaxe(p => ({ ...p, taux: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm" min={0} max={100} step={0.01} />
+                </div>
+                <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 pb-2 cursor-pointer whitespace-nowrap">
+                  <input type="checkbox" checked={newTaxe.par_defaut} onChange={(e) => setNewTaxe(p => ({ ...p, par_defaut: e.target.checked }))} className="rounded" />
+                  Par défaut
+                </label>
+                <button onClick={handleAddTaxe} className="flex items-center gap-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm pb-2">
+                  <Plus size={14} /> Ajouter
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

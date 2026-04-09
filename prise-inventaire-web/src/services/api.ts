@@ -947,6 +947,29 @@ export interface TenantParametres {
   stock_seuil_defaut?: number;
 }
 
+export interface TenantTaxe {
+  id?: number;
+  nom: string;
+  taux: number;
+  par_defaut: boolean;
+}
+
+export async function getTaxes(): Promise<TenantTaxe[]> {
+  return fetchApi('/taxes');
+}
+
+export async function createTaxe(data: Omit<TenantTaxe, 'id'>): Promise<TenantTaxe> {
+  return fetchApi('/taxes', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateTaxe(id: number, data: Omit<TenantTaxe, 'id'>): Promise<TenantTaxe> {
+  return fetchApi(`/taxes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteTaxe(id: number): Promise<void> {
+  await fetchApi(`/taxes/${id}`, { method: 'DELETE' });
+}
+
 export async function getParametres(): Promise<TenantParametres> {
   return fetchApi('/parametres');
 }

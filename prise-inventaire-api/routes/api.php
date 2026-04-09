@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\TenantParametresController;
+use App\Http\Controllers\Api\TenantTaxeController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -399,6 +400,13 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     // Paramètres généraux du tenant
     Route::get('/parametres', [TenantParametresController::class, 'show']);
     Route::put('/parametres', [TenantParametresController::class, 'update']);
+
+    Route::prefix('taxes')->group(function () {
+        Route::get('/', [TenantTaxeController::class, 'index']);
+        Route::post('/', [TenantTaxeController::class, 'store']);
+        Route::put('/{id}', [TenantTaxeController::class, 'update']);
+        Route::delete('/{id}', [TenantTaxeController::class, 'destroy']);
+    });
 
     // Configuration des numéros
     Route::prefix('configurations')->group(function () {
