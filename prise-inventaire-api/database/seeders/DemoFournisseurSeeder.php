@@ -17,6 +17,7 @@ class DemoFournisseurSeeder extends Seeder
         // ── 2 Fournisseurs ────────────────────────────────────────────
         $f1 = DB::table('fournisseurs')->insertGetId([
             'tenant_id'      => $tid,
+            'code'           => 'BRASS-NORD',
             'raison_sociale' => 'Brasserie du Nord',
             'email'          => 'contact@brasserie-nord.com',
             'telephone'      => '+33 1 23 45 67 89',
@@ -28,6 +29,7 @@ class DemoFournisseurSeeder extends Seeder
 
         $f2 = DB::table('fournisseurs')->insertGetId([
             'tenant_id'      => $tid,
+            'code'           => 'DIST-CARAIB',
             'raison_sociale' => 'Distrib Caraibes',
             'email'          => 'info@distribcaraibes.com',
             'telephone'      => '+596 5 96 00 11 22',
