@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
 import {
   getCommandesFournisseur,
+  getCommandeFournisseur,
   getFournisseursActifs,
   getProduits,
   createCommandeFournisseur,
@@ -77,9 +78,15 @@ export default function CommandesFournisseurPage() {
     setShowModal(true);
   }
 
-  function openDetail(commande: ComFourEntete) {
+  async function openDetail(commande: ComFourEntete) {
     setSelectedCommande(commande);
     setShowDetailModal(true);
+    try {
+      const full = await getCommandeFournisseur(commande.id);
+      setSelectedCommande(full);
+    } catch {
+      // garde les données partielles si l'appel échoue
+    }
   }
 
   function addLigne() {
