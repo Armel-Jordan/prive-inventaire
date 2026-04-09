@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\TourneeController;
 use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\TenantParametresController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -394,6 +395,10 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     Route::get('/produits/{id}/localisation', [LocalisationController::class, 'produitLocalisation']);
     Route::get('/produits/{id}/mouvements', [LocalisationController::class, 'mouvementsProduit']);
+
+    // Paramètres généraux du tenant
+    Route::get('/parametres', [TenantParametresController::class, 'show']);
+    Route::put('/parametres', [TenantParametresController::class, 'update']);
 
     // Configuration des numéros
     Route::prefix('configurations')->group(function () {

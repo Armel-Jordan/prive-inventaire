@@ -930,6 +930,31 @@ export async function updateConfiguration(entite: string, data: Partial<Configur
   return fetchApi(`/configurations/${entite}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
+export interface TenantParametres {
+  nom_entreprise?: string;
+  adresse?: string;
+  telephone?: string;
+  email?: string;
+  siret?: string;
+  tva_numero?: string;
+  logo_url?: string;
+  devise_symbole?: string;
+  devise_code?: string;
+  tva_taux?: number;
+  delai_paiement_jours?: number;
+  delai_livraison_jours?: number;
+  stock_alerte_email?: string;
+  stock_seuil_defaut?: number;
+}
+
+export async function getParametres(): Promise<TenantParametres> {
+  return fetchApi('/parametres');
+}
+
+export async function updateParametres(data: TenantParametres): Promise<{ message: string; parametres: TenantParametres }> {
+  return fetchApi('/parametres', { method: 'PUT', body: JSON.stringify(data) });
+}
+
 export async function genererNumero(entite: string): Promise<{ numero: string; prochain: number }> {
   return fetchApi(`/configurations/${entite}/generer`);
 }
