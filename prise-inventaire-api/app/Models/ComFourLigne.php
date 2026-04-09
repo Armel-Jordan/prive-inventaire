@@ -39,7 +39,7 @@ class ComFourLigne extends Model
 
     public function produit(): BelongsTo
     {
-        return $this->belongsTo(Produit::class, 'produit_id');
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
     }
 
     public function receptions(): HasMany

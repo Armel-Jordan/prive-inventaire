@@ -32,7 +32,7 @@ class Fournisseur extends Model
 
     public function produits(): BelongsToMany
     {
-        return $this->belongsToMany(Produit::class, 'produit_fournisseur')
+        return $this->belongsToMany(ProduitTenant::class, 'produit_fournisseur')
             ->withPivot(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal'])
             ->withTimestamps();
     }
