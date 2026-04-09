@@ -333,6 +333,8 @@ export interface ComFourLigne {
   produit?: Produit;
   quantite_commandee: number;
   quantite_recue: number;
+  unite_achat?: string | null;
+  qte_par_unite_achat?: number;
   prix_unitaire: number;
   montant_ligne: number;
 }

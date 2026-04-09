@@ -7,6 +7,7 @@ use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\Configuration;
 use App\Models\HistoriquePrixAchat;
+use App\Models\ProduitTenant;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -81,10 +82,13 @@ class CommandeFournisseurController extends Controller
             ]);
 
             foreach ($validated['lignes'] as $ligne) {
+                $produit = ProduitTenant::find($ligne['produit_id']);
                 ComFourLigne::create([
                     'com_four_entete_id' => $commande->id,
                     'produit_id' => $ligne['produit_id'],
                     'quantite_commandee' => $ligne['quantite_commandee'],
+                    'unite_achat' => $produit?->unite_achat,
+                    'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                     'prix_unitaire' => $ligne['prix_unitaire'],
                     'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                 ]);
@@ -137,10 +141,13 @@ class CommandeFournisseurController extends Controller
             $commande->lignes()->whereNotIn('id', $existingIds)->delete();
 
             foreach ($validated['lignes'] as $ligne) {
+                $produit = ProduitTenant::find($ligne['produit_id']);
                 if (isset($ligne['id'])) {
                     ComFourLigne::where('id', $ligne['id'])->update([
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
+                        'unite_achat' => $produit?->unite_achat,
+                        'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                         'prix_unitaire' => $ligne['prix_unitaire'],
                         'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                     ]);
@@ -149,6 +156,8 @@ class CommandeFournisseurController extends Controller
                         'com_four_entete_id' => $commande->id,
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
+                        'unite_achat' => $produit?->unite_achat,
+                        'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                         'prix_unitaire' => $ligne['prix_unitaire'],
                         'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                     ]);

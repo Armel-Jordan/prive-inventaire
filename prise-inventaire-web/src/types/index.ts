@@ -18,6 +18,8 @@ export interface Produit {
   numero: string;
   description: string;
   mesure: string;
+  unite_achat?: string | null;
+  qte_par_unite_achat?: number;
   type: string;
   secteur_id?: number;
   secteur?: Secteur;

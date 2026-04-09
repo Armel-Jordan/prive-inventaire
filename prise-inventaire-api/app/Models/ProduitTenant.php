@@ -19,6 +19,8 @@ class ProduitTenant extends Model
         'numero',
         'description',
         'mesure',
+        'unite_achat',
+        'qte_par_unite_achat',
         'type',
         'secteur_id',
         'categorie',
@@ -34,6 +36,7 @@ class ProduitTenant extends Model
             'prix_unitaire' => 'decimal:4',
             'actif' => 'boolean',
             'seuil_alerte' => 'decimal:2',
+            'qte_par_unite_achat' => 'integer',
         ];
     }
 

@@ -14,6 +14,9 @@ interface ReceptionForm {
   quantite_recue: number;
   quantite_restante: number;
   produit_description: string;
+  unite_achat?: string | null;
+  qte_par_unite_achat?: number;
+  mesure?: string;
   secteur_id: number | null;
   lot_numero: string;
   date_peremption: string;
@@ -66,6 +69,9 @@ export default function ReceptionsPage() {
       quantite_recue: ligne.quantite_commandee - ligne.quantite_recue,
       quantite_restante: ligne.quantite_commandee - ligne.quantite_recue,
       produit_description: ligne.produit?.description || `Produit #${ligne.produit_id}`,
+      unite_achat: ligne.unite_achat,
+      qte_par_unite_achat: ligne.qte_par_unite_achat ?? 1,
+      mesure: ligne.produit?.mesure,
       secteur_id: null,
       lot_numero: '',
       date_peremption: '',
@@ -209,7 +215,10 @@ export default function ReceptionsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {lignesEnAttente.map((ligne) => (
+                      {lignesEnAttente.map((ligne) => {
+                        const hasCond = ligne.unite_achat && (ligne.qte_par_unite_achat ?? 1) > 1;
+                        const restant = ligne.quantite_commandee - ligne.quantite_recue;
+                        return (
                         <tr key={ligne.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -217,13 +226,22 @@ export default function ReceptionsPage() {
                               <span className="text-sm">{ligne.produit?.description || `Produit #${ligne.produit_id}`}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-right">{ligne.quantite_commandee}</td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            {ligne.quantite_commandee}
+                            {hasCond && <div className="text-xs text-orange-500">{ligne.unite_achat}</div>}
+                          </td>
                           <td className="px-4 py-3 text-sm text-right text-green-600">{ligne.quantite_recue}</td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-orange-600">
-                            {ligne.quantite_commandee - ligne.quantite_recue}
+                          <td className="px-4 py-3 text-right font-medium text-orange-600">
+                            <div className="text-sm">{restant}</div>
+                            {hasCond && (
+                              <div className="text-xs text-orange-400">
+                                = {restant * (ligne.qte_par_unite_achat ?? 1)} {ligne.produit?.mesure ?? 'UN'}
+                              </div>
+                            )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -269,17 +287,20 @@ export default function ReceptionsPage() {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Produit</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 w-20">Restant</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 w-24">Qté reçue</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 w-32">Qté reçue</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-40">Secteur</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-28">N° Lot</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {receptionForms.map((form, index) => (
+                    {receptionForms.map((form, index) => {
+                      const hasCond = form.unite_achat && (form.qte_par_unite_achat ?? 1) > 1;
+                      return (
                       <tr key={form.com_four_ligne_id}>
                         <td className="px-3 py-2 text-sm">{form.produit_description}</td>
                         <td className="px-3 py-2 text-center text-sm font-medium text-orange-600">
                           {form.quantite_restante}
+                          {hasCond && <div className="text-xs text-orange-400">{form.unite_achat}</div>}
                         </td>
                         <td className="px-3 py-2">
                           <input
@@ -290,6 +311,11 @@ export default function ReceptionsPage() {
                             min={0}
                             max={form.quantite_restante}
                           />
+                          {hasCond && form.quantite_recue > 0 && (
+                            <p className="text-xs text-orange-600 text-center mt-0.5">
+                              = {form.quantite_recue * (form.qte_par_unite_achat ?? 1)} {form.mesure ?? 'UN'}
+                            </p>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <select
@@ -313,7 +339,8 @@ export default function ReceptionsPage() {
                           />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

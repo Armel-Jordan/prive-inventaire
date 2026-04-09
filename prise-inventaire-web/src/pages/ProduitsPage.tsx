@@ -10,11 +10,13 @@ interface ProduitForm {
   numero: string;
   description: string;
   mesure: string;
+  unite_achat: string;
+  qte_par_unite_achat: number;
   type: string;
   secteur_id: string;
 }
 
-const emptyForm: ProduitForm = { numero: '', description: '', mesure: 'UN', type: '', secteur_id: '' };
+const emptyForm: ProduitForm = { numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '' };
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -80,6 +82,8 @@ export default function ProduitsPage() {
       numero: produit.numero,
       description: produit.description,
       mesure: produit.mesure,
+      unite_achat: produit.unite_achat || '',
+      qte_par_unite_achat: produit.qte_par_unite_achat ?? 1,
       type: produit.type || '',
       secteur_id: produit.secteur_id?.toString() || '',
     });
@@ -90,7 +94,12 @@ export default function ProduitsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const payload = { ...form, secteur_id: form.secteur_id ? parseInt(form.secteur_id) : undefined };
+      const payload = {
+        ...form,
+        secteur_id: form.secteur_id ? parseInt(form.secteur_id) : undefined,
+        unite_achat: form.unite_achat || null,
+        qte_par_unite_achat: form.qte_par_unite_achat,
+      };
       if (editingId) {
         await updateProduit(editingId, payload);
         toast('Produit modifié avec succès');
@@ -243,6 +252,7 @@ export default function ProduitsPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Description</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Secteur</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Unité</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Conditionnement</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Type</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Actions</th>
                 </tr>
@@ -258,6 +268,15 @@ export default function ProduitsPage() {
                         : <span className="text-gray-400 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3 text-sm dark:text-gray-300">{produit.mesure}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {produit.unite_achat && (produit.qte_par_unite_achat ?? 1) > 1 ? (
+                        <span className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-1 rounded text-xs font-medium">
+                          1 {produit.unite_achat} = {produit.qte_par_unite_achat} {produit.mesure}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       {produit.type && (
                         <span className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-1 rounded text-xs font-medium">{produit.type}</span>
@@ -336,6 +355,28 @@ export default function ProduitsPage() {
                     {types.map(t => <option key={t} value={t} />)}
                   </datalist>
                 </div>
+              </div>
+              <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conditionnement fournisseur</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Unité d'achat</label>
+                    <input type="text" value={form.unite_achat} onChange={e => setForm({ ...form, unite_achat: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
+                      placeholder="ex: PACK, CARTON" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Unités par paquet</label>
+                    <input type="number" value={form.qte_par_unite_achat} onChange={e => setForm({ ...form, qte_par_unite_achat: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
+                      min={1} />
+                  </div>
+                </div>
+                {form.unite_achat && form.qte_par_unite_achat > 1 && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                    1 {form.unite_achat} = {form.qte_par_unite_achat} {form.mesure}
+                  </p>
+                )}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)}

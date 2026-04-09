@@ -26,6 +26,8 @@ class ProduitTenantController extends Controller
             'numero' => 'nullable|string|max:50|unique:produits,numero',
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
+            'unite_achat' => 'nullable|string|max:30',
+            'qte_par_unite_achat' => 'nullable|integer|min:1',
             'type' => 'nullable|string|max:50',
             'secteur_id' => 'required|exists:secteurs,id',
             'categorie' => 'nullable|string|max:100',
@@ -52,6 +54,8 @@ class ProduitTenantController extends Controller
             'numero' => $numero,
             'description' => $request->description,
             'mesure' => $request->mesure ?? 'UN',
+            'unite_achat' => $request->unite_achat,
+            'qte_par_unite_achat' => $request->qte_par_unite_achat ?? 1,
             'type' => $request->type,
             'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
@@ -81,6 +85,8 @@ class ProduitTenantController extends Controller
             'numero' => 'sometimes|string|max:50|unique:produits,numero,' . $id,
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
+            'unite_achat' => 'nullable|string|max:30',
+            'qte_par_unite_achat' => 'nullable|integer|min:1',
             'type' => 'nullable|string|max:50',
             'secteur_id' => 'sometimes|exists:secteurs,id',
             'categorie' => 'nullable|string|max:100',
@@ -88,7 +94,7 @@ class ProduitTenantController extends Controller
             'actif' => 'sometimes|boolean',
         ]);
 
-        $produit->fill($request->only(['numero', 'description', 'mesure', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']));
+        $produit->fill($request->only(['numero', 'description', 'mesure', 'unite_achat', 'qte_par_unite_achat', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']));
         $produit->save();
 
         return response()->json([

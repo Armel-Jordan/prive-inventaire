@@ -96,6 +96,12 @@ export default function CommandesFournisseurPage() {
     setFormLignes(newLignes);
   }
 
+  function getProduitConditionnement(produitId: number) {
+    const p = produits.find(p => p.id === produitId);
+    if (!p?.unite_achat || (p.qte_par_unite_achat ?? 1) <= 1) return null;
+    return { unite_achat: p.unite_achat, qte: p.qte_par_unite_achat ?? 1, mesure: p.mesure };
+  }
+
   function getMontantTotal(): number {
     return formLignes.reduce((sum, l) => sum + (l.quantite_commandee * l.prix_unitaire), 0);
   }
@@ -375,14 +381,16 @@ export default function CommandesFournisseurPage() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Produit</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-24">Quantité</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-32">Quantité</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-32">Prix unitaire</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 w-32">Montant</th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {formLignes.map((ligne, index) => (
+                      {formLignes.map((ligne, index) => {
+                        const cond = getProduitConditionnement(ligne.produit_id);
+                        return (
                         <tr key={index}>
                           <td className="px-3 py-2">
                             <select
@@ -404,6 +412,11 @@ export default function CommandesFournisseurPage() {
                               className="w-full px-2 py-1 border rounded text-sm"
                               min={1}
                             />
+                            {cond && (
+                              <p className="text-xs text-orange-600 mt-0.5 whitespace-nowrap">
+                                = {ligne.quantite_commandee * cond.qte} {cond.mesure}
+                              </p>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <input
@@ -430,7 +443,8 @@ export default function CommandesFournisseurPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
@@ -535,7 +549,14 @@ export default function CommandesFournisseurPage() {
                               {ligne.produit?.description || `Produit #${ligne.produit_id}`}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-sm text-right">{ligne.quantite_commandee}</td>
+                          <td className="px-3 py-2 text-sm text-right">
+                            {ligne.quantite_commandee}
+                            {ligne.unite_achat && (ligne.qte_par_unite_achat ?? 1) > 1 && (
+                              <div className="text-xs text-orange-600 whitespace-nowrap">
+                                {ligne.unite_achat} × {ligne.qte_par_unite_achat} = {ligne.quantite_commandee * (ligne.qte_par_unite_achat ?? 1)} UN
+                              </div>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-sm text-right">
                             <span className={ligne.quantite_recue >= ligne.quantite_commandee ? 'text-green-600' : 'text-orange-600'}>
                               {ligne.quantite_recue}
