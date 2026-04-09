@@ -405,6 +405,10 @@ export async function annulerCommandeFournisseur(id: number): Promise<{ message:
   return fetchApi(`/commandes-fournisseur/${id}/annuler`, { method: 'POST' });
 }
 
+export async function cloturerCommandeFournisseur(id: number): Promise<{ message: string; commande: ComFourEntete }> {
+  return fetchApi(`/commandes-fournisseur/${id}/cloturer`, { method: 'POST' });
+}
+
 export async function deleteCommandeFournisseur(id: number): Promise<void> {
   await fetchApi(`/commandes-fournisseur/${id}`, { method: 'DELETE' });
 }

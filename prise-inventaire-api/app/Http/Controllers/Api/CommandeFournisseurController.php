@@ -209,7 +209,7 @@ class CommandeFournisseurController extends Controller
 
         if ($commande->lignes()->where('quantite_recue', '>', 0)->exists()) {
             return response()->json([
-                'message' => 'Impossible d\'annuler une commande avec des réceptions.'
+                'message' => 'Impossible d\'annuler une commande avec des réceptions. Utilisez "Clôturer le reste" pour fermer une commande partielle.'
             ], 422);
         }
 
@@ -219,6 +219,32 @@ class CommandeFournisseurController extends Controller
         return response()->json([
             'message' => 'Commande annulée.',
             'commande' => $commande
+        ]);
+    }
+
+    public function cloturer(ComFourEntete $commande): JsonResponse
+    {
+        if ($commande->statut !== ComFourEntete::STATUT_PARTIELLE) {
+            return response()->json([
+                'message' => 'Seules les commandes partiellement reçues peuvent être clôturées.'
+            ], 422);
+        }
+
+        foreach ($commande->lignes as $ligne) {
+            if ($ligne->quantite_recue < $ligne->quantite_commandee) {
+                $ligne->quantite_commandee = $ligne->quantite_recue;
+                $ligne->montant_ligne = $ligne->quantite_recue * $ligne->prix_unitaire;
+                $ligne->saveQuietly();
+            }
+        }
+
+        $commande->recalculerMontantTotal();
+        $commande->statut = ComFourEntete::STATUT_COMPLETE;
+        $commande->save();
+
+        return response()->json([
+            'message' => 'Commande clôturée. Le reste non reçu a été annulé.',
+            'commande' => $commande->load('lignes.produit', 'fournisseur')
         ]);
     }
 

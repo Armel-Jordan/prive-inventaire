@@ -11,6 +11,7 @@ import {
   deleteCommandeFournisseur,
   getCommandePdfUrl,
   getConfiguration,
+  cloturerCommandeFournisseur,
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
@@ -164,6 +165,18 @@ export default function CommandesFournisseurPage() {
     }
   }
 
+  async function handleCloturer(id: number) {
+    if (!confirm('Clôturer cette commande ? Le reste non reçu sera annulé et la commande passera en "Complète".')) return;
+    try {
+      await cloturerCommandeFournisseur(id);
+      loadData();
+      setShowDetailModal(false);
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de la clôture');
+    }
+  }
+
   async function handleDelete(id: number) {
     if (!confirm('Voulez-vous supprimer cette commande ?')) return;
     try {
@@ -290,11 +303,20 @@ export default function CommandesFournisseurPage() {
                           </button>
                         </>
                       )}
-                      {['envoyee', 'partielle'].includes(commande.statut) && (
+                      {commande.statut === 'envoyee' && (
                         <button
                           onClick={() => handleAnnuler(commande.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
                           title="Annuler"
+                        >
+                          <Ban size={16} />
+                        </button>
+                      )}
+                      {commande.statut === 'partielle' && (
+                        <button
+                          onClick={() => handleCloturer(commande.id)}
+                          className="p-1 text-orange-600 hover:bg-orange-50 rounded"
+                          title="Clôturer le reste"
                         >
                           <Ban size={16} />
                         </button>
@@ -598,13 +620,22 @@ export default function CommandesFournisseurPage() {
                     Valider et envoyer
                   </button>
                 )}
-                {['envoyee', 'partielle'].includes(selectedCommande.statut) && (
+                {selectedCommande.statut === 'envoyee' && (
                   <button
                     onClick={() => handleAnnuler(selectedCommande.id)}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
                   >
                     <Ban size={16} />
                     Annuler
+                  </button>
+                )}
+                {selectedCommande.statut === 'partielle' && (
+                  <button
+                    onClick={() => handleCloturer(selectedCommande.id)}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2"
+                  >
+                    <Ban size={16} />
+                    Clôturer le reste
                   </button>
                 )}
               </div>

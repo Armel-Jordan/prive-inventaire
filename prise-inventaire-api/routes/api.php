@@ -286,6 +286,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::put('/{commande}', [CommandeFournisseurController::class, 'update']);
         Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
         Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);
+        Route::post('/{commande}/cloturer', [CommandeFournisseurController::class, 'cloturer']);
         Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy']);
     });
 
