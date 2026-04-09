@@ -44,6 +44,7 @@ class FournisseurController extends Controller
             'contact_nom' => 'nullable|string|max:100',
             'contact_telephone' => 'nullable|string|max:20',
             'conditions_paiement' => 'nullable|string|max:100',
+            'devise' => 'nullable|string|max:10',
             'actif' => 'boolean',
         ]);
 
@@ -83,6 +84,7 @@ class FournisseurController extends Controller
             'contact_nom' => 'nullable|string|max:100',
             'contact_telephone' => 'nullable|string|max:20',
             'conditions_paiement' => 'nullable|string|max:100',
+            'devise' => 'nullable|string|max:10',
             'actif' => 'boolean',
         ]);
 
