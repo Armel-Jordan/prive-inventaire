@@ -25,22 +25,33 @@ class DashboardController extends Controller
         $employesTotal = DB::table('employes')->where('actif', true)->count();
 
         // Mouvements relocalisation
-        $mouvementsTotal = DB::table('mouvement_relocalisation')->count();
-        $mouvementsToday = DB::table('mouvement_relocalisation')
-            ->whereDate('date_mouvement', today())
-            ->count();
-        $mouvementsByType = DB::table('mouvement_relocalisation')
-            ->select('type', DB::raw('count(*) as count'))
-            ->groupBy('type')
-            ->pluck('count', 'type')
-            ->toArray();
+        $mouvementsTotal = 0;
+        $mouvementsToday = 0;
+        $mouvementsByType = [];
+        try {
+            if (DB::getSchemaBuilder()->hasTable('mouvement_relocalisation')) {
+                $mouvementsTotal = DB::table('mouvement_relocalisation')->count();
+                $mouvementsToday = DB::table('mouvement_relocalisation')
+                    ->whereDate('date_mouvement', today())->count();
+                $mouvementsByType = DB::table('mouvement_relocalisation')
+                    ->select('type', DB::raw('count(*) as count'))
+                    ->groupBy('type')->pluck('count', 'type')->toArray();
+            }
+        } catch (\Exception $e) {
+            // Table non disponible — valeurs par défaut
+        }
 
         // Transferts planifiés (7 prochains jours)
-        $transfertsPlanifies = DB::table('transferts_planifies')
-            ->where('statut', 'planifie')
-            ->whereDate('date_planifiee', '>=', today())
-            ->whereDate('date_planifiee', '<=', today()->addDays(7))
-            ->count();
+        $transfertsPlanifies = 0;
+        try {
+            $transfertsPlanifies = DB::table('transferts_planifies')
+                ->where('statut', 'planifie')
+                ->whereDate('date_planifiee', '>=', today())
+                ->whereDate('date_planifiee', '<=', today()->addDays(7))
+                ->count();
+        } catch (\Exception $e) {
+            // Table non disponible
+        }
 
         // Approbations en attente
         $approbationsEnAttente = DB::table('approbations')
