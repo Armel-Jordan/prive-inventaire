@@ -12,7 +12,7 @@ class ProduitLocalisation extends Model
     protected $table = 'produit_localisations';
 
     protected $fillable = [
-        'produit_id', 'localisation_type', 'localisation_id',
+        'tenant_id', 'produit_id', 'localisation_type', 'localisation_id',
         'quantite', 'statut', 'commande_id',
     ];
 

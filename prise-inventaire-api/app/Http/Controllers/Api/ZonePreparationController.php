@@ -9,9 +9,10 @@ use Illuminate\Http\Request;
 
 class ZonePreparationController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $zones = ZonePreparation::orderBy('code')->get();
+        $tenantId = auth()->user()->tenant_id;
+        $zones = ZonePreparation::where('tenant_id', $tenantId)->orderBy('code')->get();
         return response()->json($zones);
     }
 
@@ -30,6 +31,7 @@ class ZonePreparationController extends Controller
         ]);
 
         $validated['actif'] = true;
+        $validated['tenant_id'] = auth()->user()->tenant_id;
         $zone = ZonePreparation::create($validated);
 
         return response()->json($zone, 201);

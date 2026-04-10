@@ -13,6 +13,7 @@ class Approbation extends Model
     protected $table = 'approbations';
 
     protected $fillable = [
+        'tenant_id',
         'type_mouvement',
         'produit_numero',
         'produit_nom',

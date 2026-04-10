@@ -13,7 +13,8 @@ class FournisseurController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Fournisseur::query();
+        $tenantId = auth()->user()->tenant_id;
+        $query = Fournisseur::where('tenant_id', $tenantId);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -59,6 +60,7 @@ class FournisseurController extends Controller
             }
         }
 
+        $validated['tenant_id'] = $tenantId;
         $fournisseur = Fournisseur::create($validated);
 
         return response()->json($fournisseur, 201);
@@ -108,7 +110,8 @@ class FournisseurController extends Controller
 
     public function listActifs(): JsonResponse
     {
-        $fournisseurs = Fournisseur::where('actif', true)
+        $tenantId = auth()->user()->tenant_id;
+        $fournisseurs = Fournisseur::where('tenant_id', $tenantId)->where('actif', true)
             ->orderBy('raison_sociale')
             ->get(['id', 'code', 'raison_sociale']);
 

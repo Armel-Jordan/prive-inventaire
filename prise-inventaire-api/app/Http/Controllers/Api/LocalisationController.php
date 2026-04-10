@@ -12,7 +12,8 @@ class LocalisationController extends Controller
 {
     public function produits(Request $request): JsonResponse
     {
-        $query = ProduitLocalisation::where('quantite', '>', 0);
+        $tenantId = auth()->user()->tenant_id;
+        $query = ProduitLocalisation::where('tenant_id', $tenantId)->where('quantite', '>', 0);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -25,7 +26,9 @@ class LocalisationController extends Controller
 
     public function parSecteur(int $secteurId): JsonResponse
     {
-        $localisations = ProduitLocalisation::where('localisation_type', 'secteur')
+        $tenantId = auth()->user()->tenant_id;
+        $localisations = ProduitLocalisation::where('tenant_id', $tenantId)
+            ->where('localisation_type', 'secteur')
             ->where('localisation_id', $secteurId)
             ->where('quantite', '>', 0)
             ->get();
@@ -35,7 +38,9 @@ class LocalisationController extends Controller
 
     public function parCamion(int $camionId): JsonResponse
     {
-        $localisations = ProduitLocalisation::where('localisation_type', 'camion')
+        $tenantId = auth()->user()->tenant_id;
+        $localisations = ProduitLocalisation::where('tenant_id', $tenantId)
+            ->where('localisation_type', 'camion')
             ->where('localisation_id', $camionId)
             ->where('quantite', '>', 0)
             ->get();
@@ -45,7 +50,9 @@ class LocalisationController extends Controller
 
     public function parZonePreparation(int $zoneId): JsonResponse
     {
-        $localisations = ProduitLocalisation::where('localisation_type', 'zone_preparation')
+        $tenantId = auth()->user()->tenant_id;
+        $localisations = ProduitLocalisation::where('tenant_id', $tenantId)
+            ->where('localisation_type', 'zone_preparation')
             ->where('localisation_id', $zoneId)
             ->where('quantite', '>', 0)
             ->get();
@@ -55,7 +62,9 @@ class LocalisationController extends Controller
 
     public function produitLocalisation(int $produitId): JsonResponse
     {
-        $localisations = ProduitLocalisation::where('produit_id', $produitId)
+        $tenantId = auth()->user()->tenant_id;
+        $localisations = ProduitLocalisation::where('tenant_id', $tenantId)
+            ->where('produit_id', $produitId)
             ->where('quantite', '>', 0)
             ->get();
 

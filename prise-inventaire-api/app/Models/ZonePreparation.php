@@ -13,6 +13,7 @@ class ZonePreparation extends Model
     protected $table = 'zones_preparation';
 
     protected $fillable = [
+        'tenant_id',
         'code',
         'nom',
         'description',

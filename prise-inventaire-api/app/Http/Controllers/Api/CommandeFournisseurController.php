@@ -16,7 +16,8 @@ class CommandeFournisseurController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = ComFourEntete::with(['fournisseur', 'createdBy']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = ComFourEntete::with(['fournisseur', 'createdBy'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -72,8 +73,9 @@ class CommandeFournisseurController extends Controller
         $numero = $config->genererNumero();
         $config->incrementer();
 
-        $commande = DB::transaction(function () use ($validated, $request, $numero) {
+        $commande = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $commande = ComFourEntete::create([
+                'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'fournisseur_id' => $validated['fournisseur_id'],
                 'date_commande' => $validated['date_commande'],

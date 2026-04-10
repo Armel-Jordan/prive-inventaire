@@ -13,6 +13,7 @@ class TransfertPlanifie extends Model
     protected $table = 'transferts_planifies';
 
     protected $fillable = [
+        'tenant_id',
         'type',
         'produit_numero',
         'produit_nom',

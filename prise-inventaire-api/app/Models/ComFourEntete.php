@@ -14,6 +14,7 @@ class ComFourEntete extends Model
     protected $table = 'com_four_entete';
 
     protected $fillable = [
+        'tenant_id',
         'numero',
         'fournisseur_id',
         'date_commande',
