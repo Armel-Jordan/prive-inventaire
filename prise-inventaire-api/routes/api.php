@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\TourneeController;
 use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -146,8 +147,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
     Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
 
-    // Dashboard stats
+    // Dashboard stats (legacy)
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // Dashboard agrégé — ventes, achats, inventaire, finance
+    Route::get('/dashboard', [ApiDashboardController::class, 'index']);
 
     // Profil utilisateur
     Route::get('/profile', [ProfileController::class, 'show']);
