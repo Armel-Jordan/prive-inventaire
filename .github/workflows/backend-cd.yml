@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'prise-inventaire-api/**'
+      - '.github/workflows/backend-cd.yml'
+  workflow_dispatch:
 
 # Empêche deux déploiements simultanés
 concurrency:
