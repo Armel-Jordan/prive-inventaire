@@ -354,6 +354,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
         Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
+        Route::delete('/{id}', [FactureController::class, 'destroy']);
     });
 
     // Bons de Livraison

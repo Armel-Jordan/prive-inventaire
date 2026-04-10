@@ -213,4 +213,17 @@ class FactureController extends Controller
 
         return response()->json($bon->load('lignes'), 201);
     }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $facture = Facture::findOrFail($id);
+
+        if ($facture->statut !== 'brouillon') {
+            return response()->json(['message' => 'Seules les factures en brouillon peuvent être supprimées.'], 422);
+        }
+
+        $facture->delete();
+
+        return response()->json(['message' => 'Facture supprimée.']);
+    }
 }

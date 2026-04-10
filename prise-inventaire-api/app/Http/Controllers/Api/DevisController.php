@@ -223,7 +223,7 @@ class DevisController extends Controller
 
         return response()->json([
             'message'  => 'Devis converti en commande.',
-            'commande' => $commande->load(['client', 'lignes.produit']),
+            'commande' => $commande->load(['client', 'lignes']),
         ]);
     }
 

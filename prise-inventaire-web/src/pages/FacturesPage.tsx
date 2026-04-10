@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, CreditCard, FileText, Send } from 'lucide-react';
+import { Eye, CreditCard, FileText, Send, Trash2 } from 'lucide-react';
 import {
   getFactures,
   getFacture,
   emettreFacture,
   enregistrerPaiement,
   creerBonLivraison,
+  deleteFacture,
 } from '../services/api';
 import type { Facture } from '../services/api';
 
@@ -64,6 +65,16 @@ export default function FacturesPage() {
       loadFactures();
     } catch (error) {
       console.error('Erreur création BL:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Supprimer cette facture ?')) return;
+    try {
+      await deleteFacture(id);
+      loadFactures();
+    } catch {
+      alert('Impossible de supprimer cette facture.');
     }
   };
 
@@ -159,11 +170,11 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.date_facture}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {facture.montant_ht?.toFixed(2)} €
+                    {Number(facture.montant_ht ?? 0).toFixed(2)} €
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     <span className={facture.reste_a_payer > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                      {facture.reste_a_payer?.toFixed(2)} €
+                      {Number(facture.reste_a_payer ?? 0).toFixed(2)} €
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(facture.statut)}</td>
@@ -177,13 +188,22 @@ export default function FacturesPage() {
                         <Eye size={18} />
                       </button>
                       {facture.statut === 'brouillon' && (
-                        <button
-                          onClick={() => handleEmettre(facture.id)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Émettre"
-                        >
-                          <Send size={18} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEmettre(facture.id)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Émettre"
+                          >
+                            <Send size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(facture.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
                       )}
                       {(facture.statut === 'emise' || facture.statut === 'partiellement_payee') && (
                         <>
@@ -258,8 +278,8 @@ export default function FacturesPage() {
                         <tr key={idx} className="dark:text-gray-300">
                           <td className="py-1">Produit #{ligne.produit_id}</td>
                           <td className="py-1 text-right">{ligne.quantite}</td>
-                          <td className="py-1 text-right">{ligne.prix_unitaire_ht?.toFixed(2)} €</td>
-                          <td className="py-1 text-right">{ligne.montant_ht?.toFixed(2)} €</td>
+                          <td className="py-1 text-right">{Number(ligne.prix_unitaire_ht ?? 0).toFixed(2)} €</td>
+                          <td className="py-1 text-right">{Number(ligne.montant_ht ?? 0).toFixed(2)} €</td>
                         </tr>
                       ))}
                     </tbody>
@@ -270,16 +290,16 @@ export default function FacturesPage() {
               <div className="border-t pt-4 dark:border-gray-700">
                 <div className="flex justify-between font-bold text-lg">
                   <span className="dark:text-white">Total:</span>
-                  <span className="dark:text-white">{selectedFacture.montant_ht?.toFixed(2)} €</span>
+                  <span className="dark:text-white">{Number(selectedFacture.montant_ht ?? 0).toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-gray-500">Payé:</span>
-                  <span className="text-green-600">{selectedFacture.montant_paye?.toFixed(2)} €</span>
+                  <span className="text-green-600">{Number(selectedFacture.montant_paye ?? 0).toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span className="text-gray-500">Reste à payer:</span>
                   <span className={selectedFacture.reste_a_payer > 0 ? 'text-red-600' : 'text-green-600'}>
-                    {selectedFacture.reste_a_payer?.toFixed(2)} €
+                    {Number(selectedFacture.reste_a_payer ?? 0).toFixed(2)} €
                   </span>
                 </div>
               </div>
@@ -291,7 +311,7 @@ export default function FacturesPage() {
                     {selectedFacture.echeances.map((ech, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
                         <span className="dark:text-gray-300">{ech.date_echeance}</span>
-                        <span className="dark:text-white">{ech.montant?.toFixed(2)} €</span>
+                        <span className="dark:text-white">{Number(ech.montant ?? 0).toFixed(2)} €</span>
                         <span className={ech.statut === 'payee' ? 'text-green-600' : 'text-yellow-600'}>
                           {ech.statut === 'payee' ? 'Payée' : ech.statut === 'partiellement_payee' ? 'Partiel' : 'En attente'}
                         </span>
@@ -319,7 +339,7 @@ export default function FacturesPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Enregistrer un paiement</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Facture {selectedFacture.numero} - Reste à payer: {selectedFacture.reste_a_payer?.toFixed(2)} €
+              Facture {selectedFacture.numero} - Reste à payer: {Number(selectedFacture.reste_a_payer ?? 0).toFixed(2)} €
             </p>
             <div className="space-y-4">
               <div>

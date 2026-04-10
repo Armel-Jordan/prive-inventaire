@@ -787,6 +787,10 @@ export async function creerBonLivraison(factureId: number): Promise<BonLivraison
   return fetchApi(`/factures/${factureId}/creer-bl`, { method: 'POST' });
 }
 
+export async function deleteFacture(id: number): Promise<void> {
+  return fetchApi(`/factures/${id}`, { method: 'DELETE' });
+}
+
 // Bons de Livraison API
 export async function getBonsLivraison(params?: { statut?: string }): Promise<{ data: BonLivraison[] }> {
   const queryParams = new URLSearchParams();

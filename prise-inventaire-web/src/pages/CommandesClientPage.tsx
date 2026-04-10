@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Check, X, FileText, Send } from 'lucide-react';
+import { Plus, Eye, Check, X, FileText, Send, Trash2 } from 'lucide-react';
 import {
   getCommandesClient,
   getClientsActifs,
@@ -8,6 +8,7 @@ import {
   accepterCommandeClient,
   refuserCommandeClient,
   creerFactureDepuisCommande,
+  deleteCommandeClient,
 } from '../services/api';
 import type { ComClientEntete, Client } from '../services/api';
 import { getProduits } from '../services/api';
@@ -123,6 +124,16 @@ export default function CommandesClientPage() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Supprimer cette commande ?')) return;
+    try {
+      await deleteCommandeClient(id);
+      loadData();
+    } catch {
+      alert('Impossible de supprimer cette commande.');
+    }
+  };
+
   const addLigne = () => {
     setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0 }]);
   };
@@ -229,7 +240,7 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.date_commande}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {cmd.montant_ttc?.toFixed(2)} €
+                    {Number(cmd.montant_ttc ?? 0).toFixed(2)} €
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
                   <td className="px-4 py-3">
@@ -242,13 +253,22 @@ export default function CommandesClientPage() {
                         <Eye size={18} />
                       </button>
                       {cmd.statut === 'brouillon' && (
-                        <button
-                          onClick={() => handleSoumettre(cmd.id)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Soumettre"
-                        >
-                          <Send size={18} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleSoumettre(cmd.id)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Soumettre"
+                          >
+                            <Send size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cmd.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
                       )}
                       {cmd.statut === 'en_attente' && (
                         <>
@@ -450,15 +470,15 @@ export default function CommandesClientPage() {
               <div className="border-t pt-3 dark:border-gray-700">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Montant HT:</span>
-                  <span className="dark:text-white">{selectedCommande.montant_ht?.toFixed(2)} €</span>
+                  <span className="dark:text-white">{Number(selectedCommande.montant_ht ?? 0).toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">TVA:</span>
-                  <span className="dark:text-white">{selectedCommande.montant_tva?.toFixed(2)} €</span>
+                  <span className="dark:text-white">{Number(selectedCommande.montant_tva ?? 0).toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between font-bold">
                   <span className="dark:text-white">Total TTC:</span>
-                  <span className="dark:text-white">{selectedCommande.montant_ttc?.toFixed(2)} €</span>
+                  <span className="dark:text-white">{Number(selectedCommande.montant_ttc ?? 0).toFixed(2)} €</span>
                 </div>
               </div>
               {selectedCommande.motif_refus && (
