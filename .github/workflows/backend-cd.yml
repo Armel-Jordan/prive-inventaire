@@ -33,7 +33,9 @@ jobs:
             cd /var/www/prise-api/prise-inventaire-api
 
             echo "--- Pull du code ---"
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             echo "--- Installation des dépendances ---"
             composer install --no-dev --optimize-autoloader --no-interaction
