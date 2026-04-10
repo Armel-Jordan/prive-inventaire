@@ -1,0 +1,86 @@
+name: Backend CD — Deploy DigitalOcean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prise-inventaire-api/**'
+
+# Empêche deux déploiements simultanés
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "=== Déploiement Prise Inventaire API ==="
+            cd /var/www/prise-api/prise-inventaire-api
+
+            echo "--- Pull du code ---"
+            git pull origin main
+
+            echo "--- Installation des dépendances ---"
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            echo "--- Mise en maintenance ---"
+            php artisan down --retry=60
+
+            echo "--- Migrations ---"
+            php artisan migrate --force
+
+            echo "--- Vider les caches ---"
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan route:clear
+            php artisan view:clear
+
+            echo "--- Optimiser pour la production ---"
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "--- Permissions fichiers ---"
+            chown -R www-data:www-data storage bootstrap/cache
+            chmod -R 775 storage bootstrap/cache
+
+            echo "--- Redémarrer PHP-FPM ---"
+            systemctl restart php8.3-fpm
+
+            echo "--- Sortie de maintenance ---"
+            php artisan up
+
+            echo "=== Déploiement terminé avec succès ==="
+
+      - name: Vérifier la santé de l'API
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.DO_HOST }}/api/health || echo "000")
+          echo "API status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "ERREUR: L'API ne répond pas correctement (status: $STATUS)"
+            exit 1
+          fi
+          echo "API opérationnelle"
+
+      - name: Notifier en cas d'échec
+        if: failure()
+        run: |
+          echo "Le déploiement a échoué. Vérifier les logs sur le serveur."
+          echo "Connexion: ssh root@${{ secrets.DO_HOST }}"
+          echo "Logs: tail -f /var/www/prise-api/prise-inventaire-api/storage/logs/laravel.log"

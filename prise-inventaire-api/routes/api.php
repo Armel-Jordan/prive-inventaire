@@ -1,5 +1,25 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
+
+// Health check — utilisé par le CI/CD et le monitoring
+Route::get('/health', function () {
+    try {
+        DB::connection()->getPdo();
+        return response()->json([
+            'status' => 'ok',
+            'database' => 'ok',
+            'timestamp' => now()->toISOString(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'database' => 'unreachable',
+            'timestamp' => now()->toISOString(),
+        ], 503);
+    }
+});
+
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SuperAdminController;

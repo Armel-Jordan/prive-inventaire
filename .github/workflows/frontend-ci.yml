@@ -1,0 +1,68 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'prise-inventaire-web/**'
+      - 'prise-inventaire-marketing/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'prise-inventaire-web/**'
+      - 'prise-inventaire-marketing/**'
+
+jobs:
+  web-ci:
+    name: Web Admin — Lint + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prise-inventaire-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: prise-inventaire-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Type check + Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+  marketing-ci:
+    name: Marketing — Lint + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prise-inventaire-marketing
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: prise-inventaire-marketing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Type check + Build
+        run: npm run build

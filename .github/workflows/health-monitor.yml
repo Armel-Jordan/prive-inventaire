@@ -1,0 +1,90 @@
+name: Health Monitor — API
+
+on:
+  schedule:
+    # Toutes les 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    # Déclenchement manuel possible depuis GitHub Actions
+
+jobs:
+  check-api:
+    name: Vérifier la santé de l'API
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping API health endpoint
+        id: health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://${{ secrets.DO_HOST }}/api/health || echo "000")
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "API status: $STATUS"
+
+      - name: Vérifier endpoint login
+        id: login
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -X POST http://${{ secrets.DO_HOST }}/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@test.com","password":"wrong"}' || echo "000")
+          echo "status=$RESPONSE" >> $GITHUB_OUTPUT
+          # 401 = API répond (mauvais credentials = normal), 000 = API down
+          echo "Login endpoint status: $RESPONSE"
+
+      - name: Évaluer la santé globale
+        run: |
+          HEALTH="${{ steps.health.outputs.status }}"
+          LOGIN="${{ steps.login.outputs.status }}"
+
+          echo "Health endpoint: $HEALTH"
+          echo "Login endpoint: $LOGIN"
+
+          # L'API est down si elle ne répond pas du tout
+          if [ "$LOGIN" = "000" ]; then
+            echo "CRITIQUE: L'API ne répond pas !"
+            exit 1
+          fi
+
+          echo "API opérationnelle — statuts: health=$HEALTH, login=$LOGIN"
+
+      - name: Créer une issue GitHub si l'API est down
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 API DOWN — ${new Date().toISOString()}`;
+            const body = `
+            ## L'API Prise Inventaire ne répond pas
+
+            **Détecté à** : ${new Date().toISOString()}
+            **Serveur** : DigitalOcean \`${{ secrets.DO_HOST }}\`
+
+            ### Actions immédiates
+            1. Se connecter au serveur : \`ssh root@${{ secrets.DO_HOST }}\`
+            2. Voir les logs : \`tail -f /var/www/prise-api/prise-inventaire-api/storage/logs/laravel.log\`
+            3. Redémarrer si nécessaire :
+               \`\`\`bash
+               systemctl restart nginx
+               systemctl restart php8.3-fpm
+               \`\`\`
+
+            *Issue créée automatiquement par le Health Monitor*
+            `;
+
+            // Vérifier si une issue identique est déjà ouverte
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'api-down'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['api-down', 'critical', 'production']
+              });
+            }
