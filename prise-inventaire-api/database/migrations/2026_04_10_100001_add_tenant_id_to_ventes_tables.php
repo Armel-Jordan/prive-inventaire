@@ -10,7 +10,7 @@ return new class extends Migration
     {
         $tables = [
             'clients',
-            'com_client_entetes',
+            'com_client_entete',
             'factures',
             'bons_livraison',
             'tournees',
@@ -19,7 +19,7 @@ return new class extends Migration
         ];
 
         foreach ($tables as $table) {
-            if (!Schema::hasColumn($table, 'tenant_id')) {
+            if (Schema::hasTable($table) && !Schema::hasColumn($table, 'tenant_id')) {
                 Schema::table($table, function (Blueprint $table) {
                     $table->unsignedBigInteger('tenant_id')->nullable()->after('id')->index();
                 });
@@ -31,7 +31,7 @@ return new class extends Migration
     {
         $tables = [
             'clients',
-            'com_client_entetes',
+            'com_client_entete',
             'factures',
             'bons_livraison',
             'tournees',
