@@ -1,23 +1,24 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10 — ajout modifier commande, facture manuelle, annuler BL, retirer BL tournée, supprimer tournée
+> Dernière mise à jour : 2026-04-10 — ajout modifier commande, facture manuelle, annuler BL, retirer BL tournée, supprimer tournée, isolation multi-tenant complète
 
 ---
 
 ## TABLE DES MATIÈRES
 
 1. [Vue d'ensemble du module](#1-vue-densemble-du-module)
-2. [Clients](#2-clients)
-3. [Devis](#3-devis)
-4. [Commandes Client](#4-commandes-client)
-5. [Factures](#5-factures)
-6. [Bons de Livraison](#6-bons-de-livraison)
-7. [Camions](#7-camions)
-8. [Tournées](#8-tournées)
-9. [Flow complet bout en bout](#9-flow-complet-bout-en-bout)
-10. [Tous les statuts et transitions](#10-tous-les-statuts-et-transitions)
-11. [Livraison partielle — cas particulier](#11-livraison-partielle--cas-particulier)
+2. [Isolation multi-tenant](#2-isolation-multi-tenant)
+3. [Clients](#3-clients)
+4. [Devis](#4-devis)
+5. [Commandes Client](#5-commandes-client)
+6. [Factures](#6-factures)
+7. [Bons de Livraison](#7-bons-de-livraison)
+8. [Camions](#8-camions)
+9. [Tournées](#9-tournées)
+10. [Flow complet bout en bout](#10-flow-complet-bout-en-bout)
+11. [Tous les statuts et transitions](#11-tous-les-statuts-et-transitions)
+12. [Livraison partielle — cas particulier](#12-livraison-partielle--cas-particulier)
 
 ---
 
@@ -46,6 +47,45 @@ Chaque étape est optionnelle selon les cas :
 - On peut créer une Commande sans passer par un Devis
 - On peut créer une Facture directement
 - Un Bon de Livraison peut être livré hors tournée
+
+---
+
+---
+
+## 2. Isolation multi-tenant
+
+Toutes les tables du module Ventes contiennent une colonne `tenant_id`. Chaque enregistrement appartient à un seul tenant (entreprise). Les données ne sont jamais partagées entre tenants.
+
+### Tables concernées
+
+| Table | tenant_id | Rôle |
+|-------|-----------|------|
+| `clients` | ✅ | Client appartient à un tenant |
+| `com_client_entete` | ✅ | Commande appartient à un tenant |
+| `factures` | ✅ | Facture appartient à un tenant |
+| `bons_livraison` | ✅ | BL appartient à un tenant |
+| `tournees` | ✅ | Tournée appartient à un tenant |
+| `camions` | ✅ | Camion appartient à un tenant |
+| `devis` | ✅ | Devis appartient à un tenant |
+
+Les tables enfants (`com_client_ligne`, `facture_lignes`, `bon_livraison_lignes`, etc.) **n'ont pas** de `tenant_id` — elles sont toujours accédées via leur parent qui a déjà le filtre.
+
+### Fonctionnement
+
+```php
+// Lecture → filtre automatique sur tenant_id
+$tenantId = auth()->user()->tenant_id;
+$query = Model::where('tenant_id', $tenantId);
+
+// Création → tenant_id injecté automatiquement
+Model::create(['tenant_id' => $tenantId, ...]);
+```
+
+Le `tenant_id` est déterminé par l'utilisateur connecté (`auth()->user()->tenant_id`), lui-même rattaché à son tenant via le middleware `IdentifyTenant`.
+
+### Migration
+
+Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 
 ---
 
