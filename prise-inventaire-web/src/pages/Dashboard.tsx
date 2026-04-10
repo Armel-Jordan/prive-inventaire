@@ -447,7 +447,7 @@ export default function Dashboard() {
               accentBg="bg-blue-600"
               iconBg="bg-blue-50 dark:bg-blue-900/30"
               iconColor="text-blue-600"
-              onClick={() => navigate('/ventes/factures')}
+              onClick={() => navigate('/factures')}
             />
             <KpiCard
               label="Devis en cours"
@@ -457,7 +457,7 @@ export default function Dashboard() {
               accentBg="bg-blue-600"
               iconBg="bg-blue-50 dark:bg-blue-900/30"
               iconColor="text-blue-600"
-              onClick={() => navigate('/ventes/devis')}
+              onClick={() => navigate('/devis')}
             />
             <KpiCard
               label="Commandes"
@@ -467,7 +467,7 @@ export default function Dashboard() {
               accentBg="bg-blue-600"
               iconBg="bg-blue-50 dark:bg-blue-900/30"
               iconColor="text-blue-600"
-              onClick={() => navigate('/ventes/commandes')}
+              onClick={() => navigate('/commandes-client')}
             />
             <KpiCard
               label="Factures impayées"
@@ -477,7 +477,7 @@ export default function Dashboard() {
               accentBg="bg-blue-600"
               iconBg="bg-blue-50 dark:bg-blue-900/30"
               iconColor="text-blue-600"
-              onClick={() => navigate('/ventes/factures')}
+              onClick={() => navigate('/factures')}
             />
           </div>
 
@@ -492,7 +492,7 @@ export default function Dashboard() {
               accentBg="bg-orange-500"
               iconBg="bg-orange-50 dark:bg-orange-900/30"
               iconColor="text-orange-500"
-              onClick={() => navigate('/achats/commandes')}
+              onClick={() => navigate('/commandes-fournisseur')}
             />
             <KpiCard
               label="En attente"
@@ -502,7 +502,7 @@ export default function Dashboard() {
               accentBg="bg-orange-500"
               iconBg="bg-orange-50 dark:bg-orange-900/30"
               iconColor="text-orange-500"
-              onClick={() => navigate('/achats/commandes')}
+              onClick={() => navigate('/commandes-fournisseur')}
             />
             <KpiCard
               label="Montant engagé"
@@ -512,7 +512,7 @@ export default function Dashboard() {
               accentBg="bg-orange-500"
               iconBg="bg-orange-50 dark:bg-orange-900/30"
               iconColor="text-orange-500"
-              onClick={() => navigate('/achats/commandes')}
+              onClick={() => navigate('/commandes-fournisseur')}
             />
             <KpiCard
               label="Dépenses achats"
@@ -522,7 +522,7 @@ export default function Dashboard() {
               accentBg="bg-orange-500"
               iconBg="bg-orange-50 dark:bg-orange-900/30"
               iconColor="text-orange-500"
-              onClick={() => navigate('/achats')}
+              onClick={() => navigate('/fournisseurs')}
             />
           </div>
 
@@ -537,7 +537,7 @@ export default function Dashboard() {
               accentBg="bg-green-600"
               iconBg="bg-green-50 dark:bg-green-900/30"
               iconColor="text-green-600"
-              onClick={() => navigate('/finance')}
+              onClick={() => navigate('/comptabilite')}
             />
             <KpiCard
               label="Impayé"
@@ -547,7 +547,7 @@ export default function Dashboard() {
               accentBg="bg-green-600"
               iconBg="bg-green-50 dark:bg-green-900/30"
               iconColor="text-green-600"
-              onClick={() => navigate('/ventes/factures')}
+              onClick={() => navigate('/factures')}
             />
             <KpiCard
               label="Dépenses achats"
@@ -557,7 +557,7 @@ export default function Dashboard() {
               accentBg="bg-green-600"
               iconBg="bg-green-50 dark:bg-green-900/30"
               iconColor="text-green-600"
-              onClick={() => navigate('/achats')}
+              onClick={() => navigate('/fournisseurs')}
             />
             <KpiCard
               label="Marge brute"
@@ -567,7 +567,7 @@ export default function Dashboard() {
               accentBg="bg-green-600"
               iconBg="bg-green-50 dark:bg-green-900/30"
               iconColor="text-green-600"
-              onClick={() => navigate('/finance')}
+              onClick={() => navigate('/comptabilite')}
             />
           </div>
 
