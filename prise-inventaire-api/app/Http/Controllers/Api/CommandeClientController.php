@@ -19,7 +19,8 @@ class CommandeClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = ComClientEntete::with(['client', 'lignes']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = ComClientEntete::with(['client', 'lignes'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -68,8 +69,9 @@ class CommandeClientController extends Controller
         $numero = $config->genererNumero();
         $config->incrementer();
 
-        $commande = DB::transaction(function () use ($validated, $request, $numero) {
+        $commande = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $commande = ComClientEntete::create([
+                'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
                 'date_commande' => $validated['date_commande'],

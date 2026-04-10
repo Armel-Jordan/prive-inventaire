@@ -11,6 +11,7 @@ class Camion extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'immatriculation',
         'marque',
         'modele',

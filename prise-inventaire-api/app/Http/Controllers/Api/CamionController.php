@@ -11,7 +11,8 @@ class CamionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Camion::query();
+        $tenantId = auth()->user()->tenant_id;
+        $query = Camion::where('tenant_id', $tenantId);
 
         if ($request->has('actif')) {
             $query->where('actif', $request->boolean('actif'));
@@ -27,8 +28,9 @@ class CamionController extends Controller
     public function disponibles(Request $request): JsonResponse
     {
         $date = $request->get('date', now()->toDateString());
+        $tenantId = auth()->user()->tenant_id;
 
-        $camions = Camion::where('actif', true)
+        $camions = Camion::where('tenant_id', $tenantId)->where('actif', true)
             ->get()
             ->filter(fn($c) => $c->estDisponible($date));
 
@@ -54,6 +56,7 @@ class CamionController extends Controller
         ]);
 
         $validated['actif'] = true;
+        $validated['tenant_id'] = auth()->user()->tenant_id;
         $camion = Camion::create($validated);
 
         return response()->json($camion, 201);

@@ -14,7 +14,8 @@ class ClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Client::query();
+        $tenantId = auth()->user()->tenant_id;
+        $query = Client::where('tenant_id', $tenantId);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -35,7 +36,8 @@ class ClientController extends Controller
 
     public function actifs(): JsonResponse
     {
-        $clients = Client::where('actif', true)->orderBy('raison_sociale')->get();
+        $tenantId = auth()->user()->tenant_id;
+        $clients = Client::where('tenant_id', $tenantId)->where('actif', true)->orderBy('raison_sociale')->get();
         return response()->json($clients);
     }
 
@@ -70,6 +72,7 @@ class ClientController extends Controller
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
         $validated['actif'] = true;
+        $validated['tenant_id'] = $tenantId;
 
         $client = Client::create($validated);
         return response()->json($client, 201);

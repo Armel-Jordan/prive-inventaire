@@ -12,7 +12,7 @@ class Tournee extends Model
     use HasFactory;
 
     protected $fillable = [
-        'numero', 'date_tournee', 'camion_id', 'livreur_id', 'zone',
+        'tenant_id', 'numero', 'date_tournee', 'camion_id', 'livreur_id', 'zone',
         'statut', 'heure_depart', 'heure_retour', 'km_depart', 'km_retour',
     ];
 

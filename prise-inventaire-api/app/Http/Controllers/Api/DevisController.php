@@ -14,7 +14,8 @@ class DevisController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -58,8 +59,9 @@ class DevisController extends Controller
         $numero = $config->genererNumero();
         $config->incrementer();
 
-        $devis = DB::transaction(function () use ($validated, $request, $numero) {
+        $devis = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $devis = Devis::create([
+                'tenant_id'     => $tenantId,
                 'numero'        => $numero,
                 'client_id'     => $validated['client_id'],
                 'date_devis'    => $validated['date_devis'],

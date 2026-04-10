@@ -16,7 +16,8 @@ class TourneeController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Tournee::with(['camion', 'tourneeBons.bonLivraison.facture.client']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = Tournee::with(['camion', 'tourneeBons.bonLivraison.facture.client'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -57,6 +58,7 @@ class TourneeController extends Controller
         $config->incrementer();
 
         $tournee = Tournee::create([
+            'tenant_id' => $tenantId,
             'numero' => $numero,
             'date_tournee' => $validated['date_tournee'],
             'camion_id' => $validated['camion_id'],

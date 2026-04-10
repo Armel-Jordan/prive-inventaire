@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10
+> Dernière mise à jour : 2026-04-10 — ajout modifier commande, facture manuelle, annuler BL, retirer BL tournée, supprimer tournée
 
 ---
 
@@ -498,13 +498,26 @@ Il y a deux étapes clés :
 
 | Statut | Signification | Actions disponibles |
 |--------|---------------|---------------------|
-| `cree` | BL créé, préparation pas encore commencée | Démarrer préparation ▶️ |
-| `en_preparation` | Préparation en cours | Modifier quantités préparées, Marquer prêt ✅ |
+| `cree` | BL créé, préparation pas encore commencée | Démarrer préparation ▶️, Annuler 🚫 |
+| `en_preparation` | Préparation en cours | Modifier quantités préparées, Marquer prêt ✅, Annuler 🚫 |
 | `pret` | Prêt à charger | Ajouter à une tournée 📦 |
 | `en_livraison` | Chargé dans un camion, en route | Enregistrer livraison 🚚 |
 | `livre_complet` | Tout livré | Terminé |
 | `livre_partiel` | Livraison partielle | Facture de reliquat créée auto |
 | `annule` | Annulé | Lecture seule |
+
+### 6.3b Annulation d'un BL
+
+Le bouton 🚫 (annuler) est disponible pour les statuts `cree` et `en_preparation`.
+
+**Endpoint :** `POST /bons-livraison/{id}/annuler`
+
+**Quand l'utiliser :**
+- Client annule sa commande après la facturation
+- Erreur de création du BL
+- Doublon
+
+Un BL annulé ne peut plus être modifié. Les mouvements de stock déjà créés pendant la préparation ne sont pas automatiquement annulés — prévoir un mouvement correctif si nécessaire.
 
 ### 6.4 Statuts des lignes
 
@@ -631,7 +644,7 @@ Une **Tournée** est un regroupement de plusieurs Bons de Livraison pour un mêm
 
 | Statut | Signification | Actions disponibles |
 |--------|---------------|---------------------|
-| `planifiee` | Créée, pas encore démarrée | Ajouter BL 📦, Démarrer ▶️ |
+| `planifiee` | Créée, pas encore démarrée | Ajouter BL 📦, Retirer BL ➖, Démarrer ▶️, Supprimer 🗑️ |
 | `en_cours` | En route | Terminer ⏹ |
 | `terminee` | Retour dépôt | Lecture seule |
 | `annulee` | Annulée | Lecture seule |
@@ -675,13 +688,24 @@ Une **Tournée** est un regroupement de plusieurs Bons de Livraison pour un mêm
 
 ### 8.5 Retirer un BL d'une tournée
 
-Si on s'est trompé ou si un client annule :
-- Endpoint : `DELETE /tournees/{id}/bon/{bonId}`
-- Possible seulement si la tournée est en `planifiee`
+Le bouton ➖ apparaît sur chaque BL dans le modal détail de la tournée, si celle-ci est en statut `planifiee`.
 
-### 8.6 Réorganiser l'ordre de livraison
+- **Endpoint :** `DELETE /tournees/{id}/bon/{bonId}`
+- Le BL repasse en statut `pret` — il peut être ajouté à une autre tournée
+- Impossible si la tournée est déjà `en_cours` ou `terminee`
 
-`PUT /tournees/{id}/ordre` permet de changer l'ordre des BL dans la tournée (pour optimiser le trajet).
+### 8.6 Supprimer une tournée
+
+Le bouton 🗑️ est disponible dans le tableau des tournées, uniquement pour les tournées en statut `planifiee`.
+
+- **Endpoint :** `DELETE /tournees/{id}`
+- Supprime la tournée et tous ses liens avec les BL
+- Les BL eux-mêmes ne sont pas affectés — ils restent en statut `pret`
+- Impossible si la tournée est `en_cours` ou `terminee`
+
+### 8.7 Réorganiser l'ordre de livraison
+
+`PUT /tournees/{id}/ordre` permet de changer l'ordre des BL dans la tournée (pour optimiser le trajet). Seulement pour les tournées `planifiee`.
 
 ---
 
@@ -717,15 +741,18 @@ Si on s'est trompé ou si un client annule :
 ═══ PHASE LOGISTIQUE ═════════════════════════════════════════════
 
 5. BON DE LIVRAISON
-   → Créer depuis la facture émise (automatique)
+   → Créer depuis la facture émise (automatique) OU créer depuis une facture manuelle
    → Démarrer la préparation dans l'entrepôt
    → Préparer les articles (saisir quantités)
    → Marquer prêt
+   ↳ Si erreur ou annulation client → Annuler le BL 🚫 (statuts cree ou en_preparation)
 
 6. TOURNÉE
    → Créer la tournée pour la date de livraison
    → Affecter un camion disponible
-   → Ajouter le BL à la tournée
+   → Ajouter le(s) BL à la tournée
+   ↳ Si ajout par erreur → Retirer le BL ➖
+   ↳ Si tournée à annuler → Supprimer la tournée 🗑️
    → Démarrer la tournée
 
 ═══ PHASE LIVRAISON ══════════════════════════════════════════════

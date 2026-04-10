@@ -15,7 +15,7 @@ class BonLivraison extends Model
     protected $table = 'bons_livraison';
 
     protected $fillable = [
-        'numero', 'facture_id', 'mode_livraison', 'statut',
+        'tenant_id', 'numero', 'facture_id', 'mode_livraison', 'statut',
         'date_preparation', 'date_pret', 'date_livraison',
         'preparateur_id', 'signature_client', 'notes_livraison',
     ];

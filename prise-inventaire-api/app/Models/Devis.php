@@ -13,6 +13,7 @@ class Devis extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'numero',
         'client_id',
         'date_devis',

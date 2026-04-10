@@ -19,7 +19,8 @@ class FactureController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Facture::with(['client', 'commande']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = Facture::with(['client', 'commande'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -81,6 +82,7 @@ class FactureController extends Controller
             }, $validated['lignes']);
 
             $facture = Facture::create([
+                'tenant_id'     => $tenantId,
                 'numero'        => $numero,
                 'client_id'     => $validated['client_id'],
                 'date_facture'  => $validated['date_facture'],
@@ -133,8 +135,9 @@ class FactureController extends Controller
         $numeroFacture = $configFacture->genererNumero();
         $configFacture->incrementer();
 
-        $facture = DB::transaction(function () use ($commande, $numeroFacture) {
+        $facture = DB::transaction(function () use ($commande, $numeroFacture, $tenantId) {
             $facture = Facture::create([
+                'tenant_id' => $tenantId,
                 'numero' => $numeroFacture,
                 'commande_id' => $commande->id,
                 'client_id' => $commande->client_id,
@@ -261,8 +264,9 @@ class FactureController extends Controller
         $numeroBon = $configBon->genererNumero();
         $configBon->incrementer();
 
-        $bon = DB::transaction(function () use ($facture, $numeroBon) {
+        $bon = DB::transaction(function () use ($facture, $numeroBon, $tenantId) {
             $bon = BonLivraison::create([
+                'tenant_id' => $tenantId,
                 'numero' => $numeroBon,
                 'facture_id' => $facture->id,
                 'mode_livraison' => 'entreprise',

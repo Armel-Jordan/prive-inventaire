@@ -18,7 +18,8 @@ class BonLivraisonController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = BonLivraison::with(['facture.client']);
+        $tenantId = auth()->user()->tenant_id;
+        $query = BonLivraison::with(['facture.client'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -138,7 +139,7 @@ class BonLivraisonController extends Controller
             'notes_livraison' => 'nullable|string',
         ]);
 
-        $tenantId = $request->attributes->get('tenant')->id;
+        $tenantId = auth()->user()->tenant_id ?? $request->attributes->get('tenant')->id;
 
         $result = DB::transaction(function () use ($bon, $validated, $request, $tenantId) {
             foreach ($validated['lignes'] as $ligneData) {

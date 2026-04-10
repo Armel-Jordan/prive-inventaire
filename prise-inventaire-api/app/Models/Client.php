@@ -12,6 +12,7 @@ class Client extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'code',
         'raison_sociale',
         'adresse_facturation',
