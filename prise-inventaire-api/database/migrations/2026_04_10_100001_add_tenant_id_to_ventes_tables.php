@@ -19,9 +19,11 @@ return new class extends Migration
         ];
 
         foreach ($tables as $table) {
-            Schema::table($table, function (Blueprint $table) {
-                $table->unsignedBigInteger('tenant_id')->nullable()->after('id')->index();
-            });
+            if (!Schema::hasColumn($table, 'tenant_id')) {
+                Schema::table($table, function (Blueprint $table) {
+                    $table->unsignedBigInteger('tenant_id')->nullable()->after('id')->index();
+                });
+            }
         }
     }
 
