@@ -219,14 +219,14 @@ export default function ClientsPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="text-sm">
                       <span className={`font-medium ${
-                        client.encours_max && client.encours_actuel > client.encours_max * 0.8
+                        client.encours_max && Number(client.encours_actuel) > Number(client.encours_max) * 0.8
                           ? 'text-red-600'
                           : 'text-gray-900 dark:text-white'
                       }`}>
-                        {client.encours_actuel.toFixed(2)} €
+                        {Number(client.encours_actuel).toFixed(2)} €
                       </span>
                       {client.encours_max && (
-                        <div className="text-xs text-gray-500">/ {client.encours_max.toFixed(2)} €</div>
+                        <div className="text-xs text-gray-500">/ {Number(client.encours_max).toFixed(2)} €</div>
                       )}
                     </div>
                   </td>

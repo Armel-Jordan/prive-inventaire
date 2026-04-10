@@ -991,6 +991,78 @@ export async function genererNumero(entite: string): Promise<{ numero: string; p
   return fetchApi(`/configurations/${entite}/generer`);
 }
 
+// ============================================
+// Devis
+// ============================================
+export interface DevisLigne {
+  id?: number;
+  produit_id: number;
+  produit?: { id: number; numero: string; description: string };
+  quantite: number;
+  prix_unitaire: number;
+  montant_ligne: number;
+}
+
+export interface DevisRecord {
+  id: number;
+  numero: string;
+  client_id: number;
+  client?: Client;
+  date_devis: string;
+  date_validite: string;
+  statut: 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire';
+  montant_total: number;
+  notes?: string;
+  lignes: DevisLigne[];
+}
+
+export async function getDevis(params?: { statut?: string; search?: string }): Promise<{ data: DevisRecord[] }> {
+  const qs = new URLSearchParams();
+  if (params?.statut) qs.append('statut', params.statut);
+  if (params?.search) qs.append('search', params.search);
+  return fetchApi(`/devis?${qs.toString()}`);
+}
+
+export async function createDevis(data: {
+  client_id: number;
+  date_devis: string;
+  date_validite: string;
+  notes?: string;
+  lignes: { produit_id: number; quantite: number; prix_unitaire: number }[];
+}): Promise<DevisRecord> {
+  return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateDevis(id: number, data: {
+  client_id: number;
+  date_devis: string;
+  date_validite: string;
+  notes?: string;
+  lignes: { id?: number; produit_id: number; quantite: number; prix_unitaire: number }[];
+}): Promise<DevisRecord> {
+  return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function envoyerDevis(id: number): Promise<{ message: string; devis: DevisRecord }> {
+  return fetchApi(`/devis/${id}/envoyer`, { method: 'POST' });
+}
+
+export async function accepterDevis(id: number): Promise<{ message: string; devis: DevisRecord }> {
+  return fetchApi(`/devis/${id}/accepter`, { method: 'POST' });
+}
+
+export async function refuserDevis(id: number): Promise<{ message: string; devis: DevisRecord }> {
+  return fetchApi(`/devis/${id}/refuser`, { method: 'POST' });
+}
+
+export async function convertirDevisEnCommande(id: number): Promise<{ message: string; commande: ComClientEntete }> {
+  return fetchApi(`/devis/${id}/convertir`, { method: 'POST' });
+}
+
+export async function deleteDevis(id: number): Promise<{ message: string }> {
+  return fetchApi(`/devis/${id}`, { method: 'DELETE' });
+}
+
 export async function consommerNumero(entite: string): Promise<{ numero: string }> {
   return fetchApi(`/configurations/${entite}/consommer`, { method: 'POST' });
 }

@@ -20,6 +20,7 @@ const ENTITY_LABELS: Record<string, string> = {
   secteur:       'Secteurs',
   fournisseur:   'Fournisseurs',
   client:        'Clients',
+  devis:         'Devis',
   commande:      'Commandes',
   facture:       'Factures',
   bon_livraison: 'Bons Livraison',
@@ -32,6 +33,7 @@ const DEFAULT_CONFIGS: FormatConfig[] = [
   { entite: 'secteur',       label: 'Secteurs',       prefixe: '',    suffixe: '', longueur: 3, separateur: '-', auto_increment: false, prochain_numero: 1, format_exemple: 'A-01' },
   { entite: 'fournisseur',   label: 'Fournisseurs',   prefixe: 'F',   suffixe: '', longueur: 5, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'F00001' },
   { entite: 'client',        label: 'Clients',        prefixe: 'C',   suffixe: '', longueur: 5, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'C00001' },
+  { entite: 'devis',         label: 'Devis',          prefixe: 'DEV', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'DEV-00001' },
   { entite: 'commande',      label: 'Commandes',      prefixe: 'CMD', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'CMD-00001' },
   { entite: 'facture',       label: 'Factures',       prefixe: 'FAC', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'FAC-00001' },
   { entite: 'bon_livraison', label: 'Bons Livraison', prefixe: 'BL',  suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'BL-00001' },
@@ -79,19 +81,28 @@ export default function ConfigurationPage() {
   const loadAll = useCallback(async () => {
     try {
       const [configData, paramData, taxesData] = await Promise.all([getConfigurations(), getParametres(), getTaxes()]);
-      const mapped: FormatConfig[] = configData.map((c: ConfigurationFormat) => ({
-        entite: c.entite,
-        label: ENTITY_LABELS[c.entite] || c.entite,
-        prefixe: c.prefixe || '',
-        suffixe: c.suffixe || '',
-        longueur: c.longueur,
-        separateur: c.separateur || '',
-        auto_increment: c.auto_increment,
-        prochain_numero: c.prochain_numero,
-        format_exemple: '',
-      }));
-      mapped.forEach(m => { m.format_exemple = generateExemple(m); });
-      setConfigs(mapped);
+      const apiMap: Record<string, ConfigurationFormat> = {};
+      configData.forEach((c: ConfigurationFormat) => { apiMap[c.entite] = c; });
+
+      const merged: FormatConfig[] = DEFAULT_CONFIGS.map(def => {
+        const api = apiMap[def.entite];
+        if (api) {
+          return {
+            entite: api.entite,
+            label: ENTITY_LABELS[api.entite] || api.entite,
+            prefixe: api.prefixe || '',
+            suffixe: api.suffixe || '',
+            longueur: api.longueur,
+            separateur: api.separateur || '',
+            auto_increment: api.auto_increment,
+            prochain_numero: api.prochain_numero,
+            format_exemple: '',
+          };
+        }
+        return { ...def };
+      });
+      merged.forEach(m => { m.format_exemple = generateExemple(m); });
+      setConfigs(merged);
       setParametres(paramData);
       setTaxes(taxesData);
     } catch (error) {

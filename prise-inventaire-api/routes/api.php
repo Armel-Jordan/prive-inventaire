@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\TourneeController;
 use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -307,6 +308,19 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     // ============================================
     // GESTION CLIENTS & VENTES
     // ============================================
+
+    // Devis
+    Route::prefix('devis')->group(function () {
+        Route::get('/', [DevisController::class, 'index']);
+        Route::post('/', [DevisController::class, 'store']);
+        Route::get('/{devis}', [DevisController::class, 'show']);
+        Route::put('/{devis}', [DevisController::class, 'update']);
+        Route::post('/{devis}/envoyer', [DevisController::class, 'envoyer']);
+        Route::post('/{devis}/accepter', [DevisController::class, 'accepter']);
+        Route::post('/{devis}/refuser', [DevisController::class, 'refuser']);
+        Route::post('/{devis}/convertir', [DevisController::class, 'convertirEnCommande']);
+        Route::delete('/{devis}', [DevisController::class, 'destroy']);
+    });
 
     // Clients
     Route::prefix('clients')->group(function () {
