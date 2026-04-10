@@ -8,16 +8,94 @@ on:
       - '.github/workflows/backend-cd.yml'
   workflow_dispatch:
 
-# Empêche deux déploiements simultanés
 concurrency:
   group: production-deploy
   cancel-in-progress: false
 
 jobs:
+  # ─── ÉTAPE 1 : Vérifications avant déploiement ───────────────────────────
+  verify:
+    name: Vérifications pré-déploiement
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: prise_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    defaults:
+      run:
+        working-directory: prise-inventaire-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo, pdo_mysql
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: prise-inventaire-api/vendor
+          key: composer-${{ hashFiles('prise-inventaire-api/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Installer les dépendances
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Lint (Laravel Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Configurer l'environnement de test
+        run: |
+          cp .env.example .env.testing
+          echo "APP_ENV=testing" >> .env.testing
+          echo "DB_CONNECTION=mysql" >> .env.testing
+          echo "DB_HOST=127.0.0.1" >> .env.testing
+          echo "DB_PORT=3306" >> .env.testing
+          echo "DB_DATABASE=prise_test" >> .env.testing
+          echo "DB_USERNAME=root" >> .env.testing
+          echo "DB_PASSWORD=root" >> .env.testing
+          php artisan key:generate --env=testing
+
+      - name: Migrations de test
+        run: php artisan migrate --env=testing --force
+
+      - name: Tests PHPUnit
+        run: php artisan test --env=testing
+
+      - name: Résumé des vérifications
+        run: |
+          echo "✅ Lint OK"
+          echo "✅ Migrations OK"
+          echo "✅ Tests OK"
+          echo "Prêt pour déploiement en production"
+
+  # ─── ÉTAPE 2 : Approbation manuelle ──────────────────────────────────────
+  approval:
+    name: Approbation manuelle
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production   # ← configure le revieweur requis sur GitHub
+
+    steps:
+      - name: Déploiement approuvé
+        run: echo "Déploiement approuvé, lancement..."
+
+  # ─── ÉTAPE 3 : Déploiement ───────────────────────────────────────────────
   deploy:
     name: Deploy to DigitalOcean
+    needs: approval
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - uses: actions/checkout@v4
@@ -75,16 +153,14 @@ jobs:
         run: |
           sleep 10
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.DO_HOST }}/api/health || echo "000")
-          echo "API status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "ERREUR: L'API ne répond pas correctement (status: $STATUS)"
+            echo "ERREUR: API status $STATUS"
             exit 1
           fi
-          echo "API opérationnelle"
+          echo "✅ API opérationnelle"
 
       - name: Notifier en cas d'échec
         if: failure()
         run: |
-          echo "Le déploiement a échoué. Vérifier les logs sur le serveur."
-          echo "Connexion: ssh root@${{ secrets.DO_HOST }}"
-          echo "Logs: tail -f /var/www/prise-api/prise-inventaire-api/storage/logs/laravel.log"
+          echo "Déploiement échoué."
+          echo "Logs: ssh root@${{ secrets.DO_HOST }} 'tail -f /var/www/prise-api/prise-inventaire-api/storage/logs/laravel.log'"
