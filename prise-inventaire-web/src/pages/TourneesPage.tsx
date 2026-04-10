@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Play, Square, Truck } from 'lucide-react';
+import { Plus, Eye, Play, Square, PackagePlus, X, Truck } from 'lucide-react';
 import {
   getTournees,
   getTournee,
@@ -7,9 +7,11 @@ import {
   getCamionsDisponibles,
   demarrerTournee,
   terminerTournee,
+  ajouterBonATournee,
+  getBonsLivraison,
   getConfiguration,
 } from '../services/api';
-import type { Tournee, Camion } from '../services/api';
+import type { Tournee, Camion, BonLivraison } from '../services/api';
 
 export default function TourneesPage() {
   const [tournees, setTournees] = useState<Tournee[]>([]);
@@ -19,7 +21,9 @@ export default function TourneesPage() {
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAjouterBLModal, setShowAjouterBLModal] = useState(false);
   const [selectedTournee, setSelectedTournee] = useState<Tournee | null>(null);
+  const [bonsDisponibles, setBonsDisponibles] = useState<BonLivraison[]>([]);
 
   const [formData, setFormData] = useState({
     date_tournee: new Date().toISOString().split('T')[0],
@@ -92,12 +96,36 @@ export default function TourneesPage() {
     }
   };
 
+  const handleOuvrirAjouterBL = async (tournee: Tournee) => {
+    try {
+      const response = await getBonsLivraison({ statut: 'pret' });
+      setBonsDisponibles(response.data || []);
+      setSelectedTournee(tournee);
+      setShowAjouterBLModal(true);
+    } catch {
+      alert('Erreur chargement des bons de livraison');
+    }
+  };
+
+  const handleAjouterBL = async (bonId: number) => {
+    if (!selectedTournee) return;
+    try {
+      await ajouterBonATournee(selectedTournee.id, bonId);
+      const updated = await getTournee(selectedTournee.id);
+      setSelectedTournee(updated);
+      const response = await getBonsLivraison({ statut: 'pret' });
+      setBonsDisponibles(response.data || []);
+    } catch {
+      alert('Erreur lors de l\'ajout du bon');
+    }
+  };
+
   const handleDemarrer = async (id: number) => {
     try {
       await demarrerTournee(id);
       loadTournees();
-    } catch (error) {
-      console.error('Erreur démarrage:', error);
+    } catch (error: any) {
+      alert(error?.message || 'Erreur démarrage — ajoutez au moins un bon de livraison.');
     }
   };
 
@@ -186,7 +214,7 @@ export default function TourneesPage() {
               {tournees.map((tournee) => (
                 <tr key={tournee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{tournee.numero}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{tournee.date_tournee}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{new Date(tournee.date_tournee).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
                       <Truck size={16} className="text-gray-400" />
@@ -208,13 +236,22 @@ export default function TourneesPage() {
                         <Eye size={18} />
                       </button>
                       {tournee.statut === 'planifiee' && (
-                        <button
-                          onClick={() => handleDemarrer(tournee.id)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Démarrer"
-                        >
-                          <Play size={18} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleOuvrirAjouterBL(tournee)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Ajouter un bon de livraison"
+                          >
+                            <PackagePlus size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDemarrer(tournee.id)}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Démarrer"
+                          >
+                            <Play size={18} />
+                          </button>
+                        </>
                       )}
                       {tournee.statut === 'en_cours' && (
                         <button
@@ -303,6 +340,61 @@ export default function TourneesPage() {
         </div>
       )}
 
+      {/* Modal ajouter BL */}
+      {showAjouterBLModal && selectedTournee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold dark:text-white">
+                Ajouter un BL — Tournée {selectedTournee.numero}
+              </h2>
+              <button
+                onClick={() => { setShowAjouterBLModal(false); }}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            {bonsDisponibles.length === 0 ? (
+              <p className="text-gray-500 text-sm py-4 text-center">
+                Aucun bon de livraison prêt disponible.<br />
+                Les bons doivent être à l'état "Prêt" pour être ajoutés à une tournée.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {bonsDisponibles.map((bon) => (
+                  <div
+                    key={bon.id}
+                    className="flex justify-between items-center p-3 border rounded-lg dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <div>
+                      <p className="font-mono font-medium dark:text-white">{bon.numero}</p>
+                      <p className="text-sm text-gray-500">
+                        {bon.facture?.client?.nom || 'Client inconnu'} — {bon.mode_livraison}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleAjouterBL(bon.id)}
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowAjouterBLModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal détail */}
       {showDetailModal && selectedTournee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -314,7 +406,7 @@ export default function TourneesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-sm text-gray-500">Date:</span>
-                  <p className="font-medium dark:text-white">{selectedTournee.date_tournee}</p>
+                  <p className="font-medium dark:text-white">{new Date(selectedTournee.date_tournee).toLocaleDateString('fr-FR')}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Statut:</span>

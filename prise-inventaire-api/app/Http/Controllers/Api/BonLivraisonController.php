@@ -108,9 +108,11 @@ class BonLivraisonController extends Controller
             return response()->json(['message' => 'Ce bon n\'est pas en préparation'], 422);
         }
 
-        $toutPrepare = $bon->lignes->every(fn($l) => $l->quantite_preparee > 0);
-        if (!$toutPrepare) {
-            return response()->json(['message' => 'Toutes les lignes doivent être préparées'], 422);
+        foreach ($bon->lignes as $ligne) {
+            if ($ligne->quantite_preparee <= 0) {
+                $ligne->quantite_preparee = $ligne->quantite_a_livrer;
+                $ligne->save();
+            }
         }
 
         $bon->statut = 'pret';

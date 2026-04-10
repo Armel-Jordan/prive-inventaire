@@ -88,8 +88,8 @@ export default function BonsLivraisonPage() {
     try {
       await marquerBLPret(id);
       loadBons();
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch (error: any) {
+      alert(error?.message || 'Toutes les lignes doivent être préparées avant de marquer comme prêt.');
     }
   };
 
