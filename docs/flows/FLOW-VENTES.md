@@ -49,6 +49,75 @@ Chaque étape est optionnelle selon les cas :
 
 ---
 
+## TABLEAU DES ACTIONS PAR MODULE (mis à jour)
+
+### Clients
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer | ✅ | Toujours |
+| Modifier | ✅ | Toujours |
+| Supprimer/Désactiver | ✅ | Toujours |
+
+### Devis
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer | ✅ | Toujours |
+| Modifier (lignes, prix) | ✅ | Statut `brouillon` |
+| Supprimer | ✅ | Statut `brouillon` |
+| Envoyer | ✅ | Statut `brouillon` |
+| Accepter | ✅ | Statut `envoye` |
+| Refuser | ✅ | Statut `envoye` |
+| Convertir en commande | ✅ | Statut `accepte` |
+
+### Commandes Client
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer | ✅ | Toujours |
+| Modifier (lignes, remises) | ✅ | Statut `brouillon` — bouton ✏️ |
+| Supprimer | ✅ | Statut `brouillon` |
+| Soumettre | ✅ | Statut `brouillon` |
+| Accepter | ✅ | Statut `soumise` |
+| Refuser | ✅ | Statut `soumise` |
+| Créer facture | ✅ | Statut `acceptee` |
+
+### Factures
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer depuis commande | ✅ | Commande `acceptee` |
+| Créer manuellement | ✅ | Toujours — bouton "Nouvelle facture" |
+| Supprimer | ✅ | Statut `brouillon` |
+| Émettre | ✅ | Statut `brouillon` |
+| Enregistrer paiement | ✅ | Statuts `emise` ou `partiellement_payee` |
+| Créer BL | ✅ | Statut `emise`, si aucun BL existant |
+
+### Bons de Livraison
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer | ✅ | Automatique depuis une facture |
+| Annuler | ✅ | Statuts `cree` ou `en_preparation` — bouton 🚫 |
+| Démarrer préparation | ✅ | Statut `cree` |
+| Modifier quantités préparées | ✅ | Statut `en_preparation` |
+| Marquer prêt | ✅ | Statut `en_preparation` |
+| Enregistrer livraison | ✅ | Statut `en_livraison` |
+
+### Tournées
+
+| Action | Disponible | Condition |
+|--------|-----------|-----------|
+| Créer | ✅ | Toujours |
+| Supprimer | ✅ | Statut `planifiee` — bouton 🗑️ |
+| Ajouter BL | ✅ | Statut `planifiee`, BL en `pret` |
+| Retirer BL | ✅ | Statut `planifiee` — bouton ➖ dans modal détail |
+| Démarrer | ✅ | Statut `planifiee` + au moins 1 BL |
+| Terminer | ✅ | Statut `en_cours` |
+
+---
+
 ## 2. Clients
 
 ### 2.1 Ce que c'est
@@ -244,6 +313,14 @@ Méthode backend : `ComClientEntete::calculerMontants()`
 | `acceptee` | Approuvée | Créer Facture 💰 |
 | `refusee` | Refusée | Lecture seule |
 
+### 4.5 Modifier une commande brouillon
+
+Le bouton ✏️ (crayon) apparaît sur les commandes en statut `brouillon`. Il ouvre le même modal que la création, pré-rempli avec les données existantes :
+- Client, dates, remise globale, notes
+- Toutes les lignes (produits, quantités, prix)
+
+L'enregistrement appelle `PUT /commandes-client/{id}` qui recalcule les montants automatiquement.
+
 ### 4.5 Flow de la commande client
 
 ```
@@ -300,6 +377,28 @@ La **Facture** est le document officiel de demande de paiement envoyé au client
 | `emise` | Envoyée au client | Enregistrer paiement 💵, Créer BL 📦 |
 | `partiellement_payee` | Paiement partiel reçu | Enregistrer paiement 💵 |
 | `payee` | Intégralement payée | Lecture seule |
+
+### 5.4 Création manuelle d'une facture
+
+En plus de la création depuis une commande, on peut créer une facture directement depuis le bouton **"Nouvelle facture"**.
+
+**Quand l'utiliser :**
+- Facturer un client sans passer par le circuit Devis → Commande
+- Facture de service ou prestation non liée à une commande
+- Corrections, avoirs manuels
+
+**Endpoint :** `POST /factures`
+
+**Champs requis :**
+- Client
+- Date de facture
+- Lignes (produit, quantité, prix HT)
+
+**Champs optionnels :**
+- Date d'échéance
+- Notes
+
+La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal : émettre → paiement → BL.
 
 ### 5.4 Flow de la facture
 

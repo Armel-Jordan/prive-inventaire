@@ -179,6 +179,20 @@ class BonLivraisonController extends Controller
         return response()->json($result->fresh(['lignes', 'facture']));
     }
 
+    public function annuler(int $id): JsonResponse
+    {
+        $bon = BonLivraison::findOrFail($id);
+
+        if (!in_array($bon->statut, ['cree', 'en_preparation'])) {
+            return response()->json(['message' => 'Seuls les bons créés ou en préparation peuvent être annulés'], 422);
+        }
+
+        $bon->statut = 'annule';
+        $bon->save();
+
+        return response()->json($bon);
+    }
+
     private function genererFactureReste(BonLivraison $bon, int $tenantId): void
     {
         $factureOrigine = $bon->facture;

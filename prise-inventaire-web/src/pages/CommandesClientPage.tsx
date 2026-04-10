@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Check, X, FileText, Send, Trash2 } from 'lucide-react';
+import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
 import {
   getCommandesClient,
   getClientsActifs,
   createCommandeClient,
+  updateCommandeClient,
   soumettreCommandeClient,
   accepterCommandeClient,
   refuserCommandeClient,
@@ -25,6 +26,7 @@ export default function CommandesClientPage() {
   const [selectedCommande, setSelectedCommande] = useState<ComClientEntete | null>(null);
   const [showRefusModal, setShowRefusModal] = useState(false);
   const [motifRefus, setMotifRefus] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     client_id: '',
@@ -63,25 +65,49 @@ export default function CommandesClientPage() {
       alert('Ajoutez au moins une ligne');
       return;
     }
+    const payload = {
+      client_id: parseInt(formData.client_id),
+      date_commande: formData.date_commande,
+      date_livraison_souhaitee: formData.date_livraison_souhaitee || undefined,
+      remise_globale: parseFloat(formData.remise_globale) || 0,
+      notes: formData.notes || undefined,
+      lignes: lignes.map(l => ({
+        produit_id: l.produit_id,
+        quantite: l.quantite,
+        prix_unitaire_ht: l.prix_unitaire_ht,
+      })),
+    };
     try {
-      await createCommandeClient({
-        client_id: parseInt(formData.client_id),
-        date_commande: formData.date_commande,
-        date_livraison_souhaitee: formData.date_livraison_souhaitee || undefined,
-        remise_globale: parseFloat(formData.remise_globale) || 0,
-        notes: formData.notes || undefined,
-        lignes: lignes.map(l => ({
-          produit_id: l.produit_id,
-          quantite: l.quantite,
-          prix_unitaire_ht: l.prix_unitaire_ht,
-        })),
-      });
+      if (editingId) {
+        await updateCommandeClient(editingId, payload);
+      } else {
+        await createCommandeClient(payload);
+      }
       setShowModal(false);
       resetForm();
       loadData();
     } catch (error) {
-      console.error('Erreur création:', error);
+      console.error('Erreur:', error);
     }
+  };
+
+  const handleOpenEdit = (cmd: ComClientEntete) => {
+    setEditingId(cmd.id);
+    setFormData({
+      client_id: String(cmd.client_id),
+      date_commande: cmd.date_commande,
+      date_livraison_souhaitee: cmd.date_livraison_souhaitee || '',
+      remise_globale: String(cmd.remise_globale ?? '0'),
+      notes: cmd.notes || '',
+    });
+    setLignes(
+      (cmd.lignes ?? []).map((l: any) => ({
+        produit_id: l.produit_id,
+        quantite: l.quantite,
+        prix_unitaire_ht: parseFloat(l.prix_unitaire_ht),
+      }))
+    );
+    setShowModal(true);
   };
 
   const handleSoumettre = async (id: number) => {
@@ -150,6 +176,7 @@ export default function CommandesClientPage() {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setFormData({
       client_id: '',
       date_commande: new Date().toISOString().split('T')[0],
@@ -255,8 +282,15 @@ export default function CommandesClientPage() {
                       {cmd.statut === 'brouillon' && (
                         <>
                           <button
-                            onClick={() => handleSoumettre(cmd.id)}
+                            onClick={() => handleOpenEdit(cmd)}
                             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Modifier"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleSoumettre(cmd.id)}
+                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
                             title="Soumettre"
                           >
                             <Send size={18} />
@@ -310,7 +344,7 @@ export default function CommandesClientPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4 dark:text-white">Nouvelle commande</h2>
+            <h2 className="text-xl font-bold mb-4 dark:text-white">{editingId ? 'Modifier la commande' : 'Nouvelle commande'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -433,7 +467,7 @@ export default function CommandesClientPage() {
                   Annuler
                 </button>
                 <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  Créer
+                  {editingId ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </form>

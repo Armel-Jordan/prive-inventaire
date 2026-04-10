@@ -44,6 +44,75 @@ class FactureController extends Controller
         return response()->json($facture);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'client_id'               => 'required|exists:clients,id',
+            'date_facture'            => 'required|date',
+            'date_echeance'           => 'nullable|date',
+            'notes'                   => 'nullable|string',
+            'lignes'                  => 'required|array|min:1',
+            'lignes.*.produit_id'     => 'required|integer',
+            'lignes.*.quantite'       => 'required|integer|min:1',
+            'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
+            'lignes.*.taux_tva'       => 'nullable|numeric',
+            'lignes.*.remise_ligne'   => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('facture', $tenantId);
+        if (!$config || !$config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+        }
+        $numero = $config->genererNumero();
+        $config->incrementer();
+
+        $facture = DB::transaction(function () use ($validated, $numero) {
+            $montantHt = 0; $montantTva = 0; $montantTtc = 0;
+
+            $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc) {
+                $tva    = $l['taux_tva'] ?? 20;
+                $remise = $l['remise_ligne'] ?? 0;
+                $ht  = $l['quantite'] * $l['prix_unitaire_ht'] * (1 - $remise / 100);
+                $tvaM = $ht * ($tva / 100);
+                $ttc = $ht + $tvaM;
+                $montantHt += $ht; $montantTva += $tvaM; $montantTtc += $ttc;
+                return compact('ht', 'tvaM', 'ttc', 'tva', 'remise') + $l;
+            }, $validated['lignes']);
+
+            $facture = Facture::create([
+                'numero'        => $numero,
+                'client_id'     => $validated['client_id'],
+                'date_facture'  => $validated['date_facture'],
+                'date_echeance' => $validated['date_echeance'] ?? null,
+                'statut'        => 'brouillon',
+                'montant_ht'    => $montantHt,
+                'montant_tva'   => $montantTva,
+                'montant_ttc'   => $montantTtc,
+                'reste_a_payer' => $montantTtc,
+                'notes'         => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($lignesCalculees as $l) {
+                FactureLigne::create([
+                    'facture_id'       => $facture->id,
+                    'produit_id'       => $l['produit_id'],
+                    'quantite'         => $l['quantite'],
+                    'prix_unitaire_ht' => $l['prix_unitaire_ht'],
+                    'taux_tva'         => $l['tva'],
+                    'remise_ligne'     => $l['remise'],
+                    'montant_ht'       => $l['ht'],
+                    'montant_tva'      => $l['tvaM'],
+                    'montant_ttc'      => $l['ttc'],
+                ]);
+            }
+
+            return $facture;
+        });
+
+        return response()->json($facture->load(['client', 'lignes']), 201);
+    }
+
     public function creerDepuisCommande(Request $request, int $commandeId): JsonResponse
     {
         $commande = ComClientEntete::with(['client', 'lignes'])->findOrFail($commandeId);

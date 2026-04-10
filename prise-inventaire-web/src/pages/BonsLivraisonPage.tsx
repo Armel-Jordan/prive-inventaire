@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Package, CheckCircle, Truck } from 'lucide-react';
+import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
 import {
   getBonsLivraison,
   getBonLivraison,
@@ -7,6 +7,7 @@ import {
   updateLignesBL,
   marquerBLPret,
   enregistrerLivraison,
+  annulerBL,
 } from '../services/api';
 import type { BonLivraison, BonLivraisonLigne } from '../services/api';
 
@@ -110,6 +111,16 @@ export default function BonsLivraisonPage() {
     }
   };
 
+  const handleAnnuler = async (id: number) => {
+    if (!confirm('Annuler ce bon de livraison ?')) return;
+    try {
+      await annulerBL(id);
+      loadBons();
+    } catch {
+      alert('Impossible d\'annuler ce bon.');
+    }
+  };
+
   const handleEnregistrerLivraison = async () => {
     if (!selectedBon) return;
     try {
@@ -209,12 +220,30 @@ export default function BonsLivraisonPage() {
                         <Eye size={18} />
                       </button>
                       {bon.statut === 'cree' && (
+                        <>
+                          <button
+                            onClick={() => handleDemarrerPreparation(bon.id)}
+                            className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
+                            title="Démarrer préparation"
+                          >
+                            <Package size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleAnnuler(bon.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Annuler"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        </>
+                      )}
+                      {bon.statut === 'en_preparation' && (
                         <button
-                          onClick={() => handleDemarrerPreparation(bon.id)}
-                          className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
-                          title="Démarrer préparation"
+                          onClick={() => handleAnnuler(bon.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Annuler"
                         >
-                          <Package size={18} />
+                          <XCircle size={18} />
                         </button>
                       )}
                       {bon.statut === 'en_preparation' && (

@@ -787,6 +787,16 @@ export async function creerBonLivraison(factureId: number): Promise<BonLivraison
   return fetchApi(`/factures/${factureId}/creer-bl`, { method: 'POST' });
 }
 
+export async function createFacture(data: {
+  client_id: number;
+  date_facture: string;
+  date_echeance?: string;
+  notes?: string;
+  lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
+}): Promise<Facture> {
+  return fetchApi('/factures', { method: 'POST', body: JSON.stringify(data) });
+}
+
 export async function deleteFacture(id: number): Promise<void> {
   return fetchApi(`/factures/${id}`, { method: 'DELETE' });
 }
@@ -820,6 +830,10 @@ export async function enregistrerLivraison(id: number, data: {
   notes_livraison?: string;
 }): Promise<BonLivraison> {
   return fetchApi(`/bons-livraison/${id}/livrer`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function annulerBL(id: number): Promise<BonLivraison> {
+  return fetchApi(`/bons-livraison/${id}/annuler`, { method: 'POST' });
 }
 
 // Camions API
@@ -875,6 +889,14 @@ export async function ajouterBonATournee(tourneeId: number, bonLivraisonId: numb
     method: 'POST',
     body: JSON.stringify({ bon_livraison_id: bonLivraisonId }),
   });
+}
+
+export async function retirerBonDeTournee(tourneeId: number, bonLivraisonId: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${tourneeId}/bon/${bonLivraisonId}`, { method: 'DELETE' });
+}
+
+export async function deleteTournee(id: number): Promise<void> {
+  return fetchApi(`/tournees/${id}`, { method: 'DELETE' });
 }
 
 export async function demarrerTournee(id: number, km_depart?: number): Promise<Tournee> {

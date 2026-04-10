@@ -350,6 +350,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::prefix('factures')->group(function () {
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
+        Route::post('/', [FactureController::class, 'store']);
         Route::post('/commande/{commandeId}', [FactureController::class, 'creerDepuisCommande']);
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
@@ -365,6 +366,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::put('/{id}/lignes', [BonLivraisonController::class, 'updateLignes']);
         Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);
         Route::post('/{id}/livrer', [BonLivraisonController::class, 'enregistrerLivraison']);
+        Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
     });
 
     // Camions
@@ -382,6 +384,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/', [TourneeController::class, 'index']);
         Route::get('/{id}', [TourneeController::class, 'show']);
         Route::post('/', [TourneeController::class, 'store']);
+        Route::delete('/{id}', [TourneeController::class, 'destroy']);
         Route::post('/{id}/ajouter-bon', [TourneeController::class, 'ajouterBon']);
         Route::delete('/{id}/bon/{bonId}', [TourneeController::class, 'retirerBon']);
         Route::put('/{id}/ordre', [TourneeController::class, 'updateOrdre']);

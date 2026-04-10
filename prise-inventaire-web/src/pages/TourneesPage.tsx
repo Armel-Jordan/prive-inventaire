@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Play, Square, PackagePlus, X, Truck } from 'lucide-react';
+import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle } from 'lucide-react';
 import {
   getTournees,
   getTournee,
@@ -8,6 +8,8 @@ import {
   demarrerTournee,
   terminerTournee,
   ajouterBonATournee,
+  retirerBonDeTournee,
+  deleteTournee,
   getBonsLivraison,
   getConfiguration,
 } from '../services/api';
@@ -117,6 +119,26 @@ export default function TourneesPage() {
       setBonsDisponibles(response.data || []);
     } catch {
       alert('Erreur lors de l\'ajout du bon');
+    }
+  };
+
+  const handleDeleteTournee = async (id: number) => {
+    if (!confirm('Supprimer cette tournée ?')) return;
+    try {
+      await deleteTournee(id);
+      loadTournees();
+    } catch {
+      alert('Impossible de supprimer cette tournée.');
+    }
+  };
+
+  const handleRetirerBL = async (bonId: number) => {
+    if (!selectedTournee) return;
+    try {
+      const updated = await retirerBonDeTournee(selectedTournee.id, bonId);
+      setSelectedTournee(updated);
+    } catch {
+      alert('Erreur lors du retrait du bon.');
     }
   };
 
@@ -250,6 +272,13 @@ export default function TourneesPage() {
                             title="Démarrer"
                           >
                             <Play size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTournee(tournee.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={18} />
                           </button>
                         </>
                       )}
@@ -445,13 +474,24 @@ export default function TourneesPage() {
                             #{tb.ordre_livraison} - {tb.bon_livraison?.numero}
                           </span>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          tb.statut === 'livre' ? 'bg-green-100 text-green-800' :
-                          tb.statut === 'echec' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {tb.statut === 'livre' ? 'Livré' : tb.statut === 'echec' ? 'Échec' : 'En attente'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            tb.statut === 'livre' ? 'bg-green-100 text-green-800' :
+                            tb.statut === 'echec' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {tb.statut === 'livre' ? 'Livré' : tb.statut === 'echec' ? 'Échec' : 'En attente'}
+                          </span>
+                          {selectedTournee.statut === 'planifiee' && (
+                            <button
+                              onClick={() => handleRetirerBL(tb.bon_livraison_id)}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded"
+                              title="Retirer ce BL"
+                            >
+                              <MinusCircle size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, CreditCard, FileText, Send, Trash2 } from 'lucide-react';
+import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
 import {
   getFactures,
   getFacture,
@@ -7,8 +7,12 @@ import {
   enregistrerPaiement,
   creerBonLivraison,
   deleteFacture,
+  createFacture,
+  getClientsActifs,
+  getProduits,
 } from '../services/api';
-import type { Facture } from '../services/api';
+import type { Facture, Client } from '../services/api';
+import type { Produit } from '../types';
 
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -23,6 +27,22 @@ export default function FacturesPage() {
     mode_paiement: 'virement',
     reference: '',
   });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [produits, setProduits] = useState<Produit[]>([]);
+  const [createForm, setCreateForm] = useState({
+    client_id: '',
+    date_facture: new Date().toISOString().split('T')[0],
+    date_echeance: '',
+    notes: '',
+  });
+  const [createLignes, setCreateLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+
+  const loadMeta = async () => {
+    const [c, p] = await Promise.all([getClientsActifs(), getProduits()]);
+    setClients(c || []);
+    setProduits(p || []);
+  };
 
   const loadFactures = useCallback(async () => {
     try {
@@ -38,6 +58,7 @@ export default function FacturesPage() {
 
   useEffect(() => {
     loadFactures();
+    loadMeta();
   }, [loadFactures]);
 
   const handleVoirDetail = async (id: number) => {
@@ -75,6 +96,26 @@ export default function FacturesPage() {
       loadFactures();
     } catch {
       alert('Impossible de supprimer cette facture.');
+    }
+  };
+
+  const handleCreateFacture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (createLignes.length === 0) { alert('Ajoutez au moins une ligne'); return; }
+    try {
+      await createFacture({
+        client_id: parseInt(createForm.client_id),
+        date_facture: createForm.date_facture,
+        date_echeance: createForm.date_echeance || undefined,
+        notes: createForm.notes || undefined,
+        lignes: createLignes,
+      });
+      setShowCreateModal(false);
+      setCreateForm({ client_id: '', date_facture: new Date().toISOString().split('T')[0], date_echeance: '', notes: '' });
+      setCreateLignes([]);
+      loadFactures();
+    } catch (error) {
+      console.error('Erreur création facture:', error);
     }
   };
 
@@ -127,6 +168,13 @@ export default function FacturesPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Factures</h1>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+        >
+          <Plus size={20} />
+          Nouvelle facture
+        </button>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
@@ -329,6 +377,99 @@ export default function FacturesPage() {
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal création manuelle */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold dark:text-white">Nouvelle facture</h2>
+              <button onClick={() => setShowCreateModal(false)}><X size={20} className="text-gray-500" /></button>
+            </div>
+            <form onSubmit={handleCreateFacture} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Client *</label>
+                  <select
+                    required
+                    value={createForm.client_id}
+                    onChange={(e) => setCreateForm({ ...createForm, client_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">Sélectionner...</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Date facture *</label>
+                  <input type="date" required value={createForm.date_facture}
+                    onChange={(e) => setCreateForm({ ...createForm, date_facture: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Date échéance</label>
+                  <input type="date" value={createForm.date_echeance}
+                    onChange={(e) => setCreateForm({ ...createForm, date_echeance: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Notes</label>
+                  <input type="text" value={createForm.notes}
+                    onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium dark:text-gray-300">Lignes</label>
+                  <button type="button"
+                    onClick={() => setCreateLignes([...createLignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0 }])}
+                    className="text-sm text-purple-600 hover:underline">+ Ajouter ligne</button>
+                </div>
+                {createLignes.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">Aucune ligne.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {createLignes.map((l, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <select value={l.produit_id}
+                          onChange={(e) => { const n = [...createLignes]; n[idx].produit_id = parseInt(e.target.value); setCreateLignes(n); }}
+                          className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                          <option value={0}>Produit...</option>
+                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}</option>)}
+                        </select>
+                        <input type="number" min="1" value={l.quantite}
+                          onChange={(e) => { const n = [...createLignes]; n[idx].quantite = parseInt(e.target.value) || 1; setCreateLignes(n); }}
+                          className="w-20 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Qté" />
+                        <input type="number" step="0.01" value={l.prix_unitaire_ht}
+                          onChange={(e) => { const n = [...createLignes]; n[idx].prix_unitaire_ht = parseFloat(e.target.value) || 0; setCreateLignes(n); }}
+                          className="w-24 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Prix HT" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
+                          {(l.quantite * l.prix_unitaire_ht).toFixed(2)} €
+                        </span>
+                        <button type="button" onClick={() => setCreateLignes(createLignes.filter((_, i) => i !== idx))}
+                          className="text-red-500 hover:text-red-700"><X size={16} /></button>
+                      </div>
+                    ))}
+                    <div className="text-right font-medium dark:text-white">
+                      Total HT: {createLignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0).toFixed(2)} €
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white">
+                  Annuler
+                </button>
+                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                  Créer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

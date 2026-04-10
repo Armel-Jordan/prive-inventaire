@@ -184,6 +184,20 @@ class TourneeController extends Controller
         return response()->json($tournee->fresh(['tourneeBons.bonLivraison']));
     }
 
+    public function destroy(int $id): JsonResponse
+    {
+        $tournee = Tournee::findOrFail($id);
+
+        if ($tournee->statut !== 'planifiee') {
+            return response()->json(['message' => 'Seules les tournées planifiées peuvent être supprimées'], 422);
+        }
+
+        $tournee->tourneeBons()->delete();
+        $tournee->delete();
+
+        return response()->json(['message' => 'Tournée supprimée.']);
+    }
+
     public function terminer(Request $request, int $id): JsonResponse
     {
         $tournee = Tournee::findOrFail($id);
