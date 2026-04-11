@@ -206,6 +206,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::prefix('alertes')->group(function () {
         Route::get('/', [AlerteStockController::class, 'index']);
         Route::get('/stats', [AlerteStockController::class, 'stats']);
+        Route::get('/previsions', [AlerteStockController::class, 'previsions']);
         Route::put('/produit/{id}/seuil', [AlerteStockController::class, 'updateSeuil']);
         Route::post('/seuils-batch', [AlerteStockController::class, 'updateSeuilsBatch']);
     });

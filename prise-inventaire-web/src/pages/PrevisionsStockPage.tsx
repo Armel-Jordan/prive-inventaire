@@ -1,63 +1,65 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, AlertTriangle, ShoppingCart, Package } from 'lucide-react';
-import { getProduits } from '../services/api';
-import type { Produit } from '../types';
+import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
-interface ProduitAvecStock extends Produit {
-  stock_actuel?: number;
-  stock_min?: number;
-  consommation_moyenne?: number;
-  jours_restants?: number;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const STORAGE_KEY = 'prise_auth';
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const data = JSON.parse(stored);
+      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
+      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
+    } catch { /* ignore */ }
+  }
+  return headers;
+}
+
+interface PrevisionProduit {
+  id: number;
+  numero: string;
+  description: string;
+  unite_mesure: string;
+  stock_actuel: number;
+  stock_min: number | null;
+  consommation_jour: number;
+  jours_restants: number | null;
+  statut: 'critique' | 'bas' | 'ok';
 }
 
 export default function PrevisionsStockPage() {
-  const [produits, setProduits] = useState<ProduitAvecStock[]>([]);
+  const [produits, setProduits] = useState<PrevisionProduit[]>([]);
+  const [stats, setStats] = useState({ total: 0, critiques: 0, bas: 0, ok: 0 });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'tous' | 'critique' | 'bas' | 'ok'>('tous');
 
   useEffect(() => {
-    loadProduits();
+    loadPrevisions();
   }, []);
 
-  const loadProduits = async () => {
+  async function loadPrevisions() {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await getProduits();
-      // Simuler des données de stock pour la démo
-      const produitsAvecStock = (data || []).map((p: Produit) => {
-        const stockActuel = Math.floor(Math.random() * 500);
-        const stockMin = Math.floor(Math.random() * 100) + 20;
-        const consommation = Math.floor(Math.random() * 20) + 5;
-        return {
-          ...p,
-          stock_actuel: stockActuel,
-          stock_min: stockMin,
-          consommation_moyenne: consommation,
-          jours_restants: consommation > 0 ? Math.floor(stockActuel / consommation) : 999,
-        };
+      const res = await fetch(`${API_BASE_URL}/alertes/previsions`, {
+        headers: getAuthHeaders(),
       });
-      setProduits(produitsAvecStock);
-    } catch (error) {
-      console.error('Erreur chargement:', error);
+      if (res.ok) {
+        const data = await res.json();
+        setProduits(data.produits);
+        setStats({ total: data.total, critiques: data.critiques, bas: data.bas, ok: data.ok });
+      }
+    } catch {
+      /* ignore */
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const getStatut = (p: ProduitAvecStock) => {
-    if (!p.stock_actuel || !p.stock_min) return 'ok';
-    if (p.stock_actuel <= p.stock_min * 0.5) return 'critique';
-    if (p.stock_actuel <= p.stock_min) return 'bas';
-    return 'ok';
-  };
-
-  const filteredProduits = produits.filter(p => {
-    if (filter === 'tous') return true;
-    return getStatut(p) === filter;
-  }).sort((a, b) => (a.jours_restants || 999) - (b.jours_restants || 999));
-
-  const critiques = produits.filter(p => getStatut(p) === 'critique').length;
-  const bas = produits.filter(p => getStatut(p) === 'bas').length;
+  const filtered = produits.filter(p => filter === 'tous' || p.statut === filter);
 
   return (
     <div className="p-6">
@@ -72,7 +74,7 @@ export default function PrevisionsStockPage() {
             <Package className="text-blue-600" size={24} />
             <div>
               <p className="text-sm text-gray-500">Total produits</p>
-              <p className="text-xl font-bold dark:text-white">{produits.length}</p>
+              <p className="text-xl font-bold dark:text-white">{stats.total}</p>
             </div>
           </div>
         </div>
@@ -81,7 +83,7 @@ export default function PrevisionsStockPage() {
             <AlertTriangle className="text-red-600" size={24} />
             <div>
               <p className="text-sm text-gray-500">Stock critique</p>
-              <p className="text-xl font-bold text-red-600">{critiques}</p>
+              <p className="text-xl font-bold text-red-600">{stats.critiques}</p>
             </div>
           </div>
         </div>
@@ -90,7 +92,7 @@ export default function PrevisionsStockPage() {
             <TrendingUp className="text-yellow-600" size={24} />
             <div>
               <p className="text-sm text-gray-500">Stock bas</p>
-              <p className="text-xl font-bold text-yellow-600">{bas}</p>
+              <p className="text-xl font-bold text-yellow-600">{stats.bas}</p>
             </div>
           </div>
         </div>
@@ -99,7 +101,7 @@ export default function PrevisionsStockPage() {
             <ShoppingCart className="text-purple-600" size={24} />
             <div>
               <p className="text-sm text-gray-500">À commander</p>
-              <p className="text-xl font-bold text-purple-600">{critiques + bas}</p>
+              <p className="text-xl font-bold text-purple-600">{stats.critiques + stats.bas}</p>
             </div>
           </div>
         </div>
@@ -109,20 +111,17 @@ export default function PrevisionsStockPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
         <div className="flex gap-2">
           {[
-            { key: 'tous', label: 'Tous', color: 'gray' },
-            { key: 'critique', label: 'Critique', color: 'red' },
-            { key: 'bas', label: 'Stock bas', color: 'yellow' },
-            { key: 'ok', label: 'OK', color: 'green' },
+            { key: 'tous', label: 'Tous', active: 'bg-gray-600 text-white' },
+            { key: 'critique', label: 'Critique', active: 'bg-red-600 text-white' },
+            { key: 'bas', label: 'Stock bas', active: 'bg-yellow-500 text-white' },
+            { key: 'ok', label: 'OK', active: 'bg-green-600 text-white' },
           ].map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key as typeof filter)}
               className={`px-4 py-2 rounded-lg font-medium ${
                 filter === f.key
-                  ? f.color === 'red' ? 'bg-red-600 text-white'
-                  : f.color === 'yellow' ? 'bg-yellow-500 text-white'
-                  : f.color === 'green' ? 'bg-green-600 text-white'
-                  : 'bg-gray-600 text-white'
+                  ? f.active
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}
             >
@@ -135,9 +134,9 @@ export default function PrevisionsStockPage() {
       {/* Tableau */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
-        ) : filteredProduits.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Aucun produit trouvé</div>
+          <PageSkeleton kpis={0} rows={5} />
+        ) : filtered.length === 0 ? (
+          <EmptyState icon="📦" title="Aucun produit trouvé" subtitle="Aucun produit ne correspond à ce filtre" />
         ) : (
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -152,10 +151,9 @@ export default function PrevisionsStockPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredProduits.map((produit) => {
-                const statut = getStatut(produit);
-                const suggestion = statut !== 'ok' 
-                  ? Math.max(0, (produit.stock_min || 0) * 2 - (produit.stock_actuel || 0))
+              {filtered.map((produit) => {
+                const suggestion = produit.statut !== 'ok' && produit.stock_min !== null
+                  ? Math.max(0, produit.stock_min * 2 - produit.stock_actuel)
                   : 0;
                 return (
                   <tr key={produit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -166,36 +164,38 @@ export default function PrevisionsStockPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
-                      {produit.stock_actuel} {produit.mesure}
+                      {produit.stock_actuel} {produit.unite_mesure}
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300">
-                      {produit.stock_min} {produit.mesure}
+                      {produit.stock_min !== null ? `${produit.stock_min} ${produit.unite_mesure}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300">
-                      {produit.consommation_moyenne}
+                      {produit.consommation_jour > 0 ? produit.consommation_jour : '—'}
                     </td>
                     <td className="px-4 py-3 text-right text-sm">
-                      <span className={
-                        (produit.jours_restants || 0) <= 7 ? 'text-red-600 font-bold' :
-                        (produit.jours_restants || 0) <= 14 ? 'text-yellow-600 font-medium' :
-                        'text-gray-600 dark:text-gray-300'
-                      }>
-                        {produit.jours_restants} j
-                      </span>
+                      {produit.jours_restants !== null ? (
+                        <span className={
+                          produit.jours_restants <= 7 ? 'text-red-600 font-bold' :
+                          produit.jours_restants <= 14 ? 'text-yellow-600 font-medium' :
+                          'text-gray-600 dark:text-gray-300'
+                        }>
+                          {produit.jours_restants} j
+                        </span>
+                      ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        statut === 'critique' ? 'bg-red-100 text-red-800' :
-                        statut === 'bas' ? 'bg-yellow-100 text-yellow-800' :
+                        produit.statut === 'critique' ? 'bg-red-100 text-red-800' :
+                        produit.statut === 'bas' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-green-100 text-green-800'
                       }`}>
-                        {statut === 'critique' ? 'Critique' : statut === 'bas' ? 'Bas' : 'OK'}
+                        {produit.statut === 'critique' ? 'Critique' : produit.statut === 'bas' ? 'Bas' : 'OK'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       {suggestion > 0 && (
                         <span className="text-sm font-medium text-purple-600">
-                          Commander {suggestion} {produit.mesure}
+                          Commander {suggestion} {produit.unite_mesure}
                         </span>
                       )}
                     </td>

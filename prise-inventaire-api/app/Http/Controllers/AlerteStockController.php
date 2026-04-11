@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MouvementTenant;
 use App\Models\ProduitTenant;
 use App\Models\ScanTenant;
 use Illuminate\Http\JsonResponse;
@@ -13,10 +14,17 @@ class AlerteStockController extends Controller
     /**
      * Récupère les produits en alerte de stock
      */
+    private function tenantId(): int
+    {
+        return request()->attributes->get('tenant_id') ?? 0;
+    }
+
     public function index(): JsonResponse
     {
+        $tenantId = $this->tenantId();
         // Récupérer les produits avec seuil d'alerte défini
-        $produits = ProduitTenant::whereNotNull('seuil_alerte')
+        $produits = ProduitTenant::where('tenant_id', $tenantId)
+            ->whereNotNull('seuil_alerte')
             ->where('seuil_alerte', '>', 0)
             ->where('actif', true)
             ->get();
@@ -25,7 +33,8 @@ class AlerteStockController extends Controller
         $alertes = [];
 
         foreach ($produits as $produit) {
-            $stockActuel = ScanTenant::where('numero', $produit->numero)
+            $stockActuel = ScanTenant::where('tenant_id', $tenantId)
+                ->where('numero', $produit->numero)
                 ->whereNull('deleted_at')
                 ->sum('quantite');
 
@@ -118,7 +127,9 @@ class AlerteStockController extends Controller
      */
     public function stats(): JsonResponse
     {
-        $produits = ProduitTenant::whereNotNull('seuil_alerte')
+        $tenantId = $this->tenantId();
+        $produits = ProduitTenant::where('tenant_id', $tenantId)
+            ->whereNotNull('seuil_alerte')
             ->where('seuil_alerte', '>', 0)
             ->where('actif', true)
             ->get();
@@ -132,7 +143,8 @@ class AlerteStockController extends Controller
         ];
 
         foreach ($produits as $produit) {
-            $stockActuel = ScanTenant::where('numero', $produit->numero)
+            $stockActuel = ScanTenant::where('tenant_id', $tenantId)
+                ->where('numero', $produit->numero)
                 ->whereNull('deleted_at')
                 ->sum('quantite');
 
@@ -150,6 +162,86 @@ class AlerteStockController extends Controller
         }
 
         return response()->json($stats);
+    }
+
+    /**
+     * Prévisions de stock : tous les produits actifs avec stock actuel et consommation
+     */
+    public function previsions(): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+        $produits = ProduitTenant::where('tenant_id', $tenantId)
+            ->where('actif', true)
+            ->get();
+
+        $depuis = now()->subDays(30);
+        $result = [];
+
+        foreach ($produits as $produit) {
+            $stockActuel = (float) ScanTenant::where('tenant_id', $tenantId)
+                ->where('numero', $produit->numero)
+                ->whereNull('deleted_at')
+                ->sum('quantite');
+
+            // Consommation : mouvements de type sortie sur 30 jours
+            $consommation30j = (float) MouvementTenant::where('tenant_id', $tenantId)
+                ->where('numero', $produit->numero)
+                ->where('action', 'sortie')
+                ->where('created_at', '>=', $depuis)
+                ->whereNull('deleted_at')
+                ->sum('quantite');
+
+            $consommationJour = round($consommation30j / 30, 2);
+            $joursRestants = $consommationJour > 0
+                ? (int) floor($stockActuel / $consommationJour)
+                : null;
+
+            $seuilMin = $produit->seuil_alerte ? (float) $produit->seuil_alerte : null;
+
+            $statut = 'ok';
+            if ($seuilMin !== null) {
+                if ($stockActuel <= $seuilMin * 0.5) {
+                    $statut = 'critique';
+                } elseif ($stockActuel <= $seuilMin) {
+                    $statut = 'bas';
+                }
+            } elseif ($joursRestants !== null && $joursRestants <= 7) {
+                $statut = 'critique';
+            } elseif ($joursRestants !== null && $joursRestants <= 14) {
+                $statut = 'bas';
+            }
+
+            $result[] = [
+                'id'                   => $produit->id,
+                'numero'               => $produit->numero,
+                'description'          => $produit->description,
+                'unite_mesure'         => $produit->mesure,
+                'stock_actuel'         => $stockActuel,
+                'stock_min'            => $seuilMin,
+                'consommation_jour'    => $consommationJour,
+                'jours_restants'       => $joursRestants,
+                'statut'               => $statut,
+            ];
+        }
+
+        // Trier : critique → bas → ok, puis par jours restants
+        usort($result, function ($a, $b) {
+            $order = ['critique' => 0, 'bas' => 1, 'ok' => 2];
+            $diff = ($order[$a['statut']] ?? 3) <=> ($order[$b['statut']] ?? 3);
+            if ($diff !== 0) return $diff;
+            return ($a['jours_restants'] ?? 9999) <=> ($b['jours_restants'] ?? 9999);
+        });
+
+        $critiques = count(array_filter($result, fn ($p) => $p['statut'] === 'critique'));
+        $bas       = count(array_filter($result, fn ($p) => $p['statut'] === 'bas'));
+
+        return response()->json([
+            'produits'  => $result,
+            'total'     => count($result),
+            'critiques' => $critiques,
+            'bas'       => $bas,
+            'ok'        => count($result) - $critiques - $bas,
+        ]);
     }
 
     /**
