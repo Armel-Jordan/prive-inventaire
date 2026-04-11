@@ -13,6 +13,17 @@ class DashboardService
         protected FinanceDashboardService $finance,
     ) {}
 
+    private function safeCall(callable $fn, array $fallback): array
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard section error: '.$e->getMessage());
+
+            return $fallback;
+        }
+    }
+
     /**
      * Résout la période et retourne [dateFrom, dateTo, label].
      */
@@ -51,10 +62,10 @@ class DashboardService
     {
         [$dateFrom, $dateTo, $label] = $this->resolvePeriod($period);
 
-        $ventesData = $this->ventes->getData($tenantId, $dateFrom, $dateTo);
-        $achatsData = $this->achats->getData($tenantId, $dateFrom, $dateTo);
-        $inventaireData = $this->inventaire->getData($tenantId, $dateFrom, $dateTo);
-        $financeData = $this->finance->getData($tenantId, $dateFrom, $dateTo);
+        $ventesData = $this->safeCall(fn () => $this->ventes->getData($tenantId, $dateFrom, $dateTo), []);
+        $achatsData = $this->safeCall(fn () => $this->achats->getData($tenantId, $dateFrom, $dateTo), []);
+        $inventaireData = $this->safeCall(fn () => $this->inventaire->getData($tenantId, $dateFrom, $dateTo), []);
+        $financeData = $this->safeCall(fn () => $this->finance->getData($tenantId, $dateFrom, $dateTo), []);
 
         return [
             'ventes' => $ventesData,

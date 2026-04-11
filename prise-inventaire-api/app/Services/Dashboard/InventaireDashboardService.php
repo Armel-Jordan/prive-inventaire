@@ -24,9 +24,8 @@ class InventaireDashboardService
     }
 
     // -------------------------------------------------------------------------
-    // Produits — total, en alerte, rupture
-    // On utilise la table alertes_stock (tenant_id) pour avoir les alertes
-    // effectives sans recalculer le stock complet.
+    // Produits — total et alertes actives configurées
+    // alertes_stock stocke les seuils (seuil_min, seuil_critique, actif)
     // -------------------------------------------------------------------------
     private function produits(int $tenantId): array
     {
@@ -39,13 +38,14 @@ class InventaireDashboardService
             [$tenantId]
         );
 
-        // Alertes actives depuis alertes_stock
+        // Alertes configurées et actives (seuil_min > seuil_critique = critique/rupture)
         $rAlertes = DB::selectOne(
             'SELECT
-                SUM(CASE WHEN statut = \'alerte\' THEN 1 ELSE 0 END)  AS en_alerte,
-                SUM(CASE WHEN statut = \'rupture\' THEN 1 ELSE 0 END) AS rupture
+                COUNT(*) AS en_alerte,
+                SUM(CASE WHEN seuil_critique > 0 THEN 1 ELSE 0 END) AS rupture
              FROM alertes_stock
-             WHERE tenant_id = ?',
+             WHERE tenant_id = ?
+               AND actif = 1',
             [$tenantId]
         );
 
