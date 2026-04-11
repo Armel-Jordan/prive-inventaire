@@ -10,19 +10,21 @@ return new class extends Migration
     public function up(): void
     {
         // Table des rôles personnalisés
+        if (! Schema::hasTable('roles_custom')) {
+            Schema::create('roles_custom', function (Blueprint $table) {
+                $table->id();
+                $table->string('nom', 50)->unique();
+                $table->string('description', 255)->nullable();
+                $table->boolean('is_system')->default(false);
+                $table->timestamps();
+            });
+        }
+
+        // Table des permissions par module
         if (Schema::hasTable('role_permissions')) {
             return;
         }
 
-        Schema::create('roles_custom', function (Blueprint $table) {
-            $table->id();
-            $table->string('nom', 50)->unique();
-            $table->string('description', 255)->nullable();
-            $table->boolean('is_system')->default(false);
-            $table->timestamps();
-        });
-
-        // Table des permissions par module
         Schema::create('role_permissions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('role_id');
