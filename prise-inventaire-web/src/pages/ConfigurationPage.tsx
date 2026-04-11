@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Save, RefreshCw, Hash, Eye, Building2, Bell, DollarSign, Clock, Plus, Trash2 } from 'lucide-react';
+import { Settings, Save, RefreshCw, Hash, Eye, Building2, DollarSign, Clock, Plus, Trash2 } from 'lucide-react';
 import { getConfigurations, updateConfiguration, getParametres, updateParametres, getTaxes, createTaxe, updateTaxe, deleteTaxe, type ConfigurationFormat, type TenantParametres, type TenantTaxe } from '@/services/api';
 
 interface FormatConfig {
@@ -40,14 +40,13 @@ const DEFAULT_CONFIGS: FormatConfig[] = [
   { entite: 'tournee',       label: 'Tournées',       prefixe: 'T',   suffixe: '', longueur: 4, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'T0001' },
 ];
 
-type MainTab = 'numeros' | 'entreprise' | 'devise' | 'delais' | 'alertes';
+type MainTab = 'numeros' | 'entreprise' | 'devise' | 'delais';
 
 const MAIN_TABS: { id: MainTab; label: string; icon: React.ReactNode }[] = [
   { id: 'numeros',    label: 'Numérotation',      icon: <Hash size={16} /> },
   { id: 'entreprise', label: 'Entreprise',         icon: <Building2 size={16} /> },
   { id: 'devise',     label: 'Devise & TVA',       icon: <DollarSign size={16} /> },
   { id: 'delais',     label: 'Délais par défaut',  icon: <Clock size={16} /> },
-  { id: 'alertes',    label: 'Alertes stock',      icon: <Bell size={16} /> },
 ];
 
 export default function ConfigurationPage() {
@@ -468,31 +467,6 @@ export default function ConfigurationPage() {
         </div>
       )}
 
-      {/* ── Alertes stock ── */}
-      {mainTab === 'alertes' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-lg">
-          <h2 className="text-lg font-semibold dark:text-white mb-6 flex items-center gap-2">
-            <Bell size={20} className="text-purple-600" /> Alertes stock
-          </h2>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seuil de stock bas par défaut (unités)</label>
-              <input type="number" value={parametres.stock_seuil_defaut ?? 5} onChange={(e) => setParam('stock_seuil_defaut', parseInt(e.target.value))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" min={0} />
-              <p className="text-xs text-gray-500 mt-1">Un produit est considéré en stock bas quand sa quantité est inférieure à ce seuil (si aucun seuil spécifique n'est défini sur le produit).</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email de notification</label>
-              <input type="email" value={parametres.stock_alerte_email || ''} onChange={(e) => setParam('stock_alerte_email', e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="alertes@masociete.fr" />
-              <p className="text-xs text-gray-500 mt-1">Cet email recevra les notifications de stock bas.</p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <button onClick={handleSaveParametres} disabled={saving} className="flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50">
-              <Save size={16} /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

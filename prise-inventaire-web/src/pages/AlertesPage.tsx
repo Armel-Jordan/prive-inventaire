@@ -93,12 +93,21 @@ export default function AlertesPage() {
     setLoadingProduits(true);
     try {
       const data = await getProduits();
-      setProduits(data.filter((p: Produit) => p.id !== undefined).map((p: Produit) => ({
-        id: p.id as number,
-        numero: p.numero,
-        description: p.description,
-        seuil_alerte: null,
-      })));
+      const mapped: ProduitAvecSeuil[] = data
+        .filter((p: Produit) => p.id !== undefined)
+        .map((p: Produit & { seuil_alerte?: number | null }) => ({
+          id: p.id as number,
+          numero: p.numero,
+          description: p.description,
+          seuil_alerte: p.seuil_alerte ?? null,
+        }));
+      setProduits(mapped);
+      // Pré-remplir seuilEdits avec les valeurs existantes
+      const initial: Record<number, string> = {};
+      mapped.forEach(p => {
+        initial[p.id] = p.seuil_alerte !== null ? String(p.seuil_alerte) : '0';
+      });
+      setSeuilEdits(initial);
     } catch {
       toast('Erreur de chargement des produits', 'error');
     } finally {
@@ -112,8 +121,7 @@ export default function AlertesPage() {
   }
 
   async function saveSeuil(produitId: number) {
-    const seuil = seuilEdits[produitId];
-    if (seuil === undefined) return;
+    const seuil = seuilEdits[produitId] ?? '0';
 
     setSaving(true);
     try {
@@ -123,12 +131,10 @@ export default function AlertesPage() {
         body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0 }),
       });
       if (res.ok) {
+        toast('Seuil sauvegardé', 'success');
         loadData();
-        setSeuilEdits(prev => {
-          const copy = { ...prev };
-          delete copy[produitId];
-          return copy;
-        });
+      } else {
+        toast('Erreur lors de la sauvegarde', 'error');
       }
     } catch {
       toast('Erreur lors de la sauvegarde', 'error');
@@ -231,7 +237,7 @@ export default function AlertesPage() {
                         <td className="px-4 py-2 text-center">
                           <button
                             onClick={() => saveSeuil(produit.id)}
-                            disabled={saving || seuilEdits[produit.id] === undefined}
+                            disabled={saving}
                             className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Save size={14} className="inline mr-1" />
