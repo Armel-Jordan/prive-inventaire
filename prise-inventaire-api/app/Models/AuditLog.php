@@ -11,6 +11,7 @@ class AuditLog extends Model
     protected $table = 'audit_logs';
 
     protected $fillable = [
+        'tenant_id',
         'action',
         'model_type',
         'model_id',
@@ -39,7 +40,10 @@ class AuditLog extends Model
         ?string $userId = null,
         ?string $userName = null
     ): self {
+        $tenantId = auth()->check() ? auth()->user()->tenant_id : null;
+
         return self::create([
+            'tenant_id' => $tenantId,
             'action' => $action,
             'model_type' => $modelType,
             'model_id' => $modelId,
