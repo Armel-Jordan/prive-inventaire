@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -228,32 +229,30 @@ export default function RapportsPage() {
           {activeTab === 'secteurs' && (
             <div className="space-y-6">
               {/* Totaux */}
-              {totaux && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-green-100 rounded-lg">
-                        <TrendingUp className="text-green-600" size={24} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">{totaux.entrants.quantite.toLocaleString()}</p>
-                        <p className="text-sm text-gray-500">{totaux.entrants.nombre} mouvements entrants</p>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <TrendingUp className="text-green-600" size={24} />
                     </div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-red-100 rounded-lg">
-                        <TrendingDown className="text-red-600" size={24} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-red-600">{totaux.sortants.quantite.toLocaleString()}</p>
-                        <p className="text-sm text-gray-500">{totaux.sortants.nombre} mouvements sortants</p>
-                      </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{(totaux?.entrants.quantite ?? 0).toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">{totaux?.entrants.nombre ?? 0} mouvements entrants</p>
                     </div>
                   </div>
                 </div>
-              )}
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-red-100 rounded-lg">
+                      <TrendingDown className="text-red-600" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{(totaux?.sortants.quantite ?? 0).toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">{totaux?.sortants.nombre ?? 0} mouvements sortants</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Graphique */}
               {secteursData.length > 0 && (
@@ -275,32 +274,36 @@ export default function RapportsPage() {
 
               {/* Tableau */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Secteur</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Entrants (nb)</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Entrants (qté)</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Sortants (nb)</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Sortants (qté)</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Solde</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {secteursData.map(s => (
-                      <tr key={s.secteur} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">{s.secteur}</td>
-                        <td className="px-4 py-3 text-right text-green-600">{s.entrants.nombre}</td>
-                        <td className="px-4 py-3 text-right text-green-600">{s.entrants.quantite.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-right text-red-600">{s.sortants.nombre}</td>
-                        <td className="px-4 py-3 text-right text-red-600">{s.sortants.quantite.toLocaleString()}</td>
-                        <td className={`px-4 py-3 text-right font-bold ${s.solde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {s.solde >= 0 ? '+' : ''}{s.solde.toLocaleString()}
-                        </td>
+                {secteursData.length === 0 ? (
+                  <EmptyState icon="📊" title="Aucun mouvement pour cette période" subtitle="Sélectionnez un autre mois ou attendez que des mouvements soient enregistrés" />
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Secteur</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Entrants (nb)</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Entrants (qté)</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Sortants (nb)</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Sortants (qté)</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Solde</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y">
+                      {secteursData.map(s => (
+                        <tr key={s.secteur} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{s.secteur}</td>
+                          <td className="px-4 py-3 text-right text-green-600">{s.entrants.nombre}</td>
+                          <td className="px-4 py-3 text-right text-green-600">{s.entrants.quantite.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right text-red-600">{s.sortants.nombre}</td>
+                          <td className="px-4 py-3 text-right text-red-600">{s.sortants.quantite.toLocaleString()}</td>
+                          <td className={`px-4 py-3 text-right font-bold ${s.solde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {s.solde >= 0 ? '+' : ''}{s.solde.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}
@@ -308,74 +311,86 @@ export default function RapportsPage() {
           {/* Rapport par employé */}
           {activeTab === 'employes' && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Employé</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Mouvements</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Scans</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Qté Mouvements</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Qté Scans</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {employesData.map(e => (
-                    <tr key={e.employe} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{e.employe}</td>
-                      <td className="px-4 py-3 text-right">{e.mouvements}</td>
-                      <td className="px-4 py-3 text-right">{e.scans}</td>
-                      <td className="px-4 py-3 text-right">{e.quantite_mouvements.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right">{e.quantite_scans.toLocaleString()}</td>
+              {employesData.length === 0 ? (
+                <EmptyState icon="👤" title="Aucune activité pour cette période" subtitle="Sélectionnez un autre mois pour voir l'activité des employés" />
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Employé</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Mouvements</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Scans</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Qté Mouvements</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Qté Scans</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {employesData.map(e => (
+                      <tr key={e.employe} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{e.employe}</td>
+                        <td className="px-4 py-3 text-right">{e.mouvements}</td>
+                        <td className="px-4 py-3 text-right">{e.scans}</td>
+                        <td className="px-4 py-3 text-right">{e.quantite_mouvements.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right">{e.quantite_scans.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
           {/* Évolution annuelle */}
-          {activeTab === 'evolution' && evolutionData.length > 0 && (
+          {activeTab === 'evolution' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold mb-4">Évolution {annee}</h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={evolutionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nom" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="mouvements" name="Mouvements" stroke="#3b82f6" strokeWidth={2} />
-                  <Line type="monotone" dataKey="scans" name="Scans" stroke="#8b5cf6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              {evolutionData.length === 0 ? (
+                <EmptyState icon="📈" title="Aucune donnée pour cette année" subtitle="L'évolution s'affichera dès que des mouvements seront enregistrés" />
+              ) : (
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={evolutionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nom" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="mouvements" name="Mouvements" stroke="#3b82f6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="scans" name="Scans" stroke="#8b5cf6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           )}
 
           {/* Top produits */}
           {activeTab === 'produits' && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">#</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Produit</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Nom</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Mouvements</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Quantité</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {produitsData.map((p, index) => (
-                    <tr key={p.produit_numero} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-500">{index + 1}</td>
-                      <td className="px-4 py-3 font-medium">{p.produit_numero}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.produit_nom || '-'}</td>
-                      <td className="px-4 py-3 text-right">{p.nombre_mouvements}</td>
-                      <td className="px-4 py-3 text-right font-bold">{p.quantite_totale.toLocaleString()}</td>
+              {produitsData.length === 0 ? (
+                <EmptyState icon="📦" title="Aucun produit actif pour cette période" subtitle="Sélectionnez un autre mois pour voir les produits les plus mouvementés" />
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">#</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Produit</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Nom</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Mouvements</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Quantité</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {produitsData.map((p, index) => (
+                      <tr key={p.produit_numero} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-gray-500">{index + 1}</td>
+                        <td className="px-4 py-3 font-medium">{p.produit_numero}</td>
+                        <td className="px-4 py-3 text-gray-600">{p.produit_nom || '-'}</td>
+                        <td className="px-4 py-3 text-right">{p.nombre_mouvements}</td>
+                        <td className="px-4 py-3 text-right font-bold">{p.quantite_totale.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
         </>
