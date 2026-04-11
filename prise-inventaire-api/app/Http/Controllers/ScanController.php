@@ -19,7 +19,7 @@ class ScanController extends Controller
 
             $produit = ProduitMobile::where('NUMERO', $request->numero)->first();
 
-            if (!$produit) {
+            if (! $produit) {
                 return response()->json([
                     'valide' => false,
                     'message' => 'Numéro introuvable',
@@ -34,10 +34,11 @@ class ScanController extends Controller
                 'type' => $produit->type,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Erreur validation produit: ' . $e->getMessage());
+            \Log::error('Erreur validation produit: '.$e->getMessage());
+
             return response()->json([
                 'valide' => false,
-                'message' => 'Erreur serveur: ' . $e->getMessage(),
+                'message' => 'Erreur serveur: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -54,7 +55,7 @@ class ScanController extends Controller
 
         $produit = ProduitMobile::where('NUMERO', $request->numero)->first();
 
-        if (!$produit) {
+        if (! $produit) {
             return response()->json([
                 'success' => false,
                 'message' => 'Numéro de produit introuvable',
@@ -87,7 +88,7 @@ class ScanController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'enregistrement: ' . $e->getMessage(),
+                'message' => 'Erreur lors de l\'enregistrement: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -129,7 +130,7 @@ class ScanController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la modification: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la modification: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -147,7 +148,7 @@ class ScanController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la suppression: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la suppression: '.$e->getMessage(),
             ], 500);
         }
     }

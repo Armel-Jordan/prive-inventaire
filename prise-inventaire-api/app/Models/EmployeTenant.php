@@ -11,6 +11,7 @@ class EmployeTenant extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'employes';
 
     protected $fillable = [

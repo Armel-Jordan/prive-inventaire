@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class FournisseurController extends Controller
@@ -20,8 +20,8 @@ class FournisseurController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
-                  ->orWhere('raison_sociale', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('raison_sociale', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -99,7 +99,7 @@ class FournisseurController extends Controller
     {
         if ($fournisseur->commandes()->exists()) {
             return response()->json([
-                'message' => 'Impossible de supprimer ce fournisseur car il a des commandes associées.'
+                'message' => 'Impossible de supprimer ce fournisseur car il a des commandes associées.',
             ], 422);
         }
 

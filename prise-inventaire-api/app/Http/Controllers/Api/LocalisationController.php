@@ -104,6 +104,7 @@ class LocalisationController extends Controller
         }
 
         $mouvements = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 50));
+
         return response()->json($mouvements);
     }
 

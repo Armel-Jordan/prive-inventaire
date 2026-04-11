@@ -51,20 +51,20 @@ class DashboardService
     {
         [$dateFrom, $dateTo, $label] = $this->resolvePeriod($period);
 
-        $ventesData    = $this->ventes->getData($tenantId, $dateFrom, $dateTo);
-        $achatsData    = $this->achats->getData($tenantId, $dateFrom, $dateTo);
+        $ventesData = $this->ventes->getData($tenantId, $dateFrom, $dateTo);
+        $achatsData = $this->achats->getData($tenantId, $dateFrom, $dateTo);
         $inventaireData = $this->inventaire->getData($tenantId, $dateFrom, $dateTo);
-        $financeData   = $this->finance->getData($tenantId, $dateFrom, $dateTo);
+        $financeData = $this->finance->getData($tenantId, $dateFrom, $dateTo);
 
         return [
-            'ventes'     => $ventesData,
-            'achats'     => $achatsData,
+            'ventes' => $ventesData,
+            'achats' => $achatsData,
             'inventaire' => $inventaireData,
-            'finance'    => $financeData,
-            'meta'       => [
-                'period'    => $label,
+            'finance' => $financeData,
+            'meta' => [
+                'period' => $label,
                 'date_from' => $dateFrom->toDateString(),
-                'date_to'   => $dateTo->toDateString(),
+                'date_to' => $dateTo->toDateString(),
             ],
         ];
     }

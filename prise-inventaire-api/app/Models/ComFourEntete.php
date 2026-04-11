@@ -31,13 +31,17 @@ class ComFourEntete extends Model
         'date_commande' => 'date',
         'date_livraison_prevue' => 'date',
         'montant_total' => 'decimal:2',
-        'taux_change'   => 'decimal:6',
+        'taux_change' => 'decimal:6',
     ];
 
     const STATUT_BROUILLON = 'brouillon';
+
     const STATUT_ENVOYEE = 'envoyee';
+
     const STATUT_PARTIELLE = 'partielle';
+
     const STATUT_COMPLETE = 'complete';
+
     const STATUT_ANNULEE = 'annulee';
 
     public function fournisseur(): BelongsTo
@@ -68,7 +72,7 @@ class ComFourEntete extends Model
             }
         }
 
-        return 'CF-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return 'CF-'.$year.'-'.str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function recalculerMontantTotal(): void

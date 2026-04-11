@@ -42,7 +42,7 @@ class Camion extends Model
 
     public function estDisponible(string $date): bool
     {
-        return !$this->tournees()
+        return ! $this->tournees()
             ->where('date_tournee', $date)
             ->whereIn('statut', ['planifiee', 'en_cours'])
             ->exists();

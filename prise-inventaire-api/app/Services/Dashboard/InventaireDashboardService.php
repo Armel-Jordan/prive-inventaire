@@ -18,7 +18,7 @@ class InventaireDashboardService
     public function getData(int $tenantId, Carbon $dateFrom, Carbon $dateTo): array
     {
         return [
-            'produits'   => $this->produits($tenantId),
+            'produits' => $this->produits($tenantId),
             'mouvements' => $this->mouvements($tenantId, $dateFrom, $dateTo),
         ];
     }
@@ -50,9 +50,9 @@ class InventaireDashboardService
         );
 
         return [
-            'total'     => (int) ($rTotal->total      ?? 0),
+            'total' => (int) ($rTotal->total ?? 0),
             'en_alerte' => (int) ($rAlertes->en_alerte ?? 0),
-            'rupture'   => (int) ($rAlertes->rupture   ?? 0),
+            'rupture' => (int) ($rAlertes->rupture ?? 0),
         ];
     }
 
@@ -76,8 +76,8 @@ class InventaireDashboardService
 
         return [
             'total_periode' => (int) ($r->total_periode ?? 0),
-            'entrees'       => (int) ($r->entrees       ?? 0),
-            'sorties'       => (int) ($r->sorties       ?? 0),
+            'entrees' => (int) ($r->entrees ?? 0),
+            'sorties' => (int) ($r->sorties ?? 0),
         ];
     }
 }

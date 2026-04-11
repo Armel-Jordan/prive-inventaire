@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Devis extends Model
 {
@@ -25,16 +25,20 @@ class Devis extends Model
     ];
 
     protected $casts = [
-        'date_devis'    => 'date',
+        'date_devis' => 'date',
         'date_validite' => 'date',
         'montant_total' => 'decimal:2',
     ];
 
     const STATUT_BROUILLON = 'brouillon';
-    const STATUT_ENVOYE    = 'envoye';
-    const STATUT_ACCEPTE   = 'accepte';
-    const STATUT_REFUSE    = 'refuse';
-    const STATUT_EXPIRE    = 'expire';
+
+    const STATUT_ENVOYE = 'envoye';
+
+    const STATUT_ACCEPTE = 'accepte';
+
+    const STATUT_REFUSE = 'refuse';
+
+    const STATUT_EXPIRE = 'expire';
 
     public function client(): BelongsTo
     {

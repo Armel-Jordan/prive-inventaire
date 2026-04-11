@@ -10,6 +10,7 @@ class TransfertPlanifie extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'transferts_planifies';
 
     protected $fillable = [

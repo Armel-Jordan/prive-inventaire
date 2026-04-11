@@ -40,7 +40,7 @@ class RolePermissionController extends Controller
     {
         $role = DB::table('roles_custom')->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json(['message' => 'Rôle non trouvé'], 404);
         }
 
@@ -92,12 +92,12 @@ class RolePermissionController extends Controller
     {
         $role = DB::table('roles_custom')->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json(['message' => 'Rôle non trouvé'], 404);
         }
 
         $request->validate([
-            'nom' => 'sometimes|string|max:50|unique:roles_custom,nom,' . $id,
+            'nom' => 'sometimes|string|max:50|unique:roles_custom,nom,'.$id,
             'description' => 'nullable|string|max:255',
             'permissions' => 'sometimes|array',
         ]);
@@ -137,7 +137,7 @@ class RolePermissionController extends Controller
     {
         $role = DB::table('roles_custom')->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json(['message' => 'Rôle non trouvé'], 404);
         }
 
@@ -149,7 +149,7 @@ class RolePermissionController extends Controller
         $usersCount = DB::table('users')->where('role_custom_id', $id)->count();
         if ($usersCount > 0) {
             return response()->json([
-                'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent"
+                'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent",
             ], 400);
         }
 
@@ -210,13 +210,13 @@ class RolePermissionController extends Controller
         $roleId = $user->role_custom_id;
 
         // Si pas de rôle assigné, chercher par le nom du rôle
-        if (!$roleId && $user->role) {
+        if (! $roleId && $user->role) {
             $role = DB::table('roles_custom')->where('nom', $user->role)->first();
             $roleId = $role?->id;
         }
 
         // Par défaut, utiliser le rôle "user"
-        if (!$roleId) {
+        if (! $roleId) {
             $role = DB::table('roles_custom')->where('nom', 'user')->first();
             $roleId = $role?->id;
         }

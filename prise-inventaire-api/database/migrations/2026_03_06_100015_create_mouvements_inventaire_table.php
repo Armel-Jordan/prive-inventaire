@@ -18,7 +18,7 @@ return new class extends Migration
                 'chargement_camion',
                 'livraison_client',
                 'retour_camion',
-                'retrait_client'
+                'retrait_client',
             ]);
             $table->integer('quantite');
             $table->enum('localisation_source_type', ['secteur', 'zone_preparation', 'camion'])->nullable();

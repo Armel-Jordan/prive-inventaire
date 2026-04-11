@@ -34,8 +34,8 @@ class AchatsDashboardService
         );
 
         return [
-            'total'         => (int)   ($r->total         ?? 0),
-            'en_attente'    => (int)   ($r->en_attente    ?? 0),
+            'total' => (int) ($r->total ?? 0),
+            'en_attente' => (int) ($r->en_attente ?? 0),
             'montant_total' => number_format((float) ($r->montant_total ?? 0), 2, '.', ''),
         ];
     }

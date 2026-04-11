@@ -23,7 +23,7 @@ class SuperAdminController extends Controller
             ->where('actif', true)
             ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Identifiants invalides ou accès non autorisé',
@@ -73,7 +73,7 @@ class SuperAdminController extends Controller
         $tenant = Tenant::create([
             'nom' => $validated['nom'],
             'slug' => $slug,
-            'db_name' => 'tenant_' . str_replace('-', '_', $slug),
+            'db_name' => 'tenant_'.str_replace('-', '_', $slug),
             'plan' => $validated['plan'],
             'actif' => true,
             'date_expiration' => now()->addYears($duree),
@@ -97,7 +97,7 @@ class SuperAdminController extends Controller
         ]);
 
         $duree = (int) $validated['duree_abonnement'];
-        $baseDate = (!$tenant->date_expiration || $tenant->isExpired()) ? now() : $tenant->date_expiration;
+        $baseDate = (! $tenant->date_expiration || $tenant->isExpired()) ? now() : $tenant->date_expiration;
 
         $tenant->update([
             'date_expiration' => $baseDate->copy()->addYears($duree),

@@ -43,9 +43,10 @@ class Tenant extends Model
 
     public function joursRestants(): int
     {
-        if (!$this->date_expiration) {
+        if (! $this->date_expiration) {
             return 999;
         }
+
         return max(0, now()->diffInDays($this->date_expiration, false));
     }
 
@@ -66,9 +67,10 @@ class Tenant extends Model
 
     public function isExpired(): bool
     {
-        if (!$this->date_expiration) {
+        if (! $this->date_expiration) {
             return false;
         }
+
         return $this->date_expiration->isPast();
     }
 }

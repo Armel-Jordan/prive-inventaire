@@ -25,11 +25,11 @@ class EmployeTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero'   => 'nullable|string|max:20|unique:employes,numero',
-            'nom'      => 'required|string|max:100',
-            'prenom'   => 'nullable|string|max:100',
-            'email'    => 'nullable|email|max:100',
-            'role'     => 'nullable|in:user,manager,admin',
+            'numero' => 'nullable|string|max:20|unique:employes,numero',
+            'nom' => 'required|string|max:100',
+            'prenom' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:100',
+            'role' => 'nullable|in:user,manager,admin',
             'password' => 'required_with:role|nullable|string|min:6',
         ]);
 
@@ -62,28 +62,28 @@ class EmployeTenantController extends Controller
                 $existing->update(['role' => $request->role]);
                 $adminUserId = $existing->id;
             } else {
-                if (!$request->filled('password')) {
+                if (! $request->filled('password')) {
                     return response()->json(['success' => false, 'message' => 'Le mot de passe est requis'], 422);
                 }
                 $adminUser = AdminUser::create([
                     'tenant_id' => $tenantId,
-                    'nom'       => trim($request->nom . ' ' . ($request->prenom ?? '')),
-                    'email'     => $request->email,
-                    'password'  => Hash::make($request->password),
-                    'role'      => $request->role,
-                    'actif'     => true,
+                    'nom' => trim($request->nom.' '.($request->prenom ?? '')),
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'role' => $request->role,
+                    'actif' => true,
                 ]);
                 $adminUserId = $adminUser->id;
             }
         }
 
         $employe = EmployeTenant::create([
-            'tenant_id'     => $tenantId,
+            'tenant_id' => $tenantId,
             'admin_user_id' => $adminUserId,
-            'numero'        => $numero,
-            'nom'           => $request->nom,
-            'prenom'        => $request->prenom,
-            'email'         => $request->email,
+            'numero' => $numero,
+            'nom' => $request->nom,
+            'prenom' => $request->prenom,
+            'email' => $request->email,
         ]);
 
         return response()->json([
@@ -96,6 +96,7 @@ class EmployeTenantController extends Controller
     public function show($id): JsonResponse
     {
         $employe = EmployeTenant::with('adminUser:id,role,actif')->findOrFail($id);
+
         return response()->json($employe);
     }
 
@@ -104,12 +105,12 @@ class EmployeTenantController extends Controller
         $employe = EmployeTenant::findOrFail($id);
 
         $request->validate([
-            'numero'   => 'sometimes|string|max:20|unique:employes,numero,' . $id,
-            'nom'      => 'sometimes|string|max:100',
-            'prenom'   => 'nullable|string|max:100',
-            'email'    => 'nullable|email|max:100',
-            'actif'    => 'sometimes|boolean',
-            'role'     => 'nullable|in:user,manager,admin,remove',
+            'numero' => 'sometimes|string|max:20|unique:employes,numero,'.$id,
+            'nom' => 'sometimes|string|max:100',
+            'prenom' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:100',
+            'actif' => 'sometimes|boolean',
+            'role' => 'nullable|in:user,manager,admin,remove',
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -127,9 +128,9 @@ class EmployeTenantController extends Controller
                 if ($employe->adminUser) {
                     // Mettre à jour le rôle existant
                     $employe->adminUser->update([
-                        'role'  => $request->role,
+                        'role' => $request->role,
                         'email' => $request->email ?? $employe->adminUser->email,
-                        'nom'   => trim($request->nom . ' ' . ($request->prenom ?? $employe->prenom ?? '')),
+                        'nom' => trim($request->nom.' '.($request->prenom ?? $employe->prenom ?? '')),
                     ]);
                     if ($request->filled('password')) {
                         $employe->adminUser->update(['password' => Hash::make($request->password)]);
@@ -147,11 +148,11 @@ class EmployeTenantController extends Controller
                     } else {
                         $adminUser = AdminUser::create([
                             'tenant_id' => $employe->tenant_id,
-                            'nom'       => trim(($request->nom ?? $employe->nom) . ' ' . ($request->prenom ?? $employe->prenom ?? '')),
-                            'email'     => $email,
-                            'password'  => Hash::make($request->password ?? str()->random(12)),
-                            'role'      => $request->role,
-                            'actif'     => true,
+                            'nom' => trim(($request->nom ?? $employe->nom).' '.($request->prenom ?? $employe->prenom ?? '')),
+                            'email' => $email,
+                            'password' => Hash::make($request->password ?? str()->random(12)),
+                            'role' => $request->role,
+                            'actif' => true,
                         ]);
                         $employe->admin_user_id = $adminUser->id;
                     }
@@ -197,7 +198,7 @@ class EmployeTenantController extends Controller
         $employe->save();
 
         return response()->json([
-            'success'   => true,
+            'success' => true,
             'photo_url' => Storage::url($path),
         ]);
     }

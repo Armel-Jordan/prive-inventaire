@@ -10,6 +10,7 @@ class ScanTenant extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'inventaire_scan';
 
     protected $fillable = [

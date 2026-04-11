@@ -31,22 +31,35 @@ class BonLivraison extends Model
         $year = date('Y');
         $last = self::where('numero', 'like', "BL-{$year}-%")->orderBy('id', 'desc')->first();
         $number = $last ? intval(substr($last->numero, -4)) + 1 : 1;
-        return "BL-{$year}-" . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return "BL-{$year}-".str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
-    public function facture(): BelongsTo { return $this->belongsTo(Facture::class); }
-    public function lignes(): HasMany { return $this->hasMany(BonLivraisonLigne::class, 'bon_id'); }
-    public function tourneeBon(): HasOne { return $this->hasOne(TourneeBon::class, 'bon_livraison_id'); }
+    public function facture(): BelongsTo
+    {
+        return $this->belongsTo(Facture::class);
+    }
+
+    public function lignes(): HasMany
+    {
+        return $this->hasMany(BonLivraisonLigne::class, 'bon_id');
+    }
+
+    public function tourneeBon(): HasOne
+    {
+        return $this->hasOne(TourneeBon::class, 'bon_livraison_id');
+    }
 
     public function estComplet(): bool
     {
-        return $this->lignes->every(fn($l) => $l->quantite_livree >= $l->quantite_a_livrer);
+        return $this->lignes->every(fn ($l) => $l->quantite_livree >= $l->quantite_a_livrer);
     }
 
     public function estPartiel(): bool
     {
         $totalLivre = $this->lignes->sum('quantite_livree');
         $totalALivrer = $this->lignes->sum('quantite_a_livrer');
+
         return $totalLivre > 0 && $totalLivre < $totalALivrer;
     }
 }

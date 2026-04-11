@@ -8,8 +8,8 @@ use App\Models\ComFourLigne;
 use App\Models\Configuration;
 use App\Models\HistoriquePrixAchat;
 use App\Models\ProduitTenant;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CommandeFournisseurController extends Controller
@@ -39,9 +39,9 @@ class CommandeFournisseurController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('numero', 'like', "%{$search}%")
-                  ->orWhereHas('fournisseur', function ($q2) use ($search) {
-                      $q2->where('raison_sociale', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('fournisseur', function ($q2) use ($search) {
+                        $q2->where('raison_sociale', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -67,7 +67,7 @@ class CommandeFournisseurController extends Controller
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
-        if (!$config || !$config->auto_increment) {
+        if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
         $numero = $config->genererNumero();
@@ -119,7 +119,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être modifiées.'
+                'message' => 'Seules les commandes en brouillon peuvent être modifiées.',
             ], 422);
         }
 
@@ -180,7 +180,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être validées.'
+                'message' => 'Seules les commandes en brouillon peuvent être validées.',
             ], 422);
         }
 
@@ -201,7 +201,7 @@ class CommandeFournisseurController extends Controller
 
         return response()->json([
             'message' => 'Commande validée et envoyée.',
-            'commande' => $commande->fresh()->load(['fournisseur', 'lignes.produit'])
+            'commande' => $commande->fresh()->load(['fournisseur', 'lignes.produit']),
         ]);
     }
 
@@ -209,13 +209,13 @@ class CommandeFournisseurController extends Controller
     {
         if (in_array($commande->statut, [ComFourEntete::STATUT_COMPLETE, ComFourEntete::STATUT_ANNULEE])) {
             return response()->json([
-                'message' => 'Cette commande ne peut pas être annulée.'
+                'message' => 'Cette commande ne peut pas être annulée.',
             ], 422);
         }
 
         if ($commande->lignes()->where('quantite_recue', '>', 0)->exists()) {
             return response()->json([
-                'message' => 'Impossible d\'annuler une commande avec des réceptions. Utilisez "Clôturer le reste" pour fermer une commande partielle.'
+                'message' => 'Impossible d\'annuler une commande avec des réceptions. Utilisez "Clôturer le reste" pour fermer une commande partielle.',
             ], 422);
         }
 
@@ -224,7 +224,7 @@ class CommandeFournisseurController extends Controller
 
         return response()->json([
             'message' => 'Commande annulée.',
-            'commande' => $commande
+            'commande' => $commande,
         ]);
     }
 
@@ -232,7 +232,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_PARTIELLE) {
             return response()->json([
-                'message' => 'Seules les commandes partiellement reçues peuvent être clôturées.'
+                'message' => 'Seules les commandes partiellement reçues peuvent être clôturées.',
             ], 422);
         }
 
@@ -250,7 +250,7 @@ class CommandeFournisseurController extends Controller
 
         return response()->json([
             'message' => 'Commande clôturée. Le reste non reçu a été annulé.',
-            'commande' => $commande->load('lignes.produit', 'fournisseur')
+            'commande' => $commande->load('lignes.produit', 'fournisseur'),
         ]);
     }
 
@@ -258,7 +258,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être supprimées.'
+                'message' => 'Seules les commandes en brouillon peuvent être supprimées.',
             ], 422);
         }
 

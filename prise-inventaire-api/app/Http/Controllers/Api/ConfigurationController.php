@@ -17,12 +17,12 @@ class ConfigurationController extends Controller
     private array $defaults = [
         ['entite' => 'produit',     'prefixe' => 'P',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
         ['entite' => 'employe',     'prefixe' => 'E',  'suffixe' => '', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'secteur',     'prefixe' => '',   'suffixe' => '', 'longueur' => 3, 'separateur' => '-','auto_increment' => false, 'prochain_numero' => 1],
+        ['entite' => 'secteur',     'prefixe' => '',   'suffixe' => '', 'longueur' => 3, 'separateur' => '-', 'auto_increment' => false, 'prochain_numero' => 1],
         ['entite' => 'fournisseur', 'prefixe' => 'F',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
         ['entite' => 'client',      'prefixe' => 'C',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'commande',    'prefixe' => 'CMD','suffixe' => '', 'longueur' => 5, 'separateur' => '-','auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'facture',     'prefixe' => 'FAC','suffixe' => '', 'longueur' => 5, 'separateur' => '-','auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'bon_livraison','prefixe'=> 'BL', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-','auto_increment' => true,  'prochain_numero' => 1],
+        ['entite' => 'commande',    'prefixe' => 'CMD', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
+        ['entite' => 'facture',     'prefixe' => 'FAC', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
+        ['entite' => 'bon_livraison', 'prefixe' => 'BL', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
         ['entite' => 'tournee',     'prefixe' => 'T',  'suffixe' => '', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
     ];
 
@@ -46,9 +46,9 @@ class ConfigurationController extends Controller
         $tenantId = $this->getTenantId($request);
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
-        if (!$configuration) {
+        if (! $configuration) {
             $default = collect($this->defaults)->firstWhere('entite', $entite);
-            if (!$default) {
+            if (! $default) {
                 return response()->json(['message' => 'Configuration non trouvée'], 404);
             }
             $configuration = Configuration::create(array_merge($default, ['tenant_id' => $tenantId]));
@@ -60,11 +60,11 @@ class ConfigurationController extends Controller
     public function update(Request $request, string $entite): JsonResponse
     {
         $request->validate([
-            'prefixe'         => 'nullable|string|max:10',
-            'suffixe'         => 'nullable|string|max:10',
-            'longueur'        => 'required|integer|min:2|max:8',
-            'separateur'      => 'nullable|string|max:5',
-            'auto_increment'  => 'required|boolean',
+            'prefixe' => 'nullable|string|max:10',
+            'suffixe' => 'nullable|string|max:10',
+            'longueur' => 'required|integer|min:2|max:8',
+            'separateur' => 'nullable|string|max:5',
+            'auto_increment' => 'required|boolean',
             'prochain_numero' => 'required|integer|min:1',
         ]);
 
@@ -73,18 +73,18 @@ class ConfigurationController extends Controller
         $configuration = Configuration::updateOrCreate(
             ['tenant_id' => $tenantId, 'entite' => $entite],
             [
-                'prefixe'         => $request->prefixe ?? '',
-                'suffixe'         => $request->suffixe ?? '',
-                'longueur'        => $request->longueur,
-                'separateur'      => $request->separateur ?? '',
-                'auto_increment'  => $request->auto_increment,
+                'prefixe' => $request->prefixe ?? '',
+                'suffixe' => $request->suffixe ?? '',
+                'longueur' => $request->longueur,
+                'separateur' => $request->separateur ?? '',
+                'auto_increment' => $request->auto_increment,
                 'prochain_numero' => $request->prochain_numero,
             ]
         );
 
         return response()->json([
-            'success'       => true,
-            'message'       => 'Configuration mise à jour',
+            'success' => true,
+            'message' => 'Configuration mise à jour',
             'configuration' => $configuration,
         ]);
     }
@@ -94,18 +94,18 @@ class ConfigurationController extends Controller
         $tenantId = $this->getTenantId($request);
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
-        if (!$configuration) {
+        if (! $configuration) {
             return response()->json(['message' => 'Configuration non trouvée'], 404);
         }
 
-        if (!$configuration->auto_increment) {
+        if (! $configuration->auto_increment) {
             return response()->json(['message' => 'La numérotation automatique n\'est pas activée'], 400);
         }
 
         $numero = $configuration->genererNumero();
 
         return response()->json([
-            'numero'  => $numero,
+            'numero' => $numero,
             'prochain' => $configuration->prochain_numero,
         ]);
     }
@@ -115,11 +115,11 @@ class ConfigurationController extends Controller
         $tenantId = $this->getTenantId($request);
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
-        if (!$configuration) {
+        if (! $configuration) {
             return response()->json(['message' => 'Configuration non trouvée'], 404);
         }
 
-        if (!$configuration->auto_increment) {
+        if (! $configuration->auto_increment) {
             return response()->json(['message' => 'La numérotation automatique n\'est pas activée'], 400);
         }
 

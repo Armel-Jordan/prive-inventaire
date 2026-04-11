@@ -30,12 +30,14 @@ class TourneeController extends Controller
         }
 
         $tournees = $query->orderBy('date_tournee', 'desc')->paginate($request->get('per_page', 20));
+
         return response()->json($tournees);
     }
 
     public function show(int $id): JsonResponse
     {
         $tournee = Tournee::with(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes'])->findOrFail($id);
+
         return response()->json($tournee);
     }
 
@@ -51,7 +53,7 @@ class TourneeController extends Controller
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('tournee', $tenantId);
-        if (!$config || !$config->auto_increment) {
+        if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
         $numero = $config->genererNumero();

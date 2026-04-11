@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComClientLigne;
 use App\Models\Configuration;
-use App\Models\Facture;
-use App\Models\FactureLigne;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
 use Illuminate\Http\JsonResponse;
@@ -36,12 +33,14 @@ class CommandeClientController extends Controller
         }
 
         $commandes = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
+
         return response()->json($commandes);
     }
 
     public function show(int $id): JsonResponse
     {
         $commande = ComClientEntete::with(['client', 'lignes', 'facture'])->findOrFail($id);
+
         return response()->json($commande);
     }
 
@@ -63,7 +62,7 @@ class CommandeClientController extends Controller
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
-        if (!$config || !$config->auto_increment) {
+        if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Configuration numérotation manquante'], 422);
         }
         $numero = $config->genererNumero();
@@ -175,7 +174,7 @@ class CommandeClientController extends Controller
         }
 
         $client = $commande->client;
-        if (!$client->peutCommander($commande->montant_ttc)) {
+        if (! $client->peutCommander($commande->montant_ttc)) {
             return response()->json([
                 'message' => 'Dépassement de l\'encours maximum autorisé',
                 'encours_actuel' => $client->encours_actuel,
@@ -236,6 +235,7 @@ class CommandeClientController extends Controller
         }
 
         $commande->delete();
+
         return response()->json(['message' => 'Commande supprimée']);
     }
 }

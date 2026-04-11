@@ -66,6 +66,7 @@ class MouvementInventaireController extends Controller
     public function show($id): JsonResponse
     {
         $mouvement = MouvementInventaire::findOrFail($id);
+
         return response()->json($mouvement);
     }
 

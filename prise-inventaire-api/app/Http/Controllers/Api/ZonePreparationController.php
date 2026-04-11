@@ -13,12 +13,14 @@ class ZonePreparationController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         $zones = ZonePreparation::where('tenant_id', $tenantId)->orderBy('code')->get();
+
         return response()->json($zones);
     }
 
     public function show(int $id): JsonResponse
     {
         $zone = ZonePreparation::with('produitLocalisations')->findOrFail($id);
+
         return response()->json($zone);
     }
 
@@ -42,13 +44,14 @@ class ZonePreparationController extends Controller
         $zone = ZonePreparation::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|string|max:20|unique:zones_preparation,code,' . $id,
+            'code' => 'sometimes|string|max:20|unique:zones_preparation,code,'.$id,
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',
         ]);
 
         $zone->update($validated);
+
         return response()->json($zone);
     }
 
@@ -56,6 +59,7 @@ class ZonePreparationController extends Controller
     {
         $zone = ZonePreparation::findOrFail($id);
         $zone->delete();
+
         return response()->json(['message' => 'Zone supprimée']);
     }
 }

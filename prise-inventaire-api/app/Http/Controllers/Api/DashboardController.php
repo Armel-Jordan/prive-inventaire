@@ -23,8 +23,8 @@ class DashboardController extends Controller
      */
     public function index(DashboardRequest $request): JsonResponse
     {
-        $tenantId = $request->attributes->get('tenant')->id;
-        $period   = $request->input('period', 'month');
+        $tenantId = auth()->user()->tenant_id;
+        $period = $request->input('period', 'month');
 
         $data = $this->dashboardService->getData($tenantId, $period);
 

@@ -14,22 +14,23 @@ class BonCommandePdfController extends Controller
     private function authenticateFromToken(Request $request): bool
     {
         $token = $request->query('token');
-        if (!$token) {
+        if (! $token) {
             return false;
         }
 
         $accessToken = PersonalAccessToken::findToken($token);
-        if (!$accessToken || !$accessToken->tokenable) {
+        if (! $accessToken || ! $accessToken->tokenable) {
             return false;
         }
 
         auth()->setUser($accessToken->tokenable);
+
         return true;
     }
 
     public function generate(Request $request, $id): Response|\Illuminate\Http\JsonResponse
     {
-        if (!$this->authenticateFromToken($request)) {
+        if (! $this->authenticateFromToken($request)) {
             return response()->json(['message' => 'Non autorisé'], 401);
         }
 
@@ -44,7 +45,7 @@ class BonCommandePdfController extends Controller
 
     public function preview(Request $request, $id): Response|\Illuminate\Http\JsonResponse
     {
-        if (!$this->authenticateFromToken($request)) {
+        if (! $this->authenticateFromToken($request)) {
             return response()->json(['message' => 'Non autorisé'], 401);
         }
 

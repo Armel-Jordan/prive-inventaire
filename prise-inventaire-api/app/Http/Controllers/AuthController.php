@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
-    public function __construct(protected TenantService $tenantService)
-    {
-    }
+    public function __construct(protected TenantService $tenantService) {}
 
     public function login(Request $request): JsonResponse
     {
@@ -29,7 +27,7 @@ class AuthController extends Controller
             ->where('actif', true)
             ->first();
 
-        if (!$tenant) {
+        if (! $tenant) {
             return response()->json([
                 'success' => false,
                 'message' => 'Entreprise non trouvée ou inactive',
@@ -48,7 +46,7 @@ class AuthController extends Controller
             ->where('actif', true)
             ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Identifiants invalides',
@@ -70,16 +68,16 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Connexion réussie',
             'user' => [
-                'id'              => $user->id,
-                'nom'             => $user->nom,
-                'email'           => $user->email,
-                'role'            => $user->role,
+                'id' => $user->id,
+                'nom' => $user->nom,
+                'email' => $user->email,
+                'role' => $user->role,
                 'profil_complete' => $profilComplete,
-                'employe_id'      => $employe?->id,
+                'employe_id' => $employe?->id,
             ],
             'tenant' => [
-                'id'   => $tenant->id,
-                'nom'  => $tenant->nom,
+                'id' => $tenant->id,
+                'nom' => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
             ],
@@ -106,16 +104,16 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => [
-                'id'              => $user->id,
-                'nom'             => $user->nom,
-                'email'           => $user->email,
-                'role'            => $user->role,
+                'id' => $user->id,
+                'nom' => $user->nom,
+                'email' => $user->email,
+                'role' => $user->role,
                 'profil_complete' => $profilComplete,
-                'employe_id'      => $employe?->id,
+                'employe_id' => $employe?->id,
             ],
             'tenant' => [
-                'id'   => $tenant->id,
-                'nom'  => $tenant->nom,
+                'id' => $tenant->id,
+                'nom' => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
             ],
@@ -125,15 +123,15 @@ class AuthController extends Controller
     public function completeProfile(Request $request): JsonResponse
     {
         $request->validate([
-            'telephone'      => 'nullable|string|max:20',
-            'adresse'        => 'nullable|string|max:255',
-            'ville'          => 'nullable|string|max:100',
-            'code_postal'    => 'nullable|string|max:10',
-            'pays'           => 'nullable|string|max:100',
+            'telephone' => 'nullable|string|max:20',
+            'adresse' => 'nullable|string|max:255',
+            'ville' => 'nullable|string|max:100',
+            'code_postal' => 'nullable|string|max:10',
+            'pays' => 'nullable|string|max:100',
             'date_naissance' => 'nullable|date',
-            'sexe'           => 'nullable|in:M,F,autre',
-            'poste'          => 'nullable|string|max:100',
-            'departement'    => 'nullable|string|max:100',
+            'sexe' => 'nullable|in:M,F,autre',
+            'poste' => 'nullable|string|max:100',
+            'departement' => 'nullable|string|max:100',
         ]);
 
         $user = $request->user();
@@ -158,7 +156,7 @@ class AuthController extends Controller
         $user = $request->user();
         $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
 
-        if (!$employe) {
+        if (! $employe) {
             return response()->json(['success' => false, 'message' => 'Fiche employé non trouvée'], 404);
         }
 
@@ -175,7 +173,7 @@ class AuthController extends Controller
         $employe->save();
 
         return response()->json([
-            'success'   => true,
+            'success' => true,
             'photo_url' => Storage::url($path),
         ]);
     }

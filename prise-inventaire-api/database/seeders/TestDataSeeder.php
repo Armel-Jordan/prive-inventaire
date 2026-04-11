@@ -2,16 +2,19 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Carbon\Carbon;
 
 class TestDataSeeder extends Seeder
 {
     private $tenantId;
+
     private $secteurs = [];
+
     private $employes = [];
+
     private $produits = [];
 
     public function run(): void
@@ -21,7 +24,7 @@ class TestDataSeeder extends Seeder
         // Récupérer le tenant "Entreprise Demo" ou le créer
         $tenant = DB::table('tenants')->where('slug', 'entreprise-demo')->first();
 
-        if (!$tenant) {
+        if (! $tenant) {
             $this->tenantId = DB::table('tenants')->insertGetId([
                 'nom' => 'Entreprise Demo',
                 'slug' => 'entreprise-demo',
@@ -33,7 +36,7 @@ class TestDataSeeder extends Seeder
             $this->command->info('✅ Tenant "Entreprise Demo" créé');
         } else {
             $this->tenantId = $tenant->id;
-            $this->command->info('✅ Tenant "Entreprise Demo" trouvé (ID: ' . $this->tenantId . ')');
+            $this->command->info('✅ Tenant "Entreprise Demo" trouvé (ID: '.$this->tenantId.')');
         }
 
         // Créer les utilisateurs de test
@@ -67,9 +70,9 @@ class TestDataSeeder extends Seeder
         $this->command->info('🎉 Données de test créées avec succès !');
         $this->command->info('');
         $this->command->info('📊 Résumé:');
-        $this->command->info('   - Secteurs: ' . count($this->secteurs));
-        $this->command->info('   - Employés: ' . count($this->employes));
-        $this->command->info('   - Produits: ' . count($this->produits));
+        $this->command->info('   - Secteurs: '.count($this->secteurs));
+        $this->command->info('   - Employés: '.count($this->employes));
+        $this->command->info('   - Produits: '.count($this->produits));
         $this->command->info('   - Scans: ~5000');
         $this->command->info('   - Mouvements: ~2000');
     }
@@ -88,7 +91,7 @@ class TestDataSeeder extends Seeder
                 ->where('email', $user['email'])
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 DB::table('admin_users')->insert([
                     'tenant_id' => $this->tenantId,
                     'nom' => $user['nom'],
@@ -129,12 +132,12 @@ class TestDataSeeder extends Seeder
                 ->where('code', $secteur['code'])
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 DB::table('secteurs')->insert([
                     'code' => $secteur['code'],
                     'nom' => $secteur['nom'],
                     'actif' => true,
-                    'qr_code' => 'QR-' . $secteur['code'] . '-' . uniqid(),
+                    'qr_code' => 'QR-'.$secteur['code'].'-'.uniqid(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -142,7 +145,7 @@ class TestDataSeeder extends Seeder
             $this->secteurs[] = $secteur['code'];
         }
 
-        $this->command->info('✅ ' . count($this->secteurs) . ' secteurs créés');
+        $this->command->info('✅ '.count($this->secteurs).' secteurs créés');
     }
 
     private function createEmployes(): void
@@ -153,13 +156,13 @@ class TestDataSeeder extends Seeder
         for ($i = 1; $i <= 25; $i++) {
             $prenom = $prenoms[array_rand($prenoms)];
             $nom = $noms[array_rand($noms)];
-            $code = 'EMP' . str_pad($i, 3, '0', STR_PAD_LEFT);
+            $code = 'EMP'.str_pad($i, 3, '0', STR_PAD_LEFT);
 
             $exists = DB::table('employes')
                 ->where('numero', $code)
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 DB::table('employes')->insert([
                     'numero' => $code,
                     'nom' => $nom,
@@ -172,7 +175,7 @@ class TestDataSeeder extends Seeder
             $this->employes[] = $code;
         }
 
-        $this->command->info('✅ ' . count($this->employes) . ' employés créés');
+        $this->command->info('✅ '.count($this->employes).' employés créés');
     }
 
     private function createProduits(): void
@@ -191,11 +194,11 @@ class TestDataSeeder extends Seeder
         $produitId = 1;
         foreach ($categories as $prefix => $items) {
             foreach ($items as $item) {
-                $numero = $prefix . str_pad($produitId, 5, '0', STR_PAD_LEFT);
+                $numero = $prefix.str_pad($produitId, 5, '0', STR_PAD_LEFT);
 
                 // Créer le produit dans la table produits
                 $exists = DB::table('produits')->where('numero', $numero)->exists();
-                if (!$exists) {
+                if (! $exists) {
                     DB::table('produits')->insert([
                         'numero' => $numero,
                         'description' => $item,
@@ -212,7 +215,7 @@ class TestDataSeeder extends Seeder
             }
         }
 
-        $this->command->info('✅ ' . count($this->produits) . ' produits créés');
+        $this->command->info('✅ '.count($this->produits).' produits créés');
     }
 
     private function createScans(): void
@@ -369,7 +372,7 @@ class TestDataSeeder extends Seeder
                 'employe' => $employe,
                 'date_planifiee' => $datePrevue,
                 'statut' => $statut,
-                'notes' => 'Transfert planifié #' . ($i + 1),
+                'notes' => 'Transfert planifié #'.($i + 1),
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -433,7 +436,7 @@ class TestDataSeeder extends Seeder
             $notifications[] = [
                 'type' => $type,
                 'titre' => $titres[$type],
-                'message' => 'Notification concernant le produit ' . $produit['nom'],
+                'message' => 'Notification concernant le produit '.$produit['nom'],
                 'destinataire' => 'admin@demo.com',
                 'lu' => rand(0, 1),
                 'lien' => null,

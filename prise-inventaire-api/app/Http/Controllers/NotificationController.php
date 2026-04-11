@@ -35,6 +35,7 @@ class NotificationController extends Controller
     public function unreadCount(): JsonResponse
     {
         $count = Notification::where('lu', false)->count();
+
         return response()->json(['count' => $count]);
     }
 

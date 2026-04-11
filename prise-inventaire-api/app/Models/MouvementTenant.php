@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MouvementTenant extends Model
@@ -11,6 +10,7 @@ class MouvementTenant extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'mouvement_relocalisation';
 
     protected $fillable = [
@@ -36,8 +36,11 @@ class MouvementTenant extends Model
 
     // Types de mouvement
     const TYPE_ARRIVAGE = 'arrivage';
+
     const TYPE_TRANSFERT = 'transfert';
+
     const TYPE_SORTIE = 'sortie';
+
     const TYPE_AJUSTEMENT = 'ajustement';
 
     public static function getTypes(): array

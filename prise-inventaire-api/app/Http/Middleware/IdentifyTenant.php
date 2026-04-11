@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class IdentifyTenant
 {
-    public function __construct(protected TenantService $tenantService)
-    {
-    }
+    public function __construct(protected TenantService $tenantService) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -23,7 +21,7 @@ class IdentifyTenant
         }
 
         // 2. Essayer via sous-domaine
-        if (!$tenant) {
+        if (! $tenant) {
             $host = $request->getHost();
             $parts = explode('.', $host);
             if (count($parts) >= 3) {
@@ -32,11 +30,11 @@ class IdentifyTenant
         }
 
         // 3. Essayer via query param (pour dev)
-        if (!$tenant && $request->has('tenant')) {
+        if (! $tenant && $request->has('tenant')) {
             $tenant = $this->tenantService->findBySlug($request->query('tenant'));
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             return response()->json([
                 'error' => 'Tenant non identifié',
                 'message' => 'Veuillez spécifier un tenant valide',

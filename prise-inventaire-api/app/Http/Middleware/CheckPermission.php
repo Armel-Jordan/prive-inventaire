@@ -13,7 +13,7 @@ class CheckPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Non authentifié',
@@ -33,7 +33,7 @@ class CheckPermission
             ->where('permission', $permission)
             ->exists();
 
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             return response()->json([
                 'success' => false,
                 'message' => 'Permission refusée',

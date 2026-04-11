@@ -6,7 +6,6 @@ use App\Models\MouvementTenant;
 use App\Models\ScanTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class TracabiliteController extends Controller
 {
@@ -179,15 +178,15 @@ class TracabiliteController extends Controller
             ->orderByDesc('date_saisie')
             ->first();
 
-        if (!$dernierMouvement && !$dernierScan) {
+        if (! $dernierMouvement && ! $dernierScan) {
             return null;
         }
 
-        if (!$dernierMouvement) {
+        if (! $dernierMouvement) {
             return $dernierScan->secteur;
         }
 
-        if (!$dernierScan) {
+        if (! $dernierScan) {
             return $dernierMouvement->secteur_destination;
         }
 

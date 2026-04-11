@@ -9,7 +9,6 @@ use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
 use App\Models\MouvementVente;
-use App\Models\ProduitLocalisation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,12 +28,14 @@ class BonLivraisonController extends Controller
         }
 
         $bons = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
+
         return response()->json($bons);
     }
 
     public function show(int $id): JsonResponse
     {
         $bon = BonLivraison::with(['facture.client', 'lignes', 'tourneeBon.tournee'])->findOrFail($id);
+
         return response()->json($bon);
     }
 
@@ -60,7 +61,7 @@ class BonLivraisonController extends Controller
     {
         $bon = BonLivraison::with('lignes')->findOrFail($id);
 
-        if (!in_array($bon->statut, ['en_preparation'])) {
+        if (! in_array($bon->statut, ['en_preparation'])) {
             return response()->json(['message' => 'Ce bon ne peut pas être modifié'], 422);
         }
 
@@ -73,7 +74,9 @@ class BonLivraisonController extends Controller
         DB::transaction(function () use ($bon, $validated, $request) {
             foreach ($validated['lignes'] as $ligneData) {
                 $ligne = BonLivraisonLigne::find($ligneData['id']);
-                if ($ligne->bon_id !== $bon->id) continue;
+                if ($ligne->bon_id !== $bon->id) {
+                    continue;
+                }
 
                 $ancienneQte = $ligne->quantite_preparee;
                 $nouvelleQte = min($ligneData['quantite_preparee'], $ligne->quantite_a_livrer);
@@ -127,7 +130,7 @@ class BonLivraisonController extends Controller
     {
         $bon = BonLivraison::with(['lignes', 'facture'])->findOrFail($id);
 
-        if (!in_array($bon->statut, ['pret', 'en_livraison'])) {
+        if (! in_array($bon->statut, ['pret', 'en_livraison'])) {
             return response()->json(['message' => 'Ce bon ne peut pas être livré'], 422);
         }
 
@@ -144,7 +147,9 @@ class BonLivraisonController extends Controller
         $result = DB::transaction(function () use ($bon, $validated, $request, $tenantId) {
             foreach ($validated['lignes'] as $ligneData) {
                 $ligne = BonLivraisonLigne::find($ligneData['id']);
-                if ($ligne->bon_id !== $bon->id) continue;
+                if ($ligne->bon_id !== $bon->id) {
+                    continue;
+                }
 
                 $ligne->quantite_livree = min($ligneData['quantite_livree'], $ligne->quantite_preparee);
                 $ligne->statut_ligne = 'livre';
@@ -184,7 +189,7 @@ class BonLivraisonController extends Controller
     {
         $bon = BonLivraison::findOrFail($id);
 
-        if (!in_array($bon->statut, ['cree', 'en_preparation'])) {
+        if (! in_array($bon->statut, ['cree', 'en_preparation'])) {
             return response()->json(['message' => 'Seuls les bons créés ou en préparation peuvent être annulés'], 422);
         }
 
@@ -221,10 +226,14 @@ class BonLivraisonController extends Controller
 
         foreach ($bon->lignes as $ligne) {
             $reste = $ligne->quantite_a_livrer - $ligne->quantite_livree;
-            if ($reste <= 0) continue;
+            if ($reste <= 0) {
+                continue;
+            }
 
             $ligneFactureOrigine = $factureOrigine->lignes->where('produit_id', $ligne->produit_id)->first();
-            if (!$ligneFactureOrigine) continue;
+            if (! $ligneFactureOrigine) {
+                continue;
+            }
 
             $ratio = $reste / $ligne->quantite_a_livrer;
             $montantLigneHt = $ligneFactureOrigine->montant_ht * $ratio;

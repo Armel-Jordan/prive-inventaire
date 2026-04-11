@@ -126,7 +126,7 @@ class RoleController extends Controller
         $user = $request->user();
         $permission = $request->get('permission');
 
-        if (!$user || !$permission) {
+        if (! $user || ! $permission) {
             return response()->json(['has_permission' => false]);
         }
 
@@ -151,7 +151,7 @@ class RoleController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['permissions' => []]);
         }
 

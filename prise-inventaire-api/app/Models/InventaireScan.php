@@ -9,13 +9,17 @@ use Illuminate\Support\Facades\DB;
 class InventaireScan extends Model
 {
     protected $connection = 'oracle';
+
     protected $table = 'INVENTAIRE_SCAN';
-    
+
     public $timestamps = true;
+
     const CREATED_AT = 'CREATED_AT';
+
     const UPDATED_AT = 'UPDATED_AT';
 
     protected $primaryKey = 'ID';
+
     public $incrementing = true;
 
     protected $fillable = [
@@ -44,7 +48,7 @@ class InventaireScan extends Model
     {
         $pdo = DB::connection($this->getConnectionName())->getPdo();
         $stmt = $pdo->prepare(
-            "UPDATE INVENTAIRE_SCAN SET DELETED_AT = SYSTIMESTAMP, UPDATED_AT = SYSTIMESTAMP WHERE ID = :id"
+            'UPDATE INVENTAIRE_SCAN SET DELETED_AT = SYSTIMESTAMP, UPDATED_AT = SYSTIMESTAMP WHERE ID = :id'
         );
         $id = $this->getKey();
         $stmt->bindParam(':id', $id);

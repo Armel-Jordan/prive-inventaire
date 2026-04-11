@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TransfertPlanifie;
 use App\Models\MouvementTenant;
+use App\Models\TransfertPlanifie;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -70,6 +70,7 @@ class TransfertPlanifieController extends Controller
     public function show(int $id): JsonResponse
     {
         $transfert = TransfertPlanifie::findOrFail($id);
+
         return response()->json($transfert);
     }
 

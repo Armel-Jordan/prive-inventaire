@@ -31,6 +31,7 @@ class TenantService
     public function findByDomain(string $domain): ?Tenant
     {
         $slug = explode('.', $domain)[0];
+
         return $this->findBySlug($slug);
     }
 
@@ -65,7 +66,8 @@ class TenantService
 
             return true;
         } catch (\Exception $e) {
-            \Log::error("Erreur création BD tenant: " . $e->getMessage());
+            \Log::error('Erreur création BD tenant: '.$e->getMessage());
+
             return false;
         }
     }

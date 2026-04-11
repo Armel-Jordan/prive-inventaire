@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\ReceptionArrivagesLigne;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReceptionController extends Controller
@@ -18,7 +18,7 @@ class ReceptionController extends Controller
             'ligneCommande.commande.fournisseur',
             'ligneCommande.produit',
             'secteur',
-            'receivedBy'
+            'receivedBy',
         ]);
 
         if ($request->has('date_debut')) {
@@ -57,14 +57,14 @@ class ReceptionController extends Controller
         $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
         if ($validated['quantite_recue'] > $quantiteRestante) {
             return response()->json([
-                'message' => "La quantité reçue ({$validated['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante})."
+                'message' => "La quantité reçue ({$validated['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante}).",
             ], 422);
         }
 
         $commande = $ligneCommande->commande;
-        if (!in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
+        if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
-                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.'
+                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
             ], 422);
         }
 
@@ -83,7 +83,7 @@ class ReceptionController extends Controller
 
         return response()->json([
             'message' => 'Réception enregistrée avec succès.',
-            'reception' => $reception->load(['ligneCommande.produit', 'secteur'])
+            'reception' => $reception->load(['ligneCommande.produit', 'secteur']),
         ], 201);
     }
 
@@ -103,9 +103,9 @@ class ReceptionController extends Controller
 
         $commande = ComFourEntete::findOrFail($validated['commande_id']);
 
-        if (!in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
+        if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
-                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.'
+                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
             ], 422);
         }
 
@@ -136,8 +136,8 @@ class ReceptionController extends Controller
         });
 
         return response()->json([
-            'message' => count($receptions) . ' réception(s) enregistrée(s) avec succès.',
-            'receptions' => $receptions
+            'message' => count($receptions).' réception(s) enregistrée(s) avec succès.',
+            'receptions' => $receptions,
         ], 201);
     }
 
@@ -159,6 +159,7 @@ class ReceptionController extends Controller
             ->get()
             ->map(function ($ligne) {
                 $ligne->quantite_restante = $ligne->quantite_commandee - $ligne->quantite_recue;
+
                 return $ligne;
             });
 

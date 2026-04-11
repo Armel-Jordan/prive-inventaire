@@ -20,11 +20,11 @@ class VentesDashboardService
     public function getData(int $tenantId, Carbon $dateFrom, Carbon $dateTo): array
     {
         return [
-            'devis'              => $this->devis($tenantId, $dateFrom, $dateTo),
-            'commandes_clients'  => $this->commandesClients($tenantId, $dateFrom, $dateTo),
-            'factures'           => $this->factures($tenantId, $dateFrom, $dateTo),
-            'bons_livraison'     => $this->bonsLivraison($tenantId, $dateFrom, $dateTo),
-            'tournees'           => $this->tournees($tenantId, $dateFrom, $dateTo),
+            'devis' => $this->devis($tenantId, $dateFrom, $dateTo),
+            'commandes_clients' => $this->commandesClients($tenantId, $dateFrom, $dateTo),
+            'factures' => $this->factures($tenantId, $dateFrom, $dateTo),
+            'bons_livraison' => $this->bonsLivraison($tenantId, $dateFrom, $dateTo),
+            'tournees' => $this->tournees($tenantId, $dateFrom, $dateTo),
         ];
     }
 
@@ -49,10 +49,10 @@ class VentesDashboardService
         $r = $rows[0] ?? null;
 
         return [
-            'total'     => (int) ($r->total     ?? 0),
+            'total' => (int) ($r->total ?? 0),
             'en_attente' => (int) ($r->en_attente ?? 0),
-            'acceptes'  => (int) ($r->acceptes  ?? 0),
-            'refuses'   => (int) ($r->refuses   ?? 0),
+            'acceptes' => (int) ($r->acceptes ?? 0),
+            'refuses' => (int) ($r->refuses ?? 0),
         ];
     }
 
@@ -73,8 +73,8 @@ class VentesDashboardService
         );
 
         return [
-            'total'         => (int) ($r->total         ?? 0),
-            'en_cours'      => (int) ($r->en_cours      ?? 0),
+            'total' => (int) ($r->total ?? 0),
+            'en_cours' => (int) ($r->en_cours ?? 0),
             'montant_total' => number_format((float) ($r->montant_total ?? 0), 2, '.', ''),
         ];
     }
@@ -100,10 +100,10 @@ class VentesDashboardService
         );
 
         return [
-            'total'          => (int)   ($r->total          ?? 0),
-            'payees'         => (int)   ($r->payees         ?? 0),
-            'impayees'       => (int)   ($r->impayees       ?? 0),
-            'en_retard'      => (int)   ($r->en_retard      ?? 0),
+            'total' => (int) ($r->total ?? 0),
+            'payees' => (int) ($r->payees ?? 0),
+            'impayees' => (int) ($r->impayees ?? 0),
+            'en_retard' => (int) ($r->en_retard ?? 0),
             'montant_impaye' => number_format((float) ($r->montant_impaye ?? 0), 2, '.', ''),
         ];
     }
@@ -125,9 +125,9 @@ class VentesDashboardService
         );
 
         return [
-            'total'     => (int) ($r->total     ?? 0),
+            'total' => (int) ($r->total ?? 0),
             'en_attente' => (int) ($r->en_attente ?? 0),
-            'expedies'  => (int) ($r->expedies  ?? 0),
+            'expedies' => (int) ($r->expedies ?? 0),
         ];
     }
 
@@ -147,7 +147,7 @@ class VentesDashboardService
         );
 
         return [
-            'total'   => (int) ($r->total   ?? 0),
+            'total' => (int) ($r->total ?? 0),
             'en_cours' => (int) ($r->en_cours ?? 0),
         ];
     }

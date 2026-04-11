@@ -27,9 +27,9 @@ class TenantParametres extends Model
     ];
 
     protected $casts = [
-        'tva_taux'              => 'decimal:2',
-        'delai_paiement_jours'  => 'integer',
+        'tva_taux' => 'decimal:2',
+        'delai_paiement_jours' => 'integer',
         'delai_livraison_jours' => 'integer',
-        'stock_seuil_defaut'    => 'integer',
+        'stock_seuil_defaut' => 'integer',
     ];
 }

@@ -29,11 +29,19 @@ class Tournee extends Model
         $year = date('Y');
         $last = self::where('numero', 'like', "TRN-{$year}-%")->orderBy('id', 'desc')->first();
         $number = $last ? intval(substr($last->numero, -4)) + 1 : 1;
-        return "TRN-{$year}-" . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return "TRN-{$year}-".str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
-    public function camion(): BelongsTo { return $this->belongsTo(Camion::class); }
-    public function tourneeBons(): HasMany { return $this->hasMany(TourneeBon::class)->orderBy('ordre_livraison'); }
+    public function camion(): BelongsTo
+    {
+        return $this->belongsTo(Camion::class);
+    }
+
+    public function tourneeBons(): HasMany
+    {
+        return $this->hasMany(TourneeBon::class)->orderBy('ordre_livraison');
+    }
 
     public function bonsLivraison()
     {

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
-use App\Models\ClientConditionPaiement;
 use App\Models\Configuration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +20,8 @@ class ClientController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
-                  ->orWhere('raison_sociale', 'like', "%{$search}%")
-                  ->orWhere('ville', 'like', "%{$search}%");
+                    ->orWhere('raison_sociale', 'like', "%{$search}%")
+                    ->orWhere('ville', 'like', "%{$search}%");
             });
         }
 
@@ -31,6 +30,7 @@ class ClientController extends Controller
         }
 
         $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
+
         return response()->json($clients);
     }
 
@@ -38,12 +38,14 @@ class ClientController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         $clients = Client::where('tenant_id', $tenantId)->where('actif', true)->orderBy('raison_sociale')->get();
+
         return response()->json($clients);
     }
 
     public function show(int $id): JsonResponse
     {
         $client = Client::with('conditionsPaiement')->findOrFail($id);
+
         return response()->json($client);
     }
 
@@ -75,6 +77,7 @@ class ClientController extends Controller
         $validated['tenant_id'] = $tenantId;
 
         $client = Client::create($validated);
+
         return response()->json($client, 201);
     }
 
@@ -98,6 +101,7 @@ class ClientController extends Controller
         ]);
 
         $client->update($validated);
+
         return response()->json($client);
     }
 
@@ -110,12 +114,14 @@ class ClientController extends Controller
         }
 
         $client->delete();
+
         return response()->json(['message' => 'Client supprimé']);
     }
 
     public function getConditionsPaiement(int $id): JsonResponse
     {
         $client = Client::findOrFail($id);
+
         return response()->json($client->conditionsPaiement);
     }
 

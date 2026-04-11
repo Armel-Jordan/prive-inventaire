@@ -17,11 +17,11 @@ class ProfileController extends Controller
         $employe = EmployeTenant::where('email', $user->email)->first();
 
         // Si pas d'employé, en créer un automatiquement
-        if (!$employe) {
+        if (! $employe) {
             // Générer un numéro unique
             $lastEmploye = EmployeTenant::orderByDesc('id')->first();
             $nextNum = $lastEmploye ? ((int) filter_var($lastEmploye->numero, FILTER_SANITIZE_NUMBER_INT) + 1) : 1;
-            $numero = 'EMP' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $numero = 'EMP'.str_pad($nextNum, 3, '0', STR_PAD_LEFT);
 
             // Extraire nom/prénom de l'utilisateur
             $nameParts = explode(' ', $user->nom ?? $user->name ?? 'Utilisateur');
@@ -48,7 +48,7 @@ class ProfileController extends Controller
 
         $employe = EmployeTenant::where('email', $user->email)->first();
 
-        if (!$employe) {
+        if (! $employe) {
             return response()->json([
                 'message' => 'Profil employé non trouvé',
             ], 404);
@@ -68,7 +68,7 @@ class ProfileController extends Controller
 
         $employe->fill($request->only([
             'telephone', 'adresse', 'ville', 'code_postal', 'pays',
-            'sexe', 'date_naissance', 'poste', 'departement'
+            'sexe', 'date_naissance', 'poste', 'departement',
         ]));
         $employe->save();
 
@@ -85,7 +85,7 @@ class ProfileController extends Controller
 
         $employe = EmployeTenant::where('email', $user->email)->first();
 
-        if (!$employe) {
+        if (! $employe) {
             return response()->json([
                 'message' => 'Profil employé non trouvé',
             ], 404);

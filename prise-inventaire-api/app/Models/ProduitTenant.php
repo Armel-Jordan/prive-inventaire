@@ -12,6 +12,7 @@ class ProduitTenant extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'produits';
 
     protected $fillable = [
@@ -48,6 +49,7 @@ class ProduitTenant extends Model
         if ($this->seuil_alerte === null || $this->seuil_alerte <= 0) {
             return false;
         }
+
         return $quantiteActuelle < $this->seuil_alerte;
     }
 

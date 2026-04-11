@@ -16,7 +16,7 @@ return new class extends Migration
             'tournees',
             'mouvements_inventaire',
             'localisations',
-            'zones_preparation'
+            'zones_preparation',
         ];
 
         $roles = DB::table('roles_custom')->get();
@@ -68,7 +68,7 @@ return new class extends Migration
             'tournees',
             'mouvements_inventaire',
             'localisations',
-            'zones_preparation'
+            'zones_preparation',
         ];
         DB::table('role_permissions')->whereIn('module', $modules)->delete();
     }

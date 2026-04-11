@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         // Ajouter la colonne role si elle n'existe pas
-        if (!Schema::hasColumn('admin_users', 'role')) {
+        if (! Schema::hasColumn('admin_users', 'role')) {
             Schema::table('admin_users', function (Blueprint $table) {
                 $table->string('role', 20)->default('user')->after('password');
             });

@@ -22,6 +22,7 @@ class CamionController extends Controller
         }
 
         $camions = $query->orderBy('immatriculation')->get();
+
         return response()->json($camions);
     }
 
@@ -32,7 +33,7 @@ class CamionController extends Controller
 
         $camions = Camion::where('tenant_id', $tenantId)->where('actif', true)
             ->get()
-            ->filter(fn($c) => $c->estDisponible($date));
+            ->filter(fn ($c) => $c->estDisponible($date));
 
         return response()->json($camions->values());
     }
@@ -40,6 +41,7 @@ class CamionController extends Controller
     public function show(int $id): JsonResponse
     {
         $camion = Camion::with('tournees')->findOrFail($id);
+
         return response()->json($camion);
     }
 
@@ -67,7 +69,7 @@ class CamionController extends Controller
         $camion = Camion::findOrFail($id);
 
         $validated = $request->validate([
-            'immatriculation' => 'sometimes|string|max:20|unique:camions,immatriculation,' . $id,
+            'immatriculation' => 'sometimes|string|max:20|unique:camions,immatriculation,'.$id,
             'marque' => 'nullable|string|max:50',
             'modele' => 'nullable|string|max:50',
             'type' => 'sometimes|in:camionnette,camion,semi_remorque',
@@ -78,6 +80,7 @@ class CamionController extends Controller
         ]);
 
         $camion->update($validated);
+
         return response()->json($camion);
     }
 
@@ -90,6 +93,7 @@ class CamionController extends Controller
         }
 
         $camion->delete();
+
         return response()->json(['message' => 'Camion supprimé']);
     }
 }

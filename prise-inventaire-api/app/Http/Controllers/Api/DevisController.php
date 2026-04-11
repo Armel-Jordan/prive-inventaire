@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\DevisLigne;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DevisController extends Controller
@@ -29,7 +29,7 @@ class DevisController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('numero', 'like', "%{$search}%")
-                  ->orWhereHas('client', fn($q2) => $q2->where('raison_sociale', 'like', "%{$search}%"));
+                    ->orWhereHas('client', fn ($q2) => $q2->where('raison_sociale', 'like', "%{$search}%"));
             });
         }
 
@@ -41,19 +41,19 @@ class DevisController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'client_id'      => 'required|exists:clients,id',
-            'date_devis'     => 'required|date',
-            'date_validite'  => 'required|date|after_or_equal:date_devis',
-            'notes'          => 'nullable|string',
-            'lignes'         => 'required|array|min:1',
-            'lignes.*.produit_id'    => 'required|exists:produits,id',
-            'lignes.*.quantite'      => 'required|integer|min:1',
+            'client_id' => 'required|exists:clients,id',
+            'date_devis' => 'required|date',
+            'date_validite' => 'required|date|after_or_equal:date_devis',
+            'notes' => 'nullable|string',
+            'lignes' => 'required|array|min:1',
+            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('devis', $tenantId);
-        if (!$config || !$config->auto_increment) {
+        if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
         }
         $numero = $config->genererNumero();
@@ -61,23 +61,23 @@ class DevisController extends Controller
 
         $devis = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $devis = Devis::create([
-                'tenant_id'     => $tenantId,
-                'numero'        => $numero,
-                'client_id'     => $validated['client_id'],
-                'date_devis'    => $validated['date_devis'],
+                'tenant_id' => $tenantId,
+                'numero' => $numero,
+                'client_id' => $validated['client_id'],
+                'date_devis' => $validated['date_devis'],
                 'date_validite' => $validated['date_validite'],
-                'notes'         => $validated['notes'] ?? null,
-                'statut'        => Devis::STATUT_BROUILLON,
-                'created_by'    => $request->user()->id,
+                'notes' => $validated['notes'] ?? null,
+                'statut' => Devis::STATUT_BROUILLON,
+                'created_by' => $request->user()->id,
             ]);
 
             foreach ($validated['lignes'] as $ligne) {
                 DevisLigne::create([
-                    'devis_id'       => $devis->id,
-                    'produit_id'     => $ligne['produit_id'],
-                    'quantite'       => $ligne['quantite'],
-                    'prix_unitaire'  => $ligne['prix_unitaire'],
-                    'montant_ligne'  => $ligne['quantite'] * $ligne['prix_unitaire'],
+                    'devis_id' => $devis->id,
+                    'produit_id' => $ligne['produit_id'],
+                    'quantite' => $ligne['quantite'],
+                    'prix_unitaire' => $ligne['prix_unitaire'],
+                    'montant_ligne' => $ligne['quantite'] * $ligne['prix_unitaire'],
                 ]);
             }
 
@@ -92,6 +92,7 @@ class DevisController extends Controller
     public function show(Devis $devis): JsonResponse
     {
         $devis->load(['client', 'lignes.produit', 'createdBy']);
+
         return response()->json($devis);
     }
 
@@ -102,23 +103,23 @@ class DevisController extends Controller
         }
 
         $validated = $request->validate([
-            'client_id'      => 'required|exists:clients,id',
-            'date_devis'     => 'required|date',
-            'date_validite'  => 'required|date|after_or_equal:date_devis',
-            'notes'          => 'nullable|string',
-            'lignes'         => 'required|array|min:1',
-            'lignes.*.id'            => 'nullable|exists:devis_lignes,id',
-            'lignes.*.produit_id'    => 'required|exists:produits,id',
-            'lignes.*.quantite'      => 'required|integer|min:1',
+            'client_id' => 'required|exists:clients,id',
+            'date_devis' => 'required|date',
+            'date_validite' => 'required|date|after_or_equal:date_devis',
+            'notes' => 'nullable|string',
+            'lignes' => 'required|array|min:1',
+            'lignes.*.id' => 'nullable|exists:devis_lignes,id',
+            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($validated, $devis) {
             $devis->update([
-                'client_id'     => $validated['client_id'],
-                'date_devis'    => $validated['date_devis'],
+                'client_id' => $validated['client_id'],
+                'date_devis' => $validated['date_devis'],
                 'date_validite' => $validated['date_validite'],
-                'notes'         => $validated['notes'] ?? null,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             $existingIds = collect($validated['lignes'])->pluck('id')->filter()->toArray();
@@ -126,8 +127,8 @@ class DevisController extends Controller
 
             foreach ($validated['lignes'] as $ligne) {
                 $data = [
-                    'produit_id'    => $ligne['produit_id'],
-                    'quantite'      => $ligne['quantite'],
+                    'produit_id' => $ligne['produit_id'],
+                    'quantite' => $ligne['quantite'],
                     'prix_unitaire' => $ligne['prix_unitaire'],
                     'montant_ligne' => $ligne['quantite'] * $ligne['prix_unitaire'],
                 ];
@@ -192,27 +193,27 @@ class DevisController extends Controller
             $numero = \App\Models\ComClientEntete::generateNumero();
 
             $commande = \App\Models\ComClientEntete::create([
-                'numero'        => $numero,
-                'client_id'     => $devis->client_id,
+                'numero' => $numero,
+                'client_id' => $devis->client_id,
                 'date_commande' => now()->toDateString(),
-                'statut'        => 'brouillon',
-                'montant_ht'    => 0,
-                'montant_tva'   => 0,
-                'montant_ttc'   => 0,
-                'notes'         => $devis->notes,
-                'created_by'    => $request->user()->id,
+                'statut' => 'brouillon',
+                'montant_ht' => 0,
+                'montant_tva' => 0,
+                'montant_ttc' => 0,
+                'notes' => $devis->notes,
+                'created_by' => $request->user()->id,
             ]);
 
             foreach ($devis->lignes as $ligne) {
                 $l = \App\Models\ComClientLigne::create([
-                    'com_entete_id'    => $commande->id,
-                    'produit_id'       => $ligne->produit_id,
-                    'quantite'         => $ligne->quantite,
+                    'com_entete_id' => $commande->id,
+                    'produit_id' => $ligne->produit_id,
+                    'quantite' => $ligne->quantite,
                     'prix_unitaire_ht' => $ligne->prix_unitaire,
-                    'taux_tva'         => 0,
-                    'remise_ligne'     => 0,
-                    'montant_ht'       => $ligne->montant_ligne,
-                    'montant_ttc'      => $ligne->montant_ligne,
+                    'taux_tva' => 0,
+                    'remise_ligne' => 0,
+                    'montant_ht' => $ligne->montant_ligne,
+                    'montant_ttc' => $ligne->montant_ligne,
                 ]);
             }
 
@@ -224,7 +225,7 @@ class DevisController extends Controller
         });
 
         return response()->json([
-            'message'  => 'Devis converti en commande.',
+            'message' => 'Devis converti en commande.',
             'commande' => $commande->load(['client', 'lignes']),
         ]);
     }

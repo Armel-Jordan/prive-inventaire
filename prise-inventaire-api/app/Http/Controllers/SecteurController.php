@@ -59,6 +59,7 @@ class SecteurController extends Controller
     public function show($id): JsonResponse
     {
         $secteur = Secteur::findOrFail($id);
+
         return response()->json($secteur);
     }
 
@@ -67,7 +68,7 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         $request->validate([
-            'code' => ['sometimes', 'string', 'max:10', 'unique:secteurs,code,' . $id, 'regex:/^[A-Za-z]\d{1,2}$/'],
+            'code' => ['sometimes', 'string', 'max:10', 'unique:secteurs,code,'.$id, 'regex:/^[A-Za-z]\d{1,2}$/'],
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',
@@ -120,7 +121,7 @@ class SecteurController extends Controller
             ->where('actif', true)
             ->first();
 
-        if (!$secteur) {
+        if (! $secteur) {
             return response()->json([
                 'valide' => false,
                 'message' => 'QR code secteur non reconnu',
@@ -141,7 +142,7 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         // Générer un code unique basé sur le code secteur
-        $qrCode = 'SECT-' . strtoupper($secteur->code) . '-' . substr(md5($secteur->id . time()), 0, 8);
+        $qrCode = 'SECT-'.strtoupper($secteur->code).'-'.substr(md5($secteur->id.time()), 0, 8);
 
         $secteur->qr_code = $qrCode;
         $secteur->save();
@@ -161,7 +162,7 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         $request->validate([
-            'qr_code' => 'required|string|max:100|unique:secteurs,qr_code,' . $id,
+            'qr_code' => 'required|string|max:100|unique:secteurs,qr_code,'.$id,
         ]);
 
         $secteur->qr_code = $request->qr_code;

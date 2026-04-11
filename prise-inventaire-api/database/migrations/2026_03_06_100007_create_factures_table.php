@@ -21,7 +21,7 @@ return new class extends Migration
                 'emise',
                 'partiellement_payee',
                 'payee',
-                'annulee'
+                'annulee',
             ])->default('brouillon');
             $table->decimal('montant_ht', 12, 2)->default(0);
             $table->decimal('montant_tva', 12, 2)->default(0);

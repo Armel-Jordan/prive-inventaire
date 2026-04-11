@@ -24,7 +24,7 @@ class MouvementTenantController extends Controller
         if ($request->has('secteur')) {
             $query->where(function ($q) use ($request) {
                 $q->where('secteur_source', $request->secteur)
-                  ->orWhere('secteur_destination', $request->secteur);
+                    ->orWhere('secteur_destination', $request->secteur);
             });
         }
 
@@ -98,6 +98,7 @@ class MouvementTenantController extends Controller
     public function show($id): JsonResponse
     {
         $mouvement = MouvementTenant::findOrFail($id);
+
         return response()->json($mouvement);
     }
 
@@ -146,7 +147,7 @@ class MouvementTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => count($mouvements) . ' produit(s) relocalisé(s) avec succès',
+            'message' => count($mouvements).' produit(s) relocalisé(s) avec succès',
             'mouvements' => $mouvements,
         ], 201);
     }
@@ -189,7 +190,7 @@ class MouvementTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => count($mouvements) . ' produit(s) ajouté(s) avec succès',
+            'message' => count($mouvements).' produit(s) ajouté(s) avec succès',
             'mouvements' => $mouvements,
         ], 201);
     }

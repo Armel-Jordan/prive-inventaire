@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 Route::get('/health', function () {
     try {
         DB::connection()->getPdo();
+
         return response()->json([
             'status' => 'ok',
             'database' => 'ok',
@@ -21,48 +22,44 @@ Route::get('/health', function () {
 });
 
 use App\Http\Controllers\AdminUserController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\SuperAdminController;
-use App\Http\Controllers\EmployeController;
-use App\Http\Controllers\EmployeTenantController;
-use App\Http\Controllers\MouvementInventaireController;
-use App\Http\Controllers\MouvementTenantController;
-use App\Http\Controllers\ProduitController;
-use App\Http\Controllers\ProduitTenantController;
-use App\Http\Controllers\ScanController;
-use App\Http\Controllers\ScanTenantController;
-use App\Http\Controllers\SecteurController;
-use App\Http\Controllers\TenantController;
 use App\Http\Controllers\AlerteStockController;
-use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\TransfertPlanifieController;
-use App\Http\Controllers\ApprobationController;
-use App\Http\Controllers\TracabiliteController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\RapportController;
-use App\Http\Controllers\InventaireTournantController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RolePermissionController;
-use App\Http\Controllers\Api\FournisseurController;
-use App\Http\Controllers\Api\CommandeFournisseurController;
-use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\BonCommandePdfController;
-use App\Http\Controllers\Api\ClientController;
-use App\Http\Controllers\Api\CommandeClientController;
-use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
-use App\Http\Controllers\Api\TourneeController;
-use App\Http\Controllers\Api\ZonePreparationController;
-use App\Http\Controllers\Api\LocalisationController;
-use App\Http\Controllers\Api\DevisController;
-use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\CommandeClientController;
+use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\FactureController;
+use App\Http\Controllers\Api\FournisseurController;
+use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\ReceptionController;
+use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
-use App\Http\Controllers\Api\TauxChangeController;
+use App\Http\Controllers\Api\TourneeController;
+use App\Http\Controllers\Api\ZonePreparationController;
+use App\Http\Controllers\ApprobationController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeTenantController;
+use App\Http\Controllers\InventaireTournantController;
+use App\Http\Controllers\MouvementInventaireController;
+use App\Http\Controllers\MouvementTenantController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProduitTenantController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RapportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\ScanTenantController;
+use App\Http\Controllers\SecteurController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\TracabiliteController;
+use App\Http\Controllers\TransfertPlanifieController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================

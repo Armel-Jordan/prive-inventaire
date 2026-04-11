@@ -48,7 +48,9 @@ class ProduitLocalisation extends Model
 
         $resteAReserver = $quantite;
         foreach ($localisations as $loc) {
-            if ($resteAReserver <= 0) break;
+            if ($resteAReserver <= 0) {
+                break;
+            }
 
             $qteAReserver = min($loc->quantite, $resteAReserver);
             $loc->quantite -= $qteAReserver;

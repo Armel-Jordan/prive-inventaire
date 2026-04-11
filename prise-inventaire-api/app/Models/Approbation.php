@@ -10,6 +10,7 @@ class Approbation extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'approbations';
 
     protected $fillable = [

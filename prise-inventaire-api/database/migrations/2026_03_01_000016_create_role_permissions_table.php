@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -34,7 +34,7 @@ return new class extends Migration
         });
 
         // Ajouter colonne role_id aux utilisateurs
-        if (!Schema::hasColumn('users', 'role_custom_id')) {
+        if (! Schema::hasColumn('users', 'role_custom_id')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->unsignedBigInteger('role_custom_id')->nullable();
             });
@@ -91,7 +91,7 @@ return new class extends Migration
             'dashboard', 'inventaires', 'statistiques', 'comparaison', 'alertes',
             'historique', 'tracabilite', 'relocalisation', 'planification',
             'approbations', 'rapports', 'inventaire_tournant', 'produits',
-            'secteurs', 'employes'
+            'secteurs', 'employes',
         ];
 
         foreach ($modules as $module) {

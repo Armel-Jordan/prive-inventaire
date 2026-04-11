@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 class TestSoftDelete extends Command
 {
     protected $signature = 'app:test-soft-delete {id}';
+
     protected $description = 'Teste la suppression logique custom';
 
     public function handle()
@@ -21,25 +22,25 @@ class TestSoftDelete extends Command
 
             // Avant suppression - check DELETED_AT
             $brut = DB::connection('oracle')
-                ->selectOne("SELECT ID, DELETED_AT FROM INVENTAIRE_SCAN WHERE ID = ?", [$id]);
-            $this->info("AVANT: DELETED_AT=" . ($brut->deleted_at ?? 'NULL'));
+                ->selectOne('SELECT ID, DELETED_AT FROM INVENTAIRE_SCAN WHERE ID = ?', [$id]);
+            $this->info('AVANT: DELETED_AT='.($brut->deleted_at ?? 'NULL'));
 
             // Utiliser softDelete() custom
-            $this->info("Appel softDelete()...");
+            $this->info('Appel softDelete()...');
             $result = $scan->softDelete();
-            $this->info("Résultat: " . ($result ? 'true' : 'false'));
+            $this->info('Résultat: '.($result ? 'true' : 'false'));
 
             // Après suppression
             $brut2 = DB::connection('oracle')
-                ->selectOne("SELECT ID, DELETED_AT FROM INVENTAIRE_SCAN WHERE ID = ?", [$id]);
-            $this->info("APRÈS: DELETED_AT=" . ($brut2->deleted_at ?? 'NULL'));
+                ->selectOne('SELECT ID, DELETED_AT FROM INVENTAIRE_SCAN WHERE ID = ?', [$id]);
+            $this->info('APRÈS: DELETED_AT='.($brut2->deleted_at ?? 'NULL'));
 
             // Test du global scope
             $count = InventaireScan::count();
             $this->info("\nScans actifs (global scope): {$count}");
 
         } catch (\Exception $e) {
-            $this->error("Erreur: " . $e->getMessage());
+            $this->error('Erreur: '.$e->getMessage());
         }
     }
 }

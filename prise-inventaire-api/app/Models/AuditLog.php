@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AuditLog extends Model
 {
     protected $connection = 'mysql';
+
     protected $table = 'audit_logs';
 
     protected $fillable = [

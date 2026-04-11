@@ -20,7 +20,7 @@ return new class extends Migration
                 'en_livraison',
                 'livre_complet',
                 'livre_partiel',
-                'annule'
+                'annule',
             ])->default('cree');
             $table->datetime('date_preparation')->nullable();
             $table->datetime('date_pret')->nullable();

@@ -12,13 +12,12 @@ use Illuminate\Support\Str;
 
 class TenantController extends Controller
 {
-    public function __construct(protected TenantService $tenantService)
-    {
-    }
+    public function __construct(protected TenantService $tenantService) {}
 
     public function index(): JsonResponse
     {
         $tenants = Tenant::orderBy('nom')->get();
+
         return response()->json($tenants);
     }
 
@@ -34,7 +33,7 @@ class TenantController extends Controller
             'admin_password' => 'required|string|min:8',
         ]);
 
-        $dbName = 'prise_' . Str::slug($request->slug, '_');
+        $dbName = 'prise_'.Str::slug($request->slug, '_');
 
         $tenant = Tenant::create([
             'nom' => $request->nom,
@@ -76,6 +75,7 @@ class TenantController extends Controller
     public function show($id): JsonResponse
     {
         $tenant = Tenant::with('users')->findOrFail($id);
+
         return response()->json($tenant);
     }
 

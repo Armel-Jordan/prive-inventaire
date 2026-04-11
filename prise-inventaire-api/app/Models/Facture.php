@@ -34,17 +34,49 @@ class Facture extends Model
         $year = date('Y');
         $last = self::where('numero', 'like', "FAC-{$year}-%")->orderBy('id', 'desc')->first();
         $number = $last ? intval(substr($last->numero, -4)) + 1 : 1;
-        return "FAC-{$year}-" . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return "FAC-{$year}-".str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
-    public function commande(): BelongsTo { return $this->belongsTo(ComClientEntete::class, 'commande_id'); }
-    public function client(): BelongsTo { return $this->belongsTo(Client::class); }
-    public function factureMere(): BelongsTo { return $this->belongsTo(Facture::class, 'facture_mere_id'); }
-    public function facturesFilles(): HasMany { return $this->hasMany(Facture::class, 'facture_mere_id'); }
-    public function lignes(): HasMany { return $this->hasMany(FactureLigne::class); }
-    public function echeances(): HasMany { return $this->hasMany(FactureEcheance::class)->orderBy('ordre'); }
-    public function paiements(): HasMany { return $this->hasMany(FacturePaiement::class); }
-    public function bonLivraison(): HasOne { return $this->hasOne(BonLivraison::class); }
+    public function commande(): BelongsTo
+    {
+        return $this->belongsTo(ComClientEntete::class, 'commande_id');
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function factureMere(): BelongsTo
+    {
+        return $this->belongsTo(Facture::class, 'facture_mere_id');
+    }
+
+    public function facturesFilles(): HasMany
+    {
+        return $this->hasMany(Facture::class, 'facture_mere_id');
+    }
+
+    public function lignes(): HasMany
+    {
+        return $this->hasMany(FactureLigne::class);
+    }
+
+    public function echeances(): HasMany
+    {
+        return $this->hasMany(FactureEcheance::class)->orderBy('ordre');
+    }
+
+    public function paiements(): HasMany
+    {
+        return $this->hasMany(FacturePaiement::class);
+    }
+
+    public function bonLivraison(): HasOne
+    {
+        return $this->hasOne(BonLivraison::class);
+    }
 
     public function updateMontantPaye(): void
     {

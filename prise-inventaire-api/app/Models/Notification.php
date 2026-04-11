@@ -10,6 +10,7 @@ class Notification extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'notifications';
 
     protected $fillable = [

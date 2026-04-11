@@ -18,18 +18,18 @@ class FinanceDashboardService
      */
     public function getData(int $tenantId, Carbon $dateFrom, Carbon $dateTo): array
     {
-        $ca          = $this->chiffreAffaires($tenantId, $dateFrom, $dateTo);
-        $encaisse    = $this->encaisse($tenantId, $dateFrom, $dateTo);
-        $impaye      = $this->montantImpaye($tenantId, $dateFrom, $dateTo);
-        $depenses    = $this->depensesAchats($tenantId, $dateFrom, $dateTo);
-        $margeBrute  = $ca - $depenses;
+        $ca = $this->chiffreAffaires($tenantId, $dateFrom, $dateTo);
+        $encaisse = $this->encaisse($tenantId, $dateFrom, $dateTo);
+        $impaye = $this->montantImpaye($tenantId, $dateFrom, $dateTo);
+        $depenses = $this->depensesAchats($tenantId, $dateFrom, $dateTo);
+        $margeBrute = $ca - $depenses;
 
         return [
-            'chiffre_affaires'  => number_format($ca,         2, '.', ''),
-            'encaisse'          => number_format($encaisse,   2, '.', ''),
-            'montant_impaye'    => number_format($impaye,     2, '.', ''),
-            'depenses_achats'   => number_format($depenses,   2, '.', ''),
-            'marge_brute'       => number_format($margeBrute, 2, '.', ''),
+            'chiffre_affaires' => number_format($ca, 2, '.', ''),
+            'encaisse' => number_format($encaisse, 2, '.', ''),
+            'montant_impaye' => number_format($impaye, 2, '.', ''),
+            'depenses_achats' => number_format($depenses, 2, '.', ''),
+            'marge_brute' => number_format($margeBrute, 2, '.', ''),
         ];
     }
 

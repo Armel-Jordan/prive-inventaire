@@ -74,6 +74,7 @@ class ProduitTenantController extends Controller
     public function show($id): JsonResponse
     {
         $produit = ProduitTenant::with('secteur')->findOrFail($id);
+
         return response()->json($produit);
     }
 
@@ -82,7 +83,7 @@ class ProduitTenantController extends Controller
         $produit = ProduitTenant::findOrFail($id);
 
         $request->validate([
-            'numero' => 'sometimes|string|max:50|unique:produits,numero,' . $id,
+            'numero' => 'sometimes|string|max:50|unique:produits,numero,'.$id,
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
@@ -131,7 +132,7 @@ class ProduitTenantController extends Controller
             ->where('actif', true)
             ->first();
 
-        if (!$produit) {
+        if (! $produit) {
             return response()->json([
                 'valide' => false,
                 'message' => 'Produit introuvable',

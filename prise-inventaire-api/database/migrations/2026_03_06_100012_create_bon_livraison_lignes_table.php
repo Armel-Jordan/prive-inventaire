@@ -20,7 +20,7 @@ return new class extends Migration
                 'en_cours',
                 'prepare',
                 'charge',
-                'livre'
+                'livre',
             ])->default('a_preparer');
             $table->timestamps();
         });

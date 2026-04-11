@@ -50,14 +50,15 @@ class AlerteStockController extends Controller
         // Trier par criticité (critique en premier)
         usort($alertes, function ($a, $b) {
             $order = ['critique' => 0, 'warning' => 1, 'info' => 2];
+
             return ($order[$a['criticite']] ?? 3) <=> ($order[$b['criticite']] ?? 3);
         });
 
         return response()->json([
             'alertes' => $alertes,
             'total' => count($alertes),
-            'critiques' => count(array_filter($alertes, fn($a) => $a['criticite'] === 'critique')),
-            'warnings' => count(array_filter($alertes, fn($a) => $a['criticite'] === 'warning')),
+            'critiques' => count(array_filter($alertes, fn ($a) => $a['criticite'] === 'critique')),
+            'warnings' => count(array_filter($alertes, fn ($a) => $a['criticite'] === 'warning')),
         ]);
     }
 
@@ -156,12 +157,19 @@ class AlerteStockController extends Controller
      */
     private function calculerCriticite(float $stockActuel, float $seuil): string
     {
-        if ($seuil <= 0) return 'info';
+        if ($seuil <= 0) {
+            return 'info';
+        }
 
         $ratio = $stockActuel / $seuil;
 
-        if ($ratio <= 0.25) return 'critique';  // Stock < 25% du seuil
-        if ($ratio <= 0.5) return 'warning';    // Stock < 50% du seuil
+        if ($ratio <= 0.25) {
+            return 'critique';
+        }  // Stock < 25% du seuil
+        if ($ratio <= 0.5) {
+            return 'warning';
+        }    // Stock < 50% du seuil
+
         return 'info';
     }
 }

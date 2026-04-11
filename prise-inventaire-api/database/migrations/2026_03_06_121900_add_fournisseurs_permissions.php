@@ -10,7 +10,7 @@ return new class extends Migration
         $newModules = [
             'fournisseurs',
             'commandes_fournisseur',
-            'receptions'
+            'receptions',
         ];
 
         $roles = DB::table('roles_custom')->get();
@@ -22,7 +22,9 @@ return new class extends Migration
                     ->where('module', $module)
                     ->exists();
 
-                if ($exists) continue;
+                if ($exists) {
+                    continue;
+                }
 
                 $canView = true;
                 $canCreate = false;

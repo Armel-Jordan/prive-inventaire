@@ -13,20 +13,21 @@ class TenantTaxeController extends Controller
     {
         $tenantId = $request->attributes->get('tenant')->id;
         $taxes = TenantTaxe::where('tenant_id', $tenantId)->orderBy('taux')->get();
+
         return response()->json($taxes);
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'nom'        => 'required|string|max:100',
-            'taux'       => 'required|numeric|min:0|max:100',
+            'nom' => 'required|string|max:100',
+            'taux' => 'required|numeric|min:0|max:100',
             'par_defaut' => 'boolean',
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
 
-        if (!empty($validated['par_defaut'])) {
+        if (! empty($validated['par_defaut'])) {
             TenantTaxe::where('tenant_id', $tenantId)->update(['par_defaut' => false]);
         }
 
@@ -41,12 +42,12 @@ class TenantTaxeController extends Controller
         $taxe = TenantTaxe::where('tenant_id', $tenantId)->findOrFail($id);
 
         $validated = $request->validate([
-            'nom'        => 'required|string|max:100',
-            'taux'       => 'required|numeric|min:0|max:100',
+            'nom' => 'required|string|max:100',
+            'taux' => 'required|numeric|min:0|max:100',
             'par_defaut' => 'boolean',
         ]);
 
-        if (!empty($validated['par_defaut'])) {
+        if (! empty($validated['par_defaut'])) {
             TenantTaxe::where('tenant_id', $tenantId)->where('id', '!=', $id)->update(['par_defaut' => false]);
         }
 
@@ -60,6 +61,7 @@ class TenantTaxeController extends Controller
         $tenantId = $request->attributes->get('tenant')->id;
         $taxe = TenantTaxe::where('tenant_id', $tenantId)->findOrFail($id);
         $taxe->delete();
+
         return response()->json(['message' => 'Taxe supprimée.']);
     }
 }

@@ -40,7 +40,8 @@ class Client extends Model
     {
         $last = self::orderBy('id', 'desc')->first();
         $number = $last ? intval(substr($last->code, 4)) + 1 : 1;
-        return 'CLI-' . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return 'CLI-'.str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
     public function conditionsPaiement(): HasMany
@@ -68,9 +69,10 @@ class Client extends Model
 
     public function peutCommander(float $montant): bool
     {
-        if (!$this->encours_max) {
+        if (! $this->encours_max) {
             return true;
         }
+
         return ($this->encours_actuel + $montant) <= $this->encours_max;
     }
 }

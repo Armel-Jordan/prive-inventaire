@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ScanTenant;
 use App\Models\MouvementTenant;
+use App\Models\ScanTenant;
 use App\Models\Secteur;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class InventaireTournantController extends Controller
 {
@@ -29,15 +27,15 @@ class InventaireTournantController extends Controller
             if ($dernierScan) {
                 $mouvementsDepuisScan = MouvementTenant::where(function ($q) use ($secteur) {
                     $q->where('secteur_source', $secteur->code)
-                      ->orWhere('secteur_destination', $secteur->code);
+                        ->orWhere('secteur_destination', $secteur->code);
                 })
-                ->where('created_at', '>', $dernierScan->date_saisie)
-                ->count();
+                    ->where('created_at', '>', $dernierScan->date_saisie)
+                    ->count();
             } else {
                 // Si jamais scanné, compter tous les mouvements
                 $mouvementsDepuisScan = MouvementTenant::where(function ($q) use ($secteur) {
                     $q->where('secteur_source', $secteur->code)
-                      ->orWhere('secteur_destination', $secteur->code);
+                        ->orWhere('secteur_destination', $secteur->code);
                 })->count();
             }
 
@@ -59,8 +57,8 @@ class InventaireTournantController extends Controller
                 'raison' => $this->getRaison($joursDepuisScan, $mouvementsDepuisScan),
             ];
         })
-        ->sortByDesc('score_priorite')
-        ->values();
+            ->sortByDesc('score_priorite')
+            ->values();
 
         return response()->json([
             'suggestions' => $suggestions,
@@ -96,7 +94,10 @@ class InventaireTournantController extends Controller
 
         $nonScannes30Jours = $secteurs->filter(function ($secteur) use ($derniersScansParSecteur, $dateLimite) {
             $dernierScan = $derniersScansParSecteur->get($secteur->code);
-            if (!$dernierScan) return true;
+            if (! $dernierScan) {
+                return true;
+            }
+
             return $dernierScan->dernier_scan < $dateLimite;
         })->count();
 
@@ -161,7 +162,7 @@ class InventaireTournantController extends Controller
                 $secteurIndex++;
             }
 
-            if (!empty($secteursJour)) {
+            if (! empty($secteursJour)) {
                 $planning[] = [
                     'date' => $jour->format('Y-m-d'),
                     'jour' => $jour->translatedFormat('l d F'),
@@ -196,6 +197,7 @@ class InventaireTournantController extends Controller
         if ($mouvements >= 10) {
             return 'Activité modérée';
         }
+
         return 'Vérification de routine';
     }
 

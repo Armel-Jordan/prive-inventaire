@@ -52,6 +52,7 @@ class Fournisseur extends Model
     {
         $lastFournisseur = self::orderBy('id', 'desc')->first();
         $nextNumber = $lastFournisseur ? $lastFournisseur->id + 1 : 1;
-        return 'FOUR-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+        return 'FOUR-'.str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }

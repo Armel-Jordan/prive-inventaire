@@ -21,18 +21,16 @@ class TestOracle extends Command
      */
     protected $description = 'Command description';
 
-
-
     /**
      * Execute the console command.
      */
     public function handle()
     {
         //
-        $result = DB::select("SELECT * FROM EMPLOYE");
+        $result = DB::select('SELECT * FROM EMPLOYE');
         foreach ($result as $r) {
             $this->info(json_encode($r));
         }
-        $this->info("Test Oracle OK");
+        $this->info('Test Oracle OK');
     }
 }

@@ -34,17 +34,29 @@ class ComClientEntete extends Model
         $year = date('Y');
         $last = self::where('numero', 'like', "CMD-{$year}-%")->orderBy('id', 'desc')->first();
         $number = $last ? intval(substr($last->numero, -4)) + 1 : 1;
-        return "CMD-{$year}-" . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return "CMD-{$year}-".str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
-    public function client(): BelongsTo { return $this->belongsTo(Client::class); }
-    public function lignes(): HasMany { return $this->hasMany(ComClientLigne::class, 'com_entete_id'); }
-    public function facture(): HasOne { return $this->hasOne(Facture::class, 'commande_id'); }
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function lignes(): HasMany
+    {
+        return $this->hasMany(ComClientLigne::class, 'com_entete_id');
+    }
+
+    public function facture(): HasOne
+    {
+        return $this->hasOne(Facture::class, 'commande_id');
+    }
 
     public function calculerMontants(): void
     {
         $this->montant_ht = $this->lignes->sum('montant_ht');
-        $this->montant_tva = $this->lignes->sum(fn($l) => $l->montant_ttc - $l->montant_ht);
+        $this->montant_tva = $this->lignes->sum(fn ($l) => $l->montant_ttc - $l->montant_ht);
         $this->montant_ttc = $this->lignes->sum('montant_ttc');
         if ($this->remise_globale > 0) {
             $this->montant_ht *= (1 - $this->remise_globale / 100);

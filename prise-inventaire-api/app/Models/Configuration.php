@@ -11,6 +11,7 @@ class Configuration extends Model
     use SoftDeletes;
 
     protected $connection = 'mysql';
+
     protected $table = 'configurations';
 
     protected $fillable = [

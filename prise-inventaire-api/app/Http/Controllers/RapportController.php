@@ -6,7 +6,6 @@ use App\Models\MouvementTenant;
 use App\Models\ScanTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class RapportController extends Controller
 {
@@ -115,6 +114,7 @@ class RapportController extends Controller
 
         $rapport = $mouvements->map(function ($m) use ($scans) {
             $scan = $scans->get($m->employe);
+
             return [
                 'employe' => $m->employe,
                 'mouvements' => $m->nombre_mouvements,

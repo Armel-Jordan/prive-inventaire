@@ -20,7 +20,7 @@ return new class extends Migration
                 'acceptee',
                 'refusee',
                 'facturee',
-                'annulee'
+                'annulee',
             ])->default('brouillon');
             $table->decimal('remise_globale', 5, 2)->default(0);
             $table->decimal('montant_ht', 12, 2)->default(0);
