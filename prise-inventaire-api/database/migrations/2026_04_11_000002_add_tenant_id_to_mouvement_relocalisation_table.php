@@ -8,17 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('mouvement_relocalisation')) {
-            return;
-        }
-
-        if (Schema::hasColumn('mouvement_relocalisation', 'tenant_id')) {
-            return;
-        }
-
-        Schema::table('mouvement_relocalisation', function (Blueprint $table) {
-            $table->unsignedBigInteger('tenant_id')->nullable()->after('id')->index();
-        });
+        // Handled by 2026_04_11_000003_fix_mouvement_relocalisation_table
+        // which creates the table if missing and adds tenant_id + deleted_at safely.
     }
 
     public function down(): void

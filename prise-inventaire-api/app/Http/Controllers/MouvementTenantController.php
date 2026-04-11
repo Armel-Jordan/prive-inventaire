@@ -11,7 +11,8 @@ class MouvementTenantController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = MouvementTenant::query();
+        $tenantId = auth()->user()->tenant_id;
+        $query = MouvementTenant::where('tenant_id', $tenantId);
 
         if ($request->has('type')) {
             $query->where('type', $request->type);
@@ -85,6 +86,7 @@ class MouvementTenantController extends Controller
 
         $mouvement = MouvementTenant::create([
             ...$validated,
+            'tenant_id' => auth()->user()->tenant_id,
             'date_mouvement' => now(),
         ]);
 
@@ -97,7 +99,8 @@ class MouvementTenantController extends Controller
 
     public function show($id): JsonResponse
     {
-        $mouvement = MouvementTenant::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $mouvement = MouvementTenant::where('tenant_id', $tenantId)->findOrFail($id);
 
         return response()->json($mouvement);
     }
@@ -125,11 +128,13 @@ class MouvementTenantController extends Controller
             ], 422);
         }
 
+        $tenantId = auth()->user()->tenant_id;
         $mouvements = [];
 
-        DB::transaction(function () use ($validated, &$mouvements) {
+        DB::transaction(function () use ($validated, $tenantId, &$mouvements) {
             foreach ($validated['produits'] as $produit) {
                 $mouvement = MouvementTenant::create([
+                    'tenant_id' => $tenantId,
                     'type' => 'transfert',
                     'produit_numero' => $produit['numero'],
                     'produit_nom' => $produit['nom'] ?? null,
@@ -168,11 +173,13 @@ class MouvementTenantController extends Controller
             'employe' => 'required|string|max:100',
         ]);
 
+        $tenantId = auth()->user()->tenant_id;
         $mouvements = [];
 
-        DB::transaction(function () use ($validated, &$mouvements) {
+        DB::transaction(function () use ($validated, $tenantId, &$mouvements) {
             foreach ($validated['produits'] as $produit) {
                 $mouvement = MouvementTenant::create([
+                    'tenant_id' => $tenantId,
                     'type' => 'arrivage',
                     'produit_numero' => $produit['numero'],
                     'produit_nom' => $produit['nom'] ?? null,
@@ -200,7 +207,9 @@ class MouvementTenantController extends Controller
      */
     public function historyByProduit($numero): JsonResponse
     {
-        $mouvements = MouvementTenant::where('produit_numero', $numero)
+        $tenantId = auth()->user()->tenant_id;
+        $mouvements = MouvementTenant::where('tenant_id', $tenantId)
+            ->where('produit_numero', $numero)
             ->orderByDesc('date_mouvement')
             ->get();
 
@@ -212,8 +221,12 @@ class MouvementTenantController extends Controller
      */
     public function historyBySecteur($secteur): JsonResponse
     {
-        $mouvements = MouvementTenant::where('secteur_source', $secteur)
-            ->orWhere('secteur_destination', $secteur)
+        $tenantId = auth()->user()->tenant_id;
+        $mouvements = MouvementTenant::where('tenant_id', $tenantId)
+            ->where(function ($q) use ($secteur) {
+                $q->where('secteur_source', $secteur)
+                    ->orWhere('secteur_destination', $secteur);
+            })
             ->orderByDesc('date_mouvement')
             ->get();
 
@@ -225,14 +238,16 @@ class MouvementTenantController extends Controller
      */
     public function stats(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $today = now()->toDateString();
         $thisMonth = now()->startOfMonth()->toDateString();
 
         $stats = [
-            'total' => MouvementTenant::count(),
-            'today' => MouvementTenant::whereDate('date_mouvement', $today)->count(),
-            'this_month' => MouvementTenant::whereDate('date_mouvement', '>=', $thisMonth)->count(),
-            'by_type' => MouvementTenant::selectRaw('type, COUNT(*) as count')
+            'total' => MouvementTenant::where('tenant_id', $tenantId)->count(),
+            'today' => MouvementTenant::where('tenant_id', $tenantId)->whereDate('date_mouvement', $today)->count(),
+            'this_month' => MouvementTenant::where('tenant_id', $tenantId)->whereDate('date_mouvement', '>=', $thisMonth)->count(),
+            'by_type' => MouvementTenant::where('tenant_id', $tenantId)
+                ->selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
                 ->pluck('count', 'type'),
         ];

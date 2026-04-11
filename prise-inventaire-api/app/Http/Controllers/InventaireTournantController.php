@@ -14,29 +14,33 @@ class InventaireTournantController extends Controller
      */
     public function suggestions(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $secteurs = Secteur::where('actif', true)->get();
 
-        $suggestions = $secteurs->map(function ($secteur) {
+        $suggestions = $secteurs->map(function ($secteur) use ($tenantId) {
             // Dernier scan dans ce secteur
-            $dernierScan = ScanTenant::where('secteur', $secteur->code)
+            $dernierScan = ScanTenant::where('tenant_id', $tenantId)
+                ->where('secteur', $secteur->code)
                 ->orderByDesc('date_saisie')
                 ->first();
 
             // Nombre de mouvements depuis le dernier scan
             $mouvementsDepuisScan = 0;
             if ($dernierScan) {
-                $mouvementsDepuisScan = MouvementTenant::where(function ($q) use ($secteur) {
-                    $q->where('secteur_source', $secteur->code)
-                        ->orWhere('secteur_destination', $secteur->code);
-                })
+                $mouvementsDepuisScan = MouvementTenant::where('tenant_id', $tenantId)
+                    ->where(function ($q) use ($secteur) {
+                        $q->where('secteur_source', $secteur->code)
+                            ->orWhere('secteur_destination', $secteur->code);
+                    })
                     ->where('created_at', '>', $dernierScan->date_saisie)
                     ->count();
             } else {
                 // Si jamais scanné, compter tous les mouvements
-                $mouvementsDepuisScan = MouvementTenant::where(function ($q) use ($secteur) {
-                    $q->where('secteur_source', $secteur->code)
-                        ->orWhere('secteur_destination', $secteur->code);
-                })->count();
+                $mouvementsDepuisScan = MouvementTenant::where('tenant_id', $tenantId)
+                    ->where(function ($q) use ($secteur) {
+                        $q->where('secteur_source', $secteur->code)
+                            ->orWhere('secteur_destination', $secteur->code);
+                    })->count();
             }
 
             // Calculer le score de priorité
@@ -71,22 +75,25 @@ class InventaireTournantController extends Controller
      */
     public function stats(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $secteurs = Secteur::where('actif', true)->get();
         $totalSecteurs = $secteurs->count();
 
         // Secteurs scannés ce mois
-        $scannesCeMois = ScanTenant::whereMonth('date_saisie', now()->month)
+        $scannesCeMois = ScanTenant::where('tenant_id', $tenantId)
+            ->whereMonth('date_saisie', now()->month)
             ->whereYear('date_saisie', now()->year)
             ->distinct('secteur')
             ->count('secteur');
 
         // Secteurs jamais scannés
-        $secteursAvecScans = ScanTenant::distinct('secteur')->pluck('secteur');
+        $secteursAvecScans = ScanTenant::where('tenant_id', $tenantId)->distinct('secteur')->pluck('secteur');
         $jamaisScannes = $secteurs->whereNotIn('code', $secteursAvecScans)->count();
 
         // Secteurs non scannés depuis 30 jours
         $dateLimite = now()->subDays(30);
-        $derniersScansParSecteur = ScanTenant::select('secteur')
+        $derniersScansParSecteur = ScanTenant::where('tenant_id', $tenantId)
+            ->select('secteur')
             ->selectRaw('MAX(date_saisie) as dernier_scan')
             ->groupBy('secteur')
             ->get()
@@ -120,7 +127,9 @@ class InventaireTournantController extends Controller
      */
     public function historiqueSecteur(string $secteur): JsonResponse
     {
-        $scans = ScanTenant::where('secteur', $secteur)
+        $tenantId = auth()->user()->tenant_id;
+        $scans = ScanTenant::where('tenant_id', $tenantId)
+            ->where('secteur', $secteur)
             ->orderByDesc('date_saisie')
             ->limit(50)
             ->get();

@@ -14,6 +14,7 @@ class ScanTenant extends Model
     protected $table = 'inventaire_scan';
 
     protected $fillable = [
+        'tenant_id',
         'numero',
         'type',
         'quantite',
