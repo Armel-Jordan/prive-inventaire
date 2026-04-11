@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('mouvement_relocalisation')) {
+            return;
+        }
+
         if (Schema::hasColumn('mouvement_relocalisation', 'tenant_id')) {
             return;
         }

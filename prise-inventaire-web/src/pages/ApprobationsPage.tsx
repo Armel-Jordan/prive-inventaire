@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Clock, CheckCircle, XCircle, Settings, AlertTriangle, X } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Settings, AlertTriangle, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
@@ -96,7 +96,7 @@ export default function ApprobationsPage() {
       if (approbationsRes.ok) setApprobations(await approbationsRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
       if (seuilsRes.ok) setSeuils(await seuilsRes.json());
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -136,7 +136,7 @@ export default function ApprobationsPage() {
         const error = await response.json();
         toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
       }
-    } catch (error) {
+    } catch {
       toast('Une erreur est survenue', 'error');
     }
   }
@@ -153,7 +153,7 @@ export default function ApprobationsPage() {
         setShowSettings(false);
         toast('Seuils mis à jour avec succès', 'success');
       }
-    } catch (error) {
+    } catch {
       toast('Une erreur est survenue', 'error');
     }
   }

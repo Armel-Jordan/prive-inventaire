@@ -45,7 +45,7 @@ export default function ComparaisonPage() {
             setDateFin(uniqueDates[0]);
           }
         }
-      } catch (error) {
+      } catch {
         toast('Erreur de chargement des données', 'error');
       } finally {
         setLoading(false);

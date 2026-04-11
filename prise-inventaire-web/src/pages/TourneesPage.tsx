@@ -146,6 +146,7 @@ export default function TourneesPage() {
     try {
       await demarrerTournee(id);
       loadTournees();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       alert(error?.message || 'Erreur démarrage — ajoutez au moins un bon de livraison.');
     }

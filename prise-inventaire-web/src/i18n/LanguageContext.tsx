@@ -9,6 +9,7 @@ interface LanguageContextType {
   t: TranslationKeys;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'prise_language';

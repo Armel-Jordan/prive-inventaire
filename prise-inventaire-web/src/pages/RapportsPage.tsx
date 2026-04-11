@@ -114,7 +114,7 @@ export default function RapportsPage() {
           setProduitsData(data.produits);
         }
       }
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement du rapport', 'error');
     } finally {
       setLoading(false);

@@ -89,6 +89,7 @@ export default function BonsLivraisonPage() {
     try {
       await marquerBLPret(id);
       loadBons();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       alert(error?.message || 'Toutes les lignes doivent être préparées avant de marquer comme prêt.');
     }

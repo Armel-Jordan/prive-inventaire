@@ -78,7 +78,7 @@ export default function AlertesPage() {
       if (statsRes.ok) {
         setStats(await statsRes.json());
       }
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des alertes', 'error');
     } finally {
       setLoading(false);
@@ -99,7 +99,7 @@ export default function AlertesPage() {
         description: p.description,
         seuil_alerte: null,
       })));
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des produits', 'error');
     } finally {
       setLoadingProduits(false);
@@ -130,7 +130,7 @@ export default function AlertesPage() {
           return copy;
         });
       }
-    } catch (error) {
+    } catch {
       toast('Erreur lors de la sauvegarde', 'error');
     } finally {
       setSaving(false);

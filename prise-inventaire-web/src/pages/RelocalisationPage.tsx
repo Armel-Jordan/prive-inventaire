@@ -113,7 +113,7 @@ export default function RelocalisationPage() {
       ]);
       setMouvements(mouvementsRes);
       setSecteurs(secteursRes);
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -187,7 +187,7 @@ export default function RelocalisationPage() {
       await Promise.all(promises);
       setShowModal(false);
       loadData();
-    } catch (error) {
+    } catch {
       toast('Erreur lors de l\'enregistrement', 'error');
     } finally {
       setSubmitting(false);
@@ -207,7 +207,7 @@ export default function RelocalisationPage() {
       });
       setShowModal(false);
       loadData();
-    } catch (error) {
+    } catch {
       toast('Erreur lors de l\'enregistrement', 'error');
     }
   }

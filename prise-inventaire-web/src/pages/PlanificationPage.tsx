@@ -106,7 +106,7 @@ export default function PlanificationPage() {
       if (transfertsRes.ok) setTransferts(await transfertsRes.json());
       if (secteursRes.ok) setSecteurs(await secteursRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ export default function PlanificationPage() {
         const error = await response.json();
         toast(error.message || 'Erreur lors de l\'enregistrement', 'error');
       }
-    } catch (error) {
+    } catch {
       toast('Erreur lors de l\'enregistrement', 'error');
     }
   }
@@ -192,7 +192,7 @@ export default function PlanificationPage() {
         const error = await response.json();
         toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
       }
-    } catch (error) {
+    } catch {
       toast('Une erreur est survenue', 'error');
     }
   }
@@ -207,7 +207,7 @@ export default function PlanificationPage() {
       if (response.ok) {
         loadData();
       }
-    } catch (error) {
+    } catch {
       toast('Une erreur est survenue', 'error');
     }
   }
@@ -222,7 +222,7 @@ export default function PlanificationPage() {
       if (response.ok) {
         loadData();
       }
-    } catch (error) {
+    } catch {
       toast('Une erreur est survenue', 'error');
     }
   }

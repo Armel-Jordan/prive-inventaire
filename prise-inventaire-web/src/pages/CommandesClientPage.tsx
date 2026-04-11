@@ -101,6 +101,7 @@ export default function CommandesClientPage() {
       notes: cmd.notes || '',
     });
     setLignes(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
         produit_id: l.produit_id,
         quantite: l.quantite,

@@ -72,7 +72,7 @@ export default function AuditPage() {
 
       if (logsRes.ok) setLogs(await logsRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement de l\'historique', 'error');
     } finally {
       setLoading(false);

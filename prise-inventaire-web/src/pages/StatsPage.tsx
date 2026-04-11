@@ -25,7 +25,7 @@ export default function StatsPage() {
           getEmployes(),
         ]);
         setScans(scansData);
-      } catch (error) {
+      } catch {
         toast('Erreur de chargement des données', 'error');
       } finally {
         setLoading(false);

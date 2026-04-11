@@ -84,7 +84,7 @@ export default function TracabilitePage() {
         setSearchResults(results);
         setShowResults(true);
       }
-    } catch (error) {
+    } catch {
       toast('Erreur lors de la recherche', 'error');
     }
   }
@@ -104,7 +104,7 @@ export default function TracabilitePage() {
         setHistorique(data.historique);
         setStats(data.stats);
       }
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement de l\'historique', 'error');
     } finally {
       setLoading(false);

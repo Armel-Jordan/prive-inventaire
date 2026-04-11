@@ -97,7 +97,7 @@ export default function InventaireTournantPage() {
           setPlanning(data.planning);
         }
       }
-    } catch (error) {
+    } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
