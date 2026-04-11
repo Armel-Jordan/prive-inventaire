@@ -125,7 +125,7 @@ export default function AlertesPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/alertes/seuil/${produitId}`, {
+      const res = await fetch(`${API_BASE_URL}/alertes/produit/${produitId}/seuil`, {
         method: 'PUT',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0 }),
