@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, Plus, Play, X, Trash2, Edit, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -62,6 +64,7 @@ const statutLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function PlanificationPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [transferts, setTransferts] = useState<TransfertPlanifie[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -102,7 +105,7 @@ export default function PlanificationPage() {
       if (secteursRes.ok) setSecteurs(await secteursRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
     }
@@ -167,11 +170,10 @@ export default function PlanificationPage() {
         loadData();
       } else {
         const error = await response.json();
-        alert(error.message || 'Erreur lors de l\'enregistrement');
+        toast(error.message || 'Erreur lors de l\'enregistrement', 'error');
       }
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'enregistrement');
+      toast('Erreur lors de l\'enregistrement', 'error');
     }
   }
 
@@ -186,10 +188,10 @@ export default function PlanificationPage() {
         loadData();
       } else {
         const error = await response.json();
-        alert(error.message || 'Erreur');
+        toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      toast('Une erreur est survenue', 'error');
     }
   }
 
@@ -204,7 +206,7 @@ export default function PlanificationPage() {
         loadData();
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      toast('Une erreur est survenue', 'error');
     }
   }
 
@@ -219,7 +221,7 @@ export default function PlanificationPage() {
         loadData();
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      toast('Une erreur est survenue', 'error');
     }
   }
 
@@ -603,6 +605,7 @@ export default function PlanificationPage() {
           </div>
         </div>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

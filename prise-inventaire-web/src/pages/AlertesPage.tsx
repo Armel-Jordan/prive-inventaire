@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw, Plus, X, Save } from 'lucide-react';
 import { getProduits } from '@/services/api';
 import type { Produit } from '@/types';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -48,6 +50,7 @@ interface ProduitAvecSeuil {
 }
 
 export default function AlertesPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [stats, setStats] = useState<AlerteStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +77,7 @@ export default function AlertesPage() {
         setStats(await statsRes.json());
       }
     } catch (error) {
-      console.error('Erreur chargement alertes:', error);
+      toast('Erreur de chargement des alertes', 'error');
     } finally {
       setLoading(false);
     }
@@ -95,7 +98,7 @@ export default function AlertesPage() {
         seuil_alerte: null,
       })));
     } catch (error) {
-      console.error('Erreur chargement produits:', error);
+      toast('Erreur de chargement des produits', 'error');
     } finally {
       setLoadingProduits(false);
     }
@@ -126,7 +129,7 @@ export default function AlertesPage() {
         });
       }
     } catch (error) {
-      console.error('Erreur sauvegarde seuil:', error);
+      toast('Erreur lors de la sauvegarde', 'error');
     } finally {
       setSaving(false);
     }
@@ -380,6 +383,7 @@ export default function AlertesPage() {
           </div>
         )}
       </div>
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

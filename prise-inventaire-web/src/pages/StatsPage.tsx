@@ -3,10 +3,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, Calendar, Package, Users } from 'lucide-react';
 import { getScans, getSecteurs, getEmployes } from '@/services/api';
 import type { InventaireScan } from '@/types';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
 export default function StatsPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [scans, setScans] = useState<InventaireScan[]>([]);
   const [loading, setLoading] = useState(true);
   const [periode, setPeriode] = useState<'7' | '30' | '90'>('30');
@@ -22,7 +25,7 @@ export default function StatsPage() {
         ]);
         setScans(scansData);
       } catch (error) {
-        console.error('Erreur chargement:', error);
+        toast('Erreur de chargement des données', 'error');
       } finally {
         setLoading(false);
       }
@@ -258,6 +261,7 @@ export default function StatsPage() {
           </div>
         )}
       </div>
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers } from 'lucide-react';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -65,6 +67,7 @@ interface BatchItem {
 }
 
 export default function RelocalisationPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [mouvements, setMouvements] = useState<Mouvement[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +112,7 @@ export default function RelocalisationPage() {
       setMouvements(mouvementsRes);
       setSecteurs(secteursRes);
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
     }
@@ -151,16 +154,13 @@ export default function RelocalisationPage() {
 
   async function handleBatchSubmit() {
     if (batchItems.length === 0) {
-      alert('Ajoutez au moins un produit');
-      return;
+      toast('Ajoutez au moins un produit', 'error'); return;
     }
     if ((batchType === 'arrivage' || batchType === 'transfert') && !batchSecteurDest) {
-      alert('Sélectionnez un secteur destination');
-      return;
+      toast('Sélectionnez un secteur destination', 'error'); return;
     }
     if ((batchType === 'transfert' || batchType === 'sortie') && !batchSecteurSource) {
-      alert('Sélectionnez un secteur source');
-      return;
+      toast('Sélectionnez un secteur source', 'error'); return;
     }
 
     setSubmitting(true);
@@ -186,8 +186,7 @@ export default function RelocalisationPage() {
       setShowModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur batch:', error);
-      alert('Erreur lors de l\'enregistrement');
+      toast('Erreur lors de l\'enregistrement', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -207,8 +206,7 @@ export default function RelocalisationPage() {
       setShowModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'enregistrement');
+      toast('Erreur lors de l\'enregistrement', 'error');
     }
   }
 
@@ -677,6 +675,7 @@ export default function RelocalisationPage() {
           </div>
         </div>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

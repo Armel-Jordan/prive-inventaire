@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { FileText, TrendingUp, TrendingDown, Users, Package, Calendar, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -57,6 +59,7 @@ const moisOptions = [
 ];
 
 export default function RapportsPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [mois, setMois] = useState(new Date().getMonth() + 1);
   const [annee, setAnnee] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState<'secteurs' | 'employes' | 'evolution' | 'produits'>('secteurs');
@@ -111,7 +114,7 @@ export default function RapportsPage() {
         }
       }
     } catch (error) {
-      console.error('Erreur chargement rapport:', error);
+      toast('Erreur de chargement du rapport', 'error');
     } finally {
       setLoading(false);
     }
@@ -378,6 +381,7 @@ export default function RapportsPage() {
           )}
         </>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

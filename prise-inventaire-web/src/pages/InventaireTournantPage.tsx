@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, MapPin, AlertTriangle, CheckCircle, Calendar, Clock, TrendingUp } from 'lucide-react';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -56,6 +58,7 @@ function getPriorityLabel(score: number): string {
 }
 
 export default function InventaireTournantPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [activeTab, setActiveTab] = useState<'suggestions' | 'planning'>('suggestions');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -93,7 +96,7 @@ export default function InventaireTournantPage() {
         }
       }
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
     }
@@ -291,6 +294,7 @@ export default function InventaireTournantPage() {
           )}
         </>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

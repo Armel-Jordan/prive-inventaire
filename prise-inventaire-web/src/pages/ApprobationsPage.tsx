@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck, Clock, CheckCircle, XCircle, Settings, AlertTriangle } from 'lucide-react';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -62,6 +64,7 @@ const statutLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function ApprobationsPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [approbations, setApprobations] = useState<Approbation[]>([]);
   const [seuils, setSeuils] = useState<Seuil[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -92,7 +95,7 @@ export default function ApprobationsPage() {
       if (statsRes.ok) setStats(await statsRes.json());
       if (seuilsRes.ok) setSeuils(await seuilsRes.json());
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      toast('Erreur de chargement des données', 'error');
     } finally {
       setLoading(false);
     }
@@ -108,8 +111,7 @@ export default function ApprobationsPage() {
   async function handleDecision() {
     if (!selectedApprobation) return;
     if (decisionType === 'reject' && !commentaire.trim()) {
-      alert('Un commentaire est requis pour rejeter');
-      return;
+      toast('Un commentaire est requis pour rejeter', 'error'); return;
     }
 
     try {
@@ -130,10 +132,10 @@ export default function ApprobationsPage() {
         loadData();
       } else {
         const error = await response.json();
-        alert(error.message || 'Erreur');
+        toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      toast('Une erreur est survenue', 'error');
     }
   }
 
@@ -147,10 +149,10 @@ export default function ApprobationsPage() {
 
       if (response.ok) {
         setShowSettings(false);
-        alert('Seuils mis à jour');
+        toast('Seuils mis à jour avec succès', 'success');
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      toast('Une erreur est survenue', 'error');
     }
   }
 
@@ -436,6 +438,7 @@ export default function ApprobationsPage() {
           </div>
         </div>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

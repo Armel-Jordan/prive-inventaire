@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { History, Plus, Pencil, Trash2, Filter, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -46,6 +48,7 @@ const actionLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function AuditPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +71,7 @@ export default function AuditPage() {
       if (logsRes.ok) setLogs(await logsRes.json());
       if (statsRes.ok) setStats(await statsRes.json());
     } catch (error) {
-      console.error('Erreur chargement audit:', error);
+      toast('Erreur de chargement de l\'historique', 'error');
     } finally {
       setLoading(false);
     }
@@ -256,6 +259,7 @@ export default function AuditPage() {
           </div>
         )}
       </div>
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

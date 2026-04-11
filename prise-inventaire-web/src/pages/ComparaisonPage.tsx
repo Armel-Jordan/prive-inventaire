@@ -3,6 +3,8 @@ import { ArrowUp, ArrowDown, Minus, Calendar, Download, RefreshCw } from 'lucide
 import { getScans } from '@/services/api';
 import type { InventaireScan } from '@/types';
 import { formatDate } from '@/lib/utils';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 interface ProduitComparaison {
   numero: string;
@@ -15,6 +17,7 @@ interface ProduitComparaison {
 }
 
 export default function ComparaisonPage() {
+  const { toasts, toast, dismiss } = useToast();
   const [scans, setScans] = useState<InventaireScan[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateDebut, setDateDebut] = useState('');
@@ -41,7 +44,7 @@ export default function ComparaisonPage() {
           }
         }
       } catch (error) {
-        console.error('Erreur chargement:', error);
+        toast('Erreur de chargement des données', 'error');
       } finally {
         setLoading(false);
       }
@@ -326,6 +329,7 @@ export default function ComparaisonPage() {
           </div>
         )}
       </div>
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

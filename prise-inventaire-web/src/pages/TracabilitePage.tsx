@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Search, MapPin, Package, Truck, ClipboardList, ArrowRight, Clock } from 'lucide-react';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -54,6 +56,7 @@ const actionLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function TracabilitePage() {
+  const { toasts, toast, dismiss } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedProduit, setSelectedProduit] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export default function TracabilitePage() {
         setShowResults(true);
       }
     } catch (error) {
-      console.error('Erreur recherche:', error);
+      toast('Erreur lors de la recherche', 'error');
     }
   }
 
@@ -100,7 +103,7 @@ export default function TracabilitePage() {
         setStats(data.stats);
       }
     } catch (error) {
-      console.error('Erreur chargement historique:', error);
+      toast('Erreur de chargement de l\'historique', 'error');
     } finally {
       setLoading(false);
     }
@@ -315,6 +318,7 @@ export default function TracabilitePage() {
           <p className="text-gray-400">Entrez un numéro ou nom de produit pour voir son historique complet</p>
         </div>
       )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
