@@ -10,6 +10,10 @@ return new class extends Migration
     public function up(): void
     {
         // Table des rôles personnalisés
+        if (Schema::hasTable('roles_custom')) {
+            return;
+        }
+
         Schema::create('roles_custom', function (Blueprint $table) {
             $table->id();
             $table->string('nom', 50)->unique();
