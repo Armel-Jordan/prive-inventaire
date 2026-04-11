@@ -79,9 +79,11 @@ export default function CommandesClientPage() {
     };
     try {
       if (editingId) {
-        await updateCommandeClient(editingId, payload);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await updateCommandeClient(editingId, payload as any);
       } else {
-        await createCommandeClient(payload);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await createCommandeClient(payload as any);
       }
       setShowModal(false);
       resetForm();

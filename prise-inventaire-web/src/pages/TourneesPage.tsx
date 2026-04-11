@@ -400,7 +400,7 @@ export default function TourneesPage() {
                     <div>
                       <p className="font-mono font-medium dark:text-white">{bon.numero}</p>
                       <p className="text-sm text-gray-500">
-                        {bon.facture?.client?.nom || 'Client inconnu'} — {bon.mode_livraison}
+                        {bon.facture?.client?.raison_sociale || 'Client inconnu'} — {bon.mode_livraison}
                       </p>
                     </div>
                     <button
