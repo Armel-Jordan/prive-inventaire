@@ -8,8 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('employes', 'admin_user_id')) {
+            return;
+        }
+
         Schema::table('employes', function (Blueprint $table) {
-            $table->unsignedBigInteger('admin_user_id')->nullable()->after('tenant_id');
+            $table->unsignedBigInteger('admin_user_id')->nullable();
             $table->foreign('admin_user_id')->references('id')->on('admin_users')->onDelete('set null');
         });
     }

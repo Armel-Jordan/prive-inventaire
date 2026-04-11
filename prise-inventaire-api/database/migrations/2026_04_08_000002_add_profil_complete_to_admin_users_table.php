@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('admin_users', 'profil_complete')) {
+            return;
+        }
+
         Schema::table('admin_users', function (Blueprint $table) {
             $table->boolean('profil_complete')->default(false)->after('actif');
         });
