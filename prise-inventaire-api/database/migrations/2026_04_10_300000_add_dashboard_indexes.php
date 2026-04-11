@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -12,19 +13,25 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    /** Vérifie si un index existe via information_schema (compatible Laravel 11+). */
+    private function indexExists(string $table, string $indexName): bool
+    {
+        return DB::table('information_schema.STATISTICS')
+            ->where('TABLE_SCHEMA', DB::raw('DATABASE()'))
+            ->where('TABLE_NAME', $table)
+            ->where('INDEX_NAME', $indexName)
+            ->exists();
+    }
+
     public function up(): void
     {
         // -- devis ---------------------------------------------------------------
         if (Schema::hasTable('devis')) {
             Schema::table('devis', function (Blueprint $table) {
-                // Évite les doublons si l'index existe déjà
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('devis'));
-
-                if (! in_array('devis_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('devis', 'devis_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'devis_tenant_created_at_index');
                 }
-                if (! in_array('devis_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('devis', 'devis_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'devis_tenant_statut_index');
                 }
             });
@@ -33,13 +40,10 @@ return new class extends Migration
         // -- com_client_entete ---------------------------------------------------
         if (Schema::hasTable('com_client_entete')) {
             Schema::table('com_client_entete', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('com_client_entete'));
-
-                if (! in_array('cce_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('com_client_entete', 'cce_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'cce_tenant_created_at_index');
                 }
-                if (! in_array('cce_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('com_client_entete', 'cce_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'cce_tenant_statut_index');
                 }
             });
@@ -48,16 +52,13 @@ return new class extends Migration
         // -- factures ------------------------------------------------------------
         if (Schema::hasTable('factures')) {
             Schema::table('factures', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('factures'));
-
-                if (! in_array('factures_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('factures', 'factures_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'factures_tenant_created_at_index');
                 }
-                if (! in_array('factures_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('factures', 'factures_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'factures_tenant_statut_index');
                 }
-                if (! in_array('factures_tenant_echeance_index', $indexes)) {
+                if (! $this->indexExists('factures', 'factures_tenant_echeance_index')) {
                     $table->index(['tenant_id', 'statut', 'date_echeance'], 'factures_tenant_echeance_index');
                 }
             });
@@ -66,13 +67,10 @@ return new class extends Migration
         // -- bons_livraison ------------------------------------------------------
         if (Schema::hasTable('bons_livraison')) {
             Schema::table('bons_livraison', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('bons_livraison'));
-
-                if (! in_array('bl_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('bons_livraison', 'bl_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'bl_tenant_created_at_index');
                 }
-                if (! in_array('bl_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('bons_livraison', 'bl_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'bl_tenant_statut_index');
                 }
             });
@@ -81,13 +79,10 @@ return new class extends Migration
         // -- tournees ------------------------------------------------------------
         if (Schema::hasTable('tournees')) {
             Schema::table('tournees', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('tournees'));
-
-                if (! in_array('tournees_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('tournees', 'tournees_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'tournees_tenant_created_at_index');
                 }
-                if (! in_array('tournees_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('tournees', 'tournees_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'tournees_tenant_statut_index');
                 }
             });
@@ -96,13 +91,10 @@ return new class extends Migration
         // -- com_four_entete -----------------------------------------------------
         if (Schema::hasTable('com_four_entete')) {
             Schema::table('com_four_entete', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('com_four_entete'));
-
-                if (! in_array('cfe_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('com_four_entete', 'cfe_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'cfe_tenant_created_at_index');
                 }
-                if (! in_array('cfe_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('com_four_entete', 'cfe_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'cfe_tenant_statut_index');
                 }
             });
@@ -111,10 +103,7 @@ return new class extends Migration
         // -- produits ------------------------------------------------------------
         if (Schema::hasTable('produits')) {
             Schema::table('produits', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('produits'));
-
-                if (! in_array('produits_tenant_deleted_at_index', $indexes)) {
+                if (! $this->indexExists('produits', 'produits_tenant_deleted_at_index')) {
                     $table->index(['tenant_id', 'deleted_at'], 'produits_tenant_deleted_at_index');
                 }
             });
@@ -123,10 +112,7 @@ return new class extends Migration
         // -- alertes_stock -------------------------------------------------------
         if (Schema::hasTable('alertes_stock')) {
             Schema::table('alertes_stock', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('alertes_stock'));
-
-                if (! in_array('alertes_stock_tenant_statut_index', $indexes)) {
+                if (! $this->indexExists('alertes_stock', 'alertes_stock_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'alertes_stock_tenant_statut_index');
                 }
             });
@@ -135,13 +121,10 @@ return new class extends Migration
         // -- mouvement_inventaire ------------------------------------------------
         if (Schema::hasTable('mouvement_inventaire')) {
             Schema::table('mouvement_inventaire', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('mouvement_inventaire'));
-
-                if (! in_array('mi_tenant_created_at_index', $indexes)) {
+                if (! $this->indexExists('mouvement_inventaire', 'mi_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'mi_tenant_created_at_index');
                 }
-                if (! in_array('mi_tenant_type_index', $indexes)) {
+                if (! $this->indexExists('mouvement_inventaire', 'mi_tenant_type_index')) {
                     $table->index(['tenant_id', 'type_mouvement'], 'mi_tenant_type_index');
                 }
             });
@@ -150,10 +133,7 @@ return new class extends Migration
         // -- facture_paiements (joint via facture.tenant_id) ---------------------
         if (Schema::hasTable('facture_paiements')) {
             Schema::table('facture_paiements', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = array_keys($sm->listTableIndexes('facture_paiements'));
-
-                if (! in_array('fp_facture_created_at_index', $indexes)) {
+                if (! $this->indexExists('facture_paiements', 'fp_facture_created_at_index')) {
                     $table->index(['facture_id', 'created_at'], 'fp_facture_created_at_index');
                 }
             });
@@ -181,11 +161,8 @@ return new class extends Migration
             }
 
             Schema::table($tableName, function (Blueprint $table) use ($tableName, $indexNames) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $existing = array_keys($sm->listTableIndexes($tableName));
-
                 foreach ($indexNames as $indexName) {
-                    if (in_array($indexName, $existing)) {
+                    if ($this->indexExists($tableName, $indexName)) {
                         $table->dropIndex($indexName);
                     }
                 }
