@@ -10,34 +10,36 @@ use Illuminate\Http\Request;
 class TransfertPlanifieController extends Controller
 {
     /**
-     * Liste des transferts planifiés
+     * Liste des transferts planifiés — isolés par tenant.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = TransfertPlanifie::query()->orderBy('date_planifiee', 'asc');
+        $tenantId = auth()->user()->tenant_id;
 
-        if ($request->has('statut') && $request->statut) {
+        $query = TransfertPlanifie::where('tenant_id', $tenantId)->orderBy('date_planifiee', 'asc');
+
+        if ($request->filled('statut')) {
             $query->where('statut', $request->statut);
         }
 
-        if ($request->has('date_debut') && $request->date_debut) {
+        if ($request->filled('date_debut')) {
             $query->whereDate('date_planifiee', '>=', $request->date_debut);
         }
 
-        if ($request->has('date_fin') && $request->date_fin) {
+        if ($request->filled('date_fin')) {
             $query->whereDate('date_planifiee', '<=', $request->date_fin);
         }
 
-        $transferts = $query->get();
-
-        return response()->json($transferts);
+        return response()->json($query->get());
     }
 
     /**
-     * Créer un transfert planifié
+     * Créer un transfert planifié.
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'type' => 'required|in:arrivage,transfert,sortie',
             'produit_numero' => 'required|string|max:50',
@@ -53,6 +55,7 @@ class TransfertPlanifieController extends Controller
         ]);
 
         $validated['statut'] = 'planifie';
+        $validated['tenant_id'] = $tenantId;
         $validated['cree_par'] = $request->user()->name ?? 'Admin';
 
         $transfert = TransfertPlanifie::create($validated);
@@ -65,21 +68,23 @@ class TransfertPlanifieController extends Controller
     }
 
     /**
-     * Détails d'un transfert planifié
+     * Détails d'un transfert planifié — vérifie l'appartenance au tenant.
      */
     public function show(int $id): JsonResponse
     {
-        $transfert = TransfertPlanifie::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $transfert = TransfertPlanifie::where('tenant_id', $tenantId)->findOrFail($id);
 
         return response()->json($transfert);
     }
 
     /**
-     * Modifier un transfert planifié
+     * Modifier un transfert planifié.
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $transfert = TransfertPlanifie::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $transfert = TransfertPlanifie::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($transfert->statut !== 'planifie') {
             return response()->json([
@@ -112,11 +117,12 @@ class TransfertPlanifieController extends Controller
     }
 
     /**
-     * Exécuter un transfert planifié
+     * Exécuter un transfert planifié.
      */
     public function execute(Request $request, int $id): JsonResponse
     {
-        $transfert = TransfertPlanifie::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $transfert = TransfertPlanifie::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($transfert->statut !== 'planifie') {
             return response()->json([
@@ -125,8 +131,8 @@ class TransfertPlanifieController extends Controller
             ], 422);
         }
 
-        // Créer le mouvement réel
         MouvementTenant::create([
+            'tenant_id' => $tenantId,
             'type' => $transfert->type,
             'produit_numero' => $transfert->produit_numero,
             'produit_nom' => $transfert->produit_nom,
@@ -138,7 +144,6 @@ class TransfertPlanifieController extends Controller
             'employe' => $transfert->employe,
         ]);
 
-        // Marquer comme exécuté
         $transfert->update([
             'statut' => 'execute',
             'execute_le' => now(),
@@ -153,11 +158,12 @@ class TransfertPlanifieController extends Controller
     }
 
     /**
-     * Annuler un transfert planifié
+     * Annuler un transfert planifié.
      */
     public function cancel(int $id): JsonResponse
     {
-        $transfert = TransfertPlanifie::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $transfert = TransfertPlanifie::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($transfert->statut !== 'planifie') {
             return response()->json([
@@ -176,11 +182,12 @@ class TransfertPlanifieController extends Controller
     }
 
     /**
-     * Supprimer un transfert planifié
+     * Supprimer un transfert planifié.
      */
     public function destroy(int $id): JsonResponse
     {
-        $transfert = TransfertPlanifie::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $transfert = TransfertPlanifie::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($transfert->statut === 'execute') {
             return response()->json([
@@ -191,18 +198,18 @@ class TransfertPlanifieController extends Controller
 
         $transfert->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Transfert supprimé',
-        ]);
+        return response()->json(['success' => true, 'message' => 'Transfert supprimé']);
     }
 
     /**
-     * Transferts à venir (aujourd'hui et demain)
+     * Transferts à venir (aujourd'hui et demain) — isolés par tenant.
      */
     public function upcoming(): JsonResponse
     {
-        $transferts = TransfertPlanifie::where('statut', 'planifie')
+        $tenantId = auth()->user()->tenant_id;
+
+        $transferts = TransfertPlanifie::where('tenant_id', $tenantId)
+            ->where('statut', 'planifie')
             ->whereDate('date_planifiee', '<=', now()->addDays(2))
             ->orderBy('date_planifiee', 'asc')
             ->get();
@@ -211,21 +218,18 @@ class TransfertPlanifieController extends Controller
     }
 
     /**
-     * Statistiques des transferts planifiés
+     * Statistiques des transferts planifiés — isolées par tenant.
      */
     public function stats(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+        $base = fn () => TransfertPlanifie::where('tenant_id', $tenantId);
+
         return response()->json([
-            'planifies' => TransfertPlanifie::where('statut', 'planifie')->count(),
-            'executes_ce_mois' => TransfertPlanifie::where('statut', 'execute')
-                ->whereMonth('execute_le', now()->month)
-                ->count(),
-            'annules_ce_mois' => TransfertPlanifie::where('statut', 'annule')
-                ->whereMonth('updated_at', now()->month)
-                ->count(),
-            'a_venir_24h' => TransfertPlanifie::where('statut', 'planifie')
-                ->where('date_planifiee', '<=', now()->addDay())
-                ->count(),
+            'planifies' => $base()->where('statut', 'planifie')->count(),
+            'executes_ce_mois' => $base()->where('statut', 'execute')->whereMonth('execute_le', now()->month)->count(),
+            'annules_ce_mois' => $base()->where('statut', 'annule')->whereMonth('updated_at', now()->month)->count(),
+            'a_venir_24h' => $base()->where('statut', 'planifie')->where('date_planifiee', '<=', now()->addDay())->count(),
         ]);
     }
 }

@@ -14,6 +14,7 @@ class MouvementTenant extends Model
     protected $table = 'mouvement_relocalisation';
 
     protected $fillable = [
+        'tenant_id',
         'type',
         'produit_numero',
         'produit_nom',

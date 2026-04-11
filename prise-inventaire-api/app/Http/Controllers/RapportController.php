@@ -10,15 +10,16 @@ use Illuminate\Http\Request;
 class RapportController extends Controller
 {
     /**
-     * Rapport mensuel des mouvements par secteur
+     * Rapport mensuel des mouvements par secteur — isolé par tenant.
      */
     public function mouvementsParSecteur(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $mois = $request->get('mois', now()->month);
         $annee = $request->get('annee', now()->year);
 
-        // Mouvements entrants par secteur (arrivages + transferts entrants)
-        $entrants = MouvementTenant::whereYear('created_at', $annee)
+        $entrants = MouvementTenant::where('tenant_id', $tenantId)
+            ->whereYear('created_at', $annee)
             ->whereMonth('created_at', $mois)
             ->whereNotNull('secteur_destination')
             ->whereIn('type', ['arrivage', 'transfert'])
@@ -29,8 +30,8 @@ class RapportController extends Controller
             ->get()
             ->keyBy('secteur');
 
-        // Mouvements sortants par secteur (sorties + transferts sortants)
-        $sortants = MouvementTenant::whereYear('created_at', $annee)
+        $sortants = MouvementTenant::where('tenant_id', $tenantId)
+            ->whereYear('created_at', $annee)
             ->whereMonth('created_at', $mois)
             ->whereNotNull('secteur_source')
             ->whereIn('type', ['sortie', 'transfert'])
@@ -41,12 +42,9 @@ class RapportController extends Controller
             ->get()
             ->keyBy('secteur');
 
-        // Combiner les secteurs
         $secteurs = collect($entrants->keys())
             ->merge($sortants->keys())
-            ->unique()
-            ->sort()
-            ->values();
+            ->unique()->sort()->values();
 
         $rapport = $secteurs->map(function ($secteur) use ($entrants, $sortants) {
             $entrant = $entrants->get($secteur);
@@ -66,35 +64,28 @@ class RapportController extends Controller
             ];
         });
 
-        // Totaux
-        $totaux = [
-            'entrants' => [
-                'nombre' => $rapport->sum('entrants.nombre'),
-                'quantite' => $rapport->sum('entrants.quantite'),
-            ],
-            'sortants' => [
-                'nombre' => $rapport->sum('sortants.nombre'),
-                'quantite' => $rapport->sum('sortants.quantite'),
-            ],
-        ];
-
         return response()->json([
             'mois' => $mois,
             'annee' => $annee,
             'rapport' => $rapport,
-            'totaux' => $totaux,
+            'totaux' => [
+                'entrants' => ['nombre' => $rapport->sum('entrants.nombre'), 'quantite' => $rapport->sum('entrants.quantite')],
+                'sortants' => ['nombre' => $rapport->sum('sortants.nombre'), 'quantite' => $rapport->sum('sortants.quantite')],
+            ],
         ]);
     }
 
     /**
-     * Rapport d'activité par employé
+     * Rapport d'activité par employé — isolé par tenant.
      */
     public function activiteParEmploye(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $mois = $request->get('mois', now()->month);
         $annee = $request->get('annee', now()->year);
 
-        $mouvements = MouvementTenant::whereYear('created_at', $annee)
+        $mouvements = MouvementTenant::where('tenant_id', $tenantId)
+            ->whereYear('created_at', $annee)
             ->whereMonth('created_at', $mois)
             ->select('employe')
             ->selectRaw('COUNT(*) as nombre_mouvements')
@@ -103,7 +94,8 @@ class RapportController extends Controller
             ->orderByDesc('nombre_mouvements')
             ->get();
 
-        $scans = ScanTenant::whereYear('date_saisie', $annee)
+        $scans = ScanTenant::where('tenant_id', $tenantId)
+            ->whereYear('date_saisie', $annee)
             ->whereMonth('date_saisie', $mois)
             ->select('employe')
             ->selectRaw('COUNT(*) as nombre_scans')
@@ -124,37 +116,32 @@ class RapportController extends Controller
             ];
         });
 
-        return response()->json([
-            'mois' => $mois,
-            'annee' => $annee,
-            'rapport' => $rapport,
-        ]);
+        return response()->json(['mois' => $mois, 'annee' => $annee, 'rapport' => $rapport]);
     }
 
     /**
-     * Évolution mensuelle sur l'année
+     * Évolution mensuelle sur l'année — isolée par tenant.
      */
     public function evolutionAnnuelle(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $annee = $request->get('annee', now()->year);
 
-        $mouvements = MouvementTenant::whereYear('created_at', $annee)
+        $mouvements = MouvementTenant::where('tenant_id', $tenantId)
+            ->whereYear('created_at', $annee)
             ->selectRaw('MONTH(created_at) as mois')
             ->selectRaw('COUNT(*) as nombre')
             ->selectRaw('SUM(quantite) as quantite')
             ->groupByRaw('MONTH(created_at)')
-            ->orderByRaw('MONTH(created_at)')
-            ->get()
-            ->keyBy('mois');
+            ->get()->keyBy('mois');
 
-        $scans = ScanTenant::whereYear('date_saisie', $annee)
+        $scans = ScanTenant::where('tenant_id', $tenantId)
+            ->whereYear('date_saisie', $annee)
             ->selectRaw('MONTH(date_saisie) as mois')
             ->selectRaw('COUNT(*) as nombre')
             ->selectRaw('SUM(quantite) as quantite')
             ->groupByRaw('MONTH(date_saisie)')
-            ->orderByRaw('MONTH(date_saisie)')
-            ->get()
-            ->keyBy('mois');
+            ->get()->keyBy('mois');
 
         $moisNoms = [
             1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
@@ -176,22 +163,21 @@ class RapportController extends Controller
             ];
         });
 
-        return response()->json([
-            'annee' => $annee,
-            'rapport' => $rapport,
-        ]);
+        return response()->json(['annee' => $annee, 'rapport' => $rapport]);
     }
 
     /**
-     * Top produits du mois
+     * Top produits du mois — isolés par tenant.
      */
     public function topProduits(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
         $mois = $request->get('mois', now()->month);
         $annee = $request->get('annee', now()->year);
         $limit = min($request->get('limit', 10), 50);
 
-        $produits = MouvementTenant::whereYear('created_at', $annee)
+        $produits = MouvementTenant::where('tenant_id', $tenantId)
+            ->whereYear('created_at', $annee)
             ->whereMonth('created_at', $mois)
             ->select('produit_numero', 'produit_nom')
             ->selectRaw('COUNT(*) as nombre_mouvements')
@@ -201,10 +187,6 @@ class RapportController extends Controller
             ->limit($limit)
             ->get();
 
-        return response()->json([
-            'mois' => $mois,
-            'annee' => $annee,
-            'produits' => $produits,
-        ]);
+        return response()->json(['mois' => $mois, 'annee' => $annee, 'produits' => $produits]);
     }
 }

@@ -11,30 +11,32 @@ use Illuminate\Support\Facades\DB;
 class ApprobationController extends Controller
 {
     /**
-     * Liste des demandes d'approbation
+     * Liste des demandes d'approbation — isolées par tenant.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Approbation::query()->orderByDesc('created_at');
+        $tenantId = auth()->user()->tenant_id;
 
-        if ($request->has('statut') && $request->statut) {
+        $query = Approbation::where('tenant_id', $tenantId)->orderByDesc('created_at');
+
+        if ($request->filled('statut')) {
             $query->where('statut', $request->statut);
         }
 
-        if ($request->has('demandeur') && $request->demandeur) {
+        if ($request->filled('demandeur')) {
             $query->where('demandeur', $request->demandeur);
         }
 
-        $approbations = $query->get();
-
-        return response()->json($approbations);
+        return response()->json($query->get());
     }
 
     /**
-     * Créer une demande d'approbation
+     * Créer une demande d'approbation.
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'type_mouvement' => 'required|in:arrivage,transfert,sortie',
             'produit_numero' => 'required|string|max:50',
@@ -47,12 +49,12 @@ class ApprobationController extends Controller
             'demandeur' => 'required|string|max:100',
         ]);
 
-        // Vérifier si approbation nécessaire
-        $seuil = $this->getSeuilApprobation($validated['type_mouvement']);
+        $seuil = $this->getSeuilApprobation($validated['type_mouvement'], $tenantId);
 
         if ($seuil && $validated['quantite'] >= $seuil) {
             $validated['statut'] = 'en_attente';
             $validated['seuil_declenchement'] = $seuil;
+            $validated['tenant_id'] = $tenantId;
             $approbation = Approbation::create($validated);
 
             return response()->json([
@@ -63,8 +65,8 @@ class ApprobationController extends Controller
             ], 201);
         }
 
-        // Pas besoin d'approbation, créer directement le mouvement
         $mouvement = MouvementTenant::create([
+            'tenant_id' => $tenantId,
             'type' => $validated['type_mouvement'],
             'produit_numero' => $validated['produit_numero'],
             'produit_nom' => $validated['produit_nom'],
@@ -85,11 +87,12 @@ class ApprobationController extends Controller
     }
 
     /**
-     * Approuver une demande
+     * Approuver une demande — vérifie l'appartenance au tenant.
      */
     public function approve(Request $request, int $id): JsonResponse
     {
-        $approbation = Approbation::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $approbation = Approbation::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($approbation->statut !== 'en_attente') {
             return response()->json([
@@ -103,8 +106,8 @@ class ApprobationController extends Controller
             'commentaire' => 'nullable|string',
         ]);
 
-        // Créer le mouvement
         MouvementTenant::create([
+            'tenant_id' => $tenantId,
             'type' => $approbation->type_mouvement,
             'produit_numero' => $approbation->produit_numero,
             'produit_nom' => $approbation->produit_nom,
@@ -116,7 +119,6 @@ class ApprobationController extends Controller
             'employe' => $approbation->demandeur,
         ]);
 
-        // Mettre à jour l'approbation
         $approbation->update([
             'statut' => 'approuve',
             'approbateur' => $validated['approbateur'],
@@ -132,11 +134,12 @@ class ApprobationController extends Controller
     }
 
     /**
-     * Rejeter une demande
+     * Rejeter une demande — vérifie l'appartenance au tenant.
      */
     public function reject(Request $request, int $id): JsonResponse
     {
-        $approbation = Approbation::findOrFail($id);
+        $tenantId = auth()->user()->tenant_id;
+        $approbation = Approbation::where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($approbation->statut !== 'en_attente') {
             return response()->json([
@@ -165,30 +168,30 @@ class ApprobationController extends Controller
     }
 
     /**
-     * Statistiques des approbations
+     * Statistiques des approbations — isolées par tenant.
      */
     public function stats(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
         return response()->json([
-            'en_attente' => Approbation::where('statut', 'en_attente')->count(),
-            'approuvees_ce_mois' => Approbation::where('statut', 'approuve')
-                ->whereMonth('date_decision', now()->month)
-                ->count(),
-            'rejetees_ce_mois' => Approbation::where('statut', 'rejete')
-                ->whereMonth('date_decision', now()->month)
-                ->count(),
+            'en_attente' => Approbation::where('tenant_id', $tenantId)->where('statut', 'en_attente')->count(),
+            'approuvees_ce_mois' => Approbation::where('tenant_id', $tenantId)->where('statut', 'approuve')
+                ->whereMonth('date_decision', now()->month)->count(),
+            'rejetees_ce_mois' => Approbation::where('tenant_id', $tenantId)->where('statut', 'rejete')
+                ->whereMonth('date_decision', now()->month)->count(),
         ]);
     }
 
     /**
-     * Obtenir les seuils d'approbation
+     * Obtenir les seuils d'approbation du tenant.
      */
     public function getSettings(): JsonResponse
     {
-        $seuils = DB::table('parametres_approbation')->get();
+        $tenantId = auth()->user()->tenant_id;
+        $seuils = DB::table('parametres_approbation')->where('tenant_id', $tenantId)->get();
 
         if ($seuils->isEmpty()) {
-            // Créer les seuils par défaut
             $defaults = [
                 ['type_mouvement' => 'arrivage', 'seuil_quantite' => 100, 'actif' => true],
                 ['type_mouvement' => 'transfert', 'seuil_quantite' => 50, 'actif' => true],
@@ -197,21 +200,24 @@ class ApprobationController extends Controller
             foreach ($defaults as $default) {
                 DB::table('parametres_approbation')->insert([
                     ...$default,
+                    'tenant_id' => $tenantId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
-            $seuils = DB::table('parametres_approbation')->get();
+            $seuils = DB::table('parametres_approbation')->where('tenant_id', $tenantId)->get();
         }
 
         return response()->json($seuils);
     }
 
     /**
-     * Mettre à jour les seuils d'approbation
+     * Mettre à jour les seuils d'approbation du tenant.
      */
     public function updateSettings(Request $request): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'seuils' => 'required|array',
             'seuils.*.type_mouvement' => 'required|in:arrivage,transfert,sortie',
@@ -222,7 +228,7 @@ class ApprobationController extends Controller
         foreach ($validated['seuils'] as $seuil) {
             DB::table('parametres_approbation')
                 ->updateOrInsert(
-                    ['type_mouvement' => $seuil['type_mouvement']],
+                    ['type_mouvement' => $seuil['type_mouvement'], 'tenant_id' => $tenantId],
                     [
                         'seuil_quantite' => $seuil['seuil_quantite'],
                         'actif' => $seuil['actif'],
@@ -231,15 +237,13 @@ class ApprobationController extends Controller
                 );
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Seuils mis à jour',
-        ]);
+        return response()->json(['success' => true, 'message' => 'Seuils mis à jour']);
     }
 
-    private function getSeuilApprobation(string $type): ?float
+    private function getSeuilApprobation(string $type, int $tenantId): ?float
     {
         $param = DB::table('parametres_approbation')
+            ->where('tenant_id', $tenantId)
             ->where('type_mouvement', $type)
             ->where('actif', true)
             ->first();
