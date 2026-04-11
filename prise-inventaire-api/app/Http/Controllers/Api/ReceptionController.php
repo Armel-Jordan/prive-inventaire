@@ -143,7 +143,10 @@ class ReceptionController extends Controller
 
     public function commandesEnAttente(): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $commandes = ComFourEntete::with(['fournisseur', 'lignes.produit'])
+            ->where('tenant_id', $tenantId)
             ->whereIn('statut', [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])
             ->orderBy('date_livraison_prevue')
             ->get();
@@ -153,6 +156,12 @@ class ReceptionController extends Controller
 
     public function lignesEnAttente(ComFourEntete $commande): JsonResponse
     {
+        $tenantId = auth()->user()->tenant_id;
+
+        if ($commande->tenant_id !== $tenantId) {
+            return response()->json(['message' => 'Non autorisé.'], 403);
+        }
+
         $lignes = $commande->lignes()
             ->with('produit')
             ->whereRaw('quantite_recue < quantite_commandee')

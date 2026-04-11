@@ -16,7 +16,11 @@ class AlerteStockController extends Controller
      */
     private function tenantId(): int
     {
-        return request()->attributes->get('tenant_id') ?? 0;
+        $tenant = request()->attributes->get('tenant');
+        if ($tenant) {
+            return $tenant->id;
+        }
+        return auth()->user()?->tenant_id ?? 0;
     }
 
     public function index(): JsonResponse
@@ -80,7 +84,8 @@ class AlerteStockController extends Controller
             'seuil_alerte' => 'required|numeric|min:0',
         ]);
 
-        $produit = ProduitTenant::findOrFail($produitId);
+        $tenantId = $this->tenantId();
+        $produit = ProduitTenant::where('tenant_id', $tenantId)->findOrFail($produitId);
         $produit->seuil_alerte = $request->seuil_alerte;
         $produit->save();
 
