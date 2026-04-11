@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -210,13 +211,7 @@ export default function RelocalisationPage() {
     }
   }
 
-  if (loading && mouvements.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Chargement...</div>
-      </div>
-    );
-  }
+  if (loading && mouvements.length === 0) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

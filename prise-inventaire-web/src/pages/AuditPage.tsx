@@ -3,6 +3,7 @@ import { History, Plus, Pencil, Trash2, Filter, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -84,9 +85,7 @@ export default function AuditPage() {
 
   const modelTypes = [...new Set(logs.map(l => l.model_type))];
 
-  if (loading && logs.length === 0) {
-    return <div className="text-gray-500">Chargement de l'historique...</div>;
-  }
+  if (loading && logs.length === 0) return <PageSkeleton kpis={3} />;
 
   return (
     <div className="space-y-6">

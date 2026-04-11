@@ -3,6 +3,7 @@ import { FileText, TrendingUp, TrendingDown, Users, Package, Calendar, Download 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -220,9 +221,7 @@ export default function RapportsPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
-          Chargement...
-        </div>
+        <PageSkeleton kpis={0} rows={5} />
       ) : (
         <>
           {/* Rapport par secteur */}

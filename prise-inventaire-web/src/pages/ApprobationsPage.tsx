@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldCheck, Clock, CheckCircle, XCircle, Settings, AlertTriangle } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -156,9 +157,7 @@ export default function ApprobationsPage() {
     }
   }
 
-  if (loading && approbations.length === 0) {
-    return <div className="text-gray-500">Chargement...</div>;
-  }
+  if (loading && approbations.length === 0) return <PageSkeleton kpis={3} />;
 
   return (
     <div className="space-y-6">

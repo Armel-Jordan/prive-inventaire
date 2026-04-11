@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, Clock, Plus, Play, X, Trash2, Edit, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -225,9 +226,7 @@ export default function PlanificationPage() {
     }
   }
 
-  if (loading && transferts.length === 0) {
-    return <div className="text-gray-500">Chargement...</div>;
-  }
+  if (loading && transferts.length === 0) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

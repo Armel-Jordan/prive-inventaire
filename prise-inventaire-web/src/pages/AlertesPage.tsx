@@ -4,6 +4,7 @@ import { getProduits } from '@/services/api';
 import type { Produit } from '@/types';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -161,9 +162,7 @@ export default function AlertesPage() {
     }
   };
 
-  if (loading) {
-    return <div className="text-gray-500">Chargement des alertes...</div>;
-  }
+  if (loading) return <PageSkeleton kpis={4} />;
 
   return (
     <div className="space-y-6">

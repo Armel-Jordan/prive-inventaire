@@ -5,6 +5,7 @@ import type { InventaireScan } from '@/types';
 import { formatDate } from '@/lib/utils';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 interface ProduitComparaison {
   numero: string;
@@ -154,9 +155,7 @@ export default function ComparaisonPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading) {
-    return <div className="text-gray-500">Chargement...</div>;
-  }
+  if (loading) return <PageSkeleton kpis={3} />;
 
   return (
     <div className="space-y-6">

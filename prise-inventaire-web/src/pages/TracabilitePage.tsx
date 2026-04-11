@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, MapPin, Package, Truck, ClipboardList, ArrowRight, Clock } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -233,7 +234,7 @@ export default function TracabilitePage() {
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Chargement...</div>
+            <PageSkeleton kpis={0} rows={4} />
           ) : historique.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <Package className="mx-auto text-gray-300 mb-4" size={48} />

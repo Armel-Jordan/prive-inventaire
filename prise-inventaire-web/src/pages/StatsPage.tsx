@@ -5,6 +5,7 @@ import { getScans, getSecteurs, getEmployes } from '@/services/api';
 import type { InventaireScan } from '@/types';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import PageSkeleton from '@/components/PageSkeleton';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
@@ -94,9 +95,7 @@ export default function StatsPage() {
   const uniqueEmployes = new Set(filteredScans.map(s => s.employe)).size;
   const avgPerDay = scansByDay.length > 0 ? Math.round(totalScans / scansByDay.length) : 0;
 
-  if (loading) {
-    return <div className="text-gray-500">Chargement des statistiques...</div>;
-  }
+  if (loading) return <PageSkeleton kpis={4} rows={4} />;
 
   return (
     <div className="space-y-6">
