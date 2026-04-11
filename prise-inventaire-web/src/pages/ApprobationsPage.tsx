@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Clock, CheckCircle, XCircle, Settings, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Clock, CheckCircle, XCircle, Settings, AlertTriangle, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -239,10 +240,7 @@ export default function ApprobationsPage() {
       {/* Liste */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {approbations.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <ShieldCheck className="mx-auto text-gray-300 mb-4" size={48} />
-            <p>Aucune demande d'approbation</p>
-          </div>
+          <EmptyState icon="🛡️" title="Aucune demande d'approbation" />
         ) : (
           <div className="divide-y">
             {approbations.map((a) => {
@@ -377,7 +375,7 @@ export default function ApprobationsPage() {
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">Seuils d'approbation</h2>
               <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 rounded">
-                ✕
+                <X size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">

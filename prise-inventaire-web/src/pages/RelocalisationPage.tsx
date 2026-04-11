@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers } from 'lucide-react';
+import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -275,9 +276,7 @@ export default function RelocalisationPage() {
         </div>
 
         {mouvements.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            Aucun mouvement enregistré
-          </div>
+          <EmptyState icon="📦" title="Aucun mouvement enregistré" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -350,7 +349,7 @@ export default function RelocalisationPage() {
                  'Nouveau mouvement'}
               </h2>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                ✕
+                <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
@@ -502,7 +501,7 @@ export default function RelocalisationPage() {
                 <h2 className="text-lg font-semibold">Scan en lot</h2>
               </div>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                ✕
+                <X size={20} />
               </button>
             </div>
 

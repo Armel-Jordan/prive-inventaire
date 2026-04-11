@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/utils';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -186,10 +187,7 @@ export default function AuditPage() {
       {/* Liste des logs */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <History className="mx-auto text-gray-300 mb-4" size={48} />
-            <p>Aucun historique trouvé</p>
-          </div>
+          <EmptyState icon="📋" title="Aucun historique trouvé" />
         ) : (
           <div className="divide-y">
             {logs.map((log) => {

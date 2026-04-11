@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/utils';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 interface ProduitComparaison {
   numero: string;
@@ -265,9 +266,7 @@ export default function ComparaisonPage() {
       {/* Table de comparaison */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {filteredComparaison.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            Aucune donnée à comparer pour cette période
-          </div>
+          <EmptyState icon="📊" title="Aucune donnée à comparer pour cette période" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

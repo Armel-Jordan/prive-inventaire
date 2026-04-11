@@ -3,6 +3,7 @@ import { RefreshCw, MapPin, AlertTriangle, CheckCircle, Calendar, Clock, Trendin
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -203,9 +204,8 @@ export default function InventaireTournantPage() {
           {activeTab === 'suggestions' && (
             <div className="space-y-4">
               {suggestions.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-500">
-                  <CheckCircle className="mx-auto text-green-400 mb-4" size={48} />
-                  <p>Tous les secteurs sont à jour !</p>
+                <div className="bg-white rounded-xl shadow-sm">
+                  <EmptyState icon="✅" title="Tous les secteurs sont à jour !" />
                 </div>
               ) : (
                 suggestions.map((s, index) => (
@@ -258,9 +258,7 @@ export default function InventaireTournantPage() {
           {activeTab === 'planning' && (
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               {planning.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  Aucun planning disponible
-                </div>
+                <EmptyState icon="📅" title="Aucun planning disponible" />
               ) : (
                 <div className="divide-y">
                   {planning.map((jour) => (

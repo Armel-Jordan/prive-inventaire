@@ -3,6 +3,7 @@ import { Search, MapPin, Package, Truck, ClipboardList, ArrowRight, Clock } from
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -236,10 +237,7 @@ export default function TracabilitePage() {
           {loading ? (
             <PageSkeleton kpis={0} rows={4} />
           ) : historique.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Package className="mx-auto text-gray-300 mb-4" size={48} />
-              <p>Aucun historique trouvé pour ce produit</p>
-            </div>
+            <EmptyState icon="🔍" title="Aucun historique trouvé pour ce produit" />
           ) : (
             <div className="relative">
               {/* Ligne verticale */}

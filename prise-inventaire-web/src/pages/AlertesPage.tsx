@@ -5,6 +5,7 @@ import type { Produit } from '@/types';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_auth';
@@ -322,14 +323,11 @@ export default function AlertesPage() {
       {/* Liste des alertes */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {filteredAlertes.length === 0 ? (
-          <div className="p-8 text-center">
-            <Bell className="mx-auto text-gray-300 mb-4" size={48} />
-            <p className="text-gray-500">
-              {alertes.length === 0 
-                ? "Aucune alerte de stock. Tous les produits sont au-dessus de leur seuil."
-                : "Aucune alerte correspondant au filtre."}
-            </p>
-          </div>
+          <EmptyState
+            icon="🔔"
+            title={alertes.length === 0 ? "Aucune alerte de stock" : "Aucune alerte correspondant au filtre"}
+            subtitle={alertes.length === 0 ? "Tous les produits sont au-dessus de leur seuil." : undefined}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
