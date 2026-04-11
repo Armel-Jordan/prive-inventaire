@@ -80,21 +80,10 @@ jobs:
           echo "✅ Tests OK"
           echo "Prêt pour déploiement en production"
 
-  # ─── ÉTAPE 2 : Approbation manuelle ──────────────────────────────────────
-  approval:
-    name: Approbation manuelle
-    needs: verify
-    runs-on: ubuntu-latest
-    environment: production   # ← configure le revieweur requis sur GitHub
-
-    steps:
-      - name: Déploiement approuvé
-        run: echo "Déploiement approuvé, lancement..."
-
-  # ─── ÉTAPE 3 : Déploiement ───────────────────────────────────────────────
+  # ─── ÉTAPE 2 : Déploiement ───────────────────────────────────────────────
   deploy:
     name: Deploy to DigitalOcean
-    needs: approval
+    needs: verify
     runs-on: ubuntu-latest
 
     steps:
