@@ -127,6 +127,12 @@ export default function TracabilitePage() {
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => searchResults.length > 0 && setShowResults(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim().length >= 1) {
+                setShowResults(false);
+                selectProduit(searchQuery.trim());
+              }
+            }}
             placeholder="Rechercher un produit par numéro ou nom..."
             className="w-full pl-12 pr-4 py-3 border rounded-xl text-lg"
           />
