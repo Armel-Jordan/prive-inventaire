@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         // Table des rôles personnalisés
-        if (Schema::hasTable('roles_custom')) {
+        if (Schema::hasTable('role_permissions')) {
             return;
         }
 
