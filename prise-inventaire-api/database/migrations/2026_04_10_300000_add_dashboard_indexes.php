@@ -23,10 +23,25 @@ return new class extends Migration
             ->exists();
     }
 
+    /** Vérifie qu'une table et ses colonnes existent toutes avant d'agir. */
+    private function hasColumns(string $table, array $columns): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+        foreach ($columns as $column) {
+            if (! Schema::hasColumn($table, $column)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function up(): void
     {
         // -- devis ---------------------------------------------------------------
-        if (Schema::hasTable('devis')) {
+        if ($this->hasColumns('devis', ['tenant_id', 'created_at', 'statut'])) {
             Schema::table('devis', function (Blueprint $table) {
                 if (! $this->indexExists('devis', 'devis_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'devis_tenant_created_at_index');
@@ -38,7 +53,7 @@ return new class extends Migration
         }
 
         // -- com_client_entete ---------------------------------------------------
-        if (Schema::hasTable('com_client_entete')) {
+        if ($this->hasColumns('com_client_entete', ['tenant_id', 'created_at', 'statut'])) {
             Schema::table('com_client_entete', function (Blueprint $table) {
                 if (! $this->indexExists('com_client_entete', 'cce_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'cce_tenant_created_at_index');
@@ -50,7 +65,7 @@ return new class extends Migration
         }
 
         // -- factures ------------------------------------------------------------
-        if (Schema::hasTable('factures')) {
+        if ($this->hasColumns('factures', ['tenant_id', 'created_at', 'statut', 'date_echeance'])) {
             Schema::table('factures', function (Blueprint $table) {
                 if (! $this->indexExists('factures', 'factures_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'factures_tenant_created_at_index');
@@ -65,7 +80,7 @@ return new class extends Migration
         }
 
         // -- bons_livraison ------------------------------------------------------
-        if (Schema::hasTable('bons_livraison')) {
+        if ($this->hasColumns('bons_livraison', ['tenant_id', 'created_at', 'statut'])) {
             Schema::table('bons_livraison', function (Blueprint $table) {
                 if (! $this->indexExists('bons_livraison', 'bl_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'bl_tenant_created_at_index');
@@ -77,7 +92,7 @@ return new class extends Migration
         }
 
         // -- tournees ------------------------------------------------------------
-        if (Schema::hasTable('tournees')) {
+        if ($this->hasColumns('tournees', ['tenant_id', 'created_at', 'statut'])) {
             Schema::table('tournees', function (Blueprint $table) {
                 if (! $this->indexExists('tournees', 'tournees_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'tournees_tenant_created_at_index');
@@ -89,7 +104,7 @@ return new class extends Migration
         }
 
         // -- com_four_entete -----------------------------------------------------
-        if (Schema::hasTable('com_four_entete')) {
+        if ($this->hasColumns('com_four_entete', ['tenant_id', 'created_at', 'statut'])) {
             Schema::table('com_four_entete', function (Blueprint $table) {
                 if (! $this->indexExists('com_four_entete', 'cfe_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'cfe_tenant_created_at_index');
@@ -101,7 +116,7 @@ return new class extends Migration
         }
 
         // -- produits ------------------------------------------------------------
-        if (Schema::hasTable('produits')) {
+        if ($this->hasColumns('produits', ['tenant_id', 'deleted_at'])) {
             Schema::table('produits', function (Blueprint $table) {
                 if (! $this->indexExists('produits', 'produits_tenant_deleted_at_index')) {
                     $table->index(['tenant_id', 'deleted_at'], 'produits_tenant_deleted_at_index');
@@ -110,7 +125,7 @@ return new class extends Migration
         }
 
         // -- alertes_stock -------------------------------------------------------
-        if (Schema::hasTable('alertes_stock')) {
+        if ($this->hasColumns('alertes_stock', ['tenant_id', 'statut'])) {
             Schema::table('alertes_stock', function (Blueprint $table) {
                 if (! $this->indexExists('alertes_stock', 'alertes_stock_tenant_statut_index')) {
                     $table->index(['tenant_id', 'statut'], 'alertes_stock_tenant_statut_index');
@@ -119,7 +134,7 @@ return new class extends Migration
         }
 
         // -- mouvement_inventaire ------------------------------------------------
-        if (Schema::hasTable('mouvement_inventaire')) {
+        if ($this->hasColumns('mouvement_inventaire', ['tenant_id', 'created_at', 'type_mouvement'])) {
             Schema::table('mouvement_inventaire', function (Blueprint $table) {
                 if (! $this->indexExists('mouvement_inventaire', 'mi_tenant_created_at_index')) {
                     $table->index(['tenant_id', 'created_at'], 'mi_tenant_created_at_index');
@@ -131,7 +146,7 @@ return new class extends Migration
         }
 
         // -- facture_paiements (joint via facture.tenant_id) ---------------------
-        if (Schema::hasTable('facture_paiements')) {
+        if ($this->hasColumns('facture_paiements', ['facture_id', 'created_at'])) {
             Schema::table('facture_paiements', function (Blueprint $table) {
                 if (! $this->indexExists('facture_paiements', 'fp_facture_created_at_index')) {
                     $table->index(['facture_id', 'created_at'], 'fp_facture_created_at_index');
