@@ -102,7 +102,7 @@ Route::prefix('mobile')->group(function () {
 // ============================================
 // Routes Super Admin (gestion des tenants)
 // ============================================
-Route::prefix('super-admin')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('super-admin')->middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::get('/stats', [SuperAdminController::class, 'getStats']);
     Route::get('/tenants', [SuperAdminController::class, 'getTenants']);
     Route::post('/tenants', [SuperAdminController::class, 'createTenant']);
@@ -118,7 +118,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum'])->group(function () {
 // ============================================
 // Routes authentifiées (utilisateur connecté)
 // ============================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/complete-profile', [AuthController::class, 'completeProfile']);
@@ -128,7 +128,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // ============================================
 // Routes Tenant (avec middleware tenant)
 // ============================================
-Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function () {
     // Employés CRUD
     Route::get('/employes', [EmployeTenantController::class, 'index']);
     Route::post('/employes', [EmployeTenantController::class, 'store']);

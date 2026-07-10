@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\ComFourEntete;
+use App\Models\SuperAdmin;
+use App\Support\TenantContext;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -23,7 +26,19 @@ class BonCommandePdfController extends Controller
             return false;
         }
 
-        auth()->setUser($accessToken->tokenable);
+        $user = $accessToken->tokenable;
+        auth()->setUser($user);
+
+        // Le contexte tenant scope le findOrFail ci-dessous (ferme l'IDOR cross-tenant sur le PDF).
+        $context = app(TenantContext::class);
+        if ($user instanceof SuperAdmin) {
+            $context->markSuperAdmin();
+        } elseif ($user instanceof AdminUser && $user->tenant_id) {
+            $context->setTenantId((int) $user->tenant_id);
+        } else {
+            // Token sans tenant identifiable : on refuse plutôt que de laisser un scope non résolu.
+            return false;
+        }
 
         return true;
     }
