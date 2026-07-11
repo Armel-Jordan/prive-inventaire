@@ -15,11 +15,21 @@ import java.util.concurrent.TimeUnit
 object InventaireApiService {
 
     private var baseUrl = "http://10.0.2.2:8000/api"
+    private var authToken: String? = null
+    private var tenantSlug: String? = null
     private val gson = Gson()
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
+        // Injecte le token Sanctum + le slug tenant sur chaque requête.
+        .addInterceptor { chain ->
+            val builder = chain.request().newBuilder()
+            authToken?.let { builder.addHeader("Authorization", "Bearer $it") }
+            tenantSlug?.let { builder.addHeader("X-Tenant-Slug", it) }
+            chain.proceed(builder.build())
+        }
         .build()
 
     private val JSON = "application/json; charset=utf-8".toMediaType()
@@ -27,6 +37,65 @@ object InventaireApiService {
     fun setBaseUrl(url: String) {
         baseUrl = url.trimEnd('/')
     }
+
+    fun setAuth(token: String, slug: String) {
+        authToken = token
+        tenantSlug = slug
+    }
+
+    fun clearAuth() {
+        authToken = null
+        tenantSlug = null
+    }
+
+    fun hasToken(): Boolean = !authToken.isNullOrBlank()
+
+    /**
+     * POST /api/auth/login — authentifie un admin_user et récupère un token Sanctum.
+     * Le token et le slug sont ensuite envoyés automatiquement sur chaque requête.
+     */
+    fun login(email: String, password: String, slug: String): LoginResult {
+        val requestBody = gson.toJson(LoginRequest(email = email, password = password, tenantSlug = slug))
+        val request = Request.Builder()
+            .url("$baseUrl/auth/login")
+            .post(requestBody.toRequestBody(JSON))
+            .addHeader("Accept", "application/json")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Réponse vide")
+
+            if (!response.isSuccessful) {
+                val message = try {
+                    gson.fromJson(body, LoginResult::class.java)?.message
+                } catch (_: Exception) {
+                    null
+                }
+                throw Exception(message ?: "Identifiants invalides (HTTP ${response.code})")
+            }
+
+            val result = gson.fromJson(body, LoginResult::class.java)
+            if (result?.token.isNullOrBlank()) {
+                throw Exception("Réponse de connexion invalide")
+            }
+            setAuth(result.token!!, slug)
+
+            return result
+        }
+    }
+
+    data class LoginRequest(
+        @SerializedName("email") val email: String,
+        @SerializedName("password") val password: String,
+        @SerializedName("tenant_slug") val tenantSlug: String,
+    )
+
+    data class LoginResult(
+        @SerializedName("success") val success: Boolean = false,
+        @SerializedName("message") val message: String? = null,
+        @SerializedName("token") val token: String? = null,
+    )
 
     // --- Data Models ---
 
