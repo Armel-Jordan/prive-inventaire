@@ -18,7 +18,15 @@ interface Tenant {
   date_expiration: string;
   renouvelable: boolean;
   duree_abonnement: number;
+  modules?: string[];
 }
+
+// Modules fonctionnels optionnels activables par entreprise (cf. config/modules.php côté API).
+const OPTIONAL_MODULES: { key: string; label: string; desc: string }[] = [
+  { key: 'achats', label: 'Achats', desc: 'Fournisseurs, commandes, réceptions' },
+  { key: 'ventes', label: 'Ventes', desc: 'Clients, devis, factures, livraisons' },
+  { key: 'finance', label: 'Finance', desc: 'Comptabilité, prévisions, prix' },
+];
 
 interface Admin {
   id: number;
@@ -83,6 +91,8 @@ export default function SuperAdminTenantPage() {
   const [editPlan, setEditPlan] = useState<string>('starter');
   const [editRenouvelable, setEditRenouvelable] = useState(true);
   const [savingTenant, setSavingTenant] = useState(false);
+  const [editModules, setEditModules] = useState<string[]>([]);
+  const [savingModules, setSavingModules] = useState(false);
   const auth = getAuth();
 
   useEffect(() => {
@@ -96,6 +106,7 @@ export default function SuperAdminTenantPage() {
       setEditNom(tenant.nom);
       setEditPlan(tenant.plan);
       setEditRenouvelable(tenant.renouvelable);
+      setEditModules((tenant.modules ?? []).filter(m => OPTIONAL_MODULES.some(o => o.key === m)));
     }
   }, [tenant]);
 
@@ -142,6 +153,27 @@ export default function SuperAdminTenantPage() {
       showFeedback('error', 'Erreur lors de la mise à jour');
     } finally {
       setSavingTenant(false);
+    }
+  }
+
+  function toggleModule(key: string) {
+    setEditModules(prev => prev.includes(key) ? prev.filter(m => m !== key) : [...prev, key]);
+  }
+
+  async function saveModules() {
+    if (!tenant) return;
+    setSavingModules(true);
+    try {
+      const data = await fetchApi(`/super-admin/tenants/${tenant.id}/modules`, {
+        method: 'PUT',
+        body: JSON.stringify({ modules: editModules }),
+      });
+      setTenant(data.tenant);
+      showFeedback('success', 'Modules mis à jour');
+    } catch {
+      showFeedback('error', 'Erreur lors de la mise à jour des modules');
+    } finally {
+      setSavingModules(false);
     }
   }
 
@@ -389,6 +421,42 @@ export default function SuperAdminTenantPage() {
               >
                 <Save size={16} />
                 {savingTenant ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+              </button>
+            </div>
+
+            {/* Modules souscrits */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+              <div>
+                <h2 className="text-white font-semibold">Modules</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Inventaire &amp; Paramètres sont toujours actifs. Activez les modules optionnels selon l'abonnement.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {OPTIONAL_MODULES.map(m => {
+                  const on = editModules.includes(m.key);
+                  return (
+                    <div key={m.key} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                      <div>
+                        <p className="text-sm text-white font-medium">{m.label}</p>
+                        <p className="text-xs text-slate-500">{m.desc}</p>
+                      </div>
+                      <button type="button" onClick={() => toggleModule(m.key)} aria-label={`Basculer ${m.label}`}>
+                        {on
+                          ? <ToggleRight size={28} className="text-purple-400" />
+                          : <ToggleLeft size={28} className="text-slate-600" />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={saveModules}
+                disabled={savingModules}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors text-sm font-medium"
+              >
+                <Save size={16} />
+                {savingModules ? 'Sauvegarde...' : 'Enregistrer les modules'}
               </button>
             </div>
 

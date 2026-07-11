@@ -139,23 +139,34 @@ export default function Layout() {
     );
   };
 
-  // Filtrer les catégories selon les permissions
-  // Pendant le chargement, afficher tout. Sinon filtrer selon canView
-  const categories = allCategories.map(cat => ({
-    ...cat,
-    items: permissionsLoading 
-      ? cat.items 
-      : cat.items.filter(item => {
-          try {
-            return canView(item.module);
-          } catch {
-            return true; // Si erreur, afficher par défaut
-          }
-        })
-  })).filter(cat => cat.items.length > 0);
-  
-  // Si aucune catégorie après filtrage, afficher tout (fallback)
-  const displayCategories = categories.length > 0 ? categories : allCategories;
+  // Modules fonctionnels souscrits par l'entreprise (abonnement).
+  // Si absent (ancienne session), on n'applique pas le gating module (rétro-compat).
+  const tenantModules = tenant?.modules;
+  const moduleAllowed = (categoryId: string) =>
+    !Array.isArray(tenantModules) ? true : tenantModules.includes(categoryId);
+
+  // Filtrage à 2 niveaux : (1) module d'entreprise (abonnement), (2) permissions par rôle.
+  // Pendant le chargement des permissions, ne filtre que par module.
+  const categories = allCategories
+    .filter(cat => moduleAllowed(cat.id))
+    .map(cat => ({
+      ...cat,
+      items: permissionsLoading
+        ? cat.items
+        : cat.items.filter(item => {
+            try {
+              return canView(item.module);
+            } catch {
+              return true; // Si erreur, afficher par défaut
+            }
+          })
+    }))
+    .filter(cat => cat.items.length > 0);
+
+  // Fallback si le filtrage par rôle vide tout : on garde au moins le gating module.
+  const displayCategories = categories.length > 0
+    ? categories
+    : allCategories.filter(cat => moduleAllowed(cat.id));
 
   const handleLogout = () => {
     logout();
