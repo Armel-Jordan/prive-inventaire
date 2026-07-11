@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\AdminUser;
+use App\Models\Client;
+use App\Models\Fournisseur;
+use App\Models\SuperAdmin;
 use App\Models\Tenant;
 use App\Models\TenantTaxe;
 use App\Support\TenantContext;
@@ -20,6 +23,12 @@ class TenantIsolationDemoSeeder extends Seeder
     public function run(): void
     {
         $context = app(TenantContext::class);
+
+        // Super-admin global (gère tous les tenants). Login : POST /api/super-admin/login.
+        SuperAdmin::firstOrCreate(
+            ['email' => 'super@prise.test'],
+            ['nom' => 'Super Admin', 'password' => 'password', 'actif' => true]
+        );
 
         // Rôles système partagés (tenant_id NULL) — normalement créés par la migration
         // create_role_permissions_table, mais son createDefaultRoles est court-circuité
@@ -40,8 +49,10 @@ class TenantIsolationDemoSeeder extends Seeder
         }
 
         foreach ([
-            ['slug' => 'alpha', 'nom' => 'Entreprise Alpha'],
-            ['slug' => 'beta', 'nom' => 'Entreprise Beta'],
+            // alpha : plan enterprise -> tous les modules (dont Finance).
+            ['slug' => 'alpha', 'nom' => 'Entreprise Alpha', 'plan' => 'enterprise'],
+            // beta : plan pro -> Achats + Ventes, PAS Finance (démontre le gating).
+            ['slug' => 'beta', 'nom' => 'Entreprise Beta', 'plan' => 'pro'],
         ] as $data) {
             $tenant = Tenant::create([
                 'nom' => $data['nom'],
@@ -49,7 +60,8 @@ class TenantIsolationDemoSeeder extends Seeder
                 'db_name' => 'tenant_'.$data['slug'],
                 'actif' => true,
                 'date_expiration' => now()->addYear(),
-                'plan' => 'basic',
+                'plan' => $data['plan'],
+                'modules' => Tenant::defaultModulesForPlan($data['plan']),
             ]);
 
             AdminUser::create([
@@ -61,13 +73,31 @@ class TenantIsolationDemoSeeder extends Seeder
                 'actif' => true,
             ]);
 
-            // TenantTaxe porte le trait BelongsToTenant -> création dans le contexte du tenant.
+            // Modèles porteurs du trait BelongsToTenant -> création dans le contexte du tenant
+            // (tenant_id injecté automatiquement). Données distinctes par tenant pour visualiser
+            // l'isolation dans l'UI (Taxes, Fournisseurs, Clients).
             $context->runAsTenant($tenant->id, function () use ($data) {
-                TenantTaxe::create([
-                    'nom' => 'TVA '.strtoupper($data['slug']),
-                    'taux' => 20,
-                    'par_defaut' => true,
-                ]);
+                $slug = strtoupper($data['slug']);
+
+                TenantTaxe::create(['nom' => 'TVA '.$slug, 'taux' => 20, 'par_defaut' => true]);
+
+                foreach (range(1, 2) as $i) {
+                    Fournisseur::create([
+                        'code' => 'FRN-'.$slug.'-'.$i,
+                        'raison_sociale' => 'Fournisseur '.$slug.' '.$i,
+                        'actif' => true,
+                    ]);
+                }
+
+                foreach (range(1, 3) as $i) {
+                    Client::create([
+                        'code' => 'CLI-'.$slug.'-'.$i,
+                        'raison_sociale' => 'Client '.$slug.' '.$i,
+                        'adresse_facturation' => $i.' rue de '.$data['nom'],
+                        'ville' => 'Ville '.$slug,
+                        'code_postal' => str_pad((string) $i, 5, '0', STR_PAD_LEFT),
+                    ]);
+                }
             });
         }
     }

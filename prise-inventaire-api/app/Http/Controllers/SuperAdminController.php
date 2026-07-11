@@ -79,6 +79,7 @@ class SuperAdminController extends Controller
             'date_expiration' => now()->addYears($duree),
             'duree_abonnement' => $duree,
             'renouvelable' => $validated['renouvelable'],
+            'modules' => Tenant::defaultModulesForPlan($validated['plan']),
         ]);
 
         return response()->json([
@@ -133,6 +134,39 @@ class SuperAdminController extends Controller
         return response()->json([
             'message' => 'Tenant mis à jour',
             'tenant' => $tenant,
+        ]);
+    }
+
+    /** Catalogue des modules optionnels activables (source unique : config/modules.php). */
+    public function modulesCatalog(): JsonResponse
+    {
+        return response()->json([
+            'core' => config('modules.core', []),
+            'optional' => config('modules.optional', []),
+            'labels' => config('modules.labels', []),
+            'plans' => config('modules.plans', []),
+        ]);
+    }
+
+    /** Active/désactive les modules optionnels d'une entreprise (super-admin). */
+    public function updateTenantModules(Request $request, $id): JsonResponse
+    {
+        $tenant = Tenant::findOrFail($id);
+        $optional = config('modules.optional', []);
+
+        $validated = $request->validate([
+            'modules' => 'present|array',
+            'modules.*' => ['string', Rule::in($optional)],
+        ]);
+
+        // On ne persiste que des modules optionnels valides (les modules cœur sont implicites).
+        $tenant->update([
+            'modules' => array_values(array_intersect($validated['modules'], $optional)),
+        ]);
+
+        return response()->json([
+            'message' => 'Modules mis à jour',
+            'tenant' => $tenant->fresh(),
         ]);
     }
 

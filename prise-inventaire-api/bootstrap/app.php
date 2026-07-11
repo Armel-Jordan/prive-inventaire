@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
             'tenant.context' => \App\Http\Middleware\ResolveTenantContext::class,
+            'module' => \App\Http\Middleware\EnsureModuleEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -80,6 +80,7 @@ class AuthController extends Controller
                 'nom' => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
+                'modules' => $tenant->activeModules(),
             ],
             'token' => $token,
         ]);
@@ -116,6 +117,7 @@ class AuthController extends Controller
                 'nom' => $tenant->nom,
                 'slug' => $tenant->slug,
                 'plan' => $tenant->plan,
+                'modules' => $tenant->activeModules(),
             ],
         ]);
     }

@@ -109,6 +109,8 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'tenant.context'])->gr
     Route::put('/tenants/{id}', [SuperAdminController::class, 'updateTenant']);
     Route::post('/tenants/{id}/renew', [SuperAdminController::class, 'renewTenant']);
     Route::delete('/tenants/{id}', [SuperAdminController::class, 'deleteTenant']);
+    Route::get('/modules-catalog', [SuperAdminController::class, 'modulesCatalog']);
+    Route::put('/tenants/{id}/modules', [SuperAdminController::class, 'updateTenantModules']);
     Route::get('/tenants/{tenantId}/admins', [SuperAdminController::class, 'getTenantAdmins']);
     Route::post('/tenants/{tenantId}/admins', [SuperAdminController::class, 'createTenantAdmin']);
     Route::put('/tenants/{tenantId}/admins/{adminId}', [SuperAdminController::class, 'updateTenantAdmin']);
@@ -293,7 +295,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     // ============================================
     // Fournisseurs
     // ============================================
-    Route::prefix('fournisseurs')->group(function () {
+    Route::prefix('fournisseurs')->middleware('module:achats')->group(function () {
         Route::get('/', [FournisseurController::class, 'index']);
         Route::get('/actifs', [FournisseurController::class, 'listActifs']);
         Route::post('/', [FournisseurController::class, 'store']);
@@ -305,7 +307,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     // ============================================
     // Commandes Fournisseurs
     // ============================================
-    Route::prefix('commandes-fournisseur')->group(function () {
+    Route::prefix('commandes-fournisseur')->middleware('module:achats')->group(function () {
         Route::get('/', [CommandeFournisseurController::class, 'index']);
         Route::post('/', [CommandeFournisseurController::class, 'store']);
         Route::get('/{commande}', [CommandeFournisseurController::class, 'show']);
@@ -319,7 +321,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     // ============================================
     // Réceptions / Arrivages
     // ============================================
-    Route::prefix('receptions')->group(function () {
+    Route::prefix('receptions')->middleware('module:achats')->group(function () {
         Route::get('/', [ReceptionController::class, 'index']);
         Route::get('/commandes-en-attente', [ReceptionController::class, 'commandesEnAttente']);
         Route::get('/commande/{commande}/lignes', [ReceptionController::class, 'lignesEnAttente']);
@@ -332,7 +334,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     // ============================================
 
     // Devis
-    Route::prefix('devis')->group(function () {
+    Route::prefix('devis')->middleware('module:ventes')->group(function () {
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
         Route::get('/{devis}', [DevisController::class, 'show']);
@@ -345,7 +347,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Clients
-    Route::prefix('clients')->group(function () {
+    Route::prefix('clients')->middleware('module:ventes')->group(function () {
         Route::get('/', [ClientController::class, 'index']);
         Route::get('/actifs', [ClientController::class, 'actifs']);
         Route::get('/{id}', [ClientController::class, 'show']);
@@ -357,7 +359,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Commandes Clients
-    Route::prefix('commandes-client')->group(function () {
+    Route::prefix('commandes-client')->middleware('module:ventes')->group(function () {
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
         Route::post('/', [CommandeClientController::class, 'store']);
@@ -369,7 +371,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Factures
-    Route::prefix('factures')->group(function () {
+    Route::prefix('factures')->middleware('module:ventes')->group(function () {
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
         Route::post('/', [FactureController::class, 'store']);
@@ -381,7 +383,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Bons de Livraison
-    Route::prefix('bons-livraison')->group(function () {
+    Route::prefix('bons-livraison')->middleware('module:ventes')->group(function () {
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
         Route::post('/{id}/preparer', [BonLivraisonController::class, 'demarrerPreparation']);
@@ -392,7 +394,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Camions
-    Route::prefix('camions')->group(function () {
+    Route::prefix('camions')->middleware('module:ventes')->group(function () {
         Route::get('/', [CamionController::class, 'index']);
         Route::get('/disponibles', [CamionController::class, 'disponibles']);
         Route::get('/{id}', [CamionController::class, 'show']);
@@ -402,7 +404,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Tournées
-    Route::prefix('tournees')->group(function () {
+    Route::prefix('tournees')->middleware('module:ventes')->group(function () {
         Route::get('/', [TourneeController::class, 'index']);
         Route::get('/{id}', [TourneeController::class, 'show']);
         Route::post('/', [TourneeController::class, 'store']);
@@ -415,7 +417,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     });
 
     // Zones de Préparation
-    Route::prefix('zones-preparation')->group(function () {
+    Route::prefix('zones-preparation')->middleware('module:ventes')->group(function () {
         Route::get('/', [ZonePreparationController::class, 'index']);
         Route::get('/{id}', [ZonePreparationController::class, 'show']);
         Route::post('/', [ZonePreparationController::class, 'store']);
