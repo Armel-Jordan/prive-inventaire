@@ -129,6 +129,15 @@ Le §8 de la spec est **inapplicable en l'état** : `phpunit.xml` force SQLite `
 - **Deux migrations définissent `role_permissions` de façon incompatible** : `2026_03_01_000012` (schéma `role`/`permission` en varchar) crée la table en premier ; du coup `2026_03_01_000016` (schéma `role_id`/`module`/`can_view…` + `createDefaultRoles`) fait un `return` précoce → **ses rôles par défaut ne sont JAMAIS créés** et `roles_custom` est **vide** en pratique. Le schéma `role_permissions` réellement actif est celui de `000012`.
 - **Conséquence pour C7** : le scoping des permissions doit cibler le schéma `000012` (role/permission strings) réellement utilisé par `CheckPermission`, PAS le schéma `000016` (mort). `roles_custom.tenant_id` (ajouté Étape 3) ne servira qu'aux rôles custom si/quand la fonctionnalité est réellement branchée. À clarifier avant C7.
 
+### Découverte Étape 4 — AdminUser NE PREND PAS le trait (critique)
+Appliquer `BelongsToTenant` (fail-closed) à `AdminUser` **casse toute l'authentification** : Sanctum résout l'utilisateur via `$accessToken->tokenable` (→ `AdminUser`) **pendant `auth:sanctum`**, donc AVANT le middleware `tenant.context`. Contexte non résolu → scope fail-closed → `null` → plus d'utilisateur authentifié sur toutes les routes. Idem `AuthController::login` (route publique, sans contexte).
+**Décision** : `AdminUser` reste SANS trait. Son isolation (IDOR sur `AdminUserController::index/show/update/destroy`) se fait par **scoping explicite** (`where('tenant_id', TenantContext)`), et l'escalade super-admin par le **garde de rôle C6**. À traiter dans le chantier compagnon, pas en Lot 4-trait.
+
+### Avancement Étape 4 (trait appliqué)
+- ✅ Lot 1 (5) · Lot 2a (4) · Lot 3 ventes (11) = **20 modèles** scopés, testés, poussés. IDOR fermés sur tous ces modèles (show/update/destroy par id → 404 cross-tenant).
+- ⏸ Lot 2b (5 modèles couplés `/mobile`) : reporté en Livraison 2 (auth mobile réelle).
+- ⏸ AdminUser : scoping explicite + C6 (pas de trait).
+
 ---
 
 *Plan consolidé à partir de : spec architecte + revue adversariale sécurité (8 failles) + revue adversariale régressions (5 régressions, 3 affirmations corrigées). Détail brut disponible dans le transcript du workflow `design-global-scope-tenant`.*
