@@ -6,6 +6,7 @@ use App\Models\AdminUser;
 use App\Models\EmployeTenant;
 use App\Models\Tenant;
 use App\Services\TenantService;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -57,6 +58,10 @@ class AuthController extends Controller
         $user->save();
 
         $token = $user->createToken('auth-token', ['*'], now()->addDays(7))->plainTextToken;
+
+        // Résout le contexte tenant : la route /auth/login est publique (pas de middleware
+        // tenant.context), or EmployeTenant porte désormais le trait scopé.
+        app(TenantContext::class)->setTenantId((int) $tenant->id);
 
         // Chercher la fiche employé liée
         $employe = EmployeTenant::where('admin_user_id', $user->id)->first();

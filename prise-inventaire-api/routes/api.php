@@ -76,7 +76,7 @@ Route::get('/commandes-fournisseur/{id}/pdf/preview', [BonCommandePdfController:
 // Routes Mobile (sans authentification JWT)
 // Ces routes sont utilisées par l'app Android
 // ============================================
-Route::prefix('mobile')->group(function () {
+Route::prefix('mobile')->middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function () {
     // Employés (lecture seule)
     Route::get('/employes', [EmployeTenantController::class, 'index']);
 
