@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -36,8 +37,10 @@ class FournisseurController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $tenantId = $request->attributes->get('tenant')->id;
+
         $validated = $request->validate([
-            'code' => 'nullable|string|max:20|unique:fournisseurs,code',
+            'code' => ['nullable', 'string', 'max:20', TenantRule::unique('fournisseurs', 'code')],
             'raison_sociale' => 'required|string|max:255',
             'adresse' => 'nullable|string',
             'telephone' => 'nullable|string|max:20',
@@ -50,7 +53,6 @@ class FournisseurController extends Controller
         ]);
 
         if (empty($validated['code'])) {
-            $tenantId = $request->attributes->get('tenant')->id;
             $config = Configuration::pourEntite('fournisseur', $tenantId);
             if ($config && $config->auto_increment) {
                 $validated['code'] = $config->genererNumero();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ZonePreparation;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,7 +28,7 @@ class ZonePreparationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:20|unique:zones_preparation',
+            'code' => ['required', 'string', 'max:20', TenantRule::unique('zones_preparation', 'code')],
             'nom' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);
@@ -44,7 +45,7 @@ class ZonePreparationController extends Controller
         $zone = ZonePreparation::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|string|max:20|unique:zones_preparation,code,'.$id,
+            'code' => ['sometimes', 'string', 'max:20', TenantRule::unique('zones_preparation', 'code', $id)],
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',

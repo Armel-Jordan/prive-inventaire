@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Camion;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -48,7 +49,7 @@ class CamionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'immatriculation' => 'required|string|max:20|unique:camions',
+            'immatriculation' => ['required', 'string', 'max:20', TenantRule::unique('camions', 'immatriculation')],
             'marque' => 'nullable|string|max:50',
             'modele' => 'nullable|string|max:50',
             'type' => 'required|in:camionnette,camion,semi_remorque',
@@ -69,7 +70,7 @@ class CamionController extends Controller
         $camion = Camion::findOrFail($id);
 
         $validated = $request->validate([
-            'immatriculation' => 'sometimes|string|max:20|unique:camions,immatriculation,'.$id,
+            'immatriculation' => ['sometimes', 'string', 'max:20', TenantRule::unique('camions', 'immatriculation', $id)],
             'marque' => 'nullable|string|max:50',
             'modele' => 'nullable|string|max:50',
             'type' => 'sometimes|in:camionnette,camion,semi_remorque',

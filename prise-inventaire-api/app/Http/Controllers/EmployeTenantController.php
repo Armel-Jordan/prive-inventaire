@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminUser;
 use App\Models\Configuration;
 use App\Models\EmployeTenant;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,7 @@ class EmployeTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => 'nullable|string|max:20|unique:employes,numero',
+            'numero' => ['nullable', 'string', 'max:20', TenantRule::unique('employes', 'numero')],
             'nom' => 'required|string|max:100',
             'prenom' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:100',
@@ -105,7 +106,7 @@ class EmployeTenantController extends Controller
         $employe = EmployeTenant::findOrFail($id);
 
         $request->validate([
-            'numero' => 'sometimes|string|max:20|unique:employes,numero,'.$id,
+            'numero' => ['sometimes', 'string', 'max:20', TenantRule::unique('employes', 'numero', $id)],
             'nom' => 'sometimes|string|max:100',
             'prenom' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:100',

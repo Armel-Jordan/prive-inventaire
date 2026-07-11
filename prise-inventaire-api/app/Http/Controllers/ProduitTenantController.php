@@ -24,7 +24,7 @@ class ProduitTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => 'nullable|string|max:50|unique:produits,numero',
+            'numero' => ['nullable', 'string', 'max:50', TenantRule::unique('produits', 'numero')],
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
@@ -84,7 +84,7 @@ class ProduitTenantController extends Controller
         $produit = ProduitTenant::findOrFail($id);
 
         $request->validate([
-            'numero' => 'sometimes|string|max:50|unique:produits,numero,'.$id,
+            'numero' => ['sometimes', 'string', 'max:50', TenantRule::unique('produits', 'numero', $id)],
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
