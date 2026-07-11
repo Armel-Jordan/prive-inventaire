@@ -11,6 +11,7 @@ use App\Models\Facture;
 use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +51,7 @@ class FactureController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => ['required', TenantRule::exists('clients')],
             'date_facture' => 'required|date',
             'date_echeance' => 'nullable|date',
             'notes' => 'nullable|string',

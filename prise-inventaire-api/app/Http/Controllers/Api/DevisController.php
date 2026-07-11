@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\DevisLigne;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,12 +42,12 @@ class DevisController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => ['required', TenantRule::exists('clients')],
             'date_devis' => 'required|date',
             'date_validite' => 'required|date|after_or_equal:date_devis',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
-            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
@@ -103,13 +104,13 @@ class DevisController extends Controller
         }
 
         $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => ['required', TenantRule::exists('clients')],
             'date_devis' => 'required|date',
             'date_validite' => 'required|date|after_or_equal:date_devis',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             'lignes.*.id' => 'nullable|exists:devis_lignes,id',
-            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);

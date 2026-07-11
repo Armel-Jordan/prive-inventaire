@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\ReceptionArrivagesLigne;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +50,7 @@ class ReceptionController extends Controller
             'com_four_ligne_id' => 'required|exists:com_four_ligne,id',
             'date_reception' => 'required|date',
             'quantite_recue' => 'required|integer|min:1',
-            'secteur_id' => 'nullable|exists:secteurs,id',
+            'secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'lot_numero' => 'nullable|string|max:50',
             'date_peremption' => 'nullable|date',
             'notes' => 'nullable|string',
@@ -98,12 +99,12 @@ class ReceptionController extends Controller
     public function receptionMultiple(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'commande_id' => 'required|exists:com_four_entete,id',
+            'commande_id' => ['required', TenantRule::exists('com_four_entete')],
             'date_reception' => 'required|date',
             'receptions' => 'required|array|min:1',
             'receptions.*.com_four_ligne_id' => 'required|exists:com_four_ligne,id',
             'receptions.*.quantite_recue' => 'required|integer|min:1',
-            'receptions.*.secteur_id' => 'nullable|exists:secteurs,id',
+            'receptions.*.secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'receptions.*.lot_numero' => 'nullable|string|max:50',
             'receptions.*.date_peremption' => 'nullable|date',
             'receptions.*.notes' => 'nullable|string',
