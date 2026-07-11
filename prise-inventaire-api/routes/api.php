@@ -161,13 +161,15 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::get('/permissions/me', [RolePermissionController::class, 'userPermissions']);
     Route::get('/permissions/modules', [RolePermissionController::class, 'modules']);
 
-    // Gestion des rôles (admin seulement)
-    Route::get('/roles-custom', [RolePermissionController::class, 'index']);
-    Route::post('/roles-custom', [RolePermissionController::class, 'store']);
-    Route::get('/roles-custom/{id}', [RolePermissionController::class, 'show']);
-    Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update']);
-    Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy']);
-    Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole']);
+    // Gestion des rôles (admin uniquement) — enforcement backend
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/roles-custom', [RolePermissionController::class, 'index']);
+        Route::post('/roles-custom', [RolePermissionController::class, 'store']);
+        Route::get('/roles-custom/{id}', [RolePermissionController::class, 'show']);
+        Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update']);
+        Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy']);
+        Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole']);
+    });
 
     // Scans
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);
@@ -277,11 +279,13 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/secteur/{secteur}', [InventaireTournantController::class, 'historiqueSecteur']);
     });
 
-    // Utilisateurs admin CRUD
-    Route::get('/users', [AdminUserController::class, 'index']);
-    Route::post('/users', [AdminUserController::class, 'store']);
-    Route::put('/users/{id}', [AdminUserController::class, 'update']);
-    Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+    // Utilisateurs admin CRUD (admin uniquement)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store']);
+        Route::put('/users/{id}', [AdminUserController::class, 'update']);
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+    });
 
     // Rôles et permissions
     Route::prefix('roles')->group(function () {
