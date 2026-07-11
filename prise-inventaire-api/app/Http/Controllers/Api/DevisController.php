@@ -133,7 +133,8 @@ class DevisController extends Controller
                     'montant_ligne' => $ligne['quantite'] * $ligne['prix_unitaire'],
                 ];
                 if (isset($ligne['id'])) {
-                    DevisLigne::where('id', $ligne['id'])->update($data);
+                    // Scoper au devis courant (tenant-scopé) : empêche de modifier la ligne d'un autre tenant par id.
+                    $devis->lignes()->where('id', $ligne['id'])->update($data);
                 } else {
                     DevisLigne::create(array_merge($data, ['devis_id' => $devis->id]));
                 }

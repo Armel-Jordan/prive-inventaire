@@ -14,12 +14,15 @@ class ReceptionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = ReceptionArrivagesLigne::with([
-            'ligneCommande.commande.fournisseur',
-            'ligneCommande.produit',
-            'secteur',
-            'receivedBy',
-        ]);
+        // Scope tenant via le trait sur ComFourEntete (commande) : ne remonte que les réceptions du tenant courant.
+        $query = ReceptionArrivagesLigne::query()
+            ->whereHas('ligneCommande.commande')
+            ->with([
+                'ligneCommande.commande.fournisseur',
+                'ligneCommande.produit',
+                'secteur',
+                'receivedBy',
+            ]);
 
         if ($request->has('date_debut')) {
             $query->whereDate('date_reception', '>=', $request->date_debut);
@@ -61,7 +64,12 @@ class ReceptionController extends Controller
             ], 422);
         }
 
+        // La relation commande porte le scope tenant (trait sur ComFourEntete) :
+        // une ligne d'un autre tenant renvoie une commande null -> 404 (ferme l'IDOR).
         $commande = $ligneCommande->commande;
+        if (! $commande) {
+            return response()->json(['message' => 'Ligne de commande introuvable.'], 404);
+        }
         if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
                 'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
@@ -109,11 +117,12 @@ class ReceptionController extends Controller
             ], 422);
         }
 
-        $receptions = DB::transaction(function () use ($validated, $request) {
+        $receptions = DB::transaction(function () use ($validated, $request, $commande) {
             $created = [];
 
             foreach ($validated['receptions'] as $receptionData) {
-                $ligneCommande = ComFourLigne::findOrFail($receptionData['com_four_ligne_id']);
+                // Scoper la ligne à la commande (tenant-scopée) : empêche de réceptionner sur la ligne d'un autre tenant.
+                $ligneCommande = $commande->lignes()->findOrFail($receptionData['com_four_ligne_id']);
                 $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
 
                 if ($receptionData['quantite_recue'] > $quantiteRestante) {

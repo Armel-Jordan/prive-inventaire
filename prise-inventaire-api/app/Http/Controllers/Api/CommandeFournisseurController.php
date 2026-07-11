@@ -149,7 +149,8 @@ class CommandeFournisseurController extends Controller
             foreach ($validated['lignes'] as $ligne) {
                 $produit = ProduitTenant::find($ligne['produit_id']);
                 if (isset($ligne['id'])) {
-                    ComFourLigne::where('id', $ligne['id'])->update([
+                    // Scoper à la commande courante (tenant-scopée) : empêche de modifier la ligne d'un autre tenant par id.
+                    $commande->lignes()->where('id', $ligne['id'])->update([
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
                         'unite_achat' => $produit?->unite_achat,
