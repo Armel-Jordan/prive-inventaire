@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
             'tenant.context' => \App\Http\Middleware\ResolveTenantContext::class,
             'module' => \App\Http\Middleware\EnsureModuleEnabled::class,
+            'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

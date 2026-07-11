@@ -102,7 +102,7 @@ Route::prefix('mobile')->group(function () {
 // ============================================
 // Routes Super Admin (gestion des tenants)
 // ============================================
-Route::prefix('super-admin')->middleware(['auth:sanctum', 'tenant.context'])->group(function () {
+Route::prefix('super-admin')->middleware(['auth:sanctum', 'super-admin', 'tenant.context'])->group(function () {
     Route::get('/stats', [SuperAdminController::class, 'getStats']);
     Route::get('/tenants', [SuperAdminController::class, 'getTenants']);
     Route::post('/tenants', [SuperAdminController::class, 'createTenant']);
