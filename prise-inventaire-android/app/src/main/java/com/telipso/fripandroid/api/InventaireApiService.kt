@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  */
 object InventaireApiService {
 
-    private var baseUrl = "http://10.0.2.2:8000/api"
+    private var baseUrl = "http://143.110.210.158/api"
     private var authToken: String? = null
     private var tenantSlug: String? = null
     private val gson = Gson()

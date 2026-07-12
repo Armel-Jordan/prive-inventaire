@@ -6,5 +6,7 @@
         <domain includeSubdomains="true">10.10.10.171</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">10.0.55.162</domain>
+        <!-- Serveur de production (HTTP en attendant HTTPS/domaine) -->
+        <domain includeSubdomains="true">143.110.210.158</domain>
     </domain-config>
 </network-security-config>
