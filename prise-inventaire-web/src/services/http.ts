@@ -78,6 +78,26 @@ function emitNetworkError(message: string): void {
   netErrListeners.forEach((cb) => cb(message));
 }
 
+// --- Choix de l'implémentation fetch -----------------------------------------
+// En desktop (Tauri), les requêtes passent par le plugin HTTP (couche Rust) :
+// ça contourne le blocage mixed-content du webview (app tauri:// → API HTTP).
+// En web, le fetch natif du navigateur. Import dynamique → aucun poids sur le
+// bundle web (le chunk n'est jamais chargé hors Tauri).
+const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+type FetchFn = typeof fetch;
+let fetchImplPromise: Promise<FetchFn> | null = null;
+
+function resolveFetch(): Promise<FetchFn> {
+  if (!isTauriRuntime) {
+    return Promise.resolve(window.fetch.bind(window));
+  }
+  if (!fetchImplPromise) {
+    fetchImplPromise = import('@tauri-apps/plugin-http').then((m) => m.fetch as unknown as FetchFn);
+  }
+  return fetchImplPromise;
+}
+
 // --- Cœur --------------------------------------------------------------------
 const IDEMPOTENT = new Set(['GET', 'HEAD', 'OPTIONS']);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -128,6 +148,7 @@ export async function apiFetch<T = unknown>(endpoint: string, options: ApiOption
   }
   const finalHeaders = { ...authHeaders, ...(headers as Record<string, string> | undefined) };
 
+  const doFetch = await resolveFetch();
   let lastApiError: ApiError | null = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -135,7 +156,7 @@ export async function apiFetch<T = unknown>(endpoint: string, options: ApiOption
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await doFetch(`${API_BASE_URL}${endpoint}`, {
         ...rest,
         headers: finalHeaders,
         signal: signal ?? controller.signal,

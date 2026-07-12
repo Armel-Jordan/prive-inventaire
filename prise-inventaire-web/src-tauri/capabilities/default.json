@@ -6,6 +6,13 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://143.110.210.158/*" },
+        { "url": "http://localhost:8000/*" }
+      ]
+    }
   ]
 }

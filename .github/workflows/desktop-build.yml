@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.platform }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -39,10 +41,19 @@ jobs:
         run: npm ci
 
       # tauri-action lance beforeBuildCommand (npm run build:desktop) puis bundle.
+      # Sur un tag desktop-v* : crée une Release GitHub et y attache les installeurs
+      # (liens de téléchargement publics). Sur workflow_dispatch : build seul (artefacts).
       - name: Build & bundle (Tauri)
         uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: prise-inventaire-web
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: 'Prise Inventaire Desktop ${{ github.ref_name }}'
+          releaseBody: "Installeurs de test (non signés). Windows : SmartScreen → « Informations complémentaires » → « Exécuter quand même ». macOS : clic droit → « Ouvrir »."
+          releaseDraft: false
+          prerelease: true
 
       - name: Upload installeurs
         uses: actions/upload-artifact@v4
