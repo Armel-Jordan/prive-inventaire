@@ -1,5 +1,13 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { User, TenantInfo, AuthState } from '@/types/auth';
+import { apiFetch } from '@/services/http';
+
+interface LoginResponse {
+  success: boolean;
+  token?: string;
+  user: User;
+  tenant: TenantInfo;
+}
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string, tenantSlug: string) => Promise<{ success: boolean; needsProfile?: boolean }>;
@@ -32,23 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading] = useState(false);
 
   const login = async (email: string, password: string, tenantSlug: string): Promise<{ success: boolean; needsProfile?: boolean }> => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const data = await apiFetch<LoginResponse>('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
         body: JSON.stringify({
           email,
           password,
           tenant_slug: tenantSlug,
         }),
       });
-
-      const data = await response.json();
 
       if (data.success && data.token) {
         setUser(data.user);

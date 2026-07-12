@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
+import { apiFetch } from '@/services/http';
 
 interface Permission {
   can_view: boolean;
@@ -43,19 +41,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const headers: Record<string, string> = { 'Accept': 'application/json' };
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-        if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/permissions/me`, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setPermissions(data);
-      }
+      const data = await apiFetch<PermissionsData>('/permissions/me');
+      setPermissions(data);
     } catch (error) {
       console.error('Erreur chargement permissions:', error);
     } finally {

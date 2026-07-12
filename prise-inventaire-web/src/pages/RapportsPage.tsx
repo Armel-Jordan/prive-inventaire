@@ -5,22 +5,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError } from '@/services/http';
 
 interface SecteurRapport {
   secteur: string;
@@ -82,41 +67,34 @@ export default function RapportsPage() {
     setLoading(true);
     try {
       if (activeTab === 'secteurs') {
-        const response = await fetch(`${API_BASE_URL}/rapports/mouvements-secteur?mois=${mois}&annee=${annee}`, {
-          headers: getAuthHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setSecteursData(data.rapport);
-          setTotaux(data.totaux);
-        }
+        const data = await apiFetch<{ rapport: SecteurRapport[]; totaux: typeof totaux }>(
+          `/rapports/mouvements-secteur?mois=${mois}&annee=${annee}`
+        );
+        setSecteursData(data.rapport);
+        setTotaux(data.totaux);
       } else if (activeTab === 'employes') {
-        const response = await fetch(`${API_BASE_URL}/rapports/activite-employe?mois=${mois}&annee=${annee}`, {
-          headers: getAuthHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setEmployesData(data.rapport);
-        }
+        const data = await apiFetch<{ rapport: EmployeRapport[] }>(
+          `/rapports/activite-employe?mois=${mois}&annee=${annee}`
+        );
+        setEmployesData(data.rapport);
       } else if (activeTab === 'evolution') {
-        const response = await fetch(`${API_BASE_URL}/rapports/evolution-annuelle?annee=${annee}`, {
-          headers: getAuthHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setEvolutionData(data.rapport);
-        }
+        const data = await apiFetch<{ rapport: EvolutionMois[] }>(
+          `/rapports/evolution-annuelle?annee=${annee}`
+        );
+        setEvolutionData(data.rapport);
       } else if (activeTab === 'produits') {
-        const response = await fetch(`${API_BASE_URL}/rapports/top-produits?mois=${mois}&annee=${annee}&limit=10`, {
-          headers: getAuthHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setProduitsData(data.produits);
-        }
+        const data = await apiFetch<{ produits: TopProduit[] }>(
+          `/rapports/top-produits?mois=${mois}&annee=${annee}&limit=10`
+        );
+        setProduitsData(data.produits);
       }
-    } catch {
-      toast('Erreur de chargement du rapport', 'error');
+    } catch (e) {
+      // L'ancien code n'agissait qu'en cas de réponse 2xx (if response.ok) :
+      // un statut HTTP non-2xx était ignoré silencieusement. On ne toast donc
+      // que sur les erreurs réseau/timeout (NetworkError), pas sur ApiError.
+      if (!(e instanceof ApiError)) {
+        toast('Erreur de chargement du rapport', 'error');
+      }
     } finally {
       setLoading(false);
     }

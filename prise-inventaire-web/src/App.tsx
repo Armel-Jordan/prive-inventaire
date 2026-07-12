@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { PermissionsProvider } from '@/contexts/PermissionsContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import Toaster from '@/components/Toaster';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
 import ScansPage from '@/pages/ScansPage';
@@ -121,17 +123,20 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <PermissionsProvider>
-              <AppRoutes />
-            </PermissionsProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <PermissionsProvider>
+                <AppRoutes />
+                <Toaster />
+              </PermissionsProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

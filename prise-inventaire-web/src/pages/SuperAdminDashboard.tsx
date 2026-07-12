@@ -4,8 +4,8 @@ import {
   Building2, Users, AlertTriangle, CheckCircle, Plus, LogOut, Shield,
   Search, RefreshCw, Clock, TrendingUp, ChevronRight, ToggleLeft, ToggleRight,
 } from 'lucide-react';
+import { apiFetch, type ApiOptions } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_super_admin';
 
 interface Stats {
@@ -104,26 +104,25 @@ export default function SuperAdminDashboard() {
     loadData();
   }, []);
 
-  async function fetchApi(endpoint: string, options?: RequestInit) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  async function fetchApi<T = unknown>(endpoint: string, options?: ApiOptions): Promise<T> {
+    // Super-admin : le token vient de localStorage['prise_super_admin'],
+    // pas de prise_auth. On force donc l'Authorization explicitement
+    // (apiFetch conserve les headers custom lors du merge).
+    return apiFetch<T>(endpoint, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${auth?.token}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${auth?.token}`,
         ...options?.headers,
       },
     });
-    if (!res.ok) throw new Error('Erreur API');
-    return res.json();
   }
 
   async function loadData() {
     setLoading(true);
     try {
       const [statsData, tenantsData] = await Promise.all([
-        fetchApi('/super-admin/stats'),
-        fetchApi('/super-admin/tenants'),
+        fetchApi<Stats>('/super-admin/stats'),
+        fetchApi<Tenant[]>('/super-admin/tenants'),
       ]);
       setStats(statsData);
       setTenants(tenantsData);

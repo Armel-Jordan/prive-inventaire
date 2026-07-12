@@ -4,22 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch } from '@/services/http';
 
 interface Suggestion {
   secteur: string;
@@ -76,24 +61,20 @@ export default function InventaireTournantPage() {
     setLoading(true);
     try {
       if (activeTab === 'suggestions') {
-        const [suggestionsRes, statsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/inventaire-tournant/suggestions`, { headers: getAuthHeaders() }),
-          fetch(`${API_BASE_URL}/inventaire-tournant/stats`, { headers: getAuthHeaders() }),
+        const [suggestionsData, statsData] = await Promise.all([
+          apiFetch<{ suggestions: Suggestion[] }>('/inventaire-tournant/suggestions').catch(() => null),
+          apiFetch<Stats>('/inventaire-tournant/stats').catch(() => null),
         ]);
 
-        if (suggestionsRes.ok) {
-          const data = await suggestionsRes.json();
-          setSuggestions(data.suggestions);
+        if (suggestionsData) {
+          setSuggestions(suggestionsData.suggestions);
         }
-        if (statsRes.ok) {
-          setStats(await statsRes.json());
+        if (statsData) {
+          setStats(statsData);
         }
       } else if (activeTab === 'planning') {
-        const response = await fetch(`${API_BASE_URL}/inventaire-tournant/planning`, {
-          headers: getAuthHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
+        const data = await apiFetch<{ planning: PlanningJour[] }>('/inventaire-tournant/planning').catch(() => null);
+        if (data) {
           setPlanning(data.planning);
         }
       }

@@ -2,23 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, Building2, AlertCircle, Camera, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(json = true): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  if (json) headers['Content-Type'] = 'application/json';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError } from '@/services/http';
 
 interface ProfileForm {
   telephone: string;
@@ -62,12 +46,10 @@ export default function CompleteProfilePage() {
 
     try {
       // 1. Compléter le profil (données texte)
-      const response = await fetch(`${API_BASE_URL}/auth/complete-profile`, {
+      const data = await apiFetch<{ success: boolean; message?: string }>('/auth/complete-profile', {
         method: 'PUT',
-        headers: getAuthHeaders(),
         body: JSON.stringify(form),
       });
-      const data = await response.json();
 
       if (!data.success) {
         setError(data.message || 'Une erreur est survenue');
@@ -79,17 +61,34 @@ export default function CompleteProfilePage() {
       if (photoFile) {
         const formData = new FormData();
         formData.append('photo', photoFile);
-        await fetch(`${API_BASE_URL}/auth/photo`, {
-          method: 'POST',
-          headers: getAuthHeaders(false),
-          body: formData,
-        });
+        try {
+          await apiFetch('/auth/photo', {
+            method: 'POST',
+            body: formData,
+            responseType: 'void',
+          });
+        } catch (photoErr) {
+          // Comportement d'origine : l'échec HTTP de l'upload photo était
+          // silencieux (fetch sans vérification de response.ok) et n'empêchait
+          // pas la suite. On ne relance que les erreurs réseau, comme avant.
+          if (!(photoErr instanceof ApiError)) throw photoErr;
+        }
       }
 
       if (user) updateUser({ ...user, profil_complete: true });
       navigate('/');
-    } catch {
-      setError('Erreur de connexion au serveur');
+    } catch (e) {
+      // Préserve le comportement d'erreur métier : afficher data.message si présent,
+      // sinon le message d'erreur réseau générique.
+      if (e instanceof ApiError) {
+        const message =
+          e.data && typeof e.data === 'object' && 'message' in e.data
+            ? String((e.data as { message: unknown }).message)
+            : e.message;
+        setError(message || 'Une erreur est survenue');
+      } else {
+        setError('Erreur de connexion au serveur');
+      }
     } finally {
       setLoading(false);
     }

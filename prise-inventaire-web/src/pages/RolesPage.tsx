@@ -1,22 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Shield, Plus, Edit2, Trash2, Save, X, Check } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError } from '@/services/http';
 
 interface Permission {
   can_view: boolean;
@@ -89,10 +74,8 @@ export default function RolesPage() {
   async function loadRoles() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/roles-custom`, { headers: getAuthHeaders() });
-      if (res.ok) {
-        setRoles(await res.json());
-      }
+      const data = await apiFetch<Role[]>('/roles-custom');
+      setRoles(data);
     } catch (error) {
       console.error('Erreur chargement rôles:', error);
     } finally {
@@ -112,22 +95,21 @@ export default function RolesPage() {
     if (!newRole.nom.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/roles-custom`, {
+      await apiFetch('/roles-custom', {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({ ...newRole, permissions: newPermissions }),
       });
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Rôle créé avec succès' });
-        setShowCreateModal(false);
-        setNewRole({ nom: '', description: '' });
-        loadRoles();
+      setMessage({ type: 'success', text: 'Rôle créé avec succès' });
+      setShowCreateModal(false);
+      setNewRole({ nom: '', description: '' });
+      loadRoles();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const data = e.data as { message?: string } | null;
+        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la création' });
       } else {
-        const data = await res.json();
-        setMessage({ type: 'error', text: data.message || 'Erreur lors de la création' });
+        setMessage({ type: 'error', text: 'Erreur de connexion' });
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Erreur de connexion' });
     } finally {
       setSaving(false);
     }
@@ -137,25 +119,24 @@ export default function RolesPage() {
     if (!editingRole) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/roles-custom/${editingRole.id}`, {
+      await apiFetch(`/roles-custom/${editingRole.id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           nom: editingRole.nom,
           description: editingRole.description,
           permissions: editingRole.permissions,
         }),
       });
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Rôle mis à jour avec succès' });
-        setEditingRole(null);
-        loadRoles();
+      setMessage({ type: 'success', text: 'Rôle mis à jour avec succès' });
+      setEditingRole(null);
+      loadRoles();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const data = e.data as { message?: string } | null;
+        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la mise à jour' });
       } else {
-        const data = await res.json();
-        setMessage({ type: 'error', text: data.message || 'Erreur lors de la mise à jour' });
+        setMessage({ type: 'error', text: 'Erreur de connexion' });
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Erreur de connexion' });
     } finally {
       setSaving(false);
     }
@@ -164,19 +145,19 @@ export default function RolesPage() {
   async function handleDeleteRole(roleId: number) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce rôle ?')) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/roles-custom/${roleId}`, {
+      await apiFetch(`/roles-custom/${roleId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        responseType: 'void',
       });
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Rôle supprimé avec succès' });
-        loadRoles();
+      setMessage({ type: 'success', text: 'Rôle supprimé avec succès' });
+      loadRoles();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const data = e.data as { message?: string } | null;
+        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la suppression' });
       } else {
-        const data = await res.json();
-        setMessage({ type: 'error', text: data.message || 'Erreur lors de la suppression' });
+        setMessage({ type: 'error', text: 'Erreur de connexion' });
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Erreur de connexion' });
     }
   }
 

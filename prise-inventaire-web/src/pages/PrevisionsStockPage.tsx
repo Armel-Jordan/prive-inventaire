@@ -2,22 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, AlertTriangle, ShoppingCart, Package } from 'lucide-react';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch } from '@/services/http';
 
 interface PrevisionProduit {
   id: number;
@@ -44,14 +29,15 @@ export default function PrevisionsStockPage() {
   async function loadPrevisions() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/alertes/previsions`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProduits(data.produits);
-        setStats({ total: data.total, critiques: data.critiques, bas: data.bas, ok: data.ok });
-      }
+      const data = await apiFetch<{
+        produits: PrevisionProduit[];
+        total: number;
+        critiques: number;
+        bas: number;
+        ok: number;
+      }>('/alertes/previsions');
+      setProduits(data.produits);
+      setStats({ total: data.total, critiques: data.critiques, bas: data.bas, ok: data.ok });
     } catch {
       /* ignore */
     } finally {

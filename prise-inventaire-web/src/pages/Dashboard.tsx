@@ -20,25 +20,9 @@ import {
   Minus,
 } from 'lucide-react';
 import { getScans, getProduits, getSecteurs, getEmployes } from '@/services/api';
+import { apiFetch } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
 const REFRESH_INTERVAL = 30000; // 30 secondes
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch {
-      /* ignore */
-    }
-  }
-  return headers;
-}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -88,6 +72,33 @@ interface PlanificationInfo {
 
 interface ApprobationInfo {
   en_attente: number;
+}
+
+// ─── Réponses API ───────────────────────────────────────────────────────────
+
+interface DashboardActions {
+  alertes?: number;
+  notifications?: number;
+  planifications?: number;
+  approbations?: number;
+}
+
+interface DashboardResponse {
+  ventes?: Partial<VentesStats>;
+  achats?: Partial<AchatsStats>;
+  finance?: Partial<FinanceStats>;
+  inventaire?: Partial<InventaireStats>;
+  actions?: DashboardActions;
+}
+
+interface LegacyDashboardResponse {
+  inventaire?: {
+    scans?: number;
+    produits?: number;
+    secteurs?: number;
+    employes?: number;
+  };
+  actions?: DashboardActions;
 }
 
 // ─── Valeurs par défaut ───────────────────────────────────────────────────────
@@ -220,12 +231,8 @@ export default function Dashboard() {
   const loadStats = useCallback(async () => {
     try {
       // ── Nouvel endpoint unifié ──────────────────────────────────────────────
-      const dashboardRes = await fetch(`${API_BASE_URL}/dashboard?period=month`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (dashboardRes.ok) {
-        const data = await dashboardRes.json();
+      try {
+        const data = await apiFetch<DashboardResponse>('/dashboard?period=month');
 
         // Nouvelles sections
         if (data.ventes) setVentes({ ...defaultVentes, ...data.ventes });
@@ -240,14 +247,10 @@ export default function Dashboard() {
           setPlanifications({ upcoming: data.actions.planifications ?? 0 });
           setApprobations({ en_attente: data.actions.approbations ?? 0 });
         }
-      } else {
+      } catch {
         // ── Fallback : ancien endpoint /dashboard/stats ─────────────────────
-        const legacyRes = await fetch(`${API_BASE_URL}/dashboard/stats`, {
-          headers: getAuthHeaders(),
-        });
-
-        if (legacyRes.ok) {
-          const data = await legacyRes.json();
+        try {
+          const data = await apiFetch<LegacyDashboardResponse>('/dashboard/stats');
 
           setLegacyStats({
             scans: data.inventaire?.scans ?? 0,
@@ -270,7 +273,7 @@ export default function Dashboard() {
             setPlanifications({ upcoming: data.actions.planifications ?? 0 });
             setApprobations({ en_attente: data.actions.approbations ?? 0 });
           }
-        } else {
+        } catch {
           // ── Fallback ultime : appels individuels ──────────────────────────
           const [scans, produits, secteurs, employes] = await Promise.all([
             getScans(),
@@ -293,30 +296,27 @@ export default function Dashboard() {
       }
 
       // ── Notifications non lues (indépendant) ────────────────────────────────
-      const notifRes = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
-        headers: getAuthHeaders(),
-      });
-      if (notifRes.ok) {
-        const data = await notifRes.json();
+      try {
+        const data = await apiFetch<{ count?: number }>('/notifications/unread-count');
         setNotifications({ count: data.count ?? 0 });
+      } catch {
+        /* endpoint indisponible : on conserve la valeur courante */
       }
 
       // ── Transferts planifiés ────────────────────────────────────────────────
-      const planifRes = await fetch(`${API_BASE_URL}/transferts-planifies/stats`, {
-        headers: getAuthHeaders(),
-      });
-      if (planifRes.ok) {
-        const data = await planifRes.json();
+      try {
+        const data = await apiFetch<{ a_venir_7_jours?: number }>('/transferts-planifies/stats');
         setPlanifications({ upcoming: data.a_venir_7_jours ?? 0 });
+      } catch {
+        /* endpoint indisponible : on conserve la valeur courante */
       }
 
       // ── Approbations en attente ─────────────────────────────────────────────
-      const approbRes = await fetch(`${API_BASE_URL}/approbations/stats`, {
-        headers: getAuthHeaders(),
-      });
-      if (approbRes.ok) {
-        const data = await approbRes.json();
+      try {
+        const data = await apiFetch<{ en_attente?: number }>('/approbations/stats');
         setApprobations({ en_attente: data.en_attente ?? 0 });
+      } catch {
+        /* endpoint indisponible : on conserve la valeur courante */
       }
 
       setLastUpdate(new Date());

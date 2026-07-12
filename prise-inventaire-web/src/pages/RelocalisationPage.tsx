@@ -4,34 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
-
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: { ...getAuthHeaders(), ...options?.headers },
-  });
-  if (!response.ok) throw new Error(`API Error: ${response.status}`);
-  return response.json();
-}
+import { apiFetch } from '@/services/http';
 
 interface Mouvement {
   id: number;
@@ -108,8 +81,8 @@ export default function RelocalisationPage() {
     try {
       const params = filterType ? `?type=${filterType}` : '';
       const [mouvementsRes, secteursRes] = await Promise.all([
-        fetchApi<Mouvement[]>(`/relocalisation${params}`),
-        fetchApi<Secteur[]>('/secteurs'),
+        apiFetch<Mouvement[]>(`/relocalisation${params}`),
+        apiFetch<Secteur[]>('/secteurs'),
       ]);
       setMouvements(mouvementsRes);
       setSecteurs(secteursRes);
@@ -169,7 +142,7 @@ export default function RelocalisationPage() {
     try {
       // Envoyer chaque produit comme un mouvement séparé
       const promises = batchItems.map(item =>
-        fetchApi('/relocalisation', {
+        apiFetch('/relocalisation', {
           method: 'POST',
           body: JSON.stringify({
             type: batchType,
@@ -197,7 +170,7 @@ export default function RelocalisationPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await fetchApi('/relocalisation', {
+      await apiFetch('/relocalisation', {
         method: 'POST',
         body: JSON.stringify({
           ...form,

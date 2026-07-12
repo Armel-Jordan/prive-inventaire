@@ -1,22 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch } from '@/services/http';
 
 interface Notification {
   id: number;
@@ -50,13 +35,8 @@ export default function NotificationBell() {
 
   async function loadUnreadCount() {
     try {
-      const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
-      }
+      const data = await apiFetch<{ count: number }>('/notifications/unread-count');
+      setUnreadCount(data.count);
     } catch (error) {
       console.error('Erreur chargement notifications:', error);
     }
@@ -65,12 +45,8 @@ export default function NotificationBell() {
   async function loadNotifications() {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/notifications?limit=10`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        setNotifications(await response.json());
-      }
+      const data = await apiFetch<Notification[]>('/notifications?limit=10');
+      setNotifications(data);
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
@@ -87,11 +63,11 @@ export default function NotificationBell() {
 
   async function markAsRead(id: number) {
     try {
-      await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      await apiFetch(`/notifications/${id}/read`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        responseType: 'void',
       });
-      setNotifications(notifications.map(n => 
+      setNotifications(notifications.map(n =>
         n.id === id ? { ...n, lu: true } : n
       ));
       setUnreadCount(Math.max(0, unreadCount - 1));
@@ -102,9 +78,9 @@ export default function NotificationBell() {
 
   async function markAllAsRead() {
     try {
-      await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      await apiFetch('/notifications/read-all', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        responseType: 'void',
       });
       setNotifications(notifications.map(n => ({ ...n, lu: true })));
       setUnreadCount(0);
@@ -115,9 +91,9 @@ export default function NotificationBell() {
 
   async function deleteNotification(id: number) {
     try {
-      await fetch(`${API_BASE_URL}/notifications/${id}`, {
+      await apiFetch(`/notifications/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        responseType: 'void',
       });
       const notif = notifications.find(n => n.id === id);
       setNotifications(notifications.filter(n => n.id !== id));

@@ -1,36 +1,12 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
+import { apiFetch, getAuthHeaders, type ApiOptions } from './http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
+export { getAuthHeaders };
 
 // Mock data pour le développement (à remplacer par les vrais appels API)
 // Mettre à false quand l'API Laravel est prête
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
-
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) {
-        headers['Authorization'] = `Bearer ${data.token}`;
-      }
-      if (data.tenant?.slug) {
-        headers['X-Tenant-Slug'] = data.tenant.slug;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return headers;
-}
 
 const mockEmployes: Employe[] = [
   { id: 1, numero: 'E001', nom: 'Jean Dupont' },
@@ -56,17 +32,9 @@ const mockScans: InventaireScan[] = [
   { id: 3, numero: 'P003', type: 'LIQUIDE', quantite: 20, unite_mesure: 'L', employe: 'E002', secteur: 'B1', date_saisie: '2026-03-01T11:00:00', scanneur: 'SCAN002' },
 ];
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: getAuthHeaders(),
-    ...options,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Erreur API: ${response.status}`);
-  }
-
-  return response.json();
+async function fetchApi<T>(endpoint: string, options?: ApiOptions): Promise<T> {
+  // Délègue au client central résilient (timeout, retry idempotent, erreurs typées).
+  return apiFetch<T>(endpoint, options);
 }
 
 // === EMPLOYES ===
