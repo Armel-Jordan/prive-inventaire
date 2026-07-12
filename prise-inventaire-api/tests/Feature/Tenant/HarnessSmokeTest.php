@@ -28,8 +28,12 @@ class HarnessSmokeTest extends TestCase
 
     public function test_hardcoded_mysql_connection_points_to_test_database(): void
     {
-        // Les modèles historiques en $connection='mysql' doivent viser le sqlite de test.
-        $this->assertSame('sqlite', DB::connection('mysql')->getDriverName());
+        // Les modèles historiques en $connection='mysql' doivent viser la MÊME base que
+        // la connexion par défaut de test : sqlite en local (remap), MySQL en CI.
+        $this->assertSame(
+            DB::connection(config('database.default'))->getDriverName(),
+            DB::connection('mysql')->getDriverName(),
+        );
     }
 
     public function test_acting_as_tenant_sets_context(): void
