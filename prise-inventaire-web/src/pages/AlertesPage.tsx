@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw, Plus, X, Save } from 'lucide-react';
 import { getProduits } from '@/services/api';
-import { apiFetch } from '@/services/http';
+import { apiFetch, NetworkError } from '@/services/http';
 import type { Produit } from '@/types';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
@@ -62,7 +62,12 @@ export default function AlertesPage() {
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value);
       }
-      if (alertesRes.status === 'rejected' && statsRes.status === 'rejected') {
+      // Iso-comportement d'origine : le toast n'apparaissait que sur erreur réseau
+      // (ancien catch du Promise.all). Les erreurs HTTP (!response.ok) étaient silencieuses.
+      const hasNetworkError =
+        (alertesRes.status === 'rejected' && alertesRes.reason instanceof NetworkError) ||
+        (statsRes.status === 'rejected' && statsRes.reason instanceof NetworkError);
+      if (hasNetworkError) {
         toast('Erreur de chargement des alertes', 'error');
       }
     } catch {

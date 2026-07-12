@@ -131,7 +131,8 @@ export default function ApprobationsPage() {
 
       setShowSettings(false);
       toast('Seuils mis à jour avec succès', 'success');
-    } catch {
+    } catch (e) {
+      if (e instanceof ApiError) return;
       toast('Une erreur est survenue', 'error');
     }
   }

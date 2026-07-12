@@ -4,7 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-import { apiFetch } from '@/services/http';
+import { apiFetch, ApiError } from '@/services/http';
 
 interface HistoryItem {
   id: number;
@@ -64,7 +64,9 @@ export default function TracabilitePage() {
       const results = await apiFetch<SearchResult[]>(`/tracabilite/search?q=${encodeURIComponent(query)}`);
       setSearchResults(results);
       setShowResults(true);
-    } catch {
+    } catch (e) {
+      // Erreur HTTP (ApiError) : silencieux, comme l'original sur !response.ok
+      if (e instanceof ApiError) return;
       toast('Erreur lors de la recherche', 'error');
     }
   }
@@ -79,7 +81,9 @@ export default function TracabilitePage() {
       const data = await apiFetch<{ historique: HistoryItem[]; stats: Stats }>(`/tracabilite/produit/${encodeURIComponent(numero)}`);
       setHistorique(data.historique);
       setStats(data.stats);
-    } catch {
+    } catch (e) {
+      // Erreur HTTP (ApiError) : silencieux, comme l'original sur !response.ok
+      if (e instanceof ApiError) return;
       toast('Erreur de chargement de l\'historique', 'error');
     } finally {
       setLoading(false);

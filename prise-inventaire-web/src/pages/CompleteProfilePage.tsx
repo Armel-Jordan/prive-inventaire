@@ -61,11 +61,18 @@ export default function CompleteProfilePage() {
       if (photoFile) {
         const formData = new FormData();
         formData.append('photo', photoFile);
-        await apiFetch('/auth/photo', {
-          method: 'POST',
-          body: formData,
-          responseType: 'void',
-        });
+        try {
+          await apiFetch('/auth/photo', {
+            method: 'POST',
+            body: formData,
+            responseType: 'void',
+          });
+        } catch (photoErr) {
+          // Comportement d'origine : l'échec HTTP de l'upload photo était
+          // silencieux (fetch sans vérification de response.ok) et n'empêchait
+          // pas la suite. On ne relance que les erreurs réseau, comme avant.
+          if (!(photoErr instanceof ApiError)) throw photoErr;
+        }
       }
 
       if (user) updateUser({ ...user, profil_complete: true });
