@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\ReceptionArrivagesLigne;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,12 +15,15 @@ class ReceptionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = ReceptionArrivagesLigne::with([
-            'ligneCommande.commande.fournisseur',
-            'ligneCommande.produit',
-            'secteur',
-            'receivedBy',
-        ]);
+        // Scope tenant via le trait sur ComFourEntete (commande) : ne remonte que les réceptions du tenant courant.
+        $query = ReceptionArrivagesLigne::query()
+            ->whereHas('ligneCommande.commande')
+            ->with([
+                'ligneCommande.commande.fournisseur',
+                'ligneCommande.produit',
+                'secteur',
+                'receivedBy',
+            ]);
 
         if ($request->has('date_debut')) {
             $query->whereDate('date_reception', '>=', $request->date_debut);
@@ -46,7 +50,7 @@ class ReceptionController extends Controller
             'com_four_ligne_id' => 'required|exists:com_four_ligne,id',
             'date_reception' => 'required|date',
             'quantite_recue' => 'required|integer|min:1',
-            'secteur_id' => 'nullable|exists:secteurs,id',
+            'secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'lot_numero' => 'nullable|string|max:50',
             'date_peremption' => 'nullable|date',
             'notes' => 'nullable|string',
@@ -61,7 +65,12 @@ class ReceptionController extends Controller
             ], 422);
         }
 
+        // La relation commande porte le scope tenant (trait sur ComFourEntete) :
+        // une ligne d'un autre tenant renvoie une commande null -> 404 (ferme l'IDOR).
         $commande = $ligneCommande->commande;
+        if (! $commande) {
+            return response()->json(['message' => 'Ligne de commande introuvable.'], 404);
+        }
         if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
                 'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
@@ -90,12 +99,12 @@ class ReceptionController extends Controller
     public function receptionMultiple(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'commande_id' => 'required|exists:com_four_entete,id',
+            'commande_id' => ['required', TenantRule::exists('com_four_entete')],
             'date_reception' => 'required|date',
             'receptions' => 'required|array|min:1',
             'receptions.*.com_four_ligne_id' => 'required|exists:com_four_ligne,id',
             'receptions.*.quantite_recue' => 'required|integer|min:1',
-            'receptions.*.secteur_id' => 'nullable|exists:secteurs,id',
+            'receptions.*.secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'receptions.*.lot_numero' => 'nullable|string|max:50',
             'receptions.*.date_peremption' => 'nullable|date',
             'receptions.*.notes' => 'nullable|string',
@@ -109,11 +118,12 @@ class ReceptionController extends Controller
             ], 422);
         }
 
-        $receptions = DB::transaction(function () use ($validated, $request) {
+        $receptions = DB::transaction(function () use ($validated, $request, $commande) {
             $created = [];
 
             foreach ($validated['receptions'] as $receptionData) {
-                $ligneCommande = ComFourLigne::findOrFail($receptionData['com_four_ligne_id']);
+                // Scoper la ligne à la commande (tenant-scopée) : empêche de réceptionner sur la ligne d'un autre tenant.
+                $ligneCommande = $commande->lignes()->findOrFail($receptionData['com_four_ligne_id']);
                 $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
 
                 if ($receptionData['quantite_recue'] > $quantiteRestante) {

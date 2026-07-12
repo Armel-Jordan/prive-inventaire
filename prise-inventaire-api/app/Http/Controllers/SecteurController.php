@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Configuration;
 use App\Models\Secteur;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,7 @@ class SecteurController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'code' => ['nullable', 'string', 'max:10', 'unique:secteurs,code'],
+            'code' => ['nullable', 'string', 'max:10', TenantRule::unique('secteurs', 'code')],
             'nom' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);
@@ -68,7 +69,7 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         $request->validate([
-            'code' => ['sometimes', 'string', 'max:10', 'unique:secteurs,code,'.$id, 'regex:/^[A-Za-z]\d{1,2}$/'],
+            'code' => ['sometimes', 'string', 'max:10', TenantRule::unique('secteurs', 'code', $id), 'regex:/^[A-Za-z]\d{1,2}$/'],
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',
@@ -162,7 +163,7 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         $request->validate([
-            'qr_code' => 'required|string|max:100|unique:secteurs,qr_code,'.$id,
+            'qr_code' => ['required', 'string', 'max:100', TenantRule::unique('secteurs', 'qr_code', $id)],
         ]);
 
         $secteur->qr_code = $request->qr_code;

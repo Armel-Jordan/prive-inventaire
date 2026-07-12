@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.telipso.fripandroid.api.InventaireApiService
 import com.telipso.fripandroid.ui.theme.PriseInventaireTheme
 import com.telipso.fripandroid.ui.theme.seed
 import kotlinx.coroutines.delay
@@ -43,11 +44,28 @@ class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Restaure l'URL serveur + le token d'auth persistés avant toute requête.
+        val config = com.telipso.fripandroid.entities.Config()
+        SQLiteDb.getInstance(this).readableDatabase.use { db -> config.loadConfig(db) }
+        if (config.serveurSynchro.isNotBlank()) {
+            InventaireApiService.setBaseUrl(config.serveurSynchro)
+        }
+        val token = AuthStore.token(this)
+        val slug = AuthStore.slug(this)
+        if (!token.isNullOrBlank() && !slug.isNullOrBlank()) {
+            InventaireApiService.setAuth(token, slug)
+        }
+
         setContent {
             PriseInventaireTheme {
                 SplashScreen(
                     onSplashFinished = {
-                        startActivity(Intent(this, EmployeLoginActivity::class.java))
+                        val next = if (AuthStore.isLoggedIn(this)) {
+                            EmployeLoginActivity::class.java
+                        } else {
+                            LoginActivity::class.java
+                        }
+                        startActivity(Intent(this, next))
                         finish()
                     }
                 )

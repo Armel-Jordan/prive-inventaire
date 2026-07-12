@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Configuration;
 use App\Models\ProduitTenant;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,13 +24,13 @@ class ProduitTenantController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => 'nullable|string|max:50|unique:produits,numero',
+            'numero' => ['nullable', 'string', 'max:50', TenantRule::unique('produits', 'numero')],
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
             'qte_par_unite_achat' => 'nullable|integer|min:1',
             'type' => 'nullable|string|max:50',
-            'secteur_id' => 'required|exists:secteurs,id',
+            'secteur_id' => ['required', TenantRule::exists('secteurs')],
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
         ]);
@@ -83,13 +84,13 @@ class ProduitTenantController extends Controller
         $produit = ProduitTenant::findOrFail($id);
 
         $request->validate([
-            'numero' => 'sometimes|string|max:50|unique:produits,numero,'.$id,
+            'numero' => ['sometimes', 'string', 'max:50', TenantRule::unique('produits', 'numero', $id)],
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
             'qte_par_unite_achat' => 'nullable|integer|min:1',
             'type' => 'nullable|string|max:50',
-            'secteur_id' => 'sometimes|exists:secteurs,id',
+            'secteur_id' => ['sometimes', TenantRule::exists('secteurs')],
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
             'actif' => 'sometimes|boolean',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -9,20 +10,25 @@ class DashboardController extends Controller
 {
     public function stats(): JsonResponse
     {
+        // Ces requêtes utilisent le query builder brut (hors Global Scope Eloquent) :
+        // on scope explicitement par tenant_id pour ne pas agréger les données d'autres tenants.
+        $tenantId = app(TenantContext::class)->getTenantId();
+
         // Scans
-        $scansTotal = DB::table('inventaire_scan')->whereNull('deleted_at')->count();
+        $scansTotal = DB::table('inventaire_scan')->where('tenant_id', $tenantId)->whereNull('deleted_at')->count();
 
         // Produits (numéros uniques dans les scans)
         $produitsTotal = DB::table('inventaire_scan')
+            ->where('tenant_id', $tenantId)
             ->whereNull('deleted_at')
             ->distinct('numero')
             ->count('numero');
 
         // Secteurs
-        $secteursTotal = DB::table('secteurs')->where('actif', true)->count();
+        $secteursTotal = DB::table('secteurs')->where('tenant_id', $tenantId)->where('actif', true)->count();
 
         // Employés
-        $employesTotal = DB::table('employes')->where('actif', true)->count();
+        $employesTotal = DB::table('employes')->where('tenant_id', $tenantId)->where('actif', true)->count();
 
         // Mouvements relocalisation
         $mouvementsTotal = 0;
@@ -30,10 +36,12 @@ class DashboardController extends Controller
         $mouvementsByType = [];
         try {
             if (DB::getSchemaBuilder()->hasTable('mouvement_relocalisation')) {
-                $mouvementsTotal = DB::table('mouvement_relocalisation')->count();
+                $mouvementsTotal = DB::table('mouvement_relocalisation')->where('tenant_id', $tenantId)->count();
                 $mouvementsToday = DB::table('mouvement_relocalisation')
+                    ->where('tenant_id', $tenantId)
                     ->whereDate('date_mouvement', today())->count();
                 $mouvementsByType = DB::table('mouvement_relocalisation')
+                    ->where('tenant_id', $tenantId)
                     ->select('type', DB::raw('count(*) as count'))
                     ->groupBy('type')->pluck('count', 'type')->toArray();
             }
@@ -45,6 +53,7 @@ class DashboardController extends Controller
         $transfertsPlanifies = 0;
         try {
             $transfertsPlanifies = DB::table('transferts_planifies')
+                ->where('tenant_id', $tenantId)
                 ->where('statut', 'planifie')
                 ->whereDate('date_planifiee', '>=', today())
                 ->whereDate('date_planifiee', '<=', today()->addDays(7))
@@ -55,11 +64,13 @@ class DashboardController extends Controller
 
         // Approbations en attente
         $approbationsEnAttente = DB::table('approbations')
+            ->where('tenant_id', $tenantId)
             ->where('statut', 'en_attente')
             ->count();
 
         // Notifications non lues
         $notificationsNonLues = DB::table('notifications')
+            ->where('tenant_id', $tenantId)
             ->where('lu', false)
             ->count();
 

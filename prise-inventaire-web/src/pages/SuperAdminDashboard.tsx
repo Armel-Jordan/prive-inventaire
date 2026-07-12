@@ -25,6 +25,29 @@ interface Tenant {
   admin_users_count: number;
   renouvelable: boolean;
   duree_abonnement: number;
+  modules?: string[];
+}
+
+const OPTIONAL_MODULE_LABELS: Record<string, string> = {
+  achats: 'Achats',
+  ventes: 'Ventes',
+  finance: 'Finance',
+};
+
+function ModuleChips({ modules }: { modules?: string[] }) {
+  const optional = (modules ?? []).filter((m) => m in OPTIONAL_MODULE_LABELS);
+  if (optional.length === 0) {
+    return <span className="text-[11px] text-slate-500">Base seule</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1 mt-1.5">
+      {optional.map((m) => (
+        <span key={m} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700 text-slate-300">
+          {OPTIONAL_MODULE_LABELS[m]}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 type FilterTab = 'tous' | 'actifs' | 'alertes' | 'expires';
@@ -291,7 +314,10 @@ export default function SuperAdminDashboard() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-4"><PlanBadge plan={tenant.plan} /></td>
+                        <td className="px-5 py-4">
+                          <PlanBadge plan={tenant.plan} />
+                          <ModuleChips modules={tenant.modules} />
+                        </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-1.5 text-slate-400 text-sm">
                             <Users size={14} />

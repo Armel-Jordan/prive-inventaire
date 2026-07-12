@@ -12,6 +12,7 @@ export interface TenantInfo {
   nom: string;
   slug: string;
   plan: string;
+  modules?: string[];
 }
 
 export interface AuthState {

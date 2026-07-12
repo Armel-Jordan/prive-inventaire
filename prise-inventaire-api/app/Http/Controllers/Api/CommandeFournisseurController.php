@@ -8,6 +8,7 @@ use App\Models\ComFourLigne;
 use App\Models\Configuration;
 use App\Models\HistoriquePrixAchat;
 use App\Models\ProduitTenant;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,14 +54,14 @@ class CommandeFournisseurController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'fournisseur_id' => 'required|exists:fournisseurs,id',
+            'fournisseur_id' => ['required', TenantRule::exists('fournisseurs')],
             'date_commande' => 'required|date',
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'devise' => 'nullable|string|max:10',
             'taux_change' => 'nullable|numeric|min:0',
             'lignes' => 'required|array|min:1',
-            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
@@ -124,13 +125,13 @@ class CommandeFournisseurController extends Controller
         }
 
         $validated = $request->validate([
-            'fournisseur_id' => 'required|exists:fournisseurs,id',
+            'fournisseur_id' => ['required', TenantRule::exists('fournisseurs')],
             'date_commande' => 'required|date',
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             'lignes.*.id' => 'nullable|exists:com_four_ligne,id',
-            'lignes.*.produit_id' => 'required|exists:produits,id',
+            'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
@@ -149,7 +150,8 @@ class CommandeFournisseurController extends Controller
             foreach ($validated['lignes'] as $ligne) {
                 $produit = ProduitTenant::find($ligne['produit_id']);
                 if (isset($ligne['id'])) {
-                    ComFourLigne::where('id', $ligne['id'])->update([
+                    // Scoper à la commande courante (tenant-scopée) : empêche de modifier la ligne d'un autre tenant par id.
+                    $commande->lignes()->where('id', $ligne['id'])->update([
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
                         'unite_achat' => $produit?->unite_achat,

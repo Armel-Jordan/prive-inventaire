@@ -13,9 +13,14 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    /** Vérifie si un index existe via information_schema (compatible Laravel 11+). */
+    /** Vérifie si un index existe. MySQL via information_schema ; autres drivers via le schema builder. */
     private function indexExists(string $table, string $indexName): bool
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return collect(Schema::getIndexes($table))
+                ->contains(fn ($index) => $index['name'] === $indexName);
+        }
+
         return DB::table('information_schema.STATISTICS')
             ->where('TABLE_SCHEMA', DB::raw('DATABASE()'))
             ->where('TABLE_NAME', $table)

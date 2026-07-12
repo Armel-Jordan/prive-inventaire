@@ -20,6 +20,7 @@ class AlerteStockController extends Controller
         if ($tenant) {
             return $tenant->id;
         }
+
         return auth()->user()?->tenant_id ?? 0;
     }
 
@@ -217,15 +218,15 @@ class AlerteStockController extends Controller
             }
 
             $result[] = [
-                'id'                   => $produit->id,
-                'numero'               => $produit->numero,
-                'description'          => $produit->description,
-                'unite_mesure'         => $produit->mesure,
-                'stock_actuel'         => $stockActuel,
-                'stock_min'            => $seuilMin,
-                'consommation_jour'    => $consommationJour,
-                'jours_restants'       => $joursRestants,
-                'statut'               => $statut,
+                'id' => $produit->id,
+                'numero' => $produit->numero,
+                'description' => $produit->description,
+                'unite_mesure' => $produit->mesure,
+                'stock_actuel' => $stockActuel,
+                'stock_min' => $seuilMin,
+                'consommation_jour' => $consommationJour,
+                'jours_restants' => $joursRestants,
+                'statut' => $statut,
             ];
         }
 
@@ -233,19 +234,22 @@ class AlerteStockController extends Controller
         usort($result, function ($a, $b) {
             $order = ['critique' => 0, 'bas' => 1, 'ok' => 2];
             $diff = ($order[$a['statut']] ?? 3) <=> ($order[$b['statut']] ?? 3);
-            if ($diff !== 0) return $diff;
+            if ($diff !== 0) {
+                return $diff;
+            }
+
             return ($a['jours_restants'] ?? 9999) <=> ($b['jours_restants'] ?? 9999);
         });
 
         $critiques = count(array_filter($result, fn ($p) => $p['statut'] === 'critique'));
-        $bas       = count(array_filter($result, fn ($p) => $p['statut'] === 'bas'));
+        $bas = count(array_filter($result, fn ($p) => $p['statut'] === 'bas'));
 
         return response()->json([
-            'produits'  => $result,
-            'total'     => count($result),
+            'produits' => $result,
+            'total' => count($result),
             'critiques' => $critiques,
-            'bas'       => $bas,
-            'ok'        => count($result) - $critiques - $bas,
+            'bas' => $bas,
+            'ok' => count($result) - $critiques - $bas,
         ]);
     }
 

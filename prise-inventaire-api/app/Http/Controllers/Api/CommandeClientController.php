@@ -8,6 +8,7 @@ use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,7 @@ class CommandeClientController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
+            'client_id' => ['required', TenantRule::exists('clients')],
             'date_commande' => 'required|date',
             'date_livraison_souhaitee' => 'nullable|date|after_or_equal:date_commande',
             'remise_globale' => 'nullable|numeric|min:0|max:100',

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MouvementVente extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $table = 'mouvements_inventaire';
 
