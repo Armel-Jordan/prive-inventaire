@@ -57,10 +57,9 @@ class DevisController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
         }
-        $numero = $config->genererNumero();
-        $config->incrementer();
+        $devis = DB::transaction(function () use ($validated, $request, $tenantId) {
+            $numero = Configuration::consommerNumero('devis', $tenantId);
 
-        $devis = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $devis = Devis::create([
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
@@ -191,8 +190,15 @@ class DevisController extends Controller
 
         $devis->load('lignes');
 
-        $commande = DB::transaction(function () use ($devis, $request) {
-            $numero = \App\Models\ComClientEntete::generateNumero();
+        $tenantId = $devis->tenant_id;
+        $configCommande = Configuration::pourEntite('commande', $tenantId);
+        if (! $configCommande || ! $configCommande->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Configuration numéro commande manquante'], 422);
+        }
+
+        $commande = DB::transaction(function () use ($devis, $request, $tenantId) {
+            // Même séquence que la création normale de commande (cohérence + verrou).
+            $numero = Configuration::consommerNumero('commande', $tenantId);
 
             $commande = \App\Models\ComClientEntete::create([
                 'numero' => $numero,

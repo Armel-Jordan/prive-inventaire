@@ -68,10 +68,9 @@ class FactureController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numero = $config->genererNumero();
-        $config->incrementer();
+        $facture = DB::transaction(function () use ($validated, $tenantId) {
+            $numero = Configuration::consommerNumero('facture', $tenantId);
 
-        $facture = DB::transaction(function () use ($validated, $numero) {
             $montantHt = 0;
             $montantTva = 0;
             $montantTtc = 0;
@@ -140,10 +139,9 @@ class FactureController extends Controller
         if (! $configFacture || ! $configFacture->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numeroFacture = $configFacture->genererNumero();
-        $configFacture->incrementer();
+        $facture = DB::transaction(function () use ($commande, $tenantId) {
+            $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
 
-        $facture = DB::transaction(function () use ($commande, $numeroFacture, $tenantId) {
             $facture = Facture::create([
                 'tenant_id' => $tenantId,
                 'numero' => $numeroFacture,
@@ -219,12 +217,6 @@ class FactureController extends Controller
 
     public function enregistrerPaiement(Request $request, int $id): JsonResponse
     {
-        $facture = Facture::findOrFail($id);
-
-        if (! in_array($facture->statut, ['emise', 'partiellement_payee'])) {
-            return response()->json(['message' => 'Cette facture ne peut pas recevoir de paiement'], 422);
-        }
-
         $validated = $request->validate([
             'montant' => 'required|numeric|min:0.01',
             'date_paiement' => 'required|date',
@@ -234,20 +226,39 @@ class FactureController extends Controller
             'echeance_id' => 'nullable|exists:facture_echeances,id',
         ]);
 
-        if ($validated['montant'] > $facture->reste_a_payer) {
-            return response()->json(['message' => 'Le montant dépasse le reste à payer'], 422);
-        }
+        try {
+            $facture = DB::transaction(function () use ($id, $validated, $request) {
+                // Verrou sur la facture : sérialise les paiements concurrents et
+                // évite le double encaissement basé sur un reste_a_payer périmé.
+                $facture = Facture::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        $paiement = FacturePaiement::create([
-            'facture_id' => $facture->id,
-            'echeance_id' => $validated['echeance_id'] ?? null,
-            'date_paiement' => $validated['date_paiement'],
-            'montant' => $validated['montant'],
-            'mode_paiement' => $validated['mode_paiement'],
-            'reference' => $validated['reference'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'enregistre_par' => $request->user()?->id,
-        ]);
+                if (! in_array($facture->statut, ['emise', 'partiellement_payee'])) {
+                    throw new \DomainException('Cette facture ne peut pas recevoir de paiement');
+                }
+
+                if ($validated['montant'] > $facture->reste_a_payer) {
+                    throw new \DomainException('Le montant dépasse le reste à payer');
+                }
+
+                FacturePaiement::create([
+                    'facture_id' => $facture->id,
+                    'echeance_id' => $validated['echeance_id'] ?? null,
+                    'date_paiement' => $validated['date_paiement'],
+                    'montant' => $validated['montant'],
+                    'mode_paiement' => $validated['mode_paiement'],
+                    'reference' => $validated['reference'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                    'enregistre_par' => $request->user()?->id,
+                ]);
+
+                // Recalcul autoritatif : montant_paye, reste_a_payer, statut, encours client.
+                $facture->updateMontantPaye();
+
+                return $facture;
+            });
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json($facture->fresh(['paiements']));
     }
@@ -269,10 +280,9 @@ class FactureController extends Controller
         if (! $configBon || ! $configBon->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numeroBon = $configBon->genererNumero();
-        $configBon->incrementer();
+        $bon = DB::transaction(function () use ($facture, $tenantId) {
+            $numeroBon = Configuration::consommerNumero('bon_livraison', $tenantId);
 
-        $bon = DB::transaction(function () use ($facture, $numeroBon, $tenantId) {
             $bon = BonLivraison::create([
                 'tenant_id' => $tenantId,
                 'numero' => $numeroBon,

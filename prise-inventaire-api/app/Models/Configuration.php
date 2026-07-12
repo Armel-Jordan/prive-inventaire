@@ -78,4 +78,29 @@ class Configuration extends Model
     {
         return self::where('tenant_id', $tenantId)->where('entite', $entite)->first();
     }
+
+    /**
+     * Génère ET consomme le prochain numéro de façon atomique.
+     *
+     * DOIT être appelé À L'INTÉRIEUR d'un DB::transaction() qui crée aussi le
+     * document : le verrou lockForUpdate sérialise les créations concurrentes
+     * (pas de doublon), et l'incrément est annulé si la création échoue (pas de
+     * trou de séquence — exigence de continuité OHADA).
+     */
+    public static function consommerNumero(string $entite, int $tenantId): string
+    {
+        $config = self::where('tenant_id', $tenantId)
+            ->where('entite', $entite)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $config || ! $config->auto_increment) {
+            throw new \RuntimeException("Numérotation indisponible pour l'entité « {$entite} ».");
+        }
+
+        $numero = $config->genererNumero();
+        $config->incrementer();
+
+        return $numero;
+    }
 }

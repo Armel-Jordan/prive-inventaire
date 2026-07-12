@@ -71,10 +71,9 @@ class CommandeFournisseurController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numero = $config->genererNumero();
-        $config->incrementer();
+        $commande = DB::transaction(function () use ($validated, $request, $tenantId) {
+            $numero = Configuration::consommerNumero('commande', $tenantId);
 
-        $commande = DB::transaction(function () use ($validated, $request, $numero, $tenantId) {
             $commande = ComFourEntete::create([
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
