@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -121,10 +121,15 @@ function AppRoutes() {
   );
 }
 
+// En desktop (Tauri, app chargée via tauri://) il n'y a pas de serveur pour
+// résoudre les routes profondes : on utilise HashRouter. En web : BrowserRouter.
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+const Router = isTauri ? HashRouter : BrowserRouter;
+
 function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <Router>
         <ThemeProvider>
           <LanguageProvider>
             <AuthProvider>
@@ -135,7 +140,7 @@ function App() {
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
-      </BrowserRouter>
+      </Router>
     </ErrorBoundary>
   );
 }

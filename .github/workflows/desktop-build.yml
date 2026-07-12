@@ -1,0 +1,55 @@
+name: Desktop Build — Tauri (Windows + macOS)
+
+# Build manuel (workflow_dispatch) ou sur tag desktop-v* → génère les installeurs.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: prise-inventaire-web/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust (src-tauri)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: prise-inventaire-web/src-tauri
+
+      - name: Install frontend deps
+        working-directory: prise-inventaire-web
+        run: npm ci
+
+      # tauri-action lance beforeBuildCommand (npm run build:desktop) puis bundle.
+      - name: Build & bundle (Tauri)
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: prise-inventaire-web
+
+      - name: Upload installeurs
+        uses: actions/upload-artifact@v4
+        with:
+          name: prise-inventaire-desktop-${{ matrix.platform }}
+          path: |
+            prise-inventaire-web/src-tauri/target/release/bundle/**/*.dmg
+            prise-inventaire-web/src-tauri/target/release/bundle/**/*.msi
+            prise-inventaire-web/src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: warn
