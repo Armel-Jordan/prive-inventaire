@@ -51,9 +51,28 @@ CORS_ALLOWED_ORIGINS=https://mon-domaine
 
 ## Site marketing
 
-`prise-inventaire-marketing` était aussi sur Amplify. Même approche possible
-(build + servir en statique via nginx sur un autre chemin/sous-domaine), ou
-hébergement statique séparé. À traiter si nécessaire.
+`prise-inventaire-marketing` (site statique) est servi par le **même nginx sur le
+port 8080** (2ᵉ `server` dans `deploy/nginx-prise-inventaire.conf`). Sur son propre
+port pour éviter les pièges de sous-chemin (base Vite / liens absolus).
+
+Mise en place (une fois, SSH) :
+```bash
+sudo mkdir -p /var/www/prise-marketing
+sudo chown -R www-data:www-data /var/www/prise-marketing
+sudo ufw allow 8080      # ouvrir le port
+# (la config nginx contient déjà le server{} port 8080)
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Déploiement continu : `.github/workflows/marketing-cd.yml` (build + copie du `dist`
+sur le droplet + reload nginx), déclenché sur push touchant `prise-inventaire-marketing/**`.
+
+Accès : `http://<IP-droplet>:8080`. Avec un domaine, préférer un sous-domaine
+(`marketing.domaine`) via `server_name` + un `server{}` en port 80/443.
+
+> Le **service worker** (`sw.js`) — qui bloquait les visiteurs sur d'anciennes
+> versions et causait des bugs — a été **retiré** (plus d'enregistrement dans
+> `index.html`, fichier supprimé).
 
 ## HTTPS (recommandé)
 
