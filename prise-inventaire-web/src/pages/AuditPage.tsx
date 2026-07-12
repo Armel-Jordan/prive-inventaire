@@ -5,22 +5,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch } from '@/services/http';
 
 interface AuditLog {
   id: number;
@@ -65,13 +50,13 @@ export default function AuditPage() {
       if (filterAction) params.append('action', filterAction);
       if (filterModel) params.append('model_type', filterModel);
 
-      const [logsRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/audit?${params}`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/audit/stats`, { headers: getAuthHeaders() }),
+      const [logsRes, statsRes] = await Promise.allSettled([
+        apiFetch<AuditLog[]>(`/audit?${params}`),
+        apiFetch<AuditStats>('/audit/stats'),
       ]);
 
-      if (logsRes.ok) setLogs(await logsRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
+      if (logsRes.status === 'fulfilled') setLogs(logsRes.value);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value);
     } catch {
       toast('Erreur de chargement de l\'historique', 'error');
     } finally {

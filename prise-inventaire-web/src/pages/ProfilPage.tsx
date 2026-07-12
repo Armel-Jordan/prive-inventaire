@@ -1,22 +1,7 @@
 import { useEffect, useState } from 'react';
 import { User, Camera, Save, MapPin, Phone, Calendar, Briefcase } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError, API_BASE_URL } from '@/services/http';
 
 interface ProfileData {
   numero: string;
@@ -64,24 +49,21 @@ export default function ProfilPage() {
   async function loadProfile() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/profile`, { headers: getAuthHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data.employe);
-        setFormData({
-          telephone: data.employe.telephone || '',
-          adresse: data.employe.adresse || '',
-          ville: data.employe.ville || '',
-          code_postal: data.employe.code_postal || '',
-          pays: data.employe.pays || '',
-          sexe: data.employe.sexe || '',
-          date_naissance: data.employe.date_naissance || '',
-          poste: data.employe.poste || '',
-          departement: data.employe.departement || '',
-        });
-        if (data.employe.photo) {
-          setPhotoPreview(`${API_BASE_URL.replace('/api', '')}/storage/${data.employe.photo}`);
-        }
+      const data = await apiFetch<{ employe: ProfileData }>(`/profile`);
+      setProfile(data.employe);
+      setFormData({
+        telephone: data.employe.telephone || '',
+        adresse: data.employe.adresse || '',
+        ville: data.employe.ville || '',
+        code_postal: data.employe.code_postal || '',
+        pays: data.employe.pays || '',
+        sexe: data.employe.sexe || '',
+        date_naissance: data.employe.date_naissance || '',
+        poste: data.employe.poste || '',
+        departement: data.employe.departement || '',
+      });
+      if (data.employe.photo) {
+        setPhotoPreview(`${API_BASE_URL.replace('/api', '')}/storage/${data.employe.photo}`);
       }
     } catch (error) {
       console.error('Erreur chargement profil:', error);
@@ -96,21 +78,20 @@ export default function ProfilPage() {
     setMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/profile`, {
+      await apiFetch(`/profile`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Profil mis à jour avec succès' });
-        loadProfile();
+      setMessage({ type: 'success', text: 'Profil mis à jour avec succès' });
+      loadProfile();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const data = error.data as { message?: string } | null;
+        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la mise à jour' });
       } else {
-        const data = await res.json();
-        setMessage({ type: 'error', text: data.message || 'Erreur lors de la mise à jour' });
+        setMessage({ type: 'error', text: 'Erreur de connexion au serveur' });
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Erreur de connexion au serveur' });
     } finally {
       setSaving(false);
     }
@@ -124,29 +105,20 @@ export default function ProfilPage() {
 
     setSaving(true);
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const headers: Record<string, string> = { 'Accept': 'application/json' };
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-        if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/profile/photo`, {
+      await apiFetch(`/profile/photo`, {
         method: 'POST',
-        headers,
         body: formDataPhoto,
       });
 
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Photo mise à jour avec succès' });
-        setPhotoFile(null);
-        loadProfile();
-      } else {
+      setMessage({ type: 'success', text: 'Photo mise à jour avec succès' });
+      setPhotoFile(null);
+      loadProfile();
+    } catch (error) {
+      if (error instanceof ApiError) {
         setMessage({ type: 'error', text: 'Erreur lors du téléchargement de la photo' });
+      } else {
+        setMessage({ type: 'error', text: 'Erreur de connexion au serveur' });
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Erreur de connexion au serveur' });
     } finally {
       setSaving(false);
     }

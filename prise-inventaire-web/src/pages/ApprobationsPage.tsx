@@ -4,22 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError } from '@/services/http';
 
 interface Approbation {
   id: number;
@@ -88,14 +73,14 @@ export default function ApprobationsPage() {
     try {
       const params = filterStatut ? `?statut=${filterStatut}` : '';
       const [approbationsRes, statsRes, seuilsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/approbations${params}`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/approbations/stats`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/approbations/settings`, { headers: getAuthHeaders() }),
+        apiFetch<Approbation[]>(`/approbations${params}`).catch(() => null),
+        apiFetch<Stats>('/approbations/stats').catch(() => null),
+        apiFetch<Seuil[]>('/approbations/settings').catch(() => null),
       ]);
 
-      if (approbationsRes.ok) setApprobations(await approbationsRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (seuilsRes.ok) setSeuils(await seuilsRes.json());
+      if (approbationsRes) setApprobations(approbationsRes);
+      if (statsRes) setStats(statsRes);
+      if (seuilsRes) setSeuils(seuilsRes);
     } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
@@ -117,11 +102,11 @@ export default function ApprobationsPage() {
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/approbations/${selectedApprobation.id}/${decisionType}`,
+      await apiFetch(
+        `/approbations/${selectedApprobation.id}/${decisionType}`,
         {
           method: 'POST',
-          headers: getAuthHeaders(),
+          responseType: 'void',
           body: JSON.stringify({
             approbateur: 'Admin Web',
             commentaire: commentaire || null,
@@ -129,30 +114,23 @@ export default function ApprobationsPage() {
         }
       );
 
-      if (response.ok) {
-        setShowDecisionModal(false);
-        loadData();
-      } else {
-        const error = await response.json();
-        toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
-      }
-    } catch {
-      toast('Une erreur est survenue', 'error');
+      setShowDecisionModal(false);
+      loadData();
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Une erreur est survenue', 'error');
     }
   }
 
   async function saveSeuils() {
     try {
-      const response = await fetch(`${API_BASE_URL}/approbations/settings`, {
+      await apiFetch('/approbations/settings', {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        responseType: 'void',
         body: JSON.stringify({ seuils }),
       });
 
-      if (response.ok) {
-        setShowSettings(false);
-        toast('Seuils mis à jour avec succès', 'success');
-      }
+      setShowSettings(false);
+      toast('Seuils mis à jour avec succès', 'success');
     } catch {
       toast('Une erreur est survenue', 'error');
     }

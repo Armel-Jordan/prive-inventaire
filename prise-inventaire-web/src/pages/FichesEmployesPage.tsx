@@ -1,23 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, User, Phone, MapPin, Briefcase, Calendar, Camera } from 'lucide-react';
+import { apiFetch } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const SERVER_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(json = true): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  if (json) headers['Content-Type'] = 'application/json';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
 
 function photoUrl(path: string | null | undefined): string | null {
   if (!path) return null;
@@ -77,8 +62,7 @@ export default function FichesEmployesPage() {
 
   async function loadData() {
     try {
-      const res = await fetch(`${API_BASE_URL}/employes`, { headers: getAuthHeaders() });
-      if (res.ok) setEmployes(await res.json());
+      setEmployes(await apiFetch<FicheEmploye[]>('/employes'));
     } catch (e) {
       console.error(e);
     } finally {
@@ -91,19 +75,15 @@ export default function FichesEmployesPage() {
     try {
       const form = new FormData();
       form.append('photo', file);
-      const res = await fetch(`${API_BASE_URL}/employes/${empId}/photo`, {
+      const data = await apiFetch<{ photo_url: string }>(`/employes/${empId}/photo`, {
         method: 'POST',
-        headers: getAuthHeaders(false),
         body: form,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setEmployes(prev => prev.map(e =>
-          e.id === empId ? { ...e, photo: data.photo_url } : e
-        ));
-        if (selected?.id === empId) {
-          setSelected(prev => prev ? { ...prev, photo: data.photo_url } : null);
-        }
+      setEmployes(prev => prev.map(e =>
+        e.id === empId ? { ...e, photo: data.photo_url } : e
+      ));
+      if (selected?.id === empId) {
+        setSelected(prev => prev ? { ...prev, photo: data.photo_url } : null);
       }
     } catch (e) {
       console.error(e);

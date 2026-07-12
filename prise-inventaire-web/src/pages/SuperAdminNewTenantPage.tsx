@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Check, Zap, Star, Crown } from 'lucide-react';
+import { apiFetch } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_super_admin';
 
 interface TenantForm {
@@ -81,17 +81,13 @@ export default function SuperAdminNewTenantPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/super-admin/tenants`, {
+      const data = await apiFetch<{ tenant: { id: number } }>('/super-admin/tenants', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${auth?.token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Authorization: `Bearer ${auth?.token}`,
         },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Erreur lors de la création');
       navigate(`/super-admin/tenants/${data.tenant.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création');

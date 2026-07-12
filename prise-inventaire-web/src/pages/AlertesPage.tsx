@@ -1,27 +1,12 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw, Plus, X, Save } from 'lucide-react';
 import { getProduits } from '@/services/api';
+import { apiFetch } from '@/services/http';
 import type { Produit } from '@/types';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
 
 interface Alerte {
   id: number;
@@ -66,17 +51,19 @@ export default function AlertesPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [alertesRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/alertes`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/alertes/stats`, { headers: getAuthHeaders() }),
+      const [alertesRes, statsRes] = await Promise.allSettled([
+        apiFetch<{ alertes?: Alerte[] }>('/alertes'),
+        apiFetch<AlerteStats>('/alertes/stats'),
       ]);
 
-      if (alertesRes.ok) {
-        const data = await alertesRes.json();
-        setAlertes(data.alertes || []);
+      if (alertesRes.status === 'fulfilled') {
+        setAlertes(alertesRes.value.alertes || []);
       }
-      if (statsRes.ok) {
-        setStats(await statsRes.json());
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value);
+      }
+      if (alertesRes.status === 'rejected' && statsRes.status === 'rejected') {
+        toast('Erreur de chargement des alertes', 'error');
       }
     } catch {
       toast('Erreur de chargement des alertes', 'error');
@@ -125,17 +112,13 @@ export default function AlertesPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/alertes/produit/${produitId}/seuil`, {
+      await apiFetch(`/alertes/produit/${produitId}/seuil`, {
         method: 'PUT',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0 }),
+        responseType: 'void',
       });
-      if (res.ok) {
-        toast('Seuil sauvegardé', 'success');
-        loadData();
-      } else {
-        toast('Erreur lors de la sauvegarde', 'error');
-      }
+      toast('Seuil sauvegardé', 'success');
+      loadData();
     } catch {
       toast('Erreur lors de la sauvegarde', 'error');
     } finally {

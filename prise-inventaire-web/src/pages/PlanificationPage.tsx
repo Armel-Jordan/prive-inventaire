@@ -4,22 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch, ApiError } from '@/services/http';
 
 interface TransfertPlanifie {
   id: number;
@@ -97,15 +82,15 @@ export default function PlanificationPage() {
     setLoading(true);
     try {
       const params = filterStatut ? `?statut=${filterStatut}` : '';
-      const [transfertsRes, secteursRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/transferts-planifies${params}`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/secteurs`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/transferts-planifies/stats`, { headers: getAuthHeaders() }),
+      const [transfertsRes, secteursRes, statsRes] = await Promise.allSettled([
+        apiFetch<TransfertPlanifie[]>(`/transferts-planifies${params}`),
+        apiFetch<Secteur[]>(`/secteurs`),
+        apiFetch<Stats>(`/transferts-planifies/stats`),
       ]);
 
-      if (transfertsRes.ok) setTransferts(await transfertsRes.json());
-      if (secteursRes.ok) setSecteurs(await secteursRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
+      if (transfertsRes.status === 'fulfilled') setTransferts(transfertsRes.value);
+      if (secteursRes.status === 'fulfilled') setSecteurs(secteursRes.value);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value);
     } catch {
       toast('Erreur de chargement des données', 'error');
     } finally {
@@ -154,44 +139,37 @@ export default function PlanificationPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const url = editingId 
-        ? `${API_BASE_URL}/transferts-planifies/${editingId}`
-        : `${API_BASE_URL}/transferts-planifies`;
-      
-      const response = await fetch(url, {
+      const endpoint = editingId
+        ? `/transferts-planifies/${editingId}`
+        : `/transferts-planifies`;
+
+      await apiFetch(endpoint, {
         method: editingId ? 'PUT' : 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           ...form,
           quantite: parseFloat(form.quantite),
         }),
       });
 
-      if (response.ok) {
-        setShowModal(false);
-        loadData();
+      setShowModal(false);
+      loadData();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const data = e.data as { message?: string } | null;
+        toast(data?.message || 'Erreur lors de l\'enregistrement', 'error');
       } else {
-        const error = await response.json();
-        toast(error.message || 'Erreur lors de l\'enregistrement', 'error');
+        toast('Erreur lors de l\'enregistrement', 'error');
       }
-    } catch {
-      toast('Erreur lors de l\'enregistrement', 'error');
     }
   }
 
   async function executeTransfert(id: number) {
     if (!confirm('Exécuter ce transfert maintenant ?')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/transferts-planifies/${id}/execute`, {
+      await apiFetch(`/transferts-planifies/${id}/execute`, {
         method: 'POST',
-        headers: getAuthHeaders(),
       });
-      if (response.ok) {
-        loadData();
-      } else {
-        const error = await response.json();
-        toast(error instanceof Error ? error.message : 'Une erreur est survenue', 'error');
-      }
+      loadData();
     } catch {
       toast('Une erreur est survenue', 'error');
     }
@@ -200,30 +178,28 @@ export default function PlanificationPage() {
   async function cancelTransfert(id: number) {
     if (!confirm('Annuler ce transfert ?')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/transferts-planifies/${id}/cancel`, {
+      await apiFetch(`/transferts-planifies/${id}/cancel`, {
         method: 'POST',
-        headers: getAuthHeaders(),
       });
-      if (response.ok) {
-        loadData();
+      loadData();
+    } catch (e) {
+      if (!(e instanceof ApiError)) {
+        toast('Une erreur est survenue', 'error');
       }
-    } catch {
-      toast('Une erreur est survenue', 'error');
     }
   }
 
   async function deleteTransfert(id: number) {
     if (!confirm('Supprimer ce transfert ?')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/transferts-planifies/${id}`, {
+      await apiFetch(`/transferts-planifies/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
       });
-      if (response.ok) {
-        loadData();
+      loadData();
+    } catch (e) {
+      if (!(e instanceof ApiError)) {
+        toast('Une erreur est survenue', 'error');
       }
-    } catch {
-      toast('Une erreur est survenue', 'error');
     }
   }
 

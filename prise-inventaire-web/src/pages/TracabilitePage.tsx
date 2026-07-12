@@ -4,22 +4,7 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const STORAGE_KEY = 'prise_auth';
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Accept': 'application/json' };
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.token) headers['Authorization'] = `Bearer ${data.token}`;
-      if (data.tenant?.slug) headers['X-Tenant-Slug'] = data.tenant.slug;
-    } catch { /* ignore */ }
-  }
-  return headers;
-}
+import { apiFetch } from '@/services/http';
 
 interface HistoryItem {
   id: number;
@@ -76,14 +61,9 @@ export default function TracabilitePage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/tracabilite/search?q=${encodeURIComponent(query)}`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const results = await response.json();
-        setSearchResults(results);
-        setShowResults(true);
-      }
+      const results = await apiFetch<SearchResult[]>(`/tracabilite/search?q=${encodeURIComponent(query)}`);
+      setSearchResults(results);
+      setShowResults(true);
     } catch {
       toast('Erreur lors de la recherche', 'error');
     }
@@ -96,14 +76,9 @@ export default function TracabilitePage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/tracabilite/produit/${encodeURIComponent(numero)}`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setHistorique(data.historique);
-        setStats(data.stats);
-      }
+      const data = await apiFetch<{ historique: HistoryItem[]; stats: Stats }>(`/tracabilite/produit/${encodeURIComponent(numero)}`);
+      setHistorique(data.historique);
+      setStats(data.stats);
     } catch {
       toast('Erreur de chargement de l\'historique', 'error');
     } finally {

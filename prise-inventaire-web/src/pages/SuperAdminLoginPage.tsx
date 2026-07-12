@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Shield } from 'lucide-react';
+import { apiFetch, ApiError } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_super_admin';
+
+interface SuperAdminLoginResponse {
+  user: unknown;
+  token: string;
+}
 
 export default function SuperAdminLoginPage() {
   const navigate = useNavigate();
@@ -19,20 +24,10 @@ export default function SuperAdminLoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/super-admin/login`, {
+      const data = await apiFetch<SuperAdminLoginResponse>('/super-admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
         body: JSON.stringify({ email, password }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Email ou mot de passe incorrect');
-      }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         user: data.user,
@@ -41,7 +36,11 @@ export default function SuperAdminLoginPage() {
 
       navigate('/super-admin/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      if (err instanceof ApiError) {
+        setError(err.message || 'Email ou mot de passe incorrect');
+      } else {
+        setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      }
     } finally {
       setLoading(false);
     }

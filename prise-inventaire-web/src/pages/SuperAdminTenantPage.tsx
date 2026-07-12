@@ -5,8 +5,8 @@ import {
   CheckCircle, AlertTriangle, RefreshCw, Save, Users, Info,
   ToggleLeft, ToggleRight, Clock,
 } from 'lucide-react';
+import { apiFetch, type ApiOptions } from '@/services/http';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const STORAGE_KEY = 'prise_super_admin';
 
 interface Tenant {
@@ -115,24 +115,23 @@ export default function SuperAdminTenantPage() {
     setTimeout(() => setFeedback(null), 3000);
   }
 
-  async function fetchApi(endpoint: string, options?: RequestInit) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  async function fetchApi<T = unknown>(endpoint: string, options?: ApiOptions): Promise<T> {
+    // Super-admin : le token vient de localStorage['prise_super_admin'],
+    // pas de prise_auth. On force donc l'Authorization explicitement
+    // (apiFetch conserve les headers custom lors du merge).
+    return apiFetch<T>(endpoint, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${auth?.token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Authorization: `Bearer ${auth?.token}`,
         ...options?.headers,
       },
     });
-    if (!res.ok) throw new Error('Erreur API');
-    return res.json();
   }
 
   async function loadData() {
     setLoading(true);
     try {
-      const data = await fetchApi(`/super-admin/tenants/${tenantId}/admins`);
+      const data = await fetchApi<{ tenant: Tenant; admins: Admin[] }>(`/super-admin/tenants/${tenantId}/admins`);
       setTenant(data.tenant);
       setAdmins(data.admins);
     } catch { /* ignore */ }
@@ -143,7 +142,7 @@ export default function SuperAdminTenantPage() {
     if (!tenant) return;
     setSavingTenant(true);
     try {
-      const data = await fetchApi(`/super-admin/tenants/${tenant.id}`, {
+      const data = await fetchApi<{ tenant: Tenant }>(`/super-admin/tenants/${tenant.id}`, {
         method: 'PUT',
         body: JSON.stringify({ nom: editNom, plan: editPlan, renouvelable: editRenouvelable }),
       });
@@ -164,7 +163,7 @@ export default function SuperAdminTenantPage() {
     if (!tenant) return;
     setSavingModules(true);
     try {
-      const data = await fetchApi(`/super-admin/tenants/${tenant.id}/modules`, {
+      const data = await fetchApi<{ tenant: Tenant }>(`/super-admin/tenants/${tenant.id}/modules`, {
         method: 'PUT',
         body: JSON.stringify({ modules: editModules }),
       });
@@ -180,7 +179,7 @@ export default function SuperAdminTenantPage() {
   async function toggleActif() {
     if (!tenant) return;
     try {
-      const data = await fetchApi(`/super-admin/tenants/${tenant.id}`, {
+      const data = await fetchApi<{ tenant: Tenant }>(`/super-admin/tenants/${tenant.id}`, {
         method: 'PUT',
         body: JSON.stringify({ actif: !tenant.actif }),
       });
