@@ -287,12 +287,12 @@ frontend:
 | **Port** | `3306` |
 | **Base de données** | `prise_central` |
 | **Utilisateur** | `admin` |
-| **Mot de passe** | `PriseInv2026!` |
+| **Mot de passe** | `<mot-de-passe>` |
 | **Région** | `us-east-1` |
 
 ### Chaîne de connexion
 ```
-mysql://admin:PriseInv2026!@prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com:3306/prise_central
+mysql://admin:<mot-de-passe>@prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com:3306/prise_central
 ```
 
 ### Connexion via CLI
@@ -319,7 +319,7 @@ DB_HOST=prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com
 DB_PORT=3306
 DB_DATABASE=prise_central
 DB_USERNAME=admin
-DB_PASSWORD=PriseInv2026!
+DB_PASSWORD=<mot-de-passe>
 ```
 
 ### Commande pour configurer les variables EB
@@ -335,7 +335,7 @@ eb setenv \
   DB_PORT=3306 \
   DB_DATABASE=prise_central \
   DB_USERNAME=admin \
-  DB_PASSWORD=PriseInv2026!
+  DB_PASSWORD=<mot-de-passe>
 ```
 
 ---
@@ -372,12 +372,12 @@ eb setenv \
 | **Port** | `3306` |
 | **Database** | `prise_central` |
 | **User** | `admin` |
-| **Password** | `PriseInv2026!` |
+| **Password** | `<mot-de-passe>` |
 
 #### Commande de connexion MySQL
 ```bash
 mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p prise_central
-# Mot de passe : PriseInv2026!
+# Mot de passe : <mot-de-passe>
 ```
 
 #### Repository GitHub
@@ -391,9 +391,9 @@ mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p p
 |-----------|--------|
 | **APK** | `/Users/armeljordan/Documents/prise/prise-inventaire-v1.0.apk` |
 | **Keystore** | `Tircis.key` |
-| **Store Password** | `tircis` |
+| **Store Password** | `<mot-de-passe-keystore>` |
 | **Key Alias** | `tircis` |
-| **Key Password** | `tircis` |
+| **Key Password** | `<mot-de-passe-keystore>` |
 
 ---
 
