@@ -17,6 +17,7 @@ import AlertesPage from '@/pages/AlertesPage';
 import ComparaisonPage from '@/pages/ComparaisonPage';
 import AuditPage from '@/pages/AuditPage';
 import PlanificationPage from '@/pages/PlanificationPage';
+import TachesPlanifieesPage from '@/pages/TachesPlanifieesPage';
 import ApprobationsPage from '@/pages/ApprobationsPage';
 import TracabilitePage from '@/pages/TracabilitePage';
 import RapportsPage from '@/pages/RapportsPage';
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="comparaison" element={<ComparaisonPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="planification" element={<PlanificationPage />} />
+        <Route path="taches-planifiees" element={<TachesPlanifieesPage />} />
         <Route path="approbations" element={<ApprobationsPage />} />
         <Route path="tracabilite" element={<TracabilitePage />} />
         <Route path="rapports" element={<RapportsPage />} />

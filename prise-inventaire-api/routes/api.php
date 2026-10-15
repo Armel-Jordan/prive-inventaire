@@ -58,6 +58,7 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\ScanTenantController;
 use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\TachePlanifieController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
 use Illuminate\Support\Facades\Route;
@@ -233,6 +234,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/{id}/execute', [TransfertPlanifieController::class, 'execute']);
         Route::post('/{id}/cancel', [TransfertPlanifieController::class, 'cancel']);
         Route::delete('/{id}', [TransfertPlanifieController::class, 'destroy']);
+    });
+
+    // Tâches planifiées (traitements automatiques) : réglage, exécution manuelle, historique.
+    Route::prefix('taches-planifiees')->middleware('role:admin')->group(function () {
+        Route::get('/', [TachePlanifieController::class, 'index']);
+        Route::get('/historique', [TachePlanifieController::class, 'historique']);
+        Route::put('/{id}', [TachePlanifieController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/executer', [TachePlanifieController::class, 'executer'])->whereNumber('id');
     });
 
     // Approbations (workflow pour gros mouvements)

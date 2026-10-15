@@ -167,6 +167,69 @@ export async function deleteSecteur(id: number): Promise<void> {
   await fetchApi(`/secteurs/${id}`, { method: 'DELETE' });
 }
 
+// === TÂCHES PLANIFIÉES ===
+export type RecurrenceTache = 'horaire' | 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'une_fois';
+
+export interface ReglageTache {
+  actif: boolean;
+  recurrence: RecurrenceTache;
+  /** HH:MM dans le fuseau des tâches (pour « horaire », seules les minutes comptent). */
+  heure: string;
+  /** 1 = lundi … 7 = dimanche */
+  jours_semaine: number[] | null;
+  jour_du_mois: number | null;
+  /** Exécution unique : AAAA-MM-JJTHH:MM dans le fuseau des tâches. */
+  prochaine_execution?: string | null;
+}
+
+export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'> {
+  id: number;
+  code: string;
+  dernier_resultat: 'succes' | 'erreur' | null;
+  statut: 'en_attente' | 'en_cours';
+  prochaine_execution: string | null;
+  derniere_execution: string | null;
+}
+
+export interface ExecutionTache {
+  id: number;
+  tache_planifiee_id: number;
+  code: string;
+  mode: 'planifie' | 'manuel';
+  duree_ms: number | null;
+  resultat: 'succes' | 'erreur' | null;
+  message: string | null;
+  debut: string | null;
+  fin: string | null;
+  auteur: string | null;
+}
+
+export interface EtatTachesPlanifiees {
+  taches: TachePlanifiee[];
+  dernier_passage: { date: string; source: 'planificateur' | 'requetes' } | null;
+  declenchement_requetes: boolean;
+  fuseau: string;
+}
+
+export async function getTachesPlanifiees(): Promise<EtatTachesPlanifiees> {
+  return fetchApi('/taches-planifiees');
+}
+
+export async function modifierTachePlanifiee(id: number, reglage: ReglageTache): Promise<TachePlanifiee> {
+  return fetchApi(`/taches-planifiees/${id}`, { method: 'PUT', body: JSON.stringify(reglage) });
+}
+
+export async function executerTachePlanifiee(id: number): Promise<{ execution: ExecutionTache; tache: TachePlanifiee }> {
+  // Une tâche peut prendre un moment : délai plus long que les appels ordinaires.
+  return fetchApi(`/taches-planifiees/${id}/executer`, { method: 'POST', timeoutMs: 120000 });
+}
+
+export async function getHistoriqueTaches(filtres: { tache_id?: number; page?: number } = {}): Promise<{ data: ExecutionTache[]; current_page: number; last_page: number; total: number }> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
+  return fetchApi(`/taches-planifiees/historique?${parametres}`);
+}
+
 // === SCANS ===
 export async function getScans(filters?: { employe?: string; secteur?: string }): Promise<InventaireScan[]> {
   if (MOCK_MODE) {
