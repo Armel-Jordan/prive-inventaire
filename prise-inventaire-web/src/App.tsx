@@ -24,6 +24,7 @@ import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import ProfilPage from '@/pages/ProfilPage';
 import RolesPage from '@/pages/RolesPage';
 import FournisseursPage from '@/pages/FournisseursPage';
+import ChampsPersonnalisesPage from '@/pages/ChampsPersonnalisesPage';
 import CommandesFournisseurPage from '@/pages/CommandesFournisseurPage';
 import ReceptionsPage from '@/pages/ReceptionsPage';
 import ClientsPage from '@/pages/ClientsPage';
@@ -95,6 +96,7 @@ function AppRoutes() {
         <Route path="profil" element={<ProfilPage />} />
         <Route path="roles" element={<RolesPage />} />
         <Route path="fournisseurs" element={<FournisseursPage />} />
+        <Route path="champs-personnalises" element={<ChampsPersonnalisesPage />} />
         <Route path="commandes-fournisseur" element={<CommandesFournisseurPage />} />
         <Route path="receptions" element={<ReceptionsPage />} />
         <Route path="clients" element={<ClientsPage />} />

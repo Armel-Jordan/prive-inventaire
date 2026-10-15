@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import {
   getDevis, createDevis, updateDevis, deleteDevis,
@@ -248,6 +249,7 @@ export default function DevisPage() {
                       {devis.statut === 'accepte' && (
                         <button onClick={() => handleConvertir(devis)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Convertir en commande"><FileText size={16} /></button>
                       )}
+                      <BoutonChampsPersonnalises entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
                     </div>
                   </td>
                 </tr>

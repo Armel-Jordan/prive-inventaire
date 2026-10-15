@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
 import {
   getCommandesClient,
@@ -334,6 +335,7 @@ export default function CommandesClientPage() {
                           <FileText size={18} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                     </div>
                   </td>
                 </tr>

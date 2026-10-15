@@ -244,6 +244,95 @@ export async function deleteUser(id: number): Promise<void> {
   await fetchApi(`/users/${id}`, { method: 'DELETE' });
 }
 
+// === CHAMPS PERSONNALISÉS ===
+export type EntiteChampPersonnalise =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+export type TypeChampPersonnalise = 'texte' | 'texte_long' | 'nombre' | 'date' | 'case' | 'liste' | 'liste_multiple' | 'courriel' | 'url' | 'telephone';
+export type ValeurChampPersonnalise = string | number | boolean | string[] | null;
+
+export interface DefinitionChampPersonnalise {
+  libelle: string;
+  options: string[] | null;
+  format: 'nombre' | 'montant' | 'pourcentage' | null;
+  decimales: number | null;
+  obligatoire: boolean;
+  sans_doublon: boolean;
+  valeur_defaut: ValeurChampPersonnalise;
+  aide: string | null;
+  actif: boolean;
+}
+
+export interface ChampPersonnalise extends DefinitionChampPersonnalise {
+  id: number;
+  entite: EntiteChampPersonnalise;
+  type: TypeChampPersonnalise;
+  code: string;
+  ordre: number;
+}
+
+/** Champ d'une fiche : sa valeur (ou la valeur par défaut tant que rien n'est saisi). */
+export interface ChampPersonnaliseFiche extends ChampPersonnalise {
+  valeur: ValeurChampPersonnalise;
+  saisie: boolean;
+}
+
+// Champs actifs par entreprise et type de fiche, demandés une fois pour toutes les lignes d'une liste.
+const cacheChampsActifs = new Map<string, Promise<ChampPersonnalise[]>>();
+
+export function champsPersonnalisesActifs(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  const cle = `${getAuthHeaders()['X-Tenant-Slug'] ?? ''}:${entite}`;
+  if (!cacheChampsActifs.has(cle)) {
+    const requete = fetchApi<ChampPersonnalise[]>(`/champs-personnalises?entite=${entite}&actifs=1`);
+    requete.catch(() => cacheChampsActifs.delete(cle));
+    cacheChampsActifs.set(cle, requete);
+  }
+  return cacheChampsActifs.get(cle)!;
+}
+
+export async function getChampsPersonnalises(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  return fetchApi(`/champs-personnalises?entite=${entite}`);
+}
+
+export async function creerChampPersonnalise(champ: DefinitionChampPersonnalise & { entite: EntiteChampPersonnalise; type: TypeChampPersonnalise }): Promise<ChampPersonnalise> {
+  const cree = await fetchApi<ChampPersonnalise>('/champs-personnalises', { method: 'POST', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return cree;
+}
+
+export async function modifierChampPersonnalise(id: number, champ: DefinitionChampPersonnalise): Promise<ChampPersonnalise> {
+  const modifie = await fetchApi<ChampPersonnalise>(`/champs-personnalises/${id}`, { method: 'PUT', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return modifie;
+}
+
+export async function supprimerChampPersonnalise(id: number): Promise<void> {
+  await fetchApi(`/champs-personnalises/${id}`, { method: 'DELETE' });
+  cacheChampsActifs.clear();
+}
+
+export async function ordonnerChampsPersonnalises(entite: EntiteChampPersonnalise, ids: number[]): Promise<ChampPersonnalise[]> {
+  const champs = await fetchApi<ChampPersonnalise[]>('/champs-personnalises/ordre', { method: 'PUT', body: JSON.stringify({ entite, ids }) });
+  cacheChampsActifs.clear();
+  return champs;
+}
+
+export async function getValeursChampsPersonnalises(entite: EntiteChampPersonnalise, entiteId: number): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi(`/champs-personnalises/valeurs?entite=${entite}&entite_id=${entiteId}`);
+}
+
+export async function enregistrerValeursChampsPersonnalises(
+  entite: EntiteChampPersonnalise,
+  entiteId: number,
+  valeurs: Record<number, ValeurChampPersonnalise>,
+): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi('/champs-personnalises/valeurs', { method: 'PUT', body: JSON.stringify({ entite, entite_id: entiteId, valeurs }) });
+}
+
+export async function rechercherChampPersonnalise(champId: number, valeur: string): Promise<{ entite_id: number; libelle_entite: string | null; valeur: ValeurChampPersonnalise }[]> {
+  return fetchApi(`/champs-personnalises/recherche?${new URLSearchParams({ champ_id: String(champId), valeur })}`);
+}
+
 // === FOURNISSEURS ===
 export interface Fournisseur {
   id: number;

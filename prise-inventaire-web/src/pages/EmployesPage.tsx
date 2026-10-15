@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff, Filter } from 'lucide-react';
 import { getEmployes, createEmploye, updateEmploye, deleteEmploye, getConfiguration } from '@/services/api';
 import type { Employe } from '@/types';
@@ -267,6 +268,7 @@ export default function EmployesPage() {
                       <button onClick={() => setConfirmId(employe.id)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver">
                         <Trash2 size={16} />
                       </button>
+                      <BoutonChampsPersonnalises entite="employe" entiteId={employe.id} titre={employe.nom} taille={16} className="ml-2" />
                     </td>
                   </tr>
                 ))}
