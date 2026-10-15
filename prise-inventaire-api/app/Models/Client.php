@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -28,6 +29,7 @@ class Client extends Model
         'encours_actuel',
         'taux_remise_global',
         'actif',
+        'categorie_id',
     ];
 
     protected $casts = [
@@ -75,5 +77,32 @@ class Client extends Model
         }
 
         return ($this->encours_actuel + $montant) <= $this->encours_max;
+    }
+
+    // Fiche client complète (phase 1.1) : relations des tables ajoutées, sans effet sur les existantes.
+
+    public function categorie(): BelongsTo
+    {
+        return $this->belongsTo(ClientCategorie::class, 'categorie_id');
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(ClientContact::class)->orderByDesc('principal')->orderBy('nom');
+    }
+
+    public function adresses(): HasMany
+    {
+        return $this->hasMany(ClientAdresse::class)->orderByDesc('principale')->orderBy('libelle');
+    }
+
+    public function remarques(): HasMany
+    {
+        return $this->hasMany(ClientRemarque::class)->orderByDesc('epinglee')->latest()->orderByDesc('id');
+    }
+
+    public function favoris(): HasMany
+    {
+        return $this->hasMany(ClientFavori::class);
     }
 }

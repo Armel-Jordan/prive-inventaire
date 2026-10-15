@@ -8,6 +8,7 @@
 
 | Document | Module | Contenu |
 |----------|--------|---------|
+| [FLOW-FICHE-CLIENT.md](./FLOW-FICHE-CLIENT.md) | Ventes | Fiche client : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris |
 | [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
 | [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
 | [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
