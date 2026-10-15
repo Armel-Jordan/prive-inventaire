@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Save, RefreshCw, Hash, Eye, Building2, DollarSign, Clock, Plus, Trash2 } from 'lucide-react';
+import { Settings, Save, RefreshCw, Hash, Eye, Building2, DollarSign, Clock, Plus, Trash2, Mail } from 'lucide-react';
 import { getConfigurations, updateConfiguration, getParametres, updateParametres, getTaxes, createTaxe, updateTaxe, deleteTaxe, type ConfigurationFormat, type TenantParametres, type TenantTaxe } from '@/services/api';
 import { ApiError } from '@/services/http';
 import GroupesTaxes from '@/components/GroupesTaxes';
+import CourrielsConfiguration from '@/components/CourrielsConfiguration';
 
 interface FormatConfig {
   entite: string;
@@ -42,13 +43,14 @@ const DEFAULT_CONFIGS: FormatConfig[] = [
   { entite: 'tournee',       label: 'Tournées',       prefixe: 'T',   suffixe: '', longueur: 4, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'T0001' },
 ];
 
-type MainTab = 'numeros' | 'entreprise' | 'devise' | 'delais';
+type MainTab = 'numeros' | 'entreprise' | 'devise' | 'delais' | 'courriels';
 
 const MAIN_TABS: { id: MainTab; label: string; icon: React.ReactNode }[] = [
   { id: 'numeros',    label: 'Numérotation',      icon: <Hash size={16} /> },
   { id: 'entreprise', label: 'Entreprise',         icon: <Building2 size={16} /> },
   { id: 'devise',     label: 'Devise & TVA',       icon: <DollarSign size={16} /> },
   { id: 'delais',     label: 'Délais par défaut',  icon: <Clock size={16} /> },
+  { id: 'courriels',  label: 'Courriels',          icon: <Mail size={16} /> },
 ];
 
 export default function ConfigurationPage() {
@@ -471,6 +473,9 @@ export default function ConfigurationPage() {
           </div>
         </div>
       )}
+
+      {/* ── Courriels ── */}
+      {mainTab === 'courriels' && <CourrielsConfiguration />}
 
     </div>
   );

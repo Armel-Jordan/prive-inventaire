@@ -1062,6 +1062,92 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
   return fetchApi(`/groupes-taxes/${id}/calculer`, { method: 'POST', body: JSON.stringify({ montant_ht: montantHt }) });
 }
 
+// === COURRIELS (paramètres d'envoi et modèles) ===
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type LangueCourriel = 'fr' | 'en';
+
+export interface ContenuModeleCourriel {
+  objet: string;
+  contenu: string;
+  nom_fichier: string | null;
+  repondre_a: string | null;
+  accuse_lecture: boolean;
+}
+
+export interface ModeleCourriel extends ContenuModeleCourriel {
+  id: number;
+  type: TypeCourriel;
+  langue: LangueCourriel;
+}
+
+export interface CatalogueCourriels {
+  langues: LangueCourriel[];
+  types: { type: TypeCourriel; variables: string[]; piece_jointe: boolean; defauts: Record<LangueCourriel, ContenuModeleCourriel> }[];
+}
+
+export interface ApercuCourriel {
+  objet: string;
+  html: string;
+  texte: string;
+  nom_fichier: string | null;
+  inconnues: string[];
+  /** Numéro du document utilisé, ou null pour des valeurs d'exemple. */
+  document: string | null;
+}
+
+export interface ParametresCourriel {
+  transport: 'plateforme' | 'smtp';
+  smtp_hote: string | null;
+  smtp_port: number | null;
+  smtp_chiffrement: 'tls' | 'ssl' | 'aucun' | null;
+  smtp_utilisateur: string | null;
+  /** Envoyé seulement pour le changer ; jamais renvoyé par l'API. */
+  smtp_mot_de_passe?: string;
+  smtp_mot_de_passe_defini?: boolean;
+  expediteur_adresse: string | null;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  copie_cachee: string | null;
+  signature: string | null;
+  adresse_plateforme?: string | null;
+}
+
+export async function getCatalogueCourriels(): Promise<CatalogueCourriels> {
+  return fetchApi('/courriels/catalogue');
+}
+
+export async function getModelesCourriel(): Promise<ModeleCourriel[]> {
+  return fetchApi('/courriels/modeles');
+}
+
+export async function createModeleCourriel(modele: Omit<ModeleCourriel, 'id'>): Promise<ModeleCourriel> {
+  return fetchApi('/courriels/modeles', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function updateModeleCourriel(id: number, modele: ContenuModeleCourriel): Promise<ModeleCourriel> {
+  return fetchApi(`/courriels/modeles/${id}`, { method: 'PUT', body: JSON.stringify(modele) });
+}
+
+export async function deleteModeleCourriel(id: number): Promise<void> {
+  await fetchApi(`/courriels/modeles/${id}`, { method: 'DELETE' });
+}
+
+export async function apercuModeleCourriel(modele: { type: TypeCourriel; langue: LangueCourriel; objet: string; contenu: string; nom_fichier: string | null }): Promise<ApercuCourriel> {
+  return fetchApi('/courriels/modeles/apercu', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function getParametresCourriel(): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres');
+}
+
+export async function updateParametresCourriel(parametres: ParametresCourriel): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres', { method: 'PUT', body: JSON.stringify(parametres) });
+}
+
+export async function testerParametresCourriel(destinataire: string, langue: LangueCourriel): Promise<{ message: string }> {
+  return fetchApi('/courriels/parametres/test', { method: 'POST', body: JSON.stringify({ destinataire, langue }) });
+}
+
 export async function getParametres(): Promise<TenantParametres> {
   return fetchApi('/parametres');
 }

@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\CourrielModeleController;
+use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DocumentPdfController;
@@ -470,6 +472,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::put('/{id}', [GroupeTaxeController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [GroupeTaxeController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/calculer', [GroupeTaxeController::class, 'calculer'])->whereNumber('id');
+    });
+
+    // Courriels : paramètres d'envoi (serveur réservé aux administrateurs) et modèles par type et par langue.
+    Route::prefix('courriels')->group(function () {
+        Route::get('/catalogue', [CourrielModeleController::class, 'catalogue']);
+        Route::get('/parametres', [CourrielParametresController::class, 'show']);
+        Route::put('/parametres', [CourrielParametresController::class, 'update'])->middleware('role:admin');
+        Route::post('/parametres/test', [CourrielParametresController::class, 'tester'])->middleware(['role:admin', 'throttle:5,1']);
+        Route::get('/modeles', [CourrielModeleController::class, 'index']);
+        Route::post('/modeles', [CourrielModeleController::class, 'store']);
+        Route::post('/modeles/apercu', [CourrielModeleController::class, 'apercu']);
+        Route::put('/modeles/{id}', [CourrielModeleController::class, 'update'])->whereNumber('id');
+        Route::delete('/modeles/{id}', [CourrielModeleController::class, 'destroy'])->whereNumber('id');
     });
 
     // Configuration des numéros
