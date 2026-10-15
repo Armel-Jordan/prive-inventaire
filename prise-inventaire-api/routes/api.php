@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\GroupeTaxeController;
@@ -342,6 +343,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('devis')->middleware('module:ventes')->group(function () {
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
+        Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
         Route::get('/{devis}', [DevisController::class, 'show']);
         Route::put('/{devis}', [DevisController::class, 'update']);
         Route::post('/{devis}/envoyer', [DevisController::class, 'envoyer']);
@@ -367,6 +369,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('commandes-client')->middleware('module:ventes')->group(function () {
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
         Route::post('/', [CommandeClientController::class, 'store']);
         Route::put('/{id}', [CommandeClientController::class, 'update']);
         Route::post('/{id}/soumettre', [CommandeClientController::class, 'soumettre']);
@@ -379,6 +382,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('factures')->middleware('module:ventes')->group(function () {
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);
         Route::post('/', [FactureController::class, 'store']);
         Route::post('/commande/{commandeId}', [FactureController::class, 'creerDepuisCommande']);
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
@@ -391,6 +395,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('bons-livraison')->middleware('module:ventes')->group(function () {
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'bonLivraison']);
         Route::post('/{id}/preparer', [BonLivraisonController::class, 'demarrerPreparation']);
         Route::put('/{id}/lignes', [BonLivraisonController::class, 'updateLignes']);
         Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);

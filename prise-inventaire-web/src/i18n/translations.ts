@@ -192,6 +192,11 @@ export const translations = {
       deleted: 'Groupe supprimé',
       error: 'Erreur',
     },
+    // Documents de vente
+    documents: {
+      openPdf: 'Ouvrir le PDF',
+      pdfError: 'Impossible de générer le PDF.',
+    },
   },
   en: {
     // Navigation
@@ -383,6 +388,11 @@ export const translations = {
       updated: 'Group updated',
       deleted: 'Group deleted',
       error: 'Error',
+    },
+    // Sales documents
+    documents: {
+      openPdf: 'Open PDF',
+      pdfError: 'Unable to generate the PDF.',
     },
   },
 };

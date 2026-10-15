@@ -31,4 +31,9 @@ class FactureLigne extends Model
     {
         return $this->belongsTo(Facture::class);
     }
+
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
+    }
 }

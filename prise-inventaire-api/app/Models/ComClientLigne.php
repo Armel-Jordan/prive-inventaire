@@ -31,6 +31,11 @@ class ComClientLigne extends Model
         return $this->belongsTo(ComClientEntete::class, 'com_entete_id');
     }
 
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
+    }
+
     public function calculerMontants(): void
     {
         $prixApresRemise = $this->prix_unitaire_ht * (1 - $this->remise_ligne / 100);

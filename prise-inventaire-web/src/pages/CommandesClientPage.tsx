@@ -16,6 +16,7 @@ import type { ComClientEntete, Client } from '../services/api';
 import { getProduits } from '../services/api';
 import type { Produit } from '../types';
 import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
+import BoutonPdf from '@/components/BoutonPdf';
 
 export default function CommandesClientPage() {
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
@@ -291,6 +292,7 @@ export default function CommandesClientPage() {
                       >
                         <Eye size={18} />
                       </button>
+                      <BoutonPdf chemin={`/commandes-client/${cmd.id}/pdf`} nomFichier={`commande-${cmd.numero}.pdf`} />
                       {cmd.statut === 'brouillon' && (
                         <>
                           <button
