@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getCommandesFournisseur,
   getCommandeFournisseur,
@@ -281,7 +284,10 @@ export default function CommandesFournisseurPage() {
               <tbody className="divide-y">
                 {commandes.map((commande) => (
                   <tr key={commande.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-mono font-medium">{commande.numero}</td>
+                    <td className="px-4 py-3 text-sm font-mono font-medium">
+                      {commande.numero}
+                      <BalisesFiche entite="commande_fournisseur" entiteId={commande.id} />
+                    </td>
                     <td className="px-4 py-3 text-sm">{commande.fournisseur?.raison_sociale}</td>
                     <td className="px-4 py-3 text-sm">
                       {new Date(commande.date_commande).toLocaleDateString('fr-FR')}
@@ -434,6 +440,7 @@ export default function CommandesFournisseurPage() {
                   className="w-full px-3 py-2 border rounded-lg"
                   rows={2}
                 />
+                <BoutonRemarquesRapides onInserer={texte => setFormNotes(n => ajouterRemarque(n, texte))} />
               </div>
 
               <div>

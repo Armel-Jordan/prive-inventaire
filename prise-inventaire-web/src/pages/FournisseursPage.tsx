@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
 import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur, getConfiguration } from '@/services/api';
 import type { Fournisseur } from '@/services/api';
 
@@ -188,6 +189,7 @@ export default function FournisseursPage() {
                           <span className="text-xs text-gray-500">{fournisseur.email}</span>
                         </div>
                       )}
+                      <BalisesFiche entite="fournisseur" entiteId={fournisseur.id} />
                     </td>
                     <td className="px-4 py-3 text-sm">{fournisseur.contact_nom || '-'}</td>
                     <td className="px-4 py-3">

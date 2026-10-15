@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getFactures,
   getFacture,
@@ -214,7 +217,10 @@ export default function FacturesPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {factures.map((facture) => (
                 <tr key={facture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{facture.numero}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
+                    {facture.numero}
+                    <BalisesFiche entite="facture" entiteId={facture.id} />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.date_facture}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
@@ -420,6 +426,7 @@ export default function FacturesPage() {
                   <input type="text" value={createForm.notes}
                     onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  <BoutonRemarquesRapides onInserer={texte => setCreateForm(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
               </div>
               <div>

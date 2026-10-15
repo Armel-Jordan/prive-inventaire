@@ -14,3 +14,8 @@ export function formatDate(dateString: string): string {
     minute: '2-digit',
   });
 }
+
+/** Ajoute un texte à la suite d'une note existante : à la ligne (zone de texte) ou après une espace. */
+export function ajouterRemarque(note: string | null | undefined, texte: string, separateur: '\n' | ' ' = '\n'): string {
+  return note && note.trim() ? `${note.replace(/\s+$/, '')}${separateur}${texte}` : texte;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -261,7 +262,10 @@ export default function ProduitsPage() {
                 {filtered.map((produit) => (
                   <tr key={produit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
-                    <td className="px-4 py-3 text-sm dark:text-gray-200">{produit.description}</td>
+                    <td className="px-4 py-3 text-sm dark:text-gray-200">
+                      {produit.description}
+                      <BalisesFiche entite="produit" entiteId={produit.id!} />
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       {produit.secteur
                         ? <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">{produit.secteur.code}</span>

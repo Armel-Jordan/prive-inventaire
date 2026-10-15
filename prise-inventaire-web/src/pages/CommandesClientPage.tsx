@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getCommandesClient,
   getClientsActifs,
@@ -266,7 +269,10 @@ export default function CommandesClientPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {commandes.map((cmd) => (
                 <tr key={cmd.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{cmd.numero}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
+                    {cmd.numero}
+                    <BalisesFiche entite="commande_client" entiteId={cmd.id} />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.date_commande}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
@@ -405,6 +411,7 @@ export default function CommandesClientPage() {
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   rows={2}
                 />
+                <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte) }))} />
               </div>
 
               <div>
