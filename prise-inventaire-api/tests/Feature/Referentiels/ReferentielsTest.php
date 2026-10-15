@@ -12,8 +12,10 @@ use App\Models\Entrepot;
 use App\Models\Fabricant;
 use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\Raison;
 use App\Models\Representant;
 use App\Models\Scopes\TenantScope;
+use App\Models\StatutPersonnalise;
 use App\Models\Tenant;
 use App\Models\Territoire;
 use App\Models\Transporteur;
@@ -67,6 +69,8 @@ class ReferentielsTest extends TestCase
             ],
             'representants' => ['code' => 'REP1', 'nom' => 'Awa Ndiaye', 'email' => 'awa@example.test', 'taux_commission' => 5],
             'transporteurs' => ['nom' => 'Express Cargo', 'url_suivi' => 'https://suivi.example/colis/{numero}'],
+            'raisons' => ['type' => 'ajustement', 'code' => 'CASSE', 'libelle' => 'Casse'],
+            'statuts_personnalises' => ['document' => 'commande_client', 'code' => 'ATT_PAIE', 'libelle' => 'En attente de paiement', 'couleur' => '#f59e0b', 'ordre' => 10],
         };
     }
 
@@ -86,6 +90,8 @@ class ReferentielsTest extends TestCase
             'itinéraires' => ['itineraires', 'nom', 'Tournée du mardi'],
             'représentants' => ['representants', 'taux_commission', 7.5],
             'transporteurs' => ['transporteurs', 'nom', 'Express Cargo SA'],
+            'raisons' => ['raisons', 'libelle', 'Casse en entrepôt'],
+            'statuts personnalisés' => ['statuts_personnalises', 'libelle', 'Attente du paiement client'],
         ];
     }
 
@@ -126,6 +132,8 @@ class ReferentielsTest extends TestCase
             'itinéraires' => ['itineraires', ['code', 'nom']],
             'représentants' => ['representants', ['nom']],
             'transporteurs' => ['transporteurs', ['nom']],
+            'raisons' => ['raisons', ['type', 'code', 'libelle']],
+            'statuts personnalisés' => ['statuts_personnalises', ['document', 'code', 'libelle']],
         ];
     }
 
@@ -182,6 +190,7 @@ class ReferentielsTest extends TestCase
             Unite::class, UniteConversion::class, Categorie::class, Fabricant::class, ModePaiement::class,
             ConditionPaiement::class, CompteBancaire::class, Devise::class, DeviseTaux::class,
             Entrepot::class, Territoire::class, Itineraire::class, Representant::class, Transporteur::class,
+            Raison::class, StatutPersonnalise::class,
         ];
 
         foreach ($modeles as $modele) {
@@ -383,6 +392,46 @@ class ReferentielsTest extends TestCase
         $this->postJson('/api/referentiels/transporteurs', ['nom' => 'Avec gabarit', 'url_suivi' => 'https://suivi.example/?n={numero}'])
             ->assertCreated()
             ->assertJsonPath('url_suivi', 'https://suivi.example/?n={numero}');
+    }
+
+    // ===== Raisons et statuts personnalisés =====
+
+    public function test_code_de_raison_unique_par_type(): void
+    {
+        $this->connecter(Tenant::factory()->create());
+
+        $this->postJson('/api/referentiels/raisons', ['type' => 'ajustement', 'code' => 'CASSE', 'libelle' => 'Casse'])->assertCreated();
+        $this->postJson('/api/referentiels/raisons', ['type' => 'ajustement', 'code' => 'CASSE', 'libelle' => 'Doublon'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['code']);
+        $this->postJson('/api/referentiels/raisons', ['type' => 'retour_client', 'code' => 'CASSE', 'libelle' => 'Produit cassé'])->assertCreated();
+        $this->postJson('/api/referentiels/raisons', ['type' => 'inconnu', 'code' => 'X', 'libelle' => 'X'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['type']);
+
+        $this->assertSame(['ajustement', 'retour_client'], $this->getJson('/api/referentiels/raisons')->json('*.type'));
+    }
+
+    public function test_statut_personnalise_couleur_et_tri(): void
+    {
+        $this->connecter(Tenant::factory()->create());
+
+        foreach (['rouge', '#12ab', '#12ab3z'] as $couleur) {
+            $this->postJson('/api/referentiels/statuts_personnalises', ['document' => 'facture', 'code' => 'X', 'libelle' => 'X', 'couleur' => $couleur])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['couleur']);
+        }
+
+        $this->postJson('/api/referentiels/statuts_personnalises', ['document' => 'facture', 'code' => 'RELANCE2', 'libelle' => 'Relance 2', 'ordre' => 20, 'couleur' => '#DC2626'])->assertCreated();
+        $this->postJson('/api/referentiels/statuts_personnalises', ['document' => 'facture', 'code' => 'RELANCE1', 'libelle' => 'Relance 1', 'ordre' => 10])->assertCreated();
+        $this->postJson('/api/referentiels/statuts_personnalises', ['document' => 'devis', 'code' => 'RELANCE1', 'libelle' => 'Devis relancé'])->assertCreated();
+        $this->postJson('/api/referentiels/statuts_personnalises', ['document' => 'facture', 'code' => 'RELANCE1', 'libelle' => 'Doublon'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['code']);
+
+        $liste = $this->getJson('/api/referentiels/statuts_personnalises')->json();
+        $this->assertSame(['Devis relancé', 'Relance 1', 'Relance 2'], array_column($liste, 'libelle'));
+        $this->assertSame('#6b7280', $liste[1]['couleur']);
     }
 
     // ===== Permission de l'écran =====

@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Pencil, Trash2, History, X, Search,
   Ruler, ArrowLeftRight, FolderTree, Factory, Wallet, CalendarClock, Landmark, Coins,
-  Warehouse, MapIcon, Route, UserRound, Truck,
+  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags,
 } from 'lucide-react';
 import {
   getReferentiel, createReferentiel, updateReferentiel, deleteReferentiel, getHistoriqueDevise,
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 
-type TypeChamp = 'texte' | 'nombre' | 'booleen' | 'liste' | 'zone' | 'reference';
+type TypeChamp = 'texte' | 'nombre' | 'booleen' | 'liste' | 'zone' | 'reference' | 'couleur';
 
 interface Champ {
   cle: string;
@@ -33,7 +33,7 @@ interface Champ {
   defaut?: string | number | boolean;
 }
 
-type GroupeReferentiel = 'produits' | 'paiement' | 'logistique' | 'commercial';
+type GroupeReferentiel = 'produits' | 'paiement' | 'logistique' | 'commercial' | 'suivi';
 
 interface Onglet {
   type: TypeReferentiel;
@@ -42,9 +42,11 @@ interface Onglet {
   champs: Champ[];
 }
 
-const GROUPES: GroupeReferentiel[] = ['produits', 'paiement', 'logistique', 'commercial'];
+const GROUPES: GroupeReferentiel[] = ['produits', 'paiement', 'logistique', 'commercial', 'suivi'];
 const TYPES_PAIEMENT = ['especes', 'cheque', 'virement', 'carte', 'mobile_money', 'prelevement', 'autre'];
 const TYPES_ENTREPOT = ['entrepot', 'magasin', 'vehicule', 'depot', 'autre'];
+const TYPES_RAISON = ['mouvement', 'ajustement', 'retour_client', 'retour_fournisseur', 'annulation', 'refus', 'autre'];
+const TYPES_DOCUMENT = ['devis', 'commande_client', 'bon_livraison', 'facture', 'commande_fournisseur', 'reception', 'autre'];
 
 // Description déclarative des référentiels : une seule logique de liste et de formulaire les sert tous.
 const ONGLETS: Onglet[] = [
@@ -185,6 +187,24 @@ const ONGLETS: Onglet[] = [
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },
+  {
+    type: 'raisons', groupe: 'suivi', icone: ListChecks, champs: [
+      { cle: 'type', type: 'liste', options: TYPES_RAISON, requis: true, colonne: true, defaut: 'mouvement' },
+      { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
+      { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 150 },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'statuts_personnalises', groupe: 'suivi', icone: Tags, champs: [
+      { cle: 'document', type: 'liste', options: TYPES_DOCUMENT, requis: true, colonne: true, defaut: 'commande_client' },
+      { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
+      { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'couleur', type: 'couleur', colonne: true, defaut: '#6b7280' },
+      { cle: 'ordre', type: 'nombre', colonne: true, min: 0, max: 999, defaut: 0 },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
 ];
 
 type Valeurs = Record<string, string | boolean>;
@@ -281,6 +301,14 @@ export default function ReferentielsPage() {
       return cible ? libelleFiche(cible) : '—';
     }
     if (champ.type === 'liste') return libelleOption(String(valeur));
+    if (champ.type === 'couleur') {
+      return (
+        <span className="inline-flex items-center gap-2">
+          <span className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600" style={{ backgroundColor: String(valeur) }} />
+          <span className="font-mono text-xs">{String(valeur)}</span>
+        </span>
+      );
+    }
     if (champ.type === 'nombre') return formatNombre(valeur);
     return String(valeur);
   }
@@ -373,6 +401,11 @@ export default function ReferentielsPage() {
           <option value="">{champ.requis ? tr.choose : tr.none}</option>
           {choix.map(r => <option key={r.id} value={r.id}>{libelleFiche(r)}</option>)}
         </select>
+      );
+    } else if (champ.type === 'couleur') {
+      saisie = (
+        <input type="color" value={String(valeur) || '#6b7280'} onChange={e => modifierValeur(champ, e.target.value)}
+          className="h-10 w-20 border dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700" />
       );
     } else if (champ.type === 'zone') {
       saisie = (
