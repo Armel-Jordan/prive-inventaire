@@ -50,6 +50,10 @@ use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\MouvementTenantController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Prix\CalculController as PrixCalculController;
+use App\Http\Controllers\Prix\GrilleController as PrixGrilleController;
+use App\Http\Controllers\Prix\ListeController as PrixListeController;
+use App\Http\Controllers\Prix\RegleController as PrixRegleController;
 use App\Http\Controllers\ProduitTenantController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportController;
@@ -427,6 +431,27 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/', [ZonePreparationController::class, 'store']);
         Route::put('/{id}', [ZonePreparationController::class, 'update']);
         Route::delete('/{id}', [ZonePreparationController::class, 'destroy']);
+    });
+
+    // Prix et remises : listes de prix, grille par produit, règles (prix client, quantités, promotions), calcul.
+    // Lecture pour le module Ventes ; modifications par les administrateurs et responsables.
+    Route::middleware('module:ventes')->group(function () {
+        Route::post('/prix/calculer', PrixCalculController::class);
+        Route::get('/listes-prix', [PrixListeController::class, 'index']);
+        Route::get('/listes-prix/{id}/clients', [PrixListeController::class, 'clients'])->whereNumber('id');
+        Route::get('/grille-prix', [PrixGrilleController::class, 'index']);
+        Route::get('/regles-prix', [PrixRegleController::class, 'index']);
+
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::post('/listes-prix', [PrixListeController::class, 'store']);
+            Route::put('/listes-prix/{id}', [PrixListeController::class, 'update'])->whereNumber('id');
+            Route::delete('/listes-prix/{id}', [PrixListeController::class, 'destroy'])->whereNumber('id');
+            Route::put('/clients/{client}/liste-prix', [PrixListeController::class, 'rattacherClient'])->whereNumber('client');
+            Route::put('/grille-prix', [PrixGrilleController::class, 'update']);
+            Route::post('/regles-prix', [PrixRegleController::class, 'store']);
+            Route::put('/regles-prix/{id}', [PrixRegleController::class, 'update'])->whereNumber('id');
+            Route::delete('/regles-prix/{id}', [PrixRegleController::class, 'destroy'])->whereNumber('id');
+        });
     });
 
     // Mouvements d'inventaire et Localisations

@@ -14,6 +14,8 @@
 | [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
 
+Prix et remises : [FLOW-PRIX.md](./FLOW-PRIX.md) — prix de base, listes de prix, règles (prix client, paliers, promotions), calcul du prix d'un client.
+
 ---
 
 ## Le flow global de l'application
