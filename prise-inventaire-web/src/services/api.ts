@@ -219,6 +219,34 @@ export async function deleteScan(id: number): Promise<void> {
   await fetchApi(`/scan/${id}`, { method: 'DELETE' });
 }
 
+// === CONFIGURATION À COMPLÉTER ===
+export interface ReglageAMettreEnPlace {
+  cle: string;
+  obligatoire: boolean;
+  faite: boolean;
+  /** Écran où se fait le réglage. */
+  lien: string;
+  ignoree: { raison: string; par: string | null; le: string | null } | null;
+}
+
+export interface ConfigurationACompleter {
+  etapes: { cle: string; taches: ReglageAMettreEnPlace[] }[];
+  qualite: { cle: string; nombre: number; lien: string }[];
+  restantes: { obligatoires: number; recommandees: number };
+}
+
+export async function getConfigurationACompleter(): Promise<ConfigurationACompleter> {
+  return fetchApi('/configuration-a-completer');
+}
+
+export async function ignorerReglage(cle: string, raison: string): Promise<ConfigurationACompleter> {
+  return fetchApi(`/configuration-a-completer/${cle}/ignorer`, { method: 'POST', body: JSON.stringify({ raison }) });
+}
+
+export async function reprendreReglage(cle: string): Promise<ConfigurationACompleter> {
+  return fetchApi(`/configuration-a-completer/${cle}/ignorer`, { method: 'DELETE' });
+}
+
 // === UTILISATEURS ADMIN ===
 export async function getUsers(): Promise<AdminUser[]> {
   return fetchApi<AdminUser[]>('/users');

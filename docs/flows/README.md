@@ -11,6 +11,7 @@
 | [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
 | [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
 | [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
+| [FLOW-CONFIGURATION-A-COMPLETER.md](./FLOW-CONFIGURATION-A-COMPLETER.md) | Transverse | Parcours de mise en route vérifié dans les données, qualité des données |
 | [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
 
@@ -67,3 +68,5 @@ PARAMÈTRES (configurer en premier)
 9. Achats → Premières commandes fournisseur
 10. Ventes → Premiers devis / commandes
 ```
+
+Cet ordre est suivi dans l'application : **Paramètres → Configuration à compléter** (voir [FLOW-CONFIGURATION-A-COMPLETER.md](./FLOW-CONFIGURATION-A-COMPLETER.md)).

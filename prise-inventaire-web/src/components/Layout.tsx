@@ -12,6 +12,7 @@ import {
   ArrowRightLeft,
   BarChart3,
   Bell,
+  ListChecks,
   GitCompare,
   History,
   CalendarClock,
@@ -113,6 +114,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     items: [
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
+      { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },

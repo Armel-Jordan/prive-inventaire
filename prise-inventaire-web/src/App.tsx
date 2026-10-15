@@ -14,6 +14,7 @@ import EmployesPage from '@/pages/EmployesPage';
 import RelocalisationPage from '@/pages/RelocalisationPage';
 import StatsPage from '@/pages/StatsPage';
 import AlertesPage from '@/pages/AlertesPage';
+import ConfigurationACompleterPage from '@/pages/ConfigurationACompleterPage';
 import ComparaisonPage from '@/pages/ComparaisonPage';
 import AuditPage from '@/pages/AuditPage';
 import PlanificationPage from '@/pages/PlanificationPage';
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="relocalisation" element={<RelocalisationPage />} />
         <Route path="statistiques" element={<StatsPage />} />
         <Route path="alertes" element={<AlertesPage />} />
+        <Route path="configuration-a-completer" element={<ConfigurationACompleterPage />} />
         <Route path="comparaison" element={<ComparaisonPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="planification" element={<PlanificationPage />} />
