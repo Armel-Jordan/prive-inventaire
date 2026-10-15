@@ -11,6 +11,7 @@ import {
 } from '../services/api';
 import type { BonLivraison, BonLivraisonLigne } from '../services/api';
 import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function BonsLivraisonPage() {
   const [bons, setBons] = useState<BonLivraison[]>([]);
@@ -222,6 +223,7 @@ export default function BonsLivraisonPage() {
                         <Eye size={18} />
                       </button>
                       <BoutonPdf chemin={`/bons-livraison/${bon.id}/pdf`} nomFichier={`bon-livraison-${bon.numero}.pdf`} />
+                      <BoutonCourriel type="bon_livraison" documentId={bon.id} />
                       {bon.statut === 'cree' && (
                         <>
                           <button

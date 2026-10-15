@@ -1148,6 +1148,88 @@ export async function testerParametresCourriel(destinataire: string, langue: Lan
   return fetchApi('/courriels/parametres/test', { method: 'POST', body: JSON.stringify({ destinataire, langue }) });
 }
 
+// === COURRIELS (envoi des documents, file d'envoi et historique) ===
+export type TypeDocumentCourriel = Exclude<TypeCourriel, 'general'>;
+export type StatutCourriel = 'en_attente' | 'en_cours' | 'envoye' | 'echec';
+
+export interface PreparationCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  document_numero: string;
+  langue: LangueCourriel;
+  modele_personnalise: boolean;
+  destinataires: string[];
+  objet: string;
+  contenu: string;
+  piece_jointe: string | null;
+}
+
+export interface EnvoiCourriel {
+  id: number;
+  type: TypeDocumentCourriel;
+  document_id: number | null;
+  document_numero: string | null;
+  destinataires: string[];
+  copies: string[] | null;
+  copies_cachees: string[] | null;
+  expediteur_adresse: string;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  objet: string;
+  piece_jointe: string | null;
+  statut: StatutCourriel;
+  tentatives: number;
+  erreur: string | null;
+  dernier_essai: string | null;
+  envoye_le: string | null;
+  created_at: string | null;
+  auteur: string | null;
+  /** Présents dans le détail d'un envoi seulement. */
+  corps_html?: string;
+  corps_texte?: string;
+}
+
+export interface PageEnvoisCourriel {
+  data: EnvoiCourriel[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export interface NouveauCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  langue: LangueCourriel;
+  destinataires: string[];
+  copies: string[];
+  copies_cachees: string[];
+  objet: string;
+  contenu: string;
+  joindre_pdf: boolean;
+}
+
+export async function preparerCourriel(type: TypeDocumentCourriel, documentId: number, langue: LangueCourriel): Promise<PreparationCourriel> {
+  return fetchApi(`/courriels/preparer?${new URLSearchParams({ type, document_id: String(documentId), langue })}`);
+}
+
+export async function envoyerCourriel(courriel: NouveauCourriel): Promise<EnvoiCourriel> {
+  return fetchApi('/courriels/envois', { method: 'POST', body: JSON.stringify(courriel) });
+}
+
+export async function getEnvoisCourriel(filtres: { type?: TypeDocumentCourriel; document_id?: number; statut?: StatutCourriel; page?: number } = {}): Promise<PageEnvoisCourriel> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
+  return fetchApi(`/courriels/envois?${parametres}`);
+}
+
+export async function getEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}`);
+}
+
+export async function reessayerEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}/reessayer`, { method: 'POST' });
+}
+
 export async function getParametres(): Promise<TenantParametres> {
   return fetchApi('/parametres');
 }

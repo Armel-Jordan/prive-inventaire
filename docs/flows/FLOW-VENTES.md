@@ -890,4 +890,6 @@ Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dan
 - Taxes : une ligne par taxe quand le document utilise des groupes de taxes (ex. TVA 17,5 % puis CAC 10 %), sinon une ligne « TVA » avec son taux s'il est unique.
 - Gabarit unique `resources/views/pdf/document-vente.blade.php`, alimenté par `App\Services\DocumentsVentePdf`. Police en sous-ensemble : environ 25 Ko par document.
 
+**Envoi par courriel :** le bouton à côté du PDF envoie le document avec son PDF joint (voir FLOW-PARAMETRES §11.3).
+
 **Accès :** comme le reste de l'API (jeton dans l'en-tête `Authorization`, entreprise par `X-Tenant-Slug`), donc jamais de jeton dans l'URL. Un document d'une autre entreprise renvoie 404. Le PDF existant des bons de commande fournisseur n'est pas modifié.

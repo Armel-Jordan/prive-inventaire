@@ -17,6 +17,7 @@ import {
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 const statutLabels: Record<string, { label: string; color: string }> = {
   brouillon: { label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
@@ -316,6 +317,7 @@ export default function CommandesFournisseurPage() {
                       >
                         <FileText size={16} />
                       </a>
+                      <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" />
                       {commande.statut === 'brouillon' && (
                         <>
                           <button

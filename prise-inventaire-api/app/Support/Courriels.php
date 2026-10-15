@@ -40,6 +40,15 @@ final class Courriels
         'commande_fournisseur' => ComFourEntete::class,
     ];
 
+    /** Module de l'entreprise dont dépend chaque type de document. */
+    public const MODULES = [
+        'devis' => 'ventes',
+        'commande_client' => 'ventes',
+        'facture' => 'ventes',
+        'bon_livraison' => 'ventes',
+        'commande_fournisseur' => 'achats',
+    ];
+
     /** Nom par défaut du PDF joint, suivi du numéro du document (mêmes noms que les PDF téléchargés). */
     public const FICHIERS = [
         'devis' => 'devis',

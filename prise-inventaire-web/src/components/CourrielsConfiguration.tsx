@@ -263,7 +263,7 @@ export default function CourrielsConfiguration() {
                 <Champ label={tc.replyTo} aide={tc.replyToHelp}>
                   <input type="email" value={parametres.repondre_a ?? ''} onChange={e => modifier({ repondre_a: e.target.value })} maxLength={255} className={classeChamp} />
                 </Champ>
-                <Champ label={tc.bcc} aide={tc.bccHelp}>
+                <Champ label={tc.alwaysBcc} aide={tc.alwaysBccHelp}>
                   <input type="email" value={parametres.copie_cachee ?? ''} onChange={e => modifier({ copie_cachee: e.target.value })} maxLength={255} className={classeChamp} />
                 </Champ>
               </div>

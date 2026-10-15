@@ -15,6 +15,7 @@ import type { Facture, Client } from '../services/api';
 import type { Produit } from '../types';
 import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -238,6 +239,7 @@ export default function FacturesPage() {
                         <Eye size={18} />
                       </button>
                       <BoutonPdf chemin={`/factures/${facture.id}/pdf`} nomFichier={`facture-${facture.numero}.pdf`} />
+                      <BoutonCourriel type="facture" documentId={facture.id} />
                       {facture.statut === 'brouillon' && (
                         <>
                           <button

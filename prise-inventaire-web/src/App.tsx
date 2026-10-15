@@ -38,6 +38,7 @@ import DevisPage from '@/pages/DevisPage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
+import CourrielsPage from '@/pages/CourrielsPage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import LoginPage from '@/pages/LoginPage';
@@ -109,6 +110,7 @@ function AppRoutes() {
         <Route path="gestion-prix" element={<GestionPrixPage />} />
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />
+        <Route path="courriels" element={<CourrielsPage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
       </Route>
       
