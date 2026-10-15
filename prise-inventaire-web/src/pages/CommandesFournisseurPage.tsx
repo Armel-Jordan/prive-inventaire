@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
 import {
@@ -300,6 +301,7 @@ export default function CommandesFournisseurPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <BoutonPiecesJointes entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" />
                       <button
                         onClick={() => openDetail(commande)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-1"

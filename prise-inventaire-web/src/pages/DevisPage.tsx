@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import {
@@ -231,6 +232,7 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(devis.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
                       <button onClick={() => { setSelectedDevis(devis); setShowDetailModal(true); }} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Voir"><Eye size={16} /></button>
                       {devis.statut === 'brouillon' && (
                         <>

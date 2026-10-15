@@ -1,8 +1,9 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Package, 
-  Users, 
+  Package,
+  Paperclip,
+  Users,
   MapPin, 
   ClipboardList,
   Menu,
@@ -111,6 +112,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     label: 'Paramètres',
     icon: Settings,
     items: [
+      { path: '/pieces-jointes', label: t.attachments.title, icon: Paperclip, module: 'configuration' },
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },

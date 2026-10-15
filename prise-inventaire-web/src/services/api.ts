@@ -401,6 +401,96 @@ export function getCommandePdfUrl(id: number): string {
   return `${API_BASE_URL}/commandes-fournisseur/${id}/pdf?token=${token}`;
 }
 
+// === PIÈCES JOINTES ===
+export type EntitePieceJointe =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+
+export interface PieceJointe {
+  id: number;
+  entite: EntitePieceJointe;
+  entite_id: number;
+  categorie: string | null;
+  description: string | null;
+  nom_original: string;
+  type_mime: string | null;
+  taille: number;
+  /** Type sans risque (PDF, image, texte) : s'ouvre dans un onglet ; les autres se téléchargent. */
+  affichable: boolean;
+  auteur: string | null;
+  created_at: string | null;
+  /** Nom de la fiche ou numéro du document (liste globale). */
+  libelle_entite?: string | null;
+}
+
+export interface PagePiecesJointes {
+  data: PieceJointe[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export async function getPiecesJointes(filtres: { entite?: EntitePieceJointe; entite_id?: number; recherche?: string; page?: number } = {}): Promise<PagePiecesJointes> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined && valeur !== '') parametres.set(cle, String(valeur)); });
+  return fetchApi(`/pieces-jointes?${parametres}`);
+}
+
+export async function getCategoriesPiecesJointes(entite?: EntitePieceJointe): Promise<string[]> {
+  return fetchApi(`/pieces-jointes/categories${entite ? `?entite=${entite}` : ''}`);
+}
+
+export async function ajouterPiecesJointes(
+  entite: EntitePieceJointe,
+  entiteId: number,
+  fichiers: { fichier: File; description: string }[],
+  categorie: string,
+): Promise<PieceJointe[]> {
+  const formulaire = new FormData();
+  formulaire.append('entite', entite);
+  formulaire.append('entite_id', String(entiteId));
+  if (categorie) formulaire.append('categorie', categorie);
+  fichiers.forEach(({ fichier, description }, index) => {
+    formulaire.append(`fichiers[${index}]`, fichier, fichier.name);
+    formulaire.append(`descriptions[${index}]`, description);
+  });
+  // Envoi de fichiers : délai plus long que les appels ordinaires.
+  return fetchApi('/pieces-jointes', { method: 'POST', body: formulaire, timeoutMs: 120000 });
+}
+
+export async function modifierPieceJointe(id: number, donnees: { description: string | null; categorie: string | null }): Promise<PieceJointe> {
+  return fetchApi(`/pieces-jointes/${id}`, { method: 'PUT', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerPieceJointe(id: number): Promise<void> {
+  await fetchApi(`/pieces-jointes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre une pièce jointe dans un nouvel onglet si son type est sans risque (PDF, image, texte),
+ * sinon la télécharge. Le jeton part dans l'en-tête ; l'onglet est ouvert pendant le clic pour ne
+ * pas être bloqué par le navigateur.
+ */
+export async function ouvrirPieceJointe(piece: PieceJointe): Promise<void> {
+  const fenetre = piece.affichable ? window.open('', '_blank') : null;
+  try {
+    const contenu = await fetchApi<Blob>(`/pieces-jointes/${piece.id}/fichier`, { responseType: 'blob', headers: { Accept: '*/*' }, timeoutMs: 120000 });
+    const url = URL.createObjectURL(contenu);
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = piece.nom_original;
+      lien.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
+  }
+}
+
 // === RECEPTIONS ===
 export interface ReceptionLigne {
   id: number;

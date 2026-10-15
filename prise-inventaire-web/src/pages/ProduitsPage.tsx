@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter } from 'lucide-react';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
@@ -283,6 +284,7 @@ export default function ProduitsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
                       <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                         <Edit2 size={16} />
                       </button>

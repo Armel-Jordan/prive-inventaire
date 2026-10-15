@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
 import {
@@ -213,6 +214,7 @@ export default function BonsLivraisonPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(bon.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                       <button
                         onClick={() => handleVoirDetail(bon.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"

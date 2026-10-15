@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
 import {
@@ -228,6 +229,7 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(facture.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="facture" entiteId={facture.id} titre={facture.numero} />
                       <button
                         onClick={() => handleVoirDetail(facture.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
