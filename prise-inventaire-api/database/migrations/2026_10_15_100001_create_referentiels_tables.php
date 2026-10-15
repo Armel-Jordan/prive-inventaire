@@ -36,7 +36,8 @@ return new class extends Migration
             $table->decimal('facteur', 18, 6);
             $table->timestamps();
 
-            $table->unique(['tenant_id', 'unite_source_id', 'unite_cible_id']);
+            // Nom explicite : le nom généré dépasse la limite de 64 caractères de MySQL.
+            $table->unique(['tenant_id', 'unite_source_id', 'unite_cible_id'], 'unite_conversions_tenant_paire_unique');
         });
 
         Schema::create('categories', function (Blueprint $table) {
