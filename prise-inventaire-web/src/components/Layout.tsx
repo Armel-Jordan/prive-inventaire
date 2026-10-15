@@ -28,7 +28,8 @@ import {
   ChevronRight,
   Warehouse,
   HandCoins,
-  Settings
+  Settings,
+  Library
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -117,6 +118,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
+      { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
     ],
   },
 ];

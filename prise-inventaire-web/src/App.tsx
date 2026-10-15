@@ -40,6 +40,7 @@ import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
+import ReferentielsPage from '@/pages/ReferentielsPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -110,6 +111,7 @@ function AppRoutes() {
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
+        <Route path="referentiels" element={<ReferentielsPage />} />
       </Route>
       
       {/* Routes Super Admin */}
