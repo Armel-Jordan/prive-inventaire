@@ -10,10 +10,12 @@ import {
   refuserCommandeClient,
   creerFactureDepuisCommande,
   deleteCommandeClient,
+  getCommandeClient,
 } from '../services/api';
 import type { ComClientEntete, Client } from '../services/api';
 import { getProduits } from '../services/api';
 import type { Produit } from '../types';
+import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 
 export default function CommandesClientPage() {
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
@@ -276,7 +278,14 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <button
-                        onClick={() => { setSelectedCommande(cmd); setShowDetailModal(true); }}
+                        onClick={() => {
+                          setSelectedCommande(cmd);
+                          setShowDetailModal(true);
+                          // Fiche complète (détail des taxes), si la commande affichée n'a pas changé entre-temps.
+                          getCommandeClient(cmd.id)
+                            .then(complete => setSelectedCommande(actuelle => (actuelle?.id === complete.id ? complete : actuelle)))
+                            .catch(() => {});
+                        }}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
                         title="Voir détails"
                       >
@@ -513,6 +522,7 @@ export default function CommandesClientPage() {
                   <span className="text-gray-500">TVA:</span>
                   <span className="dark:text-white">{Number(selectedCommande.montant_tva ?? 0).toFixed(2)} €</span>
                 </div>
+                <RecapitulatifTaxes recapitulatif={selectedCommande.recapitulatif_taxes} />
                 <div className="flex justify-between font-bold">
                   <span className="dark:text-white">Total TTC:</span>
                   <span className="dark:text-white">{Number(selectedCommande.montant_ttc ?? 0).toFixed(2)} €</span>

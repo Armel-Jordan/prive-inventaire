@@ -14,7 +14,7 @@ class ComClientLigne extends Model
 
     protected $fillable = [
         'com_entete_id', 'produit_id', 'quantite', 'prix_unitaire_ht',
-        'taux_tva', 'remise_ligne', 'montant_ht', 'montant_ttc',
+        'taux_tva', 'groupe_taxe_id', 'remise_ligne', 'montant_ht', 'montant_ttc',
     ];
 
     protected $casts = [

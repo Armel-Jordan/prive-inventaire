@@ -13,6 +13,7 @@ import {
 } from '../services/api';
 import type { Facture, Client } from '../services/api';
 import type { Produit } from '../types';
+import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -340,6 +341,16 @@ export default function FacturesPage() {
                   <span className="dark:text-white">Total:</span>
                   <span className="dark:text-white">{Number(selectedFacture.montant_ht ?? 0).toFixed(2)} €</span>
                 </div>
+                {/* Détail par taxe, quand la facture utilise des groupes de taxes. */}
+                {selectedFacture.recapitulatif_taxes && selectedFacture.recapitulatif_taxes.length > 0 && (
+                  <>
+                    <RecapitulatifTaxes recapitulatif={selectedFacture.recapitulatif_taxes} />
+                    <div className="flex justify-between font-medium">
+                      <span className="dark:text-white">Total TTC:</span>
+                      <span className="dark:text-white">{Number(selectedFacture.montant_ttc ?? 0).toFixed(2)} €</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between mt-2">
                   <span className="text-gray-500">Payé:</span>
                   <span className="text-green-600">{Number(selectedFacture.montant_paye ?? 0).toFixed(2)} €</span>
