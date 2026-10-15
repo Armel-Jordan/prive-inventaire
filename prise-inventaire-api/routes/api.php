@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
+use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\TauxChangeController;
@@ -455,6 +456,15 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/', [TenantTaxeController::class, 'store']);
         Route::put('/{id}', [TenantTaxeController::class, 'update']);
         Route::delete('/{id}', [TenantTaxeController::class, 'destroy']);
+    });
+
+    // Groupes de taxes (TPS + TVQ, TVA + CAC…) et calcul du détail des taxes sur un montant.
+    Route::prefix('groupes-taxes')->group(function () {
+        Route::get('/', [GroupeTaxeController::class, 'index']);
+        Route::post('/', [GroupeTaxeController::class, 'store']);
+        Route::put('/{id}', [GroupeTaxeController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [GroupeTaxeController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/calculer', [GroupeTaxeController::class, 'calculer'])->whereNumber('id');
     });
 
     // Configuration des numéros

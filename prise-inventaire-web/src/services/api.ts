@@ -969,6 +969,61 @@ export async function deleteTaxe(id: number): Promise<void> {
   await fetchApi(`/taxes/${id}`, { method: 'DELETE' });
 }
 
+// ── Groupes de taxes (TPS + TVQ, TVA + CAC…) ────────────────────────────────
+export type AppliqueSur = 'base' | 'base_et_taxes_precedentes' | 'taxe_precedente';
+
+export interface LigneGroupeTaxe {
+  tenant_taxe_id: number;
+  applique_sur: AppliqueSur;
+  taxe?: { id: number; nom: string; taux: string };
+}
+
+export interface GroupeTaxe {
+  id: number;
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  taux_effectif: number;
+  lignes: LigneGroupeTaxe[];
+}
+
+export interface DetailTaxes {
+  montant_ht: number;
+  taxes: { taxe_id: number; nom: string; taux: number; applique_sur: AppliqueSur; base: number; montant: number }[];
+  total_taxes: number;
+  montant_ttc: number;
+  taux_effectif: number;
+}
+
+export interface DonneesGroupeTaxe {
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  lignes: { tenant_taxe_id: number; applique_sur: AppliqueSur }[];
+}
+
+export async function getGroupesTaxes(): Promise<GroupeTaxe[]> {
+  return fetchApi('/groupes-taxes');
+}
+
+export async function createGroupeTaxe(data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi('/groupes-taxes', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateGroupeTaxe(id: number, data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi(`/groupes-taxes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteGroupeTaxe(id: number): Promise<void> {
+  await fetchApi(`/groupes-taxes/${id}`, { method: 'DELETE' });
+}
+
+export async function calculerGroupeTaxe(id: number, montantHt: number): Promise<DetailTaxes> {
+  return fetchApi(`/groupes-taxes/${id}/calculer`, { method: 'POST', body: JSON.stringify({ montant_ht: montantHt }) });
+}
+
 export async function getParametres(): Promise<TenantParametres> {
   return fetchApi('/parametres');
 }
