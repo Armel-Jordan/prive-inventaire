@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
+use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
@@ -303,6 +304,13 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
         Route::post('/cleanup', [NotificationController::class, 'cleanup']);
+    });
+
+    // Configuration à compléter : mise en route vérifiée dans les données ; écarter un réglage : administrateurs.
+    Route::prefix('configuration-a-completer')->group(function () {
+        Route::get('/', [ConfigurationACompleterController::class, 'index']);
+        Route::post('/{cle}/ignorer', [ConfigurationACompleterController::class, 'ignorer'])->where('cle', '[a-z_]+')->middleware('role:admin');
+        Route::delete('/{cle}/ignorer', [ConfigurationACompleterController::class, 'reprendre'])->where('cle', '[a-z_]+')->middleware('role:admin');
     });
 
     // Rapports
