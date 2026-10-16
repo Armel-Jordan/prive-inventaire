@@ -15,8 +15,13 @@ import { ApiError } from '@/services/http';
 import type { Produit } from '../types';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
+import Pagination from '@/components/Pagination';
+import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
 
 export default function DevisPage() {
+  const devise = useDevise();
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [devisList, setDevisList] = useState<DevisRecord[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -26,11 +31,11 @@ export default function DevisPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDevis, setSelectedDevis] = useState<DevisRecord | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [configNumero, setConfigNumero] = useState<{ auto_increment: boolean; prefixe: string; prochain_numero: number; longueur: number } | null>(null);
+  const [configNumero, setConfigNumero] = useState<{ auto_increment: boolean; prefixe: string; separateur?: string; prochain_numero: number; longueur: number } | null>(null);
 
   const [formData, setFormData] = useState({
     client_id: '',
-    date_devis: new Date().toISOString().split('T')[0],
+    date_devis: aujourdhui(),
     date_validite: '',
     notes: '',
   });
@@ -40,12 +45,13 @@ export default function DevisPage() {
     try {
       setLoading(true);
       const [devisRes, clientsRes, produitsRes, config] = await Promise.all([
-        getDevis({ statut: filterStatut || undefined }),
+        getDevis({ statut: filterStatut || undefined, page }),
         getClientsActifs(),
         getProduits(),
         getConfiguration('devis').catch(() => null),
       ]);
       setDevisList(devisRes.data || []);
+      setPagination({ dernierePage: devisRes.last_page ?? 1, total: devisRes.total ?? 0 });
       setClients(clientsRes || []);
       setProduits(produitsRes || []);
       if (config) setConfigNumero(config);
@@ -54,7 +60,7 @@ export default function DevisPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut]);
+  }, [filterStatut, page]);
 
   useEffect(() => {
     loadData();
@@ -134,10 +140,11 @@ export default function DevisPage() {
 
   const openEdit = (devis: DevisRecord) => {
     setEditingId(devis.id);
+    // Dates au format du champ (AAAA-MM-JJ) : l'horodatage complet de l'API vidait le champ.
     setFormData({
       client_id: String(devis.client_id),
-      date_devis: devis.date_devis,
-      date_validite: devis.date_validite,
+      date_devis: dateSaisie(devis.date_devis),
+      date_validite: dateSaisie(devis.date_validite),
       notes: devis.notes || '',
     });
     setLignes(devis.lignes.map(l => ({
@@ -155,9 +162,10 @@ export default function DevisPage() {
     const newLignes = [...lignes];
     (newLignes[index] as Record<string, number>)[field] = value;
     if (field === 'produit_id') {
+      // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
       const produit = produits.find(p => p.id === value);
       if (produit && newLignes[index].prix_unitaire === 0) {
-        newLignes[index].prix_unitaire = 0;
+        newLignes[index].prix_unitaire = Number(produit.prix_unitaire) || 0;
       }
     }
     setLignes(newLignes);
@@ -167,7 +175,7 @@ export default function DevisPage() {
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ client_id: '', date_devis: new Date().toISOString().split('T')[0], date_validite: '', notes: '' });
+    setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '' });
     setLignes([]);
   };
 
@@ -185,7 +193,8 @@ export default function DevisPage() {
     return <span className={`px-2 py-1 text-xs rounded-full ${styles[statut] || 'bg-gray-100'}`}>{labels[statut] || statut}</span>;
   };
 
-  const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '-';
+  const fmtDate = (d: string) => formatDateDocument(d);
+  const montant = (v: number | string) => formatMontant(v, devise);
   const totalLignes = lignes.reduce((sum, l) => sum + l.quantite * l.prix_unitaire, 0);
 
   return (
@@ -204,7 +213,8 @@ export default function DevisPage() {
       <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
         <select
           value={filterStatut}
-          onChange={(e) => setFilterStatut(e.target.value)}
+          onChange={(e) => { setFilterStatut(e.target.value); setPage(1); }}
+          aria-label="Statut"
           className="px-3 py-2 border rounded-lg"
         >
           <option value="">Tous les statuts</option>
@@ -244,7 +254,7 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-sm">{devis.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_devis)}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_validite)}</td>
-                  <td className="px-4 py-3 text-right text-sm font-medium">{Number(devis.montant_total).toFixed(2)} €</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total)}</td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(devis.statut)}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
@@ -279,6 +289,7 @@ export default function DevisPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal création/édition */}
@@ -291,7 +302,7 @@ export default function DevisPage() {
             </div>
             {configNumero?.auto_increment && !editingId && (
               <p className="text-sm text-gray-500 mb-4">
-                Numéro : {configNumero.prefixe}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')} (auto-généré)
+                Numéro : {configNumero.prefixe}{configNumero.prefixe ? configNumero.separateur ?? '' : ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')} (auto-généré)
               </p>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -335,11 +346,11 @@ export default function DevisPage() {
                         </select>
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
                         <input type="number" step="0.01" value={ligne.prix_unitaire} onChange={(e) => updateLigne(idx, 'prix_unitaire', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 border rounded text-sm" placeholder="Prix" />
-                        <span className="text-sm text-gray-600 w-20 text-right">{(ligne.quantite * ligne.prix_unitaire).toFixed(2)} €</span>
-                        <button type="button" onClick={() => removeLigne(idx)} className="text-red-500"><X size={16} /></button>
+                        <span className="text-sm text-gray-600 w-28 text-right whitespace-nowrap">{montant(ligne.quantite * ligne.prix_unitaire)}</span>
+                        <button type="button" onClick={() => removeLigne(idx)} className="text-red-500" aria-label="Retirer la ligne" title="Retirer la ligne"><X size={16} /></button>
                       </div>
                     ))}
-                    <div className="text-right font-medium">Total: {totalLignes.toFixed(2)} €</div>
+                    <div className="text-right font-medium">Total HT : {montant(totalLignes)}</div>
                   </div>
                 )}
               </div>
@@ -375,15 +386,15 @@ export default function DevisPage() {
                     {selectedDevis.lignes.map((l, i) => (
                       <div key={i} className="flex justify-between text-sm">
                         <span>{l.produit?.description || `Produit #${l.produit_id}`} × {l.quantite}</span>
-                        <span>{Number(l.montant_ligne).toFixed(2)} €</span>
+                        <span className="whitespace-nowrap">{montant(l.montant_ligne)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
               <div className="border-t pt-3 flex justify-between font-bold">
-                <span>Total:</span>
-                <span>{Number(selectedDevis.montant_total).toFixed(2)} €</span>
+                <span>Total HT :</span>
+                <span>{montant(selectedDevis.montant_total)}</span>
               </div>
               {selectedDevis.notes && <p className="text-sm text-gray-500">Notes: {selectedDevis.notes}</p>}
             </div>

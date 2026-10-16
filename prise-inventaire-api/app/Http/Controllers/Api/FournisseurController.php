@@ -115,7 +115,9 @@ class FournisseurController extends Controller
         $tenantId = auth()->user()->tenant_id;
         $fournisseurs = Fournisseur::where('tenant_id', $tenantId)->where('actif', true)
             ->orderBy('raison_sociale')
-            ->get(['id', 'code', 'raison_sociale']);
+            // La devise sert au formulaire de commande : sans elle, toute commande partait dans la devise de
+            // l'entreprise, sans taux de change, même chez un fournisseur qui facture en dollars.
+            ->get(['id', 'code', 'raison_sociale', 'devise']);
 
         return response()->json($fournisseurs);
     }

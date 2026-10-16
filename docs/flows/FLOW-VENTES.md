@@ -899,3 +899,24 @@ Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dan
 **Envoi par courriel :** le bouton à côté du PDF envoie le document avec son PDF joint (voir FLOW-PARAMETRES §12.3).
 
 **Accès :** comme le reste de l'API (jeton dans l'en-tête `Authorization`, entreprise par `X-Tenant-Slug`), donc jamais de jeton dans l'URL. Un document d'une autre entreprise renvoie 404. Le PDF existant des bons de commande fournisseur n'est pas modifié.
+
+---
+
+## 14. Écrans de vente : règles d'affichage communes
+
+- **Devise** : les montants (devis, commandes, factures, clients, comptabilité) s'affichent avec le symbole de
+  devise des paramètres de l'entreprise, au format de la langue (« 1 234,50 FCFA »), et non en euros d'office.
+- **Dates** : une date de document (`date_facture`, `date_commande`…) est lue telle quelle, sans passer par un
+  instant UTC qui la décalait d'un jour à l'ouest de Greenwich. Une date du jour proposée par défaut est celle du
+  fuseau de l'utilisateur.
+- **Listes paginées** : devis, commandes, factures, bons de livraison, tournées, clients et fournisseurs affichent
+  le nombre total et passent de page en page. Un changement de filtre revient à la première page.
+- **Lignes** : le détail d'une facture ou d'un bon de livraison donne la désignation du produit (même retiré du
+  catalogue) ; une ligne nouvelle reprend le prix du catalogue tant qu'aucun prix n'est saisi.
+- **Facture** : la liste donne le montant TTC (comme le reste à payer) ; le détail donne HT, TVA (ou le détail
+  par taxe) et TTC.
+- **Erreurs** : le message renvoyé par l'API (encours dépassé, statut incompatible, champ invalide) est affiché
+  au lieu d'un échec silencieux.
+- **Tournées** : la liste « Ajouter un bon » ne propose que les bons prêts et pas encore placés
+  (`GET /bons-livraison?statut=pret&sans_tournee=1`). Ajouter, retirer, démarrer ou terminer renvoie la tournée
+  complète (camion, bons, factures, clients).

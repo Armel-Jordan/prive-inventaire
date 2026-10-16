@@ -23,8 +23,16 @@ import type { Produit } from '../types';
 import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+
 
 export default function CommandesClientPage() {
+  const devise = useDevise();
+  const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -39,7 +47,7 @@ export default function CommandesClientPage() {
 
   const [formData, setFormData] = useState({
     client_id: '',
-    date_commande: new Date().toISOString().split('T')[0],
+    date_commande: aujourdhui(),
     date_livraison_souhaitee: '',
     remise_globale: '0',
     notes: '',
@@ -50,11 +58,12 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined }),
+        getCommandesClient({ statut: filterStatut || undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
       setCommandes(commandesRes.data || []);
+      setPagination({ dernierePage: commandesRes.last_page ?? 1, total: commandesRes.total ?? 0 });
       setClients(clientsRes || []);
       setProduits(produitsRes || []);
     } catch (error) {
@@ -62,7 +71,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut]);
+  }, [filterStatut, page]);
 
   useEffect(() => {
     loadData();
@@ -98,7 +107,7 @@ export default function CommandesClientPage() {
       resetForm();
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
+      signaler(error, 'Erreur lors de l\'enregistrement de la commande');
     }
   };
 
@@ -106,8 +115,8 @@ export default function CommandesClientPage() {
     setEditingId(cmd.id);
     setFormData({
       client_id: String(cmd.client_id),
-      date_commande: cmd.date_commande,
-      date_livraison_souhaitee: cmd.date_livraison_souhaitee || '',
+      date_commande: dateSaisie(cmd.date_commande),
+      date_livraison_souhaitee: dateSaisie(cmd.date_livraison_souhaitee),
       remise_globale: String(cmd.remise_globale ?? '0'),
       notes: cmd.notes || '',
     });
@@ -127,7 +136,7 @@ export default function CommandesClientPage() {
       await soumettreCommandeClient(id);
       loadData();
     } catch (error) {
-      console.error('Erreur soumission:', error);
+      signaler(error, 'Erreur lors de la soumission');
     }
   };
 
@@ -136,7 +145,8 @@ export default function CommandesClientPage() {
       await accepterCommandeClient(id);
       loadData();
     } catch (error) {
-      console.error('Erreur acceptation:', error);
+      signaler(error, 'Erreur lors de l\'acceptation');
+      loadData();
     }
   };
 
@@ -149,16 +159,17 @@ export default function CommandesClientPage() {
       setSelectedCommande(null);
       loadData();
     } catch (error) {
-      console.error('Erreur refus:', error);
+      signaler(error, 'Erreur lors du refus');
     }
   };
 
   const handleCreerFacture = async (id: number) => {
     try {
-      await creerFactureDepuisCommande(id);
+      const facture = await creerFactureDepuisCommande(id);
+      alert(`Facture ${facture.numero} créée (brouillon).`);
       loadData();
     } catch (error) {
-      console.error('Erreur création facture:', error);
+      signaler(error, 'Erreur lors de la création de la facture');
     }
   };
 
@@ -167,8 +178,8 @@ export default function CommandesClientPage() {
     try {
       await deleteCommandeClient(id);
       loadData();
-    } catch {
-      alert('Impossible de supprimer cette commande.');
+    } catch (error) {
+      signaler(error, 'Impossible de supprimer cette commande.');
     }
   };
 
@@ -179,7 +190,11 @@ export default function CommandesClientPage() {
   const updateLigne = (index: number, field: string, value: number) => {
     const newLignes = [...lignes];
     (newLignes[index] as Record<string, number>)[field] = value;
-    // Prix par défaut si disponible (à adapter selon les données produit)
+    // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
+    if (field === 'produit_id' && newLignes[index].prix_unitaire_ht === 0) {
+      const produit = produits.find(p => p.id === value);
+      if (produit) newLignes[index].prix_unitaire_ht = Number(produit.prix_unitaire) || 0;
+    }
     setLignes(newLignes);
   };
 
@@ -191,7 +206,7 @@ export default function CommandesClientPage() {
     setEditingId(null);
     setFormData({
       client_id: '',
-      date_commande: new Date().toISOString().split('T')[0],
+      date_commande: aujourdhui(),
       date_livraison_souhaitee: '',
       remise_globale: '0',
       notes: '',
@@ -242,7 +257,8 @@ export default function CommandesClientPage() {
         <div className="flex gap-4">
           <select
             value={filterStatut}
-            onChange={(e) => setFilterStatut(e.target.value)}
+            onChange={(e) => { setFilterStatut(e.target.value); setPage(1); }}
+            aria-label="Filtrer par statut"
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
             <option value="">Tous les statuts</option>
@@ -280,9 +296,9 @@ export default function CommandesClientPage() {
                     <BalisesFiche entite="commande_client" entiteId={cmd.id} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.client?.raison_sociale}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.date_commande}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(cmd.date_commande)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {Number(cmd.montant_ttc ?? 0).toFixed(2)} €
+                    {montant(Number(cmd.montant_ttc ?? 0))}
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
                   <td className="px-4 py-3">
@@ -364,11 +380,12 @@ export default function CommandesClientPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal création */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 dark:text-white">{editingId ? 'Modifier la commande' : 'Nouvelle commande'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -471,7 +488,7 @@ export default function CommandesClientPage() {
                           placeholder="Prix HT"
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
-                          {(ligne.quantite * ligne.prix_unitaire_ht).toFixed(2)} €
+                          {montant((ligne.quantite * ligne.prix_unitaire_ht))}
                         </span>
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500 hover:text-red-700">
                           <X size={16} />
@@ -479,7 +496,7 @@ export default function CommandesClientPage() {
                       </div>
                     ))}
                     <div className="text-right font-medium text-gray-900 dark:text-white">
-                      Total HT: {totalLignes.toFixed(2)} €
+                      Total HT: {montant(totalLignes)}
                     </div>
                   </div>
                 )}
@@ -504,7 +521,7 @@ export default function CommandesClientPage() {
 
       {/* Modal détail */}
       {showDetailModal && selectedCommande && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               Commande {selectedCommande.numero}
@@ -521,26 +538,26 @@ export default function CommandesClientPage() {
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Date commande:</span>
-                  <p className="dark:text-white">{selectedCommande.date_commande}</p>
+                  <p className="dark:text-white">{formatDateDocument(selectedCommande.date_commande)}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Date livraison souhaitée:</span>
-                  <p className="dark:text-white">{selectedCommande.date_livraison_souhaitee || '-'}</p>
+                  <p className="dark:text-white">{formatDateDocument(selectedCommande.date_livraison_souhaitee)}</p>
                 </div>
               </div>
               <div className="border-t pt-3 dark:border-gray-700">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Montant HT:</span>
-                  <span className="dark:text-white">{Number(selectedCommande.montant_ht ?? 0).toFixed(2)} €</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ht ?? 0))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">TVA:</span>
-                  <span className="dark:text-white">{Number(selectedCommande.montant_tva ?? 0).toFixed(2)} €</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_tva ?? 0))}</span>
                 </div>
                 <RecapitulatifTaxes recapitulatif={selectedCommande.recapitulatif_taxes} />
                 <div className="flex justify-between font-bold">
                   <span className="dark:text-white">Total TTC:</span>
-                  <span className="dark:text-white">{Number(selectedCommande.montant_ttc ?? 0).toFixed(2)} €</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ttc ?? 0))}</span>
                 </div>
               </div>
               {selectedCommande.motif_refus && (
@@ -563,7 +580,7 @@ export default function CommandesClientPage() {
 
       {/* Modal refus */}
       {showRefusModal && selectedCommande && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Refuser la commande</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
