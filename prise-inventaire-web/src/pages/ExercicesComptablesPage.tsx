@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CalendarRange, ChevronDown, ChevronRight, Lock, LockOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarRange, ChevronDown, ChevronRight, Landmark, Lock, LockOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import {
   getExercices, creerExercice, modifierExercice, supprimerExercice, fermerPeriode, rouvrirPeriode,
   DECOUPAGES, type ExerciceComptable, type PeriodeComptable, type SaisieExercice, type Decoupage,
@@ -110,12 +111,19 @@ export default function ExercicesComptablesPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><CalendarRange className="text-purple-600" /> {ty.title}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{ty.subtitle}</p>
         </div>
-        {peutModifier && exercices && (
-          <button onClick={() => { setErreurEdition(''); setEdition({ exercice: null, saisie: exerciceSuivant(exercices) }); }}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-            <Plus size={16} /> {ty.add}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {exercices && exercices.length > 0 && (
+            <Link to="/soldes-ouverture" className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Landmark size={16} /> {ty.openingLink}
+            </Link>
+          )}
+          {peutModifier && exercices && (
+            <button onClick={() => { setErreurEdition(''); setEdition({ exercice: null, saisie: exerciceSuivant(exercices) }); }}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+              <Plus size={16} /> {ty.add}
+            </button>
+          )}
+        </div>
       </div>
 
       {message && <p role="status" className={`mb-4 px-3 py-2 rounded-lg text-sm max-w-5xl ${message.erreur ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message.texte}</p>}

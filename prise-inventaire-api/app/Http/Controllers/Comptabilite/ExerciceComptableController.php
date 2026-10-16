@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Comptabilite;
 
 use App\Http\Controllers\Controller;
+use App\Models\EcritureComptable;
 use App\Models\ExerciceComptable;
 use App\Models\PeriodeComptable;
 use App\Services\Comptabilite\Exercices;
@@ -71,6 +72,9 @@ class ExerciceComptableController extends Controller
             if ($exercice->periodes->contains('fermee', true)) {
                 return response()->json(['message' => 'Des périodes de cet exercice sont fermées : ses dates et son découpage ne peuvent plus changer.'], 422);
             }
+            if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
+                return response()->json(['message' => 'Cet exercice a des écritures : ses dates et son découpage ne peuvent plus changer.'], 422);
+            }
             if ($erreur = $this->exercices->controlerDates($debut, $fin, $exercice)) {
                 return response()->json(['message' => $erreur, 'errors' => ['date_fin' => [$erreur]]], 422);
             }
@@ -95,6 +99,9 @@ class ExerciceComptableController extends Controller
         $exercice = ExerciceComptable::findOrFail($id);
         if ($exercice->estCloture() || $exercice->periodes()->where('fermee', true)->exists()) {
             return response()->json(['message' => 'Un exercice clôturé, ou dont une période est fermée, ne peut pas être supprimé.'], 422);
+        }
+        if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
+            return response()->json(['message' => 'Cet exercice a des écritures : il ne peut pas être supprimé.'], 422);
         }
         DB::transaction(function () use ($exercice) {
             $exercice->periodes()->delete();
