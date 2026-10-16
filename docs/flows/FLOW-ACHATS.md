@@ -112,13 +112,13 @@ Une **Commande Fournisseur** (appelée aussi "bon de commande" ou "PO — Purcha
 
 | Champ | Description |
 |-------|-------------|
-| `numero` | Ex: CF-2026-0001 (auto-généré) |
+| `numero` | Ex: BC-00001 : numérotation propre aux commandes fournisseur (`commande_fournisseur`), distincte de celle des commandes clients |
 | `fournisseur_id` | Le fournisseur concerné |
 | `date_commande` | Date de création de la commande |
 | `date_livraison_prevue` | Date à laquelle on attend la livraison |
 | `statut` | État actuel (voir section statuts) |
 | `montant_total` | Somme de toutes les lignes |
-| `devise` | Devise de la commande (héritée du fournisseur) |
+| `devise` | Devise de la commande ; sans devise transmise, celle du fournisseur |
 | `taux_change` | Taux de change si devise ≠ devise entreprise |
 | `notes` | Notes internes |
 

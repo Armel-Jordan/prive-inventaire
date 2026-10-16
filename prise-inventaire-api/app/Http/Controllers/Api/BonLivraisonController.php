@@ -171,6 +171,10 @@ class BonLivraisonController extends Controller
             $bon->notes_livraison = $validated['notes_livraison'] ?? null;
             $bon->date_livraison = now();
 
+            // Les lignes viennent d'être livrées par d'autres instances : on les recharge avant de conclure.
+            // Sans cela, estComplet() lisait les quantités d'avant la livraison : toute livraison était vue
+            // comme partielle et une facture du « reste » était émise pour la totalité du bon.
+            $bon->load('lignes');
             if ($bon->estComplet()) {
                 $bon->statut = 'livre_complet';
             } else {
