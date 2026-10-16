@@ -18,17 +18,19 @@ class Soldes
     public const MAX_LIGNES = 5000;
 
     /**
-     * Débits et crédits par compte des écritures datées entre $du et $au (bornes incluses ; null : sans borne).
+     * Débits et crédits par compte des écritures datées entre $du et $au (bornes incluses ; null : sans borne),
+     * hors écritures des origines exclues.
      *
      * @return Collection<int, object{compte_id: int, debit: float, credit: float}>
      */
-    public function mouvements(?string $du, ?string $au, ?array $compteIds = null): Collection
+    public function mouvements(?string $du, ?string $au, ?array $compteIds = null, array $sourcesExclues = []): Collection
     {
         return EcritureComptableLigne::query()
             ->join('ecritures_comptables as e', 'e.id', '=', 'ecritures_comptables_lignes.ecriture_id')
             ->when($du, fn ($q) => $q->whereDate('e.date', '>=', $du))
             ->when($au, fn ($q) => $q->whereDate('e.date', '<=', $au))
             ->when($compteIds !== null, fn ($q) => $q->whereIn('ecritures_comptables_lignes.compte_id', $compteIds))
+            ->when($sourcesExclues, fn ($q) => $q->whereNotIn('e.source', $sourcesExclues))
             ->groupBy('ecritures_comptables_lignes.compte_id')
             ->selectRaw('ecritures_comptables_lignes.compte_id as compte_id, SUM(ecritures_comptables_lignes.debit) as debit, SUM(ecritures_comptables_lignes.credit) as credit')
             ->toBase()->get()
