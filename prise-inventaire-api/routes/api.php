@@ -73,6 +73,7 @@ use App\Http\Controllers\Comptabilite\JournalComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
+use App\Http\Controllers\Inventaire\ValorisationInventaireController;
 use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\MouvementTenantController;
@@ -408,6 +409,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}/lignes', [PriseInventaireController::class, 'lignes'])->whereNumber('id');
         Route::get('/{id}/export', [PriseInventaireController::class, 'exporter'])->whereNumber('id');
         Route::middleware('role:admin,manager')->group(function () {
+            // Valorisation de l'inventaire officiel (coûts : administrateurs et responsables).
+            Route::get('/valorisation', ValorisationInventaireController::class);
             Route::post('/', [PriseInventaireController::class, 'store']);
             Route::put('/{id}/corrections', [PriseInventaireController::class, 'corriger'])->whereNumber('id');
             Route::post('/{id}/valider', [PriseInventaireController::class, 'valider'])->whereNumber('id');
