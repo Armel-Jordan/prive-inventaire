@@ -9,6 +9,7 @@
 | Document | Module | Contenu |
 |----------|--------|---------|
 | [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
+| [FLOW-CHAMPS-PERSONNALISES.md](./FLOW-CHAMPS-PERSONNALISES.md) | Transverse | Champs ajoutés par l'entreprise aux fiches et documents, recherche par valeur |
 | [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
 | [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
 | [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |

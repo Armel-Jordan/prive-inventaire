@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-react';
 import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur, getConfiguration } from '@/services/api';
 import type { Fournisseur } from '@/services/api';
@@ -222,6 +223,7 @@ export default function FournisseursPage() {
                       >
                         <Trash2 size={16} />
                       </button>
+                      <BoutonChampsPersonnalises entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="ml-2" />
                     </td>
                   </tr>
                 ))}

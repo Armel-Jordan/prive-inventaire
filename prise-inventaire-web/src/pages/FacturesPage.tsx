@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
 import {
   getFactures,
@@ -280,6 +281,7 @@ export default function FacturesPage() {
                           )}
                         </>
                       )}
+                      <BoutonChampsPersonnalises entite="facture" entiteId={facture.id} titre={facture.numero} />
                     </div>
                   </td>
                 </tr>

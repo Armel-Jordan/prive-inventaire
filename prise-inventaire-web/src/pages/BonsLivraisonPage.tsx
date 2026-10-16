@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
 import {
   getBonsLivraison,
@@ -280,6 +281,7 @@ export default function BonsLivraisonPage() {
                           <Truck size={18} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                     </div>
                   </td>
                 </tr>

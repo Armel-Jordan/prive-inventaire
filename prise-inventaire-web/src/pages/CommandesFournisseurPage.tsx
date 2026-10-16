@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
 import {
   getCommandesFournisseur,
@@ -356,6 +357,7 @@ export default function CommandesFournisseurPage() {
                           <Ban size={16} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="ml-1" />
                     </td>
                   </tr>
                 ))}

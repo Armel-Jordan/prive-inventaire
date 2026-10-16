@@ -26,6 +26,7 @@ use App\Http\Controllers\AlerteStockController;
 use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
+use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
@@ -269,6 +270,18 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/search', [TracabiliteController::class, 'search']);
         Route::get('/produit/{numero}', [TracabiliteController::class, 'produitHistory']);
         Route::get('/timeline/{numero}', [TracabiliteController::class, 'timeline']);
+    });
+
+    // Champs personnalisés des fiches et documents : définitions, valeurs, recherche par valeur.
+    Route::prefix('champs-personnalises')->group(function () {
+        Route::get('/', [ChampPersonnaliseController::class, 'index']);
+        Route::post('/', [ChampPersonnaliseController::class, 'store']);
+        Route::put('/ordre', [ChampPersonnaliseController::class, 'ordonner']);
+        Route::get('/valeurs', [ChampPersonnaliseController::class, 'valeurs']);
+        Route::put('/valeurs', [ChampPersonnaliseController::class, 'enregistrerValeurs']);
+        Route::get('/recherche', [ChampPersonnaliseController::class, 'recherche']);
+        Route::put('/{id}', [ChampPersonnaliseController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ChampPersonnaliseController::class, 'destroy'])->whereNumber('id');
     });
 
     // Notifications
