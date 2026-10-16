@@ -5,14 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Configuration;
 use App\Models\Secteur;
 use App\Support\TenantRule;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SecteurController extends Controller
 {
-    public function index(): JsonResponse
+    /**
+     * Secteurs actifs (listes de choix, application mobile) ; ?statut=inactifs ou ?statut=tous pour retrouver les
+     * secteurs désactivés, qui disparaissaient de l'écran sans moyen de les réactiver.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $secteurs = Secteur::where('actif', true)
+        $statut = $request->query('statut', 'actifs');
+        $secteurs = Secteur::query()
+            ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('code')
             ->get();
@@ -20,10 +27,22 @@ class SecteurController extends Controller
         return response()->json($secteurs);
     }
 
+    /** Code déjà pris par un secteur désactivé : l'utilisateur est invité à le réactiver. */
+    private function codeNonDesactive(?int $ignorer = null): Closure
+    {
+        return function (string $attribut, mixed $valeur, Closure $echec) use ($ignorer) {
+            $desactive = Secteur::where('code', $valeur)->where('actif', false)
+                ->when($ignorer, fn ($q) => $q->whereKeyNot($ignorer))->first();
+            if ($desactive) {
+                $echec("Le code « {$valeur} » appartient au secteur désactivé « {$desactive->nom} » : réactivez-le (filtre « Désactivés » de la liste des secteurs).");
+            }
+        };
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'code' => ['nullable', 'string', 'max:10', TenantRule::unique('secteurs', 'code')],
+            'code' => ['nullable', 'string', 'max:10', $this->codeNonDesactive(), TenantRule::unique('secteurs', 'code')],
             'nom' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);

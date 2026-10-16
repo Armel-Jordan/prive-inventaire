@@ -105,7 +105,14 @@ Produit → suivi en stock (Localisations, Mouvements)
 
 ### 2.7 Points d'attention
 
-- Un produit ne peut pas être supprimé s'il est référencé dans des commandes ou des lignes de facturation.
+- **Désactiver plutôt que supprimer.** Le bouton de la liste (`DELETE /produits/{id}`) désactive le produit. Il
+  disparaît alors des listes de choix et de l'application mobile, mais son historique (scans, mouvements,
+  documents) est conservé.
+  - Le filtre **Désactivés** (`GET /produits?statut=inactifs`, ou `tous`) le retrouve, avec un bouton
+    **Réactiver**.
+  - Son numéro reste réservé. Le reprendre pour un nouveau produit donne un message qui invite à réactiver le
+    produit désactivé.
+  - Il en va de même pour les secteurs (§3) : `GET /secteurs?statut=…`, code réservé, réactivation.
 - Le `secteur_id` du produit est son secteur "naturel" de rangement — il peut être stocké ailleurs en pratique.
 - La `mesure` doit être cohérente avec la façon dont on achète et on vend (ex: acheter en `KG`, vendre en `KG`).
 

@@ -19,6 +19,8 @@ export interface Produit {
   id?: number;
   numero: string;
   description: string;
+  /** false : produit désactivé (masqué des listes de choix, réactivable). */
+  actif?: boolean;
   mesure: string;
   unite_achat?: string | null;
   qte_par_unite_achat?: number;
@@ -31,6 +33,8 @@ export interface Secteur {
   id?: number;
   code: string;
   nom: string;
+  /** false : secteur désactivé (masqué des listes de choix, réactivable). */
+  actif?: boolean;
   description?: string;
 }
 

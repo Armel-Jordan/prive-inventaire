@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X, RotateCcw } from 'lucide-react';
 import { getSecteurs, createSecteur, updateSecteur, deleteSecteur, getConfiguration } from '@/services/api';
 import type { Secteur } from '@/types';
 import QRCode from 'qrcode';
@@ -26,6 +26,8 @@ export default function SecteursPage() {
   const [importing, setImporting] = useState(false);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  // Secteurs désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
+  const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [qrSecteur, setQrSecteur] = useState<Secteur | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,7 +37,7 @@ export default function SecteursPage() {
 
   async function loadData() {
     try {
-      const data = await getSecteurs();
+      const data = await getSecteurs(filterStatut);
       setSecteurs(data);
     } catch {
       toast('Erreur lors du chargement', 'error');
@@ -45,9 +47,23 @@ export default function SecteursPage() {
   }
 
   useEffect(() => {
-    loadData();
     getConfiguration('secteur').then(setConfigNumero).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatut]);
+
+  async function handleReactiver(secteur: Secteur) {
+    try {
+      await updateSecteur(secteur.id!, { actif: true });
+      toast('Secteur réactivé');
+      loadData();
+    } catch {
+      toast('Erreur lors de la réactivation', 'error');
+    }
+  }
 
   async function openQr(secteur: Secteur) {
     setQrSecteur(secteur);
@@ -175,6 +191,13 @@ export default function SecteursPage() {
           )}
         </div>
         <div className="flex gap-2">
+          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
+            aria-label="Statut"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+            <option value="actifs">Actifs</option>
+            <option value="inactifs">Désactivés</option>
+            <option value="tous">Tous</option>
+          </select>
           <button onClick={exportToCSV} disabled={secteurs.length === 0}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
@@ -220,7 +243,12 @@ export default function SecteursPage() {
                         {secteur.code}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">{secteur.nom}</td>
+                    <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">
+                      {secteur.nom}
+                      {secteur.actif === false && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{secteur.description || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -234,9 +262,15 @@ export default function SecteursPage() {
                             <Pencil size={16} />
                           </button>
                         )}
-                        {canDelete('secteurs') && (
+                        {secteur.actif === false && canEdit('secteurs') && (
+                          <button onClick={() => handleReactiver(secteur)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                        {secteur.actif !== false && canDelete('secteurs') && (
                           <button onClick={() => setConfirmId(secteur.id!)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
+                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
                             <Trash2 size={16} />
                           </button>
                         )}
@@ -317,8 +351,9 @@ export default function SecteursPage() {
 
       <ConfirmModal
         open={confirmId !== null}
-        title="Supprimer le secteur"
-        message="Cette action est irréversible. Les produits liés à ce secteur ne seront plus associés."
+        title="Désactiver le secteur"
+        message="Le secteur n'apparaîtra plus dans les listes de choix ni dans l'application mobile. Ses produits restent rattachés et son historique est conservé ; vous pourrez le réactiver depuis le filtre « Désactivés »."
+        confirmLabel="Désactiver"
         onConfirm={() => confirmId !== null && handleDelete(confirmId)}
         onCancel={() => setConfirmId(null)}
       />
