@@ -81,3 +81,5 @@ PARAMÈTRES (configurer en premier)
 ```
 
 Cet ordre est suivi dans l'application : **Paramètres → Configuration à compléter** (voir [FLOW-CONFIGURATION-A-COMPLETER.md](./FLOW-CONFIGURATION-A-COMPLETER.md)).
+
+Portail client (les clients de l'entreprise commandent en ligne, suivent leurs commandes et leurs factures) : [FLOW-PORTAIL-CLIENT.md](./FLOW-PORTAIL-CLIENT.md).

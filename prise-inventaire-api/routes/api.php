@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
+use App\Http\Controllers\Api\PortailClientController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RemarqueRapideController;
@@ -67,6 +68,8 @@ use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\MouvementTenantController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Portail\PortailAuthController;
+use App\Http\Controllers\Portail\PortailCommandeController;
 use App\Http\Controllers\Prix\CalculController as PrixCalculController;
 use App\Http\Controllers\Prix\GrilleController as PrixGrilleController;
 use App\Http\Controllers\Prix\ListeController as PrixListeController;
@@ -85,6 +88,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TachePlanifieController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
+use App\Http\Middleware\AuthentifierPortail;
 use App\Support\Referentiels;
 use Illuminate\Support\Facades\Route;
 
@@ -550,6 +554,18 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
     });
 
+    // Portail client, côté entreprise : réglages et accès des clients.
+    Route::prefix('portail-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [PortailClientController::class, 'index']);
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::put('/parametres', [PortailClientController::class, 'parametres']);
+            Route::post('/comptes', [PortailClientController::class, 'store']);
+            Route::put('/comptes/{id}', [PortailClientController::class, 'update'])->whereNumber('id');
+            Route::post('/comptes/{id}/invitation', [PortailClientController::class, 'invitation'])->whereNumber('id');
+            Route::delete('/comptes/{id}', [PortailClientController::class, 'destroy'])->whereNumber('id');
+        });
+    });
+
     // Camions
     Route::prefix('camions')->middleware('module:ventes')->group(function () {
         Route::get('/', [CamionController::class, 'index']);
@@ -679,4 +695,29 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/{entite}/generer', [ConfigurationController::class, 'genererNumero']);
         Route::post('/{entite}/consommer', [ConfigurationController::class, 'consommerNumero']);
     });
+});
+
+// Portail client, accès public : page d'accueil, connexion, lien d'invitation ou de mot de passe oublié.
+Route::prefix('portail/{slug}')->where(['slug' => '[A-Za-z0-9_-]+'])->group(function () {
+    Route::get('/', [PortailAuthController::class, 'infos']);
+    Route::post('/connexion', [PortailAuthController::class, 'connexion'])->middleware('throttle:10,1,portail-connexion');
+    Route::post('/activation', [PortailAuthController::class, 'activation'])->middleware('throttle:10,1,portail-activation');
+    Route::post('/mot-de-passe-oublie', [PortailAuthController::class, 'oublie'])->middleware('throttle:5,1,portail-oubli');
+});
+
+// Espace du client connecté au portail : session du portail uniquement (un jeton d'employé n'y est pas reconnu).
+Route::prefix('espace-client')->middleware(AuthentifierPortail::class)->group(function () {
+    Route::post('/deconnexion', [PortailAuthController::class, 'deconnexion']);
+    Route::get('/moi', [PortailAuthController::class, 'moi']);
+    Route::put('/moi', [PortailAuthController::class, 'modifierProfil']);
+    Route::put('/moi/mot-de-passe', [PortailAuthController::class, 'changerMotDePasse']);
+    Route::get('/catalogue', [PortailCommandeController::class, 'catalogue']);
+    Route::post('/prix', [PortailCommandeController::class, 'prix']);
+    Route::get('/commandes', [PortailCommandeController::class, 'index']);
+    Route::post('/commandes', [PortailCommandeController::class, 'store'])->middleware('throttle:20,1,portail-commandes');
+    Route::get('/commandes/{id}', [PortailCommandeController::class, 'show'])->whereNumber('id');
+    Route::post('/commandes/{id}/annuler', [PortailCommandeController::class, 'annuler'])->whereNumber('id');
+    Route::get('/commandes/{id}/pdf', [PortailCommandeController::class, 'pdfCommande'])->whereNumber('id');
+    Route::get('/factures', [PortailCommandeController::class, 'factures']);
+    Route::get('/factures/{id}/pdf', [PortailCommandeController::class, 'pdfFacture'])->whereNumber('id');
 });
