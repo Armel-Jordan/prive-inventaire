@@ -9,6 +9,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
 use App\Services\TaxesDocument;
+use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,7 +95,7 @@ class CommandeClientController extends Controller
                     'produit_id' => $ligneData['produit_id'],
                     'quantite' => $ligneData['quantite'],
                     'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                    'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
+                    'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                     'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                 ]);
                 $ligne->calculerMontants();
@@ -153,7 +154,7 @@ class CommandeClientController extends Controller
                         'produit_id' => $ligneData['produit_id'],
                         'quantite' => $ligneData['quantite'],
                         'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                        'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
+                        'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                         'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                     ]);
                     $ligne->calculerMontants();
