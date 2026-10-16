@@ -29,6 +29,7 @@ import FournisseursPage from '@/pages/FournisseursPage';
 import ChampsPersonnalisesPage from '@/pages/ChampsPersonnalisesPage';
 import CommandesFournisseurPage from '@/pages/CommandesFournisseurPage';
 import ReceptionsPage from '@/pages/ReceptionsPage';
+import FicheClientPage from '@/pages/FicheClientPage';
 import ClientsPage from '@/pages/ClientsPage';
 import BalisesPage from '@/pages/BalisesPage';
 import CamionsPage from '@/pages/CamionsPage';
@@ -107,6 +108,7 @@ function AppRoutes() {
         <Route path="champs-personnalises" element={<ChampsPersonnalisesPage />} />
         <Route path="commandes-fournisseur" element={<CommandesFournisseurPage />} />
         <Route path="receptions" element={<ReceptionsPage />} />
+        <Route path="clients/:id" element={<FicheClientPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="balises" element={<BalisesPage />} />
         <Route path="camions" element={<CamionsPage />} />

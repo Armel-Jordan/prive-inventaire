@@ -29,6 +29,11 @@ use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\ClientFicheAdresseController;
+use App\Http\Controllers\Api\ClientFicheCategorieController;
+use App\Http\Controllers\Api\ClientFicheContactController;
+use App\Http\Controllers\Api\ClientFicheController;
+use App\Http\Controllers\Api\ClientFicheRemarqueController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationACompleterController;
@@ -433,6 +438,30 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::delete('/{id}', [ClientController::class, 'destroy']);
         Route::get('/{id}/conditions-paiement', [ClientController::class, 'getConditionsPaiement']);
         Route::post('/{id}/conditions-paiement', [ClientController::class, 'setConditionsPaiement']);
+    });
+
+    // Fiche client complète : synthèse, historique d'achats, contacts, adresses, remarques, favori, catégorie.
+    Route::prefix('clients/{client}')->where(['client' => '[0-9]+'])->middleware('module:ventes')->group(function () {
+        Route::get('/fiche', [ClientFicheController::class, 'show']);
+        Route::get('/synthese', [ClientFicheController::class, 'synthese']);
+        Route::get('/historique-achats', [ClientFicheController::class, 'historique']);
+        Route::put('/categorie', [ClientFicheController::class, 'categorie']);
+        Route::post('/favori', [ClientFicheController::class, 'ajouterFavori']);
+        Route::delete('/favori', [ClientFicheController::class, 'retirerFavori']);
+        foreach (['contacts' => ClientFicheContactController::class, 'adresses' => ClientFicheAdresseController::class, 'remarques' => ClientFicheRemarqueController::class] as $liste => $controleur) {
+            Route::get("/{$liste}", [$controleur, 'index']);
+            Route::post("/{$liste}", [$controleur, 'store']);
+            Route::put("/{$liste}/{id}", [$controleur, 'update'])->whereNumber('id');
+            Route::delete("/{$liste}/{id}", [$controleur, 'destroy'])->whereNumber('id');
+        }
+    });
+
+    // Catégories de clients : lecture pour tous, gestion par les administrateurs.
+    Route::prefix('categories-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [ClientFicheCategorieController::class, 'index']);
+        Route::post('/', [ClientFicheCategorieController::class, 'store'])->middleware('role:admin');
+        Route::put('/{id}', [ClientFicheCategorieController::class, 'update'])->whereNumber('id')->middleware('role:admin');
+        Route::delete('/{id}', [ClientFicheCategorieController::class, 'destroy'])->whereNumber('id')->middleware('role:admin');
     });
 
     // Commandes Clients

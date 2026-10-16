@@ -889,6 +889,9 @@ export interface Client {
   taux_remise_global: number;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
+  categorie_id?: number | null;
+  categorie?: { id: number; nom: string } | null;
+  favori?: boolean;
 }
 
 export interface ConditionPaiement {
@@ -1049,10 +1052,12 @@ export interface ZonePreparation {
 }
 
 // Clients API
-export async function getClients(params?: { search?: string; actif?: boolean }): Promise<{ data: Client[] }> {
+export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean }): Promise<{ data: Client[] }> {
   const queryParams = new URLSearchParams();
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
+  if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
+  if (params?.favoris) queryParams.append('favoris', '1');
   return fetchApi(`/clients?${queryParams.toString()}`);
 }
 
@@ -1085,6 +1090,147 @@ export async function setConditionsPaiement(clientId: number, conditions: Partia
     method: 'POST',
     body: JSON.stringify({ conditions }),
   });
+}
+
+// Fiche client complète : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris
+export interface FicheClient extends Client {
+  contacts_count: number;
+  adresses_count: number;
+  remarques_count: number;
+}
+
+export interface SyntheseClient {
+  chiffre_affaires: { total: number; annee_courante: number; annee_precedente: number };
+  factures: {
+    nombre: number;
+    panier_moyen: number;
+    premiere: string | null;
+    derniere: { id: number; numero: string; date: string; montant_ttc: number } | null;
+  };
+  encours: { montant: number; maximum: number | null; en_retard: { nombre: number; montant: number } };
+  commandes: { en_cours: number; nombre: number };
+  devis: { en_cours: number; nombre: number };
+  ventes_mensuelles: { mois: string; montant_ht: number }[];
+  produits_les_plus_achetes: { produit_id: number; numero: string | null; description: string | null; quantite: number; montant_ht: number; factures: number; dernier_achat: string | null }[];
+}
+
+export interface LigneHistoriqueAchat {
+  id: number;
+  date: string;
+  facture_id: number;
+  facture_numero: string;
+  produit_id: number;
+  produit_numero: string | null;
+  produit_description: string | null;
+  quantite: number;
+  prix_unitaire_ht: number;
+  remise_ligne: number;
+  montant_ht: number;
+}
+
+export interface HistoriqueAchats {
+  data: LigneHistoriqueAchat[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  totaux: { quantite: number; montant_ht: number };
+}
+
+export interface ContactClient {
+  id: number;
+  nom: string;
+  fonction: string | null;
+  telephone: string | null;
+  telephone_secondaire: string | null;
+  email: string | null;
+  principal: boolean;
+  recoit_factures: boolean;
+  recoit_commandes: boolean;
+  notes: string | null;
+  actif: boolean;
+}
+
+export interface AdresseClient {
+  id: number;
+  libelle: string;
+  adresse: string;
+  ville: string | null;
+  code_postal: string | null;
+  region: string | null;
+  pays: string | null;
+  livraison: boolean;
+  principale: boolean;
+  instructions: string | null;
+  actif: boolean;
+}
+
+export interface RemarqueClient {
+  id: number;
+  texte: string;
+  epinglee: boolean;
+  auteur_id: number | null;
+  auteur: { id: number; nom: string } | null;
+  created_at: string;
+}
+
+export interface CategorieClient {
+  id: number;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+  clients_count?: number;
+}
+
+export async function getFicheClient(id: number): Promise<FicheClient> {
+  return fetchApi(`/clients/${id}/fiche`);
+}
+
+export async function getSyntheseClient(id: number): Promise<SyntheseClient> {
+  return fetchApi(`/clients/${id}/synthese`);
+}
+
+export async function getHistoriqueAchatsClient(id: number, params: { du?: string; au?: string; recherche?: string; page?: number }): Promise<HistoriqueAchats> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/clients/${id}/historique-achats?${query.toString()}`);
+}
+
+export async function changerCategorieClient(id: number, categorieId: number | null): Promise<Client> {
+  return fetchApi(`/clients/${id}/categorie`, { method: 'PUT', body: JSON.stringify({ categorie_id: categorieId }) });
+}
+
+export async function basculerFavoriClient(id: number, favori: boolean): Promise<{ favori: boolean }> {
+  return fetchApi(`/clients/${id}/favori`, { method: favori ? 'POST' : 'DELETE' });
+}
+
+/** Contacts, adresses et remarques d'un client partagent les mêmes routes. */
+export type ListeFicheClient = 'contacts' | 'adresses' | 'remarques';
+
+export async function getListeFicheClient<T>(clientId: number, liste: ListeFicheClient): Promise<T[]> {
+  return fetchApi(`/clients/${clientId}/${liste}`);
+}
+
+export async function enregistrerElementFicheClient<T>(clientId: number, liste: ListeFicheClient, donnees: Partial<T>, id?: number): Promise<T> {
+  return fetchApi(id ? `/clients/${clientId}/${liste}/${id}` : `/clients/${clientId}/${liste}`, {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(donnees),
+  });
+}
+
+export async function supprimerElementFicheClient(clientId: number, liste: ListeFicheClient, id: number): Promise<void> {
+  await fetchApi(`/clients/${clientId}/${liste}/${id}`, { method: 'DELETE' });
+}
+
+export async function getCategoriesClients(): Promise<CategorieClient[]> {
+  return fetchApi('/categories-clients');
+}
+
+export async function enregistrerCategorieClient(donnees: Partial<CategorieClient>, id?: number): Promise<CategorieClient> {
+  return fetchApi(id ? `/categories-clients/${id}` : '/categories-clients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerCategorieClient(id: number): Promise<void> {
+  await fetchApi(`/categories-clients/${id}`, { method: 'DELETE' });
 }
 
 // Commandes Clients API

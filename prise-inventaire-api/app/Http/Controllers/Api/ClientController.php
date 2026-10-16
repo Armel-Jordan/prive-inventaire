@@ -29,6 +29,13 @@ class ClientController extends Controller
             $query->where('actif', $request->boolean('actif'));
         }
 
+        // Fiche client : filtres facultatifs (catégorie, favoris de l'utilisateur), catégorie et favori affichés.
+        $utilisateur = $request->user()->id;
+        $query->when($request->filled('categorie_id'), fn ($q) => $q->where('categorie_id', $request->integer('categorie_id')))
+            ->when($request->boolean('favoris'), fn ($q) => $q->whereHas('favoris', fn ($f) => $f->where('user_id', $utilisateur)))
+            ->with('categorie:id,nom')
+            ->withExists(['favoris as favori' => fn ($f) => $f->where('user_id', $utilisateur)]);
+
         $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
 
         return response()->json($clients);

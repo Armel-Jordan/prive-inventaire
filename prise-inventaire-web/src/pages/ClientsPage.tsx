@@ -11,6 +11,7 @@ import {
   getConfiguration,
 } from '../services/api';
 import type { Client } from '../services/api';
+import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -28,6 +29,7 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
+  const [filtres, setFiltres] = useState<FiltresListeClients>({});
   const [formData, setFormData] = useState({
     code: '',
     raison_sociale: '',
@@ -60,7 +62,7 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const response = await getClients({ search: search || undefined });
+      const response = await getClients({ search: search || undefined, ...filtres });
       setClients(response.data || []);
     } catch (error) {
       console.error('Erreur chargement clients:', error);
@@ -74,7 +76,7 @@ export default function ClientsPage() {
       loadClients();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, filtres]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +171,7 @@ export default function ClientsPage() {
             className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         </div>
+        <FiltresClients valeur={filtres} onChange={setFiltres} />
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
@@ -192,7 +195,9 @@ export default function ClientsPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {clients.map((client) => (
                 <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 text-sm font-mono text-gray-900 dark:text-white">{client.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <CelluleCodeClient client={client} onFavori={() => { if (filtres.favoris) loadClients(); }} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Building2 size={16} className="text-gray-400" />
