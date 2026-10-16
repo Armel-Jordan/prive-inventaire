@@ -8,7 +8,6 @@ use App\Models\Fournisseur;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class FournisseurController extends Controller
 {
@@ -80,7 +79,7 @@ class FournisseurController extends Controller
     public function update(Request $request, Fournisseur $fournisseur): JsonResponse
     {
         $validated = $request->validate([
-            'code' => ['nullable', 'string', 'max:20', Rule::unique('fournisseurs', 'code')->ignore($fournisseur->id)],
+            'code' => ['nullable', 'string', 'max:20', TenantRule::unique('fournisseurs', 'code', $fournisseur->id)],
             'raison_sociale' => 'required|string|max:255',
             'adresse' => 'nullable|string',
             'telephone' => 'nullable|string|max:20',
