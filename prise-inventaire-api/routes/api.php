@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\TauxChangeController;
@@ -227,6 +228,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/', [AuditLogController::class, 'index']);
         Route::get('/stats', [AuditLogController::class, 'stats']);
         Route::get('/{modelType}/{modelId}', [AuditLogController::class, 'history']);
+    });
+
+    // Pièces jointes des fiches (clients, fournisseurs, produits, employés) et des documents.
+    Route::prefix('pieces-jointes')->group(function () {
+        Route::get('/', [PieceJointeController::class, 'index']);
+        Route::get('/categories', [PieceJointeController::class, 'categories']);
+        Route::post('/', [PieceJointeController::class, 'store'])->middleware('throttle:60,1');
+        Route::get('/{id}/fichier', [PieceJointeController::class, 'fichier'])->whereNumber('id');
+        Route::put('/{id}', [PieceJointeController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [PieceJointeController::class, 'destroy'])->whereNumber('id');
     });
 
     // Transferts planifiés

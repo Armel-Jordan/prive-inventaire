@@ -35,6 +35,7 @@ import TourneesPage from '@/pages/TourneesPage';
 import ComptabilitePage from '@/pages/ComptabilitePage';
 import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
+import PiecesJointesPage from '@/pages/PiecesJointesPage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
@@ -108,6 +109,7 @@ function AppRoutes() {
         <Route path="comptabilite" element={<ComptabilitePage />} />
         <Route path="previsions-stock" element={<PrevisionsStockPage />} />
         <Route path="devis" element={<DevisPage />} />
+        <Route path="pieces-jointes" element={<PiecesJointesPage />} />
         <Route path="gestion-prix" element={<GestionPrixPage />} />
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />

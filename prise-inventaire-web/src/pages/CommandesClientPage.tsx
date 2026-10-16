@@ -1,3 +1,4 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
 import {
@@ -279,6 +280,7 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                       <button
                         onClick={() => {
                           setSelectedCommande(cmd);
