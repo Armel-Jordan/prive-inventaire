@@ -42,6 +42,7 @@ import FacturesPage from '@/pages/FacturesPage';
 import NotesCreditPage from '@/pages/NotesCreditPage';
 import AcomptesPage from '@/pages/AcomptesPage';
 import DemandesAcomptePage from '@/pages/DemandesAcomptePage';
+import RelancesPage from '@/pages/RelancesPage';
 import ComptesClientsPage from '@/pages/ComptesClientsPage';
 import BonsLivraisonPage from '@/pages/BonsLivraisonPage';
 import TourneesPage from '@/pages/TourneesPage';
@@ -150,6 +151,7 @@ function AppRoutes() {
         <Route path="acomptes" element={<AcomptesPage />} />
         <Route path="demandes-acompte" element={<DemandesAcomptePage />} />
         <Route path="comptes-clients" element={<ComptesClientsPage />} />
+        <Route path="relances" element={<RelancesPage />} />
         <Route path="bons-livraison" element={<BonsLivraisonPage />} />
         <Route path="espace-client" element={<PortailClientsPage />} />
         <Route path="tournees" element={<TourneesPage />} />

@@ -130,6 +130,7 @@ class Permissions
                 'aide_en' => "Record the deposit received (date, method, reference): the deposit is added to the customer's account."],
         ]],
         'comptes_clients' => ['onglet' => 'ventes', 'fr' => 'Comptes clients', 'en' => 'Receivables', 'crud' => ['voir']],
+        'relances' => ['onglet' => 'ventes', 'fr' => 'Relances de paiement', 'en' => 'Payment reminders', 'crud' => ['voir', 'creer']],
         'bons_livraison' => ['onglet' => 'ventes', 'fr' => 'Bons de livraison', 'en' => 'Delivery notes', 'actions' => [
             'preparer' => ['base' => 'modifier', 'fr' => 'Préparer un bon de livraison', 'en' => 'Prepare a delivery note',
                 'aide_fr' => 'Passer un bon en préparation, puis le marquer prêt.', 'aide_en' => 'Start preparing a note, then mark it ready.'],

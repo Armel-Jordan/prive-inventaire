@@ -35,6 +35,9 @@ class TachesPlanifieesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Cache de fichiers (variables de la CI) : le verrou de passage laissé par un lancement précédent, à la même
+        // heure figée, ne doit pas compter.
+        Cache::flush();
 
         $this->travelTo(Carbon::parse('2026-10-15 10:30:00', 'UTC'));
         $this->tenant = Tenant::factory()->create();
@@ -81,10 +84,11 @@ class TachesPlanifieesTest extends TestCase
 
         $this->assertSame([
             'transferts_planifies', 'transferts_imminents', 'alertes_stock', 'nettoyage_notifications',
-            'factures_impayees', 'commandes_fournisseur_en_retard', 'livraisons_en_retard', 'controles_techniques',
+            'factures_impayees', 'relances_paiement', 'commandes_fournisseur_en_retard', 'livraisons_en_retard', 'controles_techniques',
         ], array_column($taches, 'code'));
-        $this->assertSame(array_fill(0, 8, false), array_column($taches, 'actif'));
-        $this->assertSame(array_fill(0, 8, null), array_column($taches, 'prochaine_execution'));
+        // Inactives par défaut, y compris les relances automatiques : aucun courriel ne part sans activation.
+        $this->assertSame(array_fill(0, 9, false), array_column($taches, 'actif'));
+        $this->assertSame(array_fill(0, 9, null), array_column($taches, 'prochaine_execution'));
 
         $this->connecter($this->tenant, 'user');
         $this->getJson('/api/taches-planifiees')->assertForbidden();

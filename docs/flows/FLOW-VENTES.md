@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — conditions de paiement et escompte (§5.10)
+> Dernière mise à jour : 2026-10-16 — relances de paiement (§7 ter)
 
 ---
 
@@ -976,6 +976,55 @@ Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'e
 | `GET /comptes-clients/{client}/releve?du=&au=[&format=csv]` | Relevé de compte |
 
 Code : `App\Services\ComptesClients`, `App\Http\Controllers\Api\CompteClientController`, écran `ComptesClientsPage`, service `src/services/comptesClients.ts`.
+
+---
+
+## 7 ter. Relances de paiement (Ventes → Relances)
+
+Plan de parité fripv2, phase 1.5 : relancer les clients dont les factures sont en retard. Dans fripv2, on repère les comptes en retard dans les comptes à recevoir pour relancer les clients ; ici, les relances sont faites et suivies dans l'application.
+
+**Factures en retard :**
+- ce sont les factures émises ou partiellement payées, avec un reste à payer, dont l'échéance est dépassée (ou la date de facture, sans échéance) ;
+- elles sont classées du plus ancien retard au plus récent ;
+- l'écran les filtre par retard (plus de 30, 60, 90 jours), par client ou facture, et par « jamais relancées » ;
+- cartes : factures en retard, clients, reste dû, jamais relancées.
+
+**Relancer :**
+- **Par courriel** : le modèle « relance » (Paramètres → Courriels), avec la facture en PDF joint.
+  - Variables : `{numero}`, `{date}`, `{date_echeance}`, `{jours_retard}`, `{niveau}`, `{reste_a_payer}`, en plus de celles du client et de l'entreprise.
+  - La relance est notée à l'envoi du courriel, une seule fois par courriel.
+- **Noter une relance** faite autrement : téléphone, courrier ou autre, avec date et notes (la réponse du client, par exemple). La date ne peut pas être dans le futur.
+- **Niveau** : chaque relance prend le suivant (1re, 2e, 3e…).
+- **Historique** : les relances d'une facture, avec leur niveau, date, moyen, auteur ou « automatique », et notes.
+
+**Relances automatiques :** la tâche planifiée `relances_paiement` (Paramètres → Tâches planifiées). Elle est **inactive par défaut** : aucun courriel ne part sans activation.
+- Chaque jour à 08:00, elle envoie le courriel de relance pour chaque facture en retard d'au moins **N jours** (15 par défaut) dont la dernière relance date d'au moins N jours.
+- Au plus **3 relances automatiques** par facture.
+- Seulement aux clients qui ont une adresse de courriel.
+- La relance est notée dès la mise en file du courriel, marquée « automatique ».
+
+**Permissions :** module `relances`, avec « Consulter » et « Créer » (relancer). À la mise en place, chaque groupe reçoit :
+- **la consultation** de ses droits de consulter les factures ;
+- **la relance** de ses droits de modifier les factures.
+
+Pour les rôles système, cela donne :
+- administrateur et responsable : consultent et relancent ;
+- utilisateur et lecture seule : consultent seulement.
+
+La liste (`GET /relances`) exige le droit de consulter les relances.
+
+| Route | Rôle |
+|---|---|
+| `GET /relances?retard_min=&jamais=1&recherche=&client_id=&date=` | Factures en retard à une date et totaux |
+| `GET /relances/historique?client_id=&facture_id=` | Historique des relances, paginé |
+| `GET /factures/{id}/relances` | Relances d'une facture |
+| `POST /factures/{id}/relances` | Noter une relance (`mode`, `date`, `notes`) |
+
+**Données :** table `facture_relances` (facture, client, niveau, date, moyen, courriel envoyé, automatique, notes, auteur).
+
+Code :
+- API : service `App\Services\Relances`, contrôleur `RelanceController`, tâche `App\Taches\RelancerFacturesEnRetard`, migration `2026_10_16_100033_creer_relances_paiement` ;
+- web : écran `RelancesPage`, service `src/services/relances.ts`.
 
 ---
 
