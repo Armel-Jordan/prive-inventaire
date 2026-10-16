@@ -78,6 +78,19 @@ function emitNetworkError(message: string): void {
   netErrListeners.forEach((cb) => cb(message));
 }
 
+// --- Session expirée (jeton révoqué ou périmé) --------------------------------
+// Un 401 sur un appel authentifié ferme la session : sans cela, les écrans restaient vides
+// (« 0 produit », « 0 € ») sans message ni retour à la connexion.
+type SessionListener = () => void;
+const sessionListeners = new Set<SessionListener>();
+
+export function onSessionExpiree(cb: SessionListener): () => void {
+  sessionListeners.add(cb);
+  return () => {
+    sessionListeners.delete(cb);
+  };
+}
+
 // --- Cœur --------------------------------------------------------------------
 const IDEMPOTENT = new Set(['GET', 'HEAD', 'OPTIONS']);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -155,6 +168,10 @@ export async function apiFetch<T = unknown>(endpoint: string, options: ApiOption
         }
 
         const data = await safeParse(response);
+        // Jeton refusé : seulement s'il y en avait un (pas pendant la connexion elle-même).
+        if (response.status === 401 && finalHeaders.Authorization && !endpoint.startsWith('/auth/login')) {
+          sessionListeners.forEach((cb) => cb());
+        }
         const message =
           (data && typeof data === 'object' && data !== null && 'message' in data
             ? String((data as { message: unknown }).message)

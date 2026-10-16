@@ -10,7 +10,7 @@ interface Suggestion {
   secteur: string;
   nom: string;
   dernier_scan: string | null;
-  jours_depuis_scan: number;
+  jours_depuis_scan: number | null;
   mouvements_depuis_scan: number;
   score_priorite: number;
   raison: string;
@@ -215,9 +215,11 @@ export default function InventaireTournantPage() {
                                 ? `Dernier scan: ${new Date(s.dernier_scan).toLocaleDateString('fr-FR')}`
                                 : 'Jamais scanné'}
                             </span>
-                            <span>
-                              {s.jours_depuis_scan} jour{s.jours_depuis_scan > 1 ? 's' : ''} depuis dernier scan
-                            </span>
+                            {s.jours_depuis_scan !== null && (
+                              <span>
+                                {s.jours_depuis_scan} jour{s.jours_depuis_scan > 1 ? 's' : ''} depuis dernier scan
+                              </span>
+                            )}
                             <span>
                               {s.mouvements_depuis_scan} mouvement{s.mouvements_depuis_scan > 1 ? 's' : ''} depuis
                             </span>

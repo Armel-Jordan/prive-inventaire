@@ -4,6 +4,7 @@ import { getSecteurs, createSecteur, updateSecteur, deleteSecteur, getConfigurat
 import type { Secteur } from '@/types';
 import QRCode from 'qrcode';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -98,8 +99,9 @@ export default function SecteursPage() {
       }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      // Raison donnée par l'API (code déjà pris, champ invalide) plutôt qu'un message générique.
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     }
   }
 
@@ -108,8 +110,8 @@ export default function SecteursPage() {
       await deleteSecteur(id);
       toast('Secteur supprimé');
       loadData();
-    } catch {
-      toast('Erreur lors de la suppression', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la suppression'), 'error');
     } finally {
       setConfirmId(null);
     }
@@ -139,6 +141,8 @@ export default function SecteursPage() {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
       let imported = 0, errors = 0;
+      // Lignes refusées, avec leur numéro et la raison donnée par l'API (seul un total était affiché).
+      const refus: string[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';').map(v => v.trim());
         const row: Record<string, string> = {};
@@ -147,10 +151,14 @@ export default function SecteursPage() {
           try {
             await createSecteur({ code: row.code, nom: row.nom, description: row.description || '' });
             imported++;
-          } catch { errors++; }
+          } catch (e) {
+            errors++;
+            refus.push(`ligne ${i + 1} (${row.code}) : ${messageErreur(e, 'refusée')}`);
+          }
         }
       }
-      toast(`${imported} secteurs importés${errors ? `, ${errors} erreurs` : ''}`, errors ? 'info' : 'success');
+      const detail = refus.length ? ` — ${refus.slice(0, 3).join(' ; ')}${refus.length > 3 ? ' ; …' : ''}` : '';
+      toast(`${imported} secteurs importés${errors ? `, ${errors} erreurs${detail}` : ''}`, errors ? 'info' : 'success');
       loadData();
     } catch {
       toast('Erreur lors de l\'import', 'error');

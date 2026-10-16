@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, TenantInfo, AuthState } from '@/types/auth';
-import { apiFetch, ApiError } from '@/services/http';
+import { apiFetch, ApiError, onSessionExpiree } from '@/services/http';
 
 interface LoginResponse {
   success: boolean;
@@ -32,6 +32,9 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = 'prise_auth';
+
+/** Marque posée quand l'API a refusé le jeton : la page de connexion explique pourquoi on y revient. */
+export const MARQUE_SESSION_EXPIREE = 'prise_session_expiree';
 
 function getInitialState() {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -108,12 +111,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const fermerSession = useCallback(() => {
     setUser(null);
     setTenant(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
+  // Déconnexion : le jeton est révoqué par l'API (il restait valable après la déconnexion). L'appel
+  // part avec le jeton encore présent ; la session locale est fermée sans attendre sa réponse.
+  const logout = () => {
+    if (localStorage.getItem(STORAGE_KEY)) {
+      apiFetch('/auth/logout', { method: 'POST', retries: 0, timeoutMs: 5000, responseType: 'void' }).catch(() => {});
+    }
+    fermerSession();
   };
+
+  // Jeton refusé par l'API (révoqué, périmé, compte désactivé) : retour à la connexion avec un message.
+  useEffect(() => onSessionExpiree(() => {
+    if (!localStorage.getItem(STORAGE_KEY)) return;
+    sessionStorage.setItem(MARQUE_SESSION_EXPIREE, '1');
+    fermerSession();
+  }), [fermerSession]);
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);

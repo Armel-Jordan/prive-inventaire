@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { apiFetch } from '@/services/http';
@@ -160,8 +161,8 @@ export default function RelocalisationPage() {
       await Promise.all(promises);
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de l\'enregistrement', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de l\'enregistrement'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -180,8 +181,9 @@ export default function RelocalisationPage() {
       });
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de l\'enregistrement', 'error');
+    } catch (e) {
+      // « Le secteur source et destination doivent être différents » plutôt qu'un échec sans raison.
+      toast(messageErreur(e, 'Erreur lors de l\'enregistrement'), 'error');
     }
   }
 

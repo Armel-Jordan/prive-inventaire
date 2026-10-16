@@ -3,6 +3,7 @@ import { Pencil, Trash2, Search, X, Plus, Download, Calendar, Filter, CheckSquar
 import { getScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
 import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { signaler } from '@/lib/erreurs';
 
 interface ScanForm {
   numero: string;
@@ -63,8 +64,8 @@ export default function ScansPage() {
       setSelectedIds(new Set());
       loadData();
     } catch (error) {
-      console.error('Erreur suppression lot:', error);
-      alert('Erreur lors de la suppression');
+      signaler(error, 'Erreur lors de la suppression');
+      loadData();
     } finally {
       setIsDeleting(false);
     }
@@ -166,8 +167,7 @@ export default function ScansPage() {
       setShowCreateModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la création');
+      signaler(error, 'Erreur lors de la création');
     }
   }
 
@@ -183,7 +183,8 @@ export default function ScansPage() {
       setEditingScan(null);
       loadData();
     } catch (error) {
-      console.error('Erreur modification:', error);
+      // Quantité refusée (négative…) : la fenêtre restait ouverte sans aucune explication.
+      signaler(error, 'Erreur lors de la modification');
     }
   }
 
@@ -193,7 +194,7 @@ export default function ScansPage() {
       await deleteScan(id);
       loadData();
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      signaler(error, 'Erreur lors de la suppression');
     }
   }
 

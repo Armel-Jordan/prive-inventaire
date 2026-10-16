@@ -89,12 +89,9 @@ export default function RapportsPage() {
         setProduitsData(data.produits);
       }
     } catch (e) {
-      // L'ancien code n'agissait qu'en cas de réponse 2xx (if response.ok) :
-      // un statut HTTP non-2xx était ignoré silencieusement. On ne toast donc
-      // que sur les erreurs réseau/timeout (NetworkError), pas sur ApiError.
-      if (!(e instanceof ApiError)) {
-        toast('Erreur de chargement du rapport', 'error');
-      }
+      // Échec signalé, réponse d'erreur de l'API comprise (une erreur 500 laissait un rapport vide sans
+      // explication).
+      toast(e instanceof ApiError ? `Erreur de chargement du rapport : ${e.message}` : 'Erreur de chargement du rapport', 'error');
     } finally {
       setLoading(false);
     }
@@ -116,6 +113,13 @@ export default function RapportsPage() {
         csv += `${e.employe};${e.mouvements};${e.scans};${e.quantite_mouvements};${e.quantite_scans}\n`;
       });
       filename = `rapport-employes-${mois}-${annee}.csv`;
+    } else if (activeTab === 'evolution') {
+      // L'onglet Évolution n'avait pas d'export : le bouton ne faisait rien.
+      csv = 'Mois;Mouvements;Scans;Qté Mouvements;Qté Scans\n';
+      evolutionData.forEach(m => {
+        csv += `${m.nom};${m.mouvements};${m.scans};${m.quantite_mouvements};${m.quantite_scans}\n`;
+      });
+      filename = `rapport-evolution-${annee}.csv`;
     } else if (activeTab === 'produits') {
       csv = 'Produit;Nom;Mouvements;Quantité\n';
       produitsData.forEach(p => {
@@ -125,7 +129,8 @@ export default function RapportsPage() {
     }
 
     if (csv) {
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      // BOM : sans lui, Excel lit le fichier en ANSI et abîme les accents (« Employé », « Février »).
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = filename;

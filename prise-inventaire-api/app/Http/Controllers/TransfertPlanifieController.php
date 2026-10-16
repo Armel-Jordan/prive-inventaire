@@ -55,7 +55,8 @@ class TransfertPlanifieController extends Controller
 
         $validated['statut'] = 'planifie';
         $validated['tenant_id'] = $tenantId;
-        $validated['cree_par'] = $request->user()->name ?? 'Admin';
+        // AdminUser n'a pas de « name » : l'auteur était toujours « Admin ».
+        $validated['cree_par'] = $request->user()->nom ?: $request->user()->email;
 
         $transfert = TransfertPlanifie::create($validated);
 
@@ -130,7 +131,7 @@ class TransfertPlanifieController extends Controller
             ], 422);
         }
 
-        $transfert->executer($request->user()->name ?? 'Admin');
+        $transfert->executer($request->user()->nom ?: $request->user()->email);
 
         return response()->json([
             'success' => true,
