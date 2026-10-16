@@ -52,7 +52,7 @@ class AvoirController extends Controller
         $avoir = Avoir::with([
             'client:id,code,raison_sociale,email', 'facture:id,numero,date_facture,statut,montant_ttc,montant_paye,montant_credite,reste_a_payer',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
-            'imputations.facture:id,numero', 'remboursements', 'auteur:id,nom', 'emetteur:id,nom',
+            'imputations.facture:id,numero', 'remboursements', 'auteur:id,nom', 'emetteur:id,nom', 'retour:id,avoir_id,numero',
         ])->findOrFail($id);
         // Détail par taxe, comme sur la facture (vide si ses lignes utilisent un taux unique).
         $avoir->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('avoir', $avoir->lignes->pluck('id')));

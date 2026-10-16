@@ -113,6 +113,11 @@ class Permissions
                 'aide_fr' => "Rembourser au client le crédit disponible d'une note, ou l'imputer sur une autre de ses factures.",
                 'aide_en' => "Refund a credit note's available credit to the customer, or apply it to another of their invoices."],
         ]],
+        'retours_clients' => ['onglet' => 'ventes', 'fr' => 'Retours clients', 'en' => 'Customer returns', 'actions' => [
+            'traiter' => ['base' => 'modifier', 'fr' => 'Traiter un retour client', 'en' => 'Process a customer return',
+                'aide_fr' => 'Traiter un retour brouillon : il reçoit son numéro, la marchandise est remise en stock dans son secteur ou mise au rebut.',
+                'aide_en' => 'Process a draft return: it gets its number, and the goods are put back in stock in their sector or scrapped.'],
+        ]],
         'acomptes' => ['onglet' => 'ventes', 'fr' => 'Acomptes', 'en' => 'Deposits', 'actions' => [
             'appliquer' => ['base' => 'modifier', 'fr' => 'Appliquer un acompte sur une facture', 'en' => 'Apply a deposit to an invoice',
                 'aide_fr' => "Utiliser ce qui reste d'un acompte pour payer une facture du client.",

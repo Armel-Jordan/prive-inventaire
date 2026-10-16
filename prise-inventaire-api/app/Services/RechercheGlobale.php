@@ -13,6 +13,7 @@ use App\Models\EmployeTenant;
 use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
+use App\Models\RetourClient;
 use App\Models\Secteur;
 use App\Models\Tenant;
 use Closure;
@@ -28,8 +29,8 @@ final class RechercheGlobale
 {
     /** Types disponibles, dans l'ordre d'affichage. */
     public const TYPES = [
-        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'demandes_acompte',
-        'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
+        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'retours_clients',
+        'demandes_acompte', 'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
     ];
 
     /**
@@ -174,6 +175,23 @@ final class RechercheGlobale
                     'sous_titre' => $a->client?->raison_sociale,
                     'details' => ['client' => $a->client?->raison_sociale, 'facture' => $a->facture?->numero, 'date' => $date($a->date_avoir), 'statut' => $a->statut, 'montant' => (float) $a->montant_ttc, 'disponible' => $a->credit_disponible, 'devise' => $a->devise],
                     'lien' => $lien('/notes-credit', $a->numero),
+                ],
+            ],
+            // Retours traités (un brouillon n'a pas encore de numéro).
+            'retours_clients' => [
+                'module' => 'ventes',
+                'cle' => 'numero',
+                'requete' => fn (string $motif) => RetourClient::query()->with('client:id,raison_sociale', 'facture:id,numero')
+                    ->withSum('lignes as quantite_totale', 'quantite')->whereNotNull('numero')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)
+                        ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))
+                        ->orWhereHas('facture', fn ($f) => $f->where('numero', 'like', $motif))),
+                'resultat' => fn (RetourClient $r) => [
+                    'id' => $r->id,
+                    'titre' => $r->numero,
+                    'sous_titre' => $r->client?->raison_sociale,
+                    'details' => ['client' => $r->client?->raison_sociale, 'facture' => $r->facture?->numero, 'date' => $date($r->date_retour), 'statut' => $r->statut, 'quantite' => (int) $r->quantite_totale],
+                    'lien' => $lien('/retours-clients', $r->numero),
                 ],
             ],
             'demandes_acompte' => [

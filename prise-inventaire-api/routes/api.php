@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RelanceController;
 use App\Http\Controllers\Api\RemarqueRapideController;
+use App\Http\Controllers\Api\RetourClientController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -586,6 +587,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
         Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
         Route::get('/{id}/avoir', [AvoirController::class, 'proposition']);
+        Route::get('/{id}/retour', [RetourClientController::class, 'proposition']);
         Route::get('/{id}/escompte', [FactureController::class, 'escompte']);
         Route::get('/{id}/relances', [RelanceController::class, 'deFacture']);
         Route::post('/{id}/relances', [RelanceController::class, 'store']);
@@ -604,6 +606,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/imputer', [AvoirController::class, 'imputer'])->whereNumber('id');
         Route::post('/{id}/rembourser', [AvoirController::class, 'rembourser'])->whereNumber('id');
         Route::delete('/{id}', [AvoirController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Retours clients : marchandise rapportée, remise en stock ou mise au rebut, puis note de crédit du retour.
+    Route::prefix('retours-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [RetourClientController::class, 'index']);
+        Route::get('/{id}', [RetourClientController::class, 'show'])->whereNumber('id');
+        Route::post('/', [RetourClientController::class, 'store']);
+        Route::put('/{id}', [RetourClientController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/traiter', [RetourClientController::class, 'traiter'])->whereNumber('id');
+        Route::post('/{id}/crediter', [RetourClientController::class, 'crediter'])->whereNumber('id');
+        Route::delete('/{id}', [RetourClientController::class, 'destroy'])->whereNumber('id');
     });
 
     // Acomptes : paiements reçus avant la facture, appliqués au paiement des factures ou remboursés.

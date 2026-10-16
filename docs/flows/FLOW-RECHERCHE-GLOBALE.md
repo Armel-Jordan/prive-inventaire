@@ -15,6 +15,8 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 | Clients | code, raison sociale, ville, courriel, téléphone | Ventes |
 | Fournisseurs | code, raison sociale, courriel, téléphone | Achats |
 | Devis, commandes clients, factures | numéro, nom du client | Ventes |
+| Notes de crédit (émises), retours clients (traités) | numéro, nom du client, numéro de facture | Ventes |
+| Demandes d'acompte | numéro, description, nom du client | Ventes |
 | Bons de livraison | numéro, numéro de facture, nom du client | Ventes |
 | Commandes fournisseurs | numéro, nom du fournisseur | Achats |
 | Secteurs | code, nom | — |

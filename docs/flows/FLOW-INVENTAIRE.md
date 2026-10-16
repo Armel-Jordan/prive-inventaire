@@ -63,7 +63,7 @@ Un **mouvement de relocalisation** enregistre le déplacement physique d'un prod
 
 | Type | Signification | Champs obligatoires |
 |------|---------------|---------------------|
-| `arrivage` | Entrée de produit dans un secteur | `secteur_destination`, `quantite` |
+| `arrivage` | Entrée de produit dans un secteur (dont les retours clients remis en stock, motif « Retour client RC-… ») | `secteur_destination`, `quantite` |
 | `transfert` | Déplacement d'un secteur à un autre | `secteur_source`, `secteur_destination`, `quantite` |
 | `sortie` | Retrait d'un produit d'un secteur | `secteur_source`, `quantite` |
 | `ajustement` | Correction manuelle du stock | `secteur_destination`, `quantite` |
@@ -442,8 +442,10 @@ GET /audit/{modelType}/{modelId}   → historique d'un objet spécifique
    ✓ Employés et rôles configurés (module Paramètres)
 
 2. ENTRÉE DU STOCK
-   → Via Achats : Réception d'une commande fournisseur
-     ⚡ Crée un mouvement de type "arrivage" dans mouvement_relocalisation
+   → Via Achats : Réception d'une commande fournisseur, rangée dans un secteur
+     ⚡ Comptée comme une entrée de ce secteur par la prise d'inventaire suivante
+   → Via Ventes : Retour client remis en stock (FLOW-VENTES §5.12)
+     ⚡ Crée un mouvement de type "arrivage" dans mouvement_relocalisation (motif « Retour client RC-… »)
    → Via Relocalisation directe : Arrivage manuel / scan en lot
 
 3. ORGANISATION EN ENTREPÔT

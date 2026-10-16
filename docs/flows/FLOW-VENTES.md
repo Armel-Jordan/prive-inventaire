@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — ventes en devises étrangères (§5.11)
+> Dernière mise à jour : 2026-10-16 — retours clients (§5.12)
 
 ---
 
@@ -838,6 +838,95 @@ Plan de parité fripv2, phase 1.5 : un client étranger achète et paie dans sa 
 Code :
 - API : service `App\Services\DevisesVente`, migration `2026_10_16_100034_ventes_multi_devises` ;
 - web : composant `ChampDevise`, fonctions `useMontantDocument` et `tauxPropose` (`src/lib/documents.ts`).
+
+### 5.12 Retours clients (Ventes → Retours clients)
+
+Plan de parité fripv2, phase 1.7 : la marchandise qu'un client rapporte, avec la raison du retour. Dans fripv2, c'est une ligne à quantité négative sur une facture ; ici, c'est un document à part, qui gère le **stock**, la note de crédit (§5.8) gérant l'**argent**.
+
+**Créer un retour :**
+- bouton **Retour de marchandise** d'une facture émise, payée ou non, même créditée (liste des factures) ;
+- ou, dans l'écran Retours clients :
+  - **Retour d'une facture**, puis le choix de la facture ;
+  - **Retour sans facture** : vente faite hors de l'application, prêt, échantillon… On choisit le client, puis les produits.
+
+**L'éditeur**, pour chaque produit rapporté :
+- la quantité **remise en stock**, et le **secteur** où la ranger (celui du produit est proposé) ;
+- la quantité **mise au rebut** ;
+- la **raison** du retour.
+
+**Raison du retour :**
+- choisie parmi les raisons du référentiel de type « Retour client » (Référentiels → Raisons) ;
+- **obligatoire dès que l'entreprise en a défini au moins une** (422 « Choisissez la raison du retour. ») ;
+- sans raison définie, elle est facultative.
+
+**Limites :**
+- sur une facture, un produit revient au plus dans la quantité facturée, moins les retours **traités** de cette ligne ;
+- une ligne peut se partager entre stock et rebut : leur total compte ;
+- 422 « Au plus 1 (quantité facturée, retours déjà traités déduits). » au-delà ;
+- un brouillon est de nouveau contrôlé à son traitement : un autre retour de la facture a pu être traité entre-temps ;
+- la date du retour ne précède pas la facture et n'est pas dans le futur.
+
+**Statuts :**
+
+| Statut | Signification | Actions |
+|---|---|---|
+| `brouillon` | Sans numéro, sans effet sur le stock | Modifier, Traiter, Supprimer |
+| `traite` | Numéroté ; marchandise remise en stock ou au rebut | Créer la note de crédit (retour d'une facture) |
+
+**Au traitement :**
+1. le retour reçoit son numéro (numérotation `retour_client`, `RC-00001` par défaut, voir FLOW-PARAMETRES §7) ;
+2. chaque **remise en stock** crée un **arrivage** dans son secteur (mouvement de stock) :
+   - motif « Retour client RC-00001 : Produit défectueux » ;
+   - daté du jour du retour ;
+   - visible en Relocalisation et en Traçabilité ;
+   - compté comme une **entrée** par la prise d'inventaire suivante (FLOW-PRISE-INVENTAIRE) ;
+   - comme une réception, il ne passe pas par les seuils d'approbation (le traitement est déjà une action réservée) ;
+3. le **rebut** ne fait rien entrer en stock : il reste noté sur le retour ;
+4. un retour traité ne se modifie ni ne se supprime plus.
+
+**Note de crédit d'un retour** (retour d'une facture, traité) :
+- « Créer la note de crédit » prépare une note **brouillon** sur la facture d'origine : les quantités retournées (stock et rebut), au prix facturé ;
+- au plus ce qui reste à créditer de chaque ligne ;
+- motif « Retour RC-00001 » ;
+- elle s'émet ensuite dans l'écran Notes de crédit, comme toute note ;
+- **une seule** par retour ; si son brouillon est supprimé, le retour peut en donner une autre ;
+- 422 :
+  - « Traitez d'abord le retour. » ;
+  - « Ce retour n'a pas de facture d'origine : il n'y a rien à créditer. » ;
+  - « La facture FAC-00001 est déjà entièrement créditée. ».
+
+**Ailleurs dans l'application :**
+- **Détail d'une facture** : liste de ses retours ;
+- **Détail d'une note de crédit** : lien vers le retour dont elle est issue ;
+- **Liste des retours** : quantités traitées de la sélection (remises en stock, au rebut, par raison) ;
+- **Recherche globale** : retours traités, par numéro, client ou facture.
+
+| Route | Rôle |
+|---|---|
+| `GET /factures/{id}/retour` | Ce qui reste à retourner de chaque ligne, et le secteur proposé |
+| `GET /retours-clients` | Liste (statut, client, facture, période, recherche), avec `resume` |
+| `GET /retours-clients/{id}` | Détail |
+| `POST /retours-clients` | Brouillon : `facture_id` ou `client_id`, `date_retour`, `notes`, `lignes[]` |
+| `PUT /retours-clients/{id}` | Modifier un brouillon (client et facture restent ceux de sa création) |
+| `POST /retours-clients/{id}/traiter` | Traiter (action nommée « Traiter un retour client ») |
+| `POST /retours-clients/{id}/crediter` | Note de crédit brouillon (droit de créer les notes de crédit) |
+| `DELETE /retours-clients/{id}` | Supprimer un brouillon |
+
+**Une ligne** (`lignes[]`) :
+- `facture_ligne_id` pour un retour d'une facture, ou `produit_id` sans facture ;
+- `quantite` ;
+- `traitement` : `remise_en_stock` (avec `secteur_id`) ou `rebut` ;
+- `raison_id` (raison de type `retour_client`), `notes`.
+
+**Droits** (module « Retours clients ») :
+- à la mise à jour, chaque groupe reçoit ceux des factures ;
+- **Traiter un retour client** reprend le réglage de « Émettre une facture ».
+
+**Données :** tables `retours_clients` et `retour_client_lignes` (la ligne garde l'arrivage créé, `mouvement_id`).
+
+Code :
+- API : service `App\Services\RetoursClients`, migration `2026_10_16_100035_creer_retours_clients` ;
+- web : page `RetoursClientsPage`, composant `retours/EditeurRetour`.
 
 ---
 

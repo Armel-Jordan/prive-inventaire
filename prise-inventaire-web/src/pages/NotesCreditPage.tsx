@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Banknote, Eye, Pencil, Plus, ReceiptText, Send, Trash2, Undo2, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { formatDateDocument, formatMontant, useDevise, useMontantDocument } from '@/lib/documents';
+import { formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { getFactures, type Facture, type PageResultats } from '@/services/api';
 import { emettreAvoir, getAvoir, getAvoirs, STATUTS_AVOIR, supprimerAvoir, type Avoir } from '@/services/avoirs';
 import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
@@ -276,7 +276,14 @@ function DetailNoteCredit({ avoir, onClose, actions }: { avoir: Avoir; onClose: 
           <div><dt className="text-xs text-gray-500">{tc.customer}</dt><dd className="text-gray-900 dark:text-white">{avoir.client?.raison_sociale}</dd></div>
           <div><dt className="text-xs text-gray-500">{tc.invoice}</dt><dd className="font-mono text-gray-900 dark:text-white">{avoir.facture?.numero}</dd></div>
           <div><dt className="text-xs text-gray-500">{tc.date}</dt><dd className="text-gray-900 dark:text-white">{formatDateDocument(avoir.date_avoir, language)}</dd></div>
-          <div><dt className="text-xs text-gray-500">{tc.reason}</dt><dd className="text-gray-900 dark:text-white">{avoir.motif || '—'}</dd></div>
+          <div><dt className="text-xs text-gray-500">{tc.reason}</dt><dd className="text-gray-900 dark:text-white">
+            {avoir.motif || '—'}
+            {avoir.retour?.numero && (
+              <Link to={`/retours-clients?recherche=${encodeURIComponent(avoir.retour.numero)}`} className="block text-xs text-teal-600 hover:underline">
+                {t.customerReturns.fromReturn.replace('{numero}', avoir.retour.numero)}
+              </Link>
+            )}
+          </dd></div>
         </dl>
 
         <div className="overflow-x-auto">
@@ -360,7 +367,8 @@ function DetailNoteCredit({ avoir, onClose, actions }: { avoir: Avoir; onClose: 
 function ChoixFacture({ onClose, onChoisir }: { onClose: () => void; onChoisir: (factureId: number) => void }) {
   const { t, language } = useLanguage();
   const tc = t.creditNotes;
-  const devise = useDevise();
+  // Chaque facture dans sa devise.
+  const montantDoc = useMontantDocument();
   const [texte, setTexte] = useState('');
   const [factures, setFactures] = useState<Facture[] | null>(null);
 
@@ -392,7 +400,7 @@ function ChoixFacture({ onClose, onChoisir }: { onClose: () => void; onChoisir: 
                   <span className="font-mono text-gray-900 dark:text-white">{f.numero}</span>
                   <span className="block text-xs text-gray-500">{f.client?.raison_sociale} · {formatDateDocument(f.date_facture, language)}</span>
                 </span>
-                <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{formatMontant(f.montant_ttc, devise, language)}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{montantDoc(f.montant_ttc, f.devise)}</span>
               </button>
             </li>
           ))}

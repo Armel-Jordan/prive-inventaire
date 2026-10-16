@@ -65,13 +65,15 @@ class FactureController extends Controller
     public function show(int $id): JsonResponse
     {
         // Produit de chaque ligne (même retiré du catalogue) : le détail affichait « Produit #12 ».
-        // Notes de crédit établies sur la facture et crédits imputés (de ses notes ou d'autres notes du client).
+        // Notes de crédit établies sur la facture et crédits imputés (de ses notes ou d'autres notes du client),
+        // retours de sa marchandise.
         $facture = Facture::with([
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison', 'conditionPaiement:id,code,libelle,delai_jours,fin_de_mois,escompte_pourcentage,escompte_jours',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
             'imputations.avoir:id,numero',
+            'retours' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_retour')->orderBy('id'),
         ])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $facture->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('facture', $facture->lignes->pluck('id')));
