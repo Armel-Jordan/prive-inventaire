@@ -6,7 +6,7 @@ import GrillePrix from '@/components/prix/GrillePrix';
 import ListesPrix from '@/components/prix/ListesPrix';
 import ReglesPrix from '@/components/prix/ReglesPrix';
 import SimulateurPrix from '@/components/prix/SimulateurPrix';
-import { peutModifierPrix, useSymboleDevise } from '@/components/prix/format';
+import { useSymboleDevise } from '@/components/prix/format';
 
 type Onglet = 'grille' | 'listes' | 'regles' | 'simulateur';
 
@@ -19,8 +19,8 @@ export default function GestionPrixPage() {
   const { t } = useLanguage();
   const tp = t.pricing;
   const id = useId();
-  const { permissions } = usePermissions();
-  const modifiable = peutModifierPrix(permissions?.role);
+  const { canEdit } = usePermissions();
+  const modifiable = canEdit('gestion_prix');
   const devise = useSymboleDevise();
   const [onglet, setOnglet] = useState<Onglet>('grille');
 

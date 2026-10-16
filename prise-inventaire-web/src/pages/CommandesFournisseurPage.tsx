@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -42,6 +43,8 @@ interface LigneForm {
 }
 
 export default function CommandesFournisseurPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const [commandes, setCommandes] = useState<ComFourEntete[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -348,13 +351,15 @@ export default function CommandesFournisseurPage() {
                       <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" />
                       {commande.statut === 'brouillon' && (
                         <>
-                          <button
-                            onClick={() => handleValider(commande.id)}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded mr-1"
-                            title="Valider"
-                          >
-                            <Send size={16} />
-                          </button>
+                          {peut('commandes_fournisseur', 'valider') && (
+                            <button
+                              onClick={() => handleValider(commande.id)}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded mr-1"
+                              title="Valider"
+                            >
+                              <Send size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(commande.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -365,22 +370,26 @@ export default function CommandesFournisseurPage() {
                         </>
                       )}
                       {commande.statut === 'envoyee' && (
-                        <button
-                          onClick={() => handleAnnuler(commande.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Annuler"
-                        >
-                          <Ban size={16} />
-                        </button>
+                        <>{peut('commandes_fournisseur', 'annuler') && (
+                          <button
+                            onClick={() => handleAnnuler(commande.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Annuler"
+                          >
+                            <Ban size={16} />
+                          </button>
+                        )}</>
                       )}
                       {commande.statut === 'partielle' && (
-                        <button
-                          onClick={() => handleCloturer(commande.id)}
-                          className="p-1 text-orange-600 hover:bg-orange-50 rounded"
-                          title="Clôturer le reste"
-                        >
-                          <Ban size={16} />
-                        </button>
+                        <>{peut('commandes_fournisseur', 'cloturer') && (
+                          <button
+                            onClick={() => handleCloturer(commande.id)}
+                            className="p-1 text-orange-600 hover:bg-orange-50 rounded"
+                            title="Clôturer le reste"
+                          >
+                            <Ban size={16} />
+                          </button>
+                        )}</>
                       )}
                       <BoutonChampsPersonnalises entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="ml-1" />
                     </td>

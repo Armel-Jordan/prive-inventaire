@@ -6,7 +6,7 @@ import {
   getApercuCloture, cloturerExercice, rouvrirExercice, montant,
   DECOUPAGES, type ApercuCloture, type ExerciceComptable, type PeriodeComptable, type SaisieExercice, type Decoupage,
 } from '@/services/comptabilite';
-import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 
@@ -37,9 +37,11 @@ function exerciceSuivant(exercices: ExerciceComptable[]): SaisieExercice {
 export default function ExercicesComptablesPage() {
   const { t, language } = useLanguage();
   const ty = t.accounting.years;
-  const { user } = useAuth();
-  const peutModifier = user?.role === 'admin' || user?.role === 'manager';
-  const estAdmin = user?.role === 'admin';
+  // Permissions de la comptabilité (rôles et permissions).
+  const { peut } = usePermissions();
+  const peutModifier = peut('comptabilite', 'plan');
+  // Clôturer ou rouvrir un exercice, rouvrir une période.
+  const estAdmin = peut('comptabilite', 'cloturer');
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
 
   const [exercices, setExercices] = useState<ExerciceComptable[] | null>(null);

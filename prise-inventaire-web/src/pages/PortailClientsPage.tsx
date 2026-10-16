@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Check, Copy, ExternalLink, Globe, Mail, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { getClientsActifs, type Client } from '@/services/api';
 import {
@@ -39,8 +40,12 @@ function BoutonCopier({ texte, libelle, copie }: { texte: string; libelle: strin
 export default function PortailClientsPage() {
   const { t, language } = useLanguage();
   const ta = t.portalAdmin;
-  const { user, tenant } = useAuth();
-  const peutModifier = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'super_admin';
+  const { tenant } = useAuth();
+  // Droits du module Espace client (rôles et permissions).
+  const { canCreate, canEdit, canDelete } = usePermissions();
+  const peutModifier = canEdit('espace_client');
+  const peutCreer = canCreate('espace_client');
+  const peutSupprimer = canDelete('espace_client');
   const { toasts, toast, dismiss } = useToast();
   const [etat, setEtat] = useState<EtatPortailClients | null>(null);
   const [erreur, setErreur] = useState('');
@@ -200,7 +205,7 @@ export default function PortailClientsPage() {
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-3">
             <h2 className="font-semibold text-gray-800 dark:text-white">{ta.accesses}</h2>
-            {peutModifier && (
+            {peutCreer && (
               <button type="button" onClick={() => setEdition({ acces: null })}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
                 <Plus size={16} /> {ta.newAccess}
@@ -218,7 +223,7 @@ export default function PortailClientsPage() {
                     <th className="px-4 py-2 font-medium">{ta.client}</th>
                     <th className="px-4 py-2 font-medium">{ta.state}</th>
                     <th className="px-4 py-2 font-medium">{ta.lastLogin}</th>
-                    {peutModifier && <th className="px-4 py-2" />}
+                    {(peutModifier || peutSupprimer) && <th className="px-4 py-2" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -242,12 +247,18 @@ export default function PortailClientsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">{acces.derniere_connexion ? date(acces.derniere_connexion) : ta.never}</td>
-                        {peutModifier && (
+                        {(peutModifier || peutSupprimer) && (
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-1">
-                              <button type="button" onClick={() => { void renvoyer(acces); }} title={ta.resend} aria-label={ta.resend} className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700"><Mail size={16} /></button>
-                              <button type="button" onClick={() => setEdition({ acces })} title={ta.edit} aria-label={ta.edit} className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700"><Pencil size={16} /></button>
-                              <button type="button" onClick={() => setASupprimer(acces)} title={ta.delete} aria-label={ta.delete} className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700"><Trash2 size={16} /></button>
+                              {peutModifier && (
+                                <>
+                                  <button type="button" onClick={() => { void renvoyer(acces); }} title={ta.resend} aria-label={ta.resend} className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700"><Mail size={16} /></button>
+                                  <button type="button" onClick={() => setEdition({ acces })} title={ta.edit} aria-label={ta.edit} className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700"><Pencil size={16} /></button>
+                                </>
+                              )}
+                              {peutSupprimer && (
+                                <button type="button" onClick={() => setASupprimer(acces)} title={ta.delete} aria-label={ta.delete} className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700"><Trash2 size={16} /></button>
+                              )}
                             </div>
                           </td>
                         )}

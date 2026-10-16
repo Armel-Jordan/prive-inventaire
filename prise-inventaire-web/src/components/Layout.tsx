@@ -56,6 +56,8 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ size?: number }>;
   module: string;
+  /** Action nommée exigée en plus (ex. « etats » de la comptabilité) ; sinon le droit de consulter le module. */
+  action?: string;
 }
 
 interface NavCategory {
@@ -73,7 +75,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     items: [
       { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
       { path: '/prises-inventaire', label: t.stocktake.nav, icon: ClipboardCheck, module: 'inventaires' },
-      { path: '/valorisation-inventaire', label: t.valuation.nav, icon: Coins, module: 'inventaires' },
+      { path: '/valorisation-inventaire', label: t.valuation.nav, icon: Coins, module: 'valorisation' },
       { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
       { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
       { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
@@ -102,11 +104,11 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: HandCoins,
     items: [
       { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
-      { path: '/espace-client', label: t.portalAdmin.nav, icon: Globe, module: 'clients' },
+      { path: '/espace-client', label: t.portalAdmin.nav, icon: Globe, module: 'espace_client' },
       { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
-      { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'factures' },
+      { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'comptes_clients' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
       { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
       { path: '/tournees', label: 'Tournées', icon: Route, module: 'tournees' },
@@ -121,9 +123,9 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/plan-comptable', label: t.accounting.chartNav, icon: BookOpen, module: 'comptabilite' },
       { path: '/exercices-comptables', label: t.accounting.yearsNav, icon: CalendarRange, module: 'comptabilite' },
       { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
-      { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite' },
-      { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite' },
-      { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite' },
+      { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite', action: 'etats' },
+      { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite', action: 'etats' },
+      { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite', action: 'etats' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
       { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
     ],
@@ -143,7 +145,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/alertes-config', label: t.alertsConfig.nav, icon: Bell, module: 'alertes_config' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
-      { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
+      { path: '/roles', label: t.permissions.nav, icon: Shield, module: 'roles' },
       { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
       { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
@@ -157,7 +159,9 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, tenant, logout } = useAuth();
   const { t } = useLanguage();
-  const { canView, loading: permissionsLoading, permissions } = usePermissions();
+  const { canView, peut, loading: permissionsLoading, permissions } = usePermissions();
+  // Entrée du menu permise : droit de consulter le module, et l'action nommée exigée s'il y en a une.
+  const permise = (item: NavItem) => canView(item.module) && (!item.action || peut(item.module, item.action));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['inventaire']);
   const allCategories = getNavCategories(t);
@@ -186,7 +190,7 @@ export default function Layout() {
         ? cat.items
         : cat.items.filter(item => {
             try {
-              return canView(item.module);
+              return permise(item);
             } catch {
               return true; // Si erreur, afficher par défaut
             }
@@ -204,7 +208,7 @@ export default function Layout() {
   // (l'API refuse de toute façon les écritures que le rôle ne permet pas).
   const pageCourante = allCategories.flatMap(cat => cat.items)
     .find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
-  const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !canView(pageCourante.module);
+  const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !permise(pageCourante);
   // Page d'un module que l'entreprise n'a pas souscrit (Achats, Ventes, Finance) : message au lieu d'une page
   // vide, voire d'une erreur (les appels de l'API sont refusés).
   const categorieCourante = allCategories.find(cat => cat.items.some(item => item === pageCourante));

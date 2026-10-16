@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useEffect, useState } from 'react';
 import { Clock, CheckCircle, XCircle, Settings, AlertTriangle, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
@@ -51,6 +52,8 @@ const statutLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function ApprobationsPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   const [approbations, setApprobations] = useState<Approbation[]>([]);
   const [seuils, setSeuils] = useState<Seuil[]>([]);
@@ -269,7 +272,7 @@ export default function ApprobationsPage() {
                         </div>
                       )}
                     </div>
-                    {a.statut === 'en_attente' && (
+                    {a.statut === 'en_attente' && peut('approbations', 'decider') && (
                       <div className="flex gap-2 ml-4">
                         <button
                           onClick={() => openDecisionModal(a, 'approve')}

@@ -6,7 +6,7 @@ import {
   type CompteComptable, type EcritureComptable, type JournalComptable, type PageEcritures, type SourceEcriture, type TypeJournal,
 } from '@/services/comptabilite';
 import { ApiError } from '@/services/http';
-import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 
@@ -39,8 +39,9 @@ export default function JournalComptablePage() {
   const { t, language } = useLanguage();
   const ta = t.accounting;
   const tj = ta.journal;
-  const { user } = useAuth();
-  const peutModifier = user?.role === 'admin' || user?.role === 'manager';
+  // Permissions de la comptabilité (rôles et permissions).
+  const { peut } = usePermissions();
+  const peutModifier = peut('comptabilite', 'ecrire');
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
 
   const [comptes, setComptes] = useState<CompteComptable[]>([]);

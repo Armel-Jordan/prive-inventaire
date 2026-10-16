@@ -30,8 +30,9 @@ export default function FicheFournisseurPage() {
   const tcf = t.clientFile;
   const id = useId();
   const devise = useSymboleDevise();
-  const { permissions } = usePermissions();
-  const responsable = permissions?.role === 'admin' || permissions?.role === 'manager';
+  // Coordonnées bancaires : permission « Gérer les coordonnées bancaires ».
+  const { peut } = usePermissions();
+  const responsable = peut('fournisseurs', 'comptes_bancaires');
   const [fournisseur, setFournisseur] = useState<FicheFournisseur | null>(null);
   const [onglet, setOnglet] = useState<Onglet>('synthese');
   const [erreur, setErreur] = useState('');

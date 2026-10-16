@@ -13,6 +13,8 @@ interface PermissionsData {
   role: string;
   role_id: number | null;
   permissions: Record<string, Permission>;
+  /** Droits effectifs code par code (« factures.emettre »…) : groupes, actions nommées et exceptions. */
+  actions?: Record<string, boolean>;
 }
 
 interface PermissionsContextType {
@@ -23,6 +25,8 @@ interface PermissionsContextType {
   canEdit: (module: string) => boolean;
   canDelete: (module: string) => boolean;
   isAdmin: () => boolean;
+  /** Action nommée ou droit de base d'un module (« emettre », « voir »…), d'après les droits effectifs. */
+  peut: (module: string, action: string) => boolean;
   refreshPermissions: () => Promise<void>;
 }
 
@@ -87,6 +91,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return permissions?.role === 'admin';
   }
 
+  function peut(module: string, action: string): boolean {
+    if (!permissions) return false;
+    if (permissions.role === 'admin') return true;
+    return permissions.actions?.[`${module}.${action}`] ?? false;
+  }
+
   return (
     <PermissionsContext.Provider value={{
       permissions,
@@ -96,6 +106,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       canEdit,
       canDelete,
       isAdmin,
+      peut,
       refreshPermissions: loadPermissions,
     }}>
       {children}

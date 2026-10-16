@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi, modèles, envoi des documents et historique
+> Dernière mise à jour : 2026-10-16 — rôles et permissions : groupes, permissions par écran et par action, exceptions par compte
 
 ---
 
@@ -203,7 +203,7 @@ Un **Employé** est une personne qui utilise l'application. Chaque employé :
 | `manager` | Crée et modifie partout, sans supprimer ; ni configuration, ni rôles, ni fiches employés |
 | `admin` | Tout — gestion complète |
 
-Le détail par module est celui de la matrice de l'écran Rôles (§6). Un **rôle personnalisé** peut remplacer ces
+Le détail par écran et par action est celui de l'écran Rôles et permissions (§6). Un **rôle personnalisé** peut remplacer ces
 droits pour un compte donné.
 
 ### 4.4 Flow de création d'un employé
@@ -249,65 +249,162 @@ Section complémentaire aux Employés, dédiée aux informations RH détaillées
 
 ## 6. Rôles & Permissions
 
-### 6.1 Système de rôles
+Sur le modèle de fripv2 (plan de parité, phase 6.2) : des **groupes** de permissions, des permissions **par écran et par action**, et des **exceptions** compte par compte. Rien n'a changé pour les rôles système à la mise en place : chaque permission nouvelle reproduit les droits d'avant.
 
-Chaque compte a un **rôle de base** : `admin`, `manager`, `user` ou `readonly`, et peut recevoir en plus un
-**rôle personnalisé** de son entreprise.
-- Le rôle de base ouvre les fonctions réservées par rôle : par exemple, seule une route `role:admin` est
-  accessible à un admin (utilisateurs, rôles, tâches planifiées).
-- Les **permissions par module** (voir, créer, modifier, supprimer) sont celles du rôle personnalisé s'il y en a
-  un, sinon celles du rôle système du même nom. Elles sont servies par `GET /permissions/me`.
-- Le **menu** n'affiche que les modules consultables. Une page ouverte par son adresse sans le droit de la
-  consulter affiche « Accès refusé ».
-- **L'API applique la matrice aux écritures** (middleware `droits`, `App\Support\Droits`) :
-  - `POST` sur une liste vaut « créer » ;
-  - `PUT`, `PATCH` et un `POST` d'action sur un élément (valider, annuler…) valent « modifier » ;
-  - `DELETE` vaut « supprimer ».
-  - Un refus répond **403** avec le message « Droit insuffisant : votre rôle ne permet pas de créer dans
-    « Produits » ».
-  - Paramètres, taxes, groupes de taxes, numérotation, champs personnalisés, balises, modèles de courriel et
-    réglages des approbations relèvent du module `configuration`.
-  - Les lectures, les calculs (prix, taxes), les aperçus, les envois de courriels, les favoris, la catégorie
-    d'un client et les remarques des fiches restent ouverts.
-- Un compte désactivé est refusé (401) même s'il présente encore un jeton.
-- **Module non souscrit** (Achats, Ventes, Finance) : ses pages, ouvertes par leur adresse, affichent « Module
-  non activé » au lieu d'une page vide ou d'une erreur, et le tableau de bord n'en montre pas la section.
-- Un administrateur a tous les droits, même avec un rôle personnalisé.
+### 6.1 Les droits d'un compte
 
-### 6.2 Rôles système et rôles personnalisés
+1. **Ses groupes :**
+   - son **rôle principal** : un rôle personnalisé actif de son entreprise s'il en a un, sinon le rôle système de son rôle de base (`admin`, `manager`, `user`, `readonly`) ;
+   - ses **groupes supplémentaires**, des groupes actifs de son entreprise.
 
-L'écran « Rôles » (`GET/POST/PUT/DELETE /roles-custom/{id}`, réservé aux administrateurs) distingue deux sortes de rôles.
+   Les droits de tous ses groupes **s'additionnent**.
+2. **Ses exceptions :** une permission **accordée** en plus de ses groupes, ou **refusée** même si un groupe l'accorde. Le refus l'emporte.
+3. Un **administrateur** a tous les droits, quels que soient ses groupes.
 
-**Rôles système** (`admin`, `manager`, `user`, `readonly`) :
-- Ils sont communs à toutes les entreprises.
-- On peut consulter leurs permissions, mais pas les modifier : `PUT`/`DELETE` répond 403.
-- Le bouton « Dupliquer » crée une copie modifiable.
+Les droits effectifs sont servis par `GET /permissions/me` :
+- `permissions` : droits par module (voir, créer, modifier, supprimer), pour les menus ;
+- `actions` : chaque permission, code par code (`factures.emettre`…), pour les boutons.
 
-**Rôles personnalisés** :
-- Ils appartiennent à l'entreprise qui les crée et restent invisibles des autres (404).
-- Leur nom est unique dans l'entreprise. Les noms des rôles système sont réservés, sans tenir compte des majuscules.
+### 6.2 Le catalogue des permissions
 
-**Exemple :** dupliquer `user` en « Préparateur BL », puis ne garder que la consultation des bons de livraison.
+Le catalogue (`App\Support\Permissions`, servi par `GET /permissions/catalogue`) range les permissions par onglet du menu (Général, Inventaire, Achats, Ventes, Finance, Paramètres), puis par écran. Chaque permission a :
+- un nom ;
+- une aide en français et en anglais.
 
-### 6.3 Accès à l'application (fiche employé)
+| Sorte | Exemples | Ce qu'elle ouvre |
+|---|---|---|
+| **Droits de base** | Consulter, Créer, Modifier, Supprimer | L'écran et les écritures de ses données |
+| **Actions nommées** | Émettre une facture, Enregistrer un paiement, Accepter ou refuser une commande, Envoyer / accepter / convertir un devis, Préparer / livrer / annuler un bon de livraison, Valider / clôturer / annuler une commande fournisseur, Approuver ou rejeter, Exécuter un transfert planifié, Piloter une tournée, Gérer les prises d'inventaire, Gérer les coordonnées bancaires des fournisseurs, Gérer les catégories de clients, Voir les états comptables, Saisir des écritures, Modifier le plan comptable et les exercices, Clôturer ou rouvrir un exercice | Une opération précise |
 
-L'accès se règle dans **Employés → Accès à l'application** : rôle de base, rôle personnalisé et mot de passe.
-- Le **courriel**, identifiant de connexion, est obligatoire pour donner l'accès (422 sur `email`, au lieu
-  d'une erreur 500).
-- Le **rôle personnalisé** (administrateurs seulement) remplace les droits par module du rôle choisi ; il ne
-  s'applique pas à un administrateur.
-- La création, la modification et la suppression d'employés sont réservées aux rôles admin et manager. Tous les comptes peuvent lire la liste, qui alimente des listes de choix.
+Une **action nommée** qu'un groupe ne règle pas suit un droit de base du même écran (indiqué dans le catalogue). Par exemple, « Émettre une facture » suit « Modifier » des factures. Les groupes enregistrés depuis l'écran des rôles règlent toutes leurs actions explicitement.
+
+Écrans ajoutés au catalogue, qui suivaient jusqu'ici un autre module :
+
+| Écran | Module | Suivait |
+|---|---|---|
+| Valorisation | `valorisation` | réservé aux administrateurs et responsables |
+| Comptes clients | `comptes_clients` | Factures |
+| Espace client | `espace_client` | Clients, et réservé aux administrateurs et responsables pour les écritures |
+
+### 6.3 Ce que l'API contrôle
+
+Le contrôle est fait par le middleware `droits` (`App\Support\Droits`).
+
+**Écritures, selon le préfixe de l'adresse :**
+- `POST` sur une liste vaut « créer » ;
+- `PUT`, `PATCH` et un `POST` sur un élément valent « modifier » ;
+- `DELETE` vaut « supprimer ».
+
+**Actions nommées :** les routes d'action (émettre, payer, accepter, livrer, valider, clôturer…) exigent leur action nommée, plutôt que « modifier ».
+
+**Comptabilité :**
+
+| Opération | Permission exigée |
+|---|---|
+| Écritures, journaux, soldes d'ouverture | Saisir des écritures |
+| Comptes, exercices, fermeture d'une période | Modifier le plan comptable et les exercices |
+| Clôture et réouverture d'un exercice, réouverture d'une période | Clôturer ou rouvrir un exercice |
+
+**Lectures des données sensibles :** il faut le droit de consulter la comptabilité, les comptes clients, l'espace client ou la valorisation. La balance, le grand livre, le bilan et le résultat exigent en plus « Voir les états comptables ».
+
+**Refus :** réponse **403** avec un message qui nomme la permission, par exemple : « Droit insuffisant : votre rôle ne permet pas de faire « Saisir des écritures » (Comptabilité) ».
+
+**Toujours libres :**
+- les autres lectures ;
+- les calculs (prix, taxes) et les aperçus ;
+- les envois de courriels et les favoris ;
+- la catégorie d'un client et les remarques des fiches.
+
+**Restent réservés aux administrateurs, par rôle :**
+- les rôles et les accès ;
+- les comptes utilisateurs ;
+- la sécurité (double authentification) ;
+- les tâches planifiées ;
+- le serveur d'envoi des courriels ;
+- les tâches ignorées de la configuration à compléter.
+
+**Comptes et abonnement :**
+- Un compte désactivé est refusé (401), même s'il présente encore un jeton.
+- **Module non souscrit** (Achats, Ventes, Finance) : ses pages, ouvertes par leur adresse, affichent « Module non activé ».
+
+### 6.4 Écran « Rôles et permissions »
+
+Paramètres → Rôles et permissions (`/roles`), réservé aux administrateurs.
+
+**Groupes** (`GET/POST/PUT/DELETE /roles-custom/{id}`) :
+- **Rôles système** (Administrateur, Responsable, Utilisateur, Lecture seule) : communs à toutes les entreprises, en lecture seule. **Dupliquer** en fait un groupe modifiable.
+- **Groupes de l'entreprise** :
+  - nom (unique dans l'entreprise, différent des rôles système) et description ;
+  - **actif / inactif** : un groupe inactif ne donne plus aucun droit et reste attribué pour l'historique ;
+  - nombre de comptes ;
+  - un groupe attribué ne se supprime pas (400) : le désactiver.
+
+**Permissions :**
+- un onglet par famille du menu, avec le nombre de permissions entre parenthèses ;
+- une section par écran, avec une case **Tous** ;
+- **Tout cocher** et **Tout décocher** ;
+- **recherche** sans accents ni majuscules : « facture émettre » trouve « Émettre une facture » ;
+- **panneau d'aide** de la permission survolée.
+
+### 6.5 Accès d'un compte
+
+Employés → bouton **Accès et permissions** (clé) d'un employé qui a un compte. L'écran est à `/acces/{compte}` et l'API à `GET/PUT /acces-comptes/{id}`, réservés aux administrateurs.
+
+- **Rôle principal** : rappelé ; il se règle dans la fiche de l'employé (§6.6).
+- **Groupes supplémentaires** : cases à cocher parmi les groupes de l'entreprise.
+- **Permissions** :
+  - à gauche, ce que donnent ses groupes ;
+  - à droite, l'**exception**. Un clic fait passer de *Hérité* à *Accordé*, puis *Refusé*, puis de nouveau *Hérité*.
+- **Outils** :
+  - Afficher : *Toutes* ou *Exceptions seulement* ;
+  - **Tout accorder** ;
+  - **Retirer les exceptions**.
+- Pour un **administrateur**, l'écran indique qu'il a tous les droits.
+
+**Exemple :** une comptable sans clôture.
+1. Créer le groupe « Comptable » avec :
+   - Comptabilité → Consulter ;
+   - Voir les états comptables ;
+   - Saisir des écritures.
+2. Le donner en groupe supplémentaire à un compte « Utilisateur ».
+
+Pour lui retirer seulement les états, refuser « Voir les états comptables » dans ses exceptions.
+
+### 6.6 Accès à l'application (fiche employé)
+
+L'accès se règle dans **Employés → Accès à l'application** : rôle de base, rôle personnalisé (rôle principal) et mot de passe.
+- Le **courriel**, identifiant de connexion, est obligatoire pour donner l'accès (422 sur `email`, au lieu d'une erreur 500).
+- Le **rôle personnalisé** (administrateurs seulement) remplace les droits du rôle choisi ; il ne s'applique pas à un administrateur.
+- La création, la modification et la suppression d'employés suivent les droits du module Employés. Tous les comptes peuvent lire la liste, qui alimente des listes de choix.
 - Un **administrateur** attribue tous les rôles.
 - Un **manager** n'attribue que les rôles `user` et `readonly`, sans rôle personnalisé. Il ne touche pas aux comptes administrateur ou manager : ni leur rôle, ni leur mot de passe, ni leur adresse, qui sert à réinitialiser le mot de passe.
 - Le **dernier administrateur actif** de l'entreprise ne peut être ni rétrogradé, ni désactivé, ni privé d'accès (422), y compris via `PUT /users/{id}`.
 
-`POST /users/{userId}/assign-role` rattache un compte de l'entreprise (`admin_users`) à l'un de ses rôles
-personnalisés (`role_id` null pour revenir au rôle de base). Un rôle encore attribué ne se supprime pas (400).
+`POST /users/{userId}/assign-role` rattache un compte à l'un des rôles personnalisés de l'entreprise (`role_id` null pour revenir au rôle de base).
 
-> **Changement de comportement :** les écritures suivent désormais la matrice. Un manager ne modifie plus les
-> paramètres, les taxes ni la numérotation (module `configuration`) ; un compte `user` ne crée plus de produits
-> ni de secteurs. Pour ouvrir un droit, créer un rôle personnalisé (par exemple en dupliquant `manager`) et
-> l'attribuer au compte depuis la fiche employé.
+### 6.7 Données
+
+| Table | Contenu |
+|---|---|
+| `roles_custom` | Groupes (rôles système et de l'entreprise), `actif` |
+| `role_permissions` | Droits de base d'un groupe par module (`can_view`, `can_create`, `can_edit`, `can_delete`) |
+| `role_actions` | Actions nommées réglées par un groupe (`permission` = « module.action », `accorde`) |
+| `admin_user_groupes` | Groupes supplémentaires d'un compte |
+| `admin_user_permissions` | Exceptions d'un compte (`accorde` : vrai = accordée, faux = refusée) |
+
+> **Changements de comportement (2026-10-16) :**
+> - Les verrous par rôle des écrans suivants sont remplacés par des permissions, réglées pour les rôles système comme avant :
+>   - comptabilité ;
+>   - prises d'inventaire et valorisation ;
+>   - catégories de clients ;
+>   - coordonnées bancaires des fournisseurs ;
+>   - espace client ;
+>   - tarifs et prix ;
+>   - écritures des employés.
+>
+>   Un groupe personnalisé peut désormais les donner à un compte « Utilisateur », par exemple la saisie comptable.
+> - Les lectures de la comptabilité, des comptes clients, de l'espace client et de la valorisation exigent le droit de les consulter. Un compte « Lecture seule » ne lit plus la comptabilité par l'API : son menu ne l'affichait déjà pas.
+> - Les boutons d'action (émettre, payer, accepter, livrer…) n'apparaissent plus sans la permission correspondante.
 
 ---
 

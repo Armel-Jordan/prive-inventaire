@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Landmark, Save } from 'lucide-react';
 import { getSoldesOuverture, enregistrerSoldesOuverture, montant, type SoldesOuverture } from '@/services/comptabilite';
 import { ApiError } from '@/services/http';
-import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 
@@ -14,8 +14,9 @@ const nombre = (texte: string) => Math.round((Number(texte.replace(',', '.')) ||
 export default function SoldesOuverturePage() {
   const { t, language } = useLanguage();
   const to = t.accounting.opening;
-  const { user } = useAuth();
-  const peutModifier = user?.role === 'admin' || user?.role === 'manager';
+  // Permissions de la comptabilité (rôles et permissions).
+  const { peut } = usePermissions();
+  const peutModifier = peut('comptabilite', 'ecrire');
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
 
   const [etat, setEtat] = useState<SoldesOuverture | null>(null);

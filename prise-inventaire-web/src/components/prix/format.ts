@@ -33,4 +33,3 @@ export function useSymboleDevise(): string {
 }
 
 /** Les administrateurs et responsables modifient les prix ; les autres consultent. */
-export const peutModifierPrix = (role?: string) => role === 'admin' || role === 'manager';

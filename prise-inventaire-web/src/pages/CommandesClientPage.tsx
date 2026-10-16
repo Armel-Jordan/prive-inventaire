@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -29,6 +30,8 @@ import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } 
 
 
 export default function CommandesClientPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut, canCreate } = usePermissions();
   const devise = useDevise();
   const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
   const [page, setPage] = useState(1);
@@ -329,13 +332,15 @@ export default function CommandesClientPage() {
                           >
                             <Pencil size={18} />
                           </button>
-                          <button
-                            onClick={() => handleSoumettre(cmd.id)}
-                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                            title="Soumettre"
-                          >
-                            <Send size={18} />
-                          </button>
+                          {peut('commandes_client', 'soumettre') && (
+                            <button
+                              onClick={() => handleSoumettre(cmd.id)}
+                              className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                              title="Soumettre"
+                            >
+                              <Send size={18} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(cmd.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -347,30 +352,36 @@ export default function CommandesClientPage() {
                       )}
                       {cmd.statut === 'en_attente' && (
                         <>
-                          <button
-                            onClick={() => handleAccepter(cmd.id)}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                            title="Accepter"
-                          >
-                            <Check size={18} />
-                          </button>
-                          <button
-                            onClick={() => { setSelectedCommande(cmd); setShowRefusModal(true); }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Refuser"
-                          >
-                            <X size={18} />
-                          </button>
+                          {peut('commandes_client', 'decider') && (
+                            <button
+                              onClick={() => handleAccepter(cmd.id)}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              title="Accepter"
+                            >
+                              <Check size={18} />
+                            </button>
+                          )}
+                          {peut('commandes_client', 'decider') && (
+                            <button
+                              onClick={() => { setSelectedCommande(cmd); setShowRefusModal(true); }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              title="Refuser"
+                            >
+                              <X size={18} />
+                            </button>
+                          )}
                         </>
                       )}
                       {cmd.statut === 'acceptee' && (
-                        <button
-                          onClick={() => handleCreerFacture(cmd.id)}
-                          className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                          title="Créer facture"
-                        >
-                          <FileText size={18} />
-                        </button>
+                        <>{canCreate('factures') && (
+                          <button
+                            onClick={() => handleCreerFacture(cmd.id)}
+                            className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                            title="Créer facture"
+                          >
+                            <FileText size={18} />
+                          </button>
+                        )}</>
                       )}
                       <BoutonChampsPersonnalises entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                     </div>
