@@ -53,6 +53,8 @@ object InventaireApiService {
     /**
      * POST /api/auth/login — authentifie un admin_user et récupère un token Sanctum.
      * Le token et le slug sont ensuite envoyés automatiquement sur chaque requête.
+     * Compte en double authentification : l'API répond 403 avec un défi. Le résultat porte alors `defi`,
+     * sans token, et l'écran demande le code (voir loginDeuxFacteurs).
      */
     fun login(email: String, password: String, slug: String): LoginResult {
         val requestBody = gson.toJson(LoginRequest(email = email, password = password, tenantSlug = slug))
@@ -65,25 +67,69 @@ object InventaireApiService {
 
         client.newCall(request).execute().use { response ->
             val body = response.body?.string() ?: throw Exception("Réponse vide")
+            val result = lireResultat(body)
 
+            if (result != null && result.deuxFacteurs == true && !result.defi.isNullOrBlank()) {
+                return result
+            }
             if (!response.isSuccessful) {
-                val message = try {
-                    gson.fromJson(body, LoginResult::class.java)?.message
-                } catch (_: Exception) {
-                    null
-                }
-                throw Exception(message ?: "Identifiants invalides (HTTP ${response.code})")
+                throw Exception(result?.message ?: "Identifiants invalides (HTTP ${response.code})")
             }
 
-            val result = gson.fromJson(body, LoginResult::class.java)
-            if (result?.token.isNullOrBlank()) {
-                throw Exception("Réponse de connexion invalide")
-            }
-            setAuth(result.token!!, slug)
-
-            return result
+            return connecter(result, slug)
         }
     }
+
+    /**
+     * POST /api/auth/login/deux-facteurs — seconde étape de connexion : le défi reçu à la première étape et le
+     * code de l'application d'authentification (ou un code de secours). Si le défi a expiré (ou après trop de
+     * codes invalides), DefiExpireException : il faut ressaisir le mot de passe.
+     */
+    fun loginDeuxFacteurs(defi: String, code: String, slug: String): LoginResult {
+        val requestBody = gson.toJson(DeuxFacteursRequest(defi = defi, code = code.trim()))
+        val request = Request.Builder()
+            .url("$baseUrl/auth/login/deux-facteurs")
+            .post(requestBody.toRequestBody(JSON))
+            .addHeader("Accept", "application/json")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: throw Exception("Réponse vide")
+            val result = lireResultat(body)
+
+            if (!response.isSuccessful) {
+                val message = result?.message ?: "Code refusé (HTTP ${response.code})"
+                if (result?.defiExpire == true) {
+                    throw DefiExpireException(message)
+                }
+                throw Exception(message)
+            }
+
+            return connecter(result, slug)
+        }
+    }
+
+    /** Réponse de connexion lue, ou null si le corps n'est pas du JSON attendu. */
+    private fun lireResultat(body: String): LoginResult? = try {
+        gson.fromJson(body, LoginResult::class.java)
+    } catch (_: Exception) {
+        null
+    }
+
+    /** Ouvre la session : le token et le slug accompagneront chaque requête. */
+    private fun connecter(result: LoginResult?, slug: String): LoginResult {
+        val token = result?.token
+        if (result == null || token.isNullOrBlank()) {
+            throw Exception("Réponse de connexion invalide")
+        }
+        setAuth(token, slug)
+
+        return result
+    }
+
+    /** Défi de double authentification expiré : retour à la saisie du mot de passe. */
+    class DefiExpireException(message: String) : Exception(message)
 
     data class LoginRequest(
         @SerializedName("email") val email: String,
@@ -91,10 +137,18 @@ object InventaireApiService {
         @SerializedName("tenant_slug") val tenantSlug: String,
     )
 
+    data class DeuxFacteursRequest(
+        @SerializedName("defi") val defi: String,
+        @SerializedName("code") val code: String,
+    )
+
     data class LoginResult(
         @SerializedName("success") val success: Boolean = false,
         @SerializedName("message") val message: String? = null,
         @SerializedName("token") val token: String? = null,
+        @SerializedName("deux_facteurs") val deuxFacteurs: Boolean? = null,
+        @SerializedName("defi") val defi: String? = null,
+        @SerializedName("defi_expire") val defiExpire: Boolean? = null,
     )
 
     // --- Data Models ---
