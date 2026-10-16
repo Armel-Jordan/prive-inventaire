@@ -74,9 +74,10 @@ class Facture extends Model
         return $this->hasMany(FacturePaiement::class);
     }
 
+    /** Bon de livraison en cours de la facture : le plus récent qui n'est pas annulé. */
     public function bonLivraison(): HasOne
     {
-        return $this->hasOne(BonLivraison::class);
+        return $this->hasOne(BonLivraison::class)->where('statut', '!=', 'annule')->latest('id');
     }
 
     public function updateMontantPaye(): void
@@ -89,6 +90,24 @@ class Facture extends Model
             $this->statut = 'partiellement_payee';
         }
         $this->save();
+        $this->repartirSurEcheances();
         $this->client->updateEncours();
+    }
+
+    /**
+     * Répartit le montant payé sur les échéances, dans leur ordre : chacune passe payée, en partie payée
+     * ou en attente. Elles restaient « en attente » même une fois la facture entièrement payée.
+     */
+    private function repartirSurEcheances(): void
+    {
+        $reste = (float) $this->montant_paye;
+        foreach ($this->echeances()->get() as $echeance) {
+            $paye = round(min((float) $echeance->montant, max(0.0, $reste)), 2);
+            $reste -= $paye;
+            $echeance->update([
+                'montant_paye' => $paye,
+                'statut' => $paye >= (float) $echeance->montant ? 'payee' : ($paye > 0 ? 'partiellement_payee' : 'en_attente'),
+            ]);
+        }
     }
 }

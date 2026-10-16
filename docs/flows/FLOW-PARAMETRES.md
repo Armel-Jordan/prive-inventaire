@@ -254,20 +254,25 @@ Via `GET/POST/PUT/DELETE /roles-custom/{id}`, on peut créer des rôles sur mesu
 
 ### 7.1 Ce que c'est
 
-La numérotation automatique génère les numéros de documents dans tout le système. Elle est configurable pour chaque type de document :
+La numérotation automatique génère les numéros de documents dans tout le système. Elle est configurable pour chaque type de document. Le tableau donne la numérotation par défaut (`Configuration::DEFAUTS`) :
 
-| Entité | Exemple de numéro |
+| Entité | Numéro par défaut |
 |--------|-------------------|
-| `produit` | PRD-0001 |
-| `employe` | EMP-0001 |
-| `secteur` | SEC-001 |
-| `fournisseur` | FRN-0001 |
-| `client` | CLT-0001 |
-| `devis` | DEV-2026-0001 |
-| `commande` | CMD-2026-0001 |
-| `facture` | FAC-2026-0001 |
-| `bon_livraison` | BL-2026-0001 |
-| `tournee` | TRN-2026-0001 |
+| `produit` | P00001 |
+| `employe` | E0001 |
+| `secteur` | saisi à la main (pas d'incrément) |
+| `fournisseur` | F00001 |
+| `client` | C00001 |
+| `devis` | DEV-00001 |
+| `commande` (commandes clients) | CMD-00001 |
+| `commande_fournisseur` | BC-00001 |
+| `facture` | FAC-00001 |
+| `bon_livraison` | BL-00001 |
+| `tournee` | T0001 |
+
+- Une entreprise qui n'a pas encore enregistré la numérotation d'un type la reçoit **au premier besoin** (écran Configuration ou création du document). Avant le 2026-10-16, son premier bon de livraison ou devis était refusé (« Numéro requis »).
+- Les commandes fournisseur ont leur propre séquence (`commande_fournisseur`) : elles consommaient celle des commandes clients, qui avait alors des trous.
+- Chaque entreprise numérote pour elle : deux entreprises peuvent toutes deux émettre FAC-00001.
 
 ### 7.2 Format configurable
 

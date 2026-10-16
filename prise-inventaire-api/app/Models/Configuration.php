@@ -72,11 +72,38 @@ class Configuration extends Model
     }
 
     /**
-     * Récupère la configuration pour une entité donnée
+     * Numérotation par défaut de chaque type de fiche ou de document. Une entreprise qui n'a pas encore
+     * enregistré la sienne l'obtient au premier besoin (écran Configuration ou création du document) :
+     * sans cela, son premier bon de livraison, devis… était refusé (« Numéro requis »).
+     */
+    public const DEFAUTS = [
+        'produit' => ['prefixe' => 'P', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true],
+        'employe' => ['prefixe' => 'E', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
+        'secteur' => ['prefixe' => '', 'longueur' => 3, 'separateur' => '-', 'auto_increment' => false],
+        'fournisseur' => ['prefixe' => 'F', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true],
+        'client' => ['prefixe' => 'C', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true],
+        'devis' => ['prefixe' => 'DEV', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'commande' => ['prefixe' => 'CMD', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'commande_fournisseur' => ['prefixe' => 'BC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'facture' => ['prefixe' => 'FAC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'bon_livraison' => ['prefixe' => 'BL', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
+    ];
+
+    /**
+     * Configuration d'une entité ; créée avec la numérotation par défaut si l'entreprise n'en a pas encore.
      */
     public static function pourEntite(string $entite, int $tenantId): ?self
     {
-        return self::where('tenant_id', $tenantId)->where('entite', $entite)->first();
+        $config = self::withTrashed()->where('tenant_id', $tenantId)->where('entite', $entite)->first();
+        if ($config?->trashed()) {
+            $config->restore();
+        }
+        if ($config || ! isset(self::DEFAUTS[$entite])) {
+            return $config;
+        }
+
+        return self::create(['tenant_id' => $tenantId, 'entite' => $entite, 'suffixe' => '', 'prochain_numero' => 1] + self::DEFAUTS[$entite]);
     }
 
     /**
@@ -89,6 +116,7 @@ class Configuration extends Model
      */
     public static function consommerNumero(string $entite, int $tenantId): string
     {
+        self::pourEntite($entite, $tenantId);
         $config = self::where('tenant_id', $tenantId)
             ->where('entite', $entite)
             ->lockForUpdate()

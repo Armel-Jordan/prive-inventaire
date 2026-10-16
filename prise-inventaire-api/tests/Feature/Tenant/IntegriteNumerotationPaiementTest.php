@@ -91,11 +91,21 @@ class IntegriteNumerotationPaiementTest extends TestCase
         });
     }
 
-    public function test_consommer_numero_leve_une_exception_si_config_absente(): void
+    public function test_consommer_numero_cree_la_numerotation_par_defaut_si_absente(): void
     {
         $tenant = Tenant::factory()->create();
 
         app(TenantContext::class)->runAsTenant($tenant->id, function () use ($tenant) {
+            $this->assertSame('FAC-00001', DB::transaction(fn () => Configuration::consommerNumero('facture', $tenant->id)));
+        });
+    }
+
+    public function test_consommer_numero_leve_une_exception_sans_numerotation_automatique(): void
+    {
+        $tenant = Tenant::factory()->create();
+
+        app(TenantContext::class)->runAsTenant($tenant->id, function () use ($tenant) {
+            Configuration::create(['entite' => 'facture', 'prefixe' => 'FAC', 'longueur' => 4, 'auto_increment' => false, 'prochain_numero' => 1]);
             $this->expectException(\RuntimeException::class);
             DB::transaction(fn () => Configuration::consommerNumero('facture', $tenant->id));
         });

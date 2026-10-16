@@ -11,6 +11,7 @@ import {
   getClientsActifs, getProduits, getConfiguration,
 } from '../services/api';
 import type { DevisRecord, Client } from '../services/api';
+import { ApiError } from '@/services/http';
 import type { Produit } from '../types';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
@@ -86,18 +87,24 @@ export default function DevisPage() {
     }
   };
 
+  // Le message de l'API dit pourquoi l'action est refusée (devis expiré, déjà converti…).
+  const signalerErreur = (e: unknown, defaut: string) => {
+    alert(e instanceof ApiError ? ((e.data as { message?: string } | null)?.message || defaut) : defaut);
+    loadData();
+  };
+
   const handleEnvoyer = async (id: number) => {
     try {
       await envoyerDevis(id);
       loadData();
-    } catch { alert('Erreur'); }
+    } catch (e) { signalerErreur(e, 'Erreur lors de l\'envoi'); }
   };
 
   const handleAccepter = async (id: number) => {
     try {
       await accepterDevis(id);
       loadData();
-    } catch { alert('Erreur'); }
+    } catch (e) { signalerErreur(e, 'Erreur lors de l\'acceptation'); }
   };
 
   const handleRefuser = async (id: number) => {
@@ -105,16 +112,16 @@ export default function DevisPage() {
     try {
       await refuserDevis(id);
       loadData();
-    } catch { alert('Erreur'); }
+    } catch (e) { signalerErreur(e, 'Erreur lors du refus'); }
   };
 
   const handleConvertir = async (devis: DevisRecord) => {
     if (!confirm(`Convertir le devis ${devis.numero} en commande client ?`)) return;
     try {
-      await convertirDevisEnCommande(devis.id);
-      alert('Devis converti en commande !');
+      const { commande } = await convertirDevisEnCommande(devis.id);
+      alert(`Devis converti en commande ${commande.numero}.`);
       loadData();
-    } catch { alert('Erreur lors de la conversion'); }
+    } catch (e) { signalerErreur(e, 'Erreur lors de la conversion'); }
   };
 
   const handleDelete = async (id: number) => {
@@ -238,7 +245,10 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_devis)}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_validite)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium">{Number(devis.montant_total).toFixed(2)} €</td>
-                  <td className="px-4 py-3 text-center">{getStatutBadge(devis.statut)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {getStatutBadge(devis.statut)}
+                    {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
@@ -258,7 +268,7 @@ export default function DevisPage() {
                           <button onClick={() => handleRefuser(devis.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Refuser"><XCircle size={16} /></button>
                         </>
                       )}
-                      {devis.statut === 'accepte' && (
+                      {devis.statut === 'accepte' && !devis.commande && (
                         <button onClick={() => handleConvertir(devis)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Convertir en commande"><FileText size={16} /></button>
                       )}
                       <BoutonChampsPersonnalises entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />

@@ -79,7 +79,7 @@ export default function CommandesFournisseurPage() {
 
   useEffect(() => {
     loadData();
-    getConfiguration('commande').then(setConfigNumero).catch(() => {});
+    getConfiguration('commande_fournisseur').then(setConfigNumero).catch(() => {});
     getParametres().then(p => setDeviseLocale(p.devise_code || 'EUR')).catch(() => {});
   }, [loadData]);
 

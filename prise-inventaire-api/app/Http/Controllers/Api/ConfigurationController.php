@@ -14,44 +14,23 @@ class ConfigurationController extends Controller
         return $request->attributes->get('tenant')->id;
     }
 
-    private array $defaults = [
-        ['entite' => 'produit',     'prefixe' => 'P',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'employe',     'prefixe' => 'E',  'suffixe' => '', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'secteur',     'prefixe' => '',   'suffixe' => '', 'longueur' => 3, 'separateur' => '-', 'auto_increment' => false, 'prochain_numero' => 1],
-        ['entite' => 'fournisseur', 'prefixe' => 'F',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'client',      'prefixe' => 'C',  'suffixe' => '', 'longueur' => 5, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'commande',    'prefixe' => 'CMD', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'facture',     'prefixe' => 'FAC', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'bon_livraison', 'prefixe' => 'BL', 'suffixe' => '', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true,  'prochain_numero' => 1],
-        ['entite' => 'tournee',     'prefixe' => 'T',  'suffixe' => '', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true,  'prochain_numero' => 1],
-    ];
-
+    /** Toutes les numérotations de l'entreprise, complétées des valeurs par défaut qui lui manquent. */
     public function index(Request $request): JsonResponse
     {
         $tenantId = $this->getTenantId($request);
-        $configurations = Configuration::where('tenant_id', $tenantId)->get();
-
-        if ($configurations->isEmpty()) {
-            foreach ($this->defaults as $default) {
-                Configuration::create(array_merge($default, ['tenant_id' => $tenantId]));
-            }
-            $configurations = Configuration::where('tenant_id', $tenantId)->get();
+        foreach (array_keys(Configuration::DEFAUTS) as $entite) {
+            Configuration::pourEntite($entite, $tenantId);
         }
 
-        return response()->json($configurations);
+        return response()->json(Configuration::where('tenant_id', $tenantId)->get());
     }
 
     public function show(Request $request, string $entite): JsonResponse
     {
-        $tenantId = $this->getTenantId($request);
-        $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
+        $configuration = Configuration::pourEntite($entite, $this->getTenantId($request));
 
         if (! $configuration) {
-            $default = collect($this->defaults)->firstWhere('entite', $entite);
-            if (! $default) {
-                return response()->json(['message' => 'Configuration non trouvée'], 404);
-            }
-            $configuration = Configuration::create(array_merge($default, ['tenant_id' => $tenantId]));
+            return response()->json(['message' => 'Configuration non trouvée'], 404);
         }
 
         return response()->json($configuration);
