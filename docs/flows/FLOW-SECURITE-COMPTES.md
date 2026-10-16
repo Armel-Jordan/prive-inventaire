@@ -81,7 +81,11 @@ Rien ne change pour un compte qui n'active pas la double authentification : la c
 
 **Téléphone perdu :** un administrateur de l'entreprise désactive la double authentification de l'utilisateur. Celui-ci se connecte avec son mot de passe et peut la réactiver.
 
-**Application mobile :** elle ne gère pas encore la seconde étape. Un utilisateur qui active la double authentification ne peut plus s'y connecter : elle affiche le message de l'API, qui l'explique. Le support viendra avec la phase 7 (mobile terrain). L'écran d'activation prévient l'utilisateur.
+**Application mobile :** la seconde étape est gérée depuis le 16/10/2026.
+- Après le mot de passe, l'application ouvre un écran « Double authentification » : code à 6 chiffres (clavier numérique) ou code de secours.
+- Elle appelle `POST /auth/login/deux-facteurs` avec le défi reçu.
+- Si le défi a expiré ou qu'il y a eu trop d'essais, l'application revient au mot de passe.
+- Une ancienne version de l'application affiche le message de l'API, qui demande de la mettre à jour. L'écran d'activation du site web prévient l'utilisateur.
 
 ---
 

@@ -56,14 +56,14 @@ class AuthController extends Controller
         }
 
         // Double authentification : le mot de passe ne suffit pas, un code est demandé avant de délivrer
-        // le jeton. Statut 403 avec un message lisible : l'application mobile, qui ne gère pas encore
-        // cette étape, l'affiche tel quel.
+        // le jeton. Le site web et l'application mobile passent à l'écran du code ; une ancienne version
+        // de l'application mobile, qui ne connaît pas cette étape, affiche le message tel quel.
         if ($user->deuxFacteursActive()) {
             return response()->json([
                 'success' => false,
                 'deux_facteurs' => true,
                 'defi' => $this->deuxFacteurs->creerDefi($user),
-                'message' => 'Double authentification requise : saisissez le code de votre application depuis le site web (l\'application mobile ne la gère pas encore).',
+                'message' => 'Double authentification requise : saisissez le code de votre application d\'authentification. Sur mobile, mettez l\'application à jour si elle ne vous le demande pas.',
             ], 403);
         }
 
