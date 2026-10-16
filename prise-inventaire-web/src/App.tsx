@@ -53,6 +53,8 @@ import EtatsFinanciersPage from '@/pages/EtatsFinanciersPage';
 import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
 import PiecesJointesPage from '@/pages/PiecesJointesPage';
+import PortailClientsPage from '@/pages/PortailClientsPage';
+import PortailApp from '@/portail/PortailApp';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
@@ -97,6 +99,8 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/mot-de-passe-oublie" element={<MotDePasseOubliePage />} />
       <Route path="/reinitialiser-mot-de-passe" element={<ReinitialiserMotDePassePage />} />
+      {/* Portail client d'une entreprise : écrans de ses clients, sessions propres au portail. */}
+      <Route path="/portail/:slug/*" element={<PortailApp />} />
       <Route path="/complete-profile" element={<CompleteProfilePage />} />
       <Route
         path="/"
@@ -142,6 +146,7 @@ function AppRoutes() {
         <Route path="factures" element={<FacturesPage />} />
         <Route path="comptes-clients" element={<ComptesClientsPage />} />
         <Route path="bons-livraison" element={<BonsLivraisonPage />} />
+        <Route path="portail-clients" element={<PortailClientsPage />} />
         <Route path="tournees" element={<TourneesPage />} />
         <Route path="comptabilite" element={<ComptabilitePage />} />
         <Route path="plan-comptable" element={<PlanComptablePage />} />
