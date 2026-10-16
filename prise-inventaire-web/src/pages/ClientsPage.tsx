@@ -15,7 +15,7 @@ import { getReferentiel } from '../services/api';
 import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
-import { formatMontant, useDevise } from '@/lib/documents';
+import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -52,9 +52,12 @@ export default function ClientsPage() {
     encours_max: '',
     taux_remise_global: '0',
     condition_paiement_id: '',
+    devise: '',
   });
-  // Conditions de paiement du référentiel (délai, escompte pour paiement rapide).
+  // Conditions de paiement et devises du référentiel.
   const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
+  const [devises, setDevises] = useState<string[]>([]);
+  const deviseEntreprise = useCodeDevise();
 
   async function loadConfig() {
     try {
@@ -69,6 +72,7 @@ export default function ClientsPage() {
     loadClients();
     loadConfig();
     getReferentiel('conditions_paiement', true).then(setConditions, () => {});
+    getReferentiel('devises', true).then(liste => setDevises(liste.map(d => String(d.code ?? '').toUpperCase()).filter(Boolean)), () => {});
   }, []);
 
   const loadClients = async () => {
@@ -99,6 +103,8 @@ export default function ClientsPage() {
         encours_max: formData.encours_max ? parseFloat(formData.encours_max) : undefined,
         taux_remise_global: parseFloat(formData.taux_remise_global) || 0,
         condition_paiement_id: formData.condition_paiement_id ? Number(formData.condition_paiement_id) : null,
+        // Vide : la devise de l'entreprise.
+        devise: formData.devise || null,
       };
 
       if (editingClient) {
@@ -130,6 +136,7 @@ export default function ClientsPage() {
       encours_max: client.encours_max?.toString() || '',
       taux_remise_global: client.taux_remise_global?.toString() || '0',
       condition_paiement_id: client.condition_paiement_id ? String(client.condition_paiement_id) : '',
+      devise: client.devise ?? '',
     });
     setShowModal(true);
   };
@@ -160,6 +167,7 @@ export default function ClientsPage() {
       encours_max: '',
       taux_remise_global: '0',
       condition_paiement_id: '',
+      devise: '',
     });
   };
 
@@ -440,6 +448,18 @@ export default function ClientsPage() {
                     <option value="">Condition par défaut de l'entreprise</option>
                     {conditions.map(c => <option key={c.id} value={c.id}>{String(c.libelle)}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Devise du client</label>
+                  <select
+                    value={formData.devise}
+                    onChange={(e) => setFormData({ ...formData, devise: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">{deviseEntreprise} (devise de l'entreprise)</option>
+                    {[...new Set([...devises, formData.devise].filter(c => c && c !== deviseEntreprise))].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <span className="text-xs text-gray-500">Reprise par ses devis, commandes et factures.</span>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">

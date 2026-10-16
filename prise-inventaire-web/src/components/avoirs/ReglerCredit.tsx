@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import {
   getFacturesImputables, imputerAvoir, MODES_REMBOURSEMENT, rembourserAvoir,
   type Avoir, type FactureImputable, type ModeRemboursement,
@@ -22,8 +22,9 @@ export default function ReglerCredit({ avoir, mode, onClose, onRegle }: {
 }) {
   const { t, language } = useLanguage();
   const tc = t.creditNotes;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  const montantDoc = useMontantDocument();
+  // Dans la devise de la note (seules les factures de cette devise peuvent recevoir son crédit).
+  const montant = (v: number | string | null | undefined) => montantDoc(v, avoir.devise);
   const disponible = Number(avoir.credit_disponible);
   const [factures, setFactures] = useState<FactureImputable[] | null>(mode === 'imputer' ? null : []);
   const [factureId, setFactureId] = useState<number | null>(null);

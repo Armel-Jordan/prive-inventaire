@@ -58,6 +58,9 @@ class Relances
                 'date_echeance' => $f->date_echeance?->toDateString(),
                 'montant_ttc' => round((float) $f->montant_ttc, 2),
                 'reste_a_payer' => round((float) $f->reste_a_payer, 2),
+                // Devise de la facture (null : celle de l'entreprise) et reste dans la devise de l'entreprise.
+                'devise' => $f->devise,
+                'reste_reference' => round((float) $f->reste_a_payer * (float) ($f->taux_change ?: 1), 2),
                 'retard' => (int) $echeance->diffInDays($jour),
                 'nb_relances' => (int) $f->relances_count,
                 'derniere_relance' => $derniere ? [

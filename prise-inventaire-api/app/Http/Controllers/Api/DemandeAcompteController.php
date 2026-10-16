@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DemandeAcompte;
 use App\Services\Acomptes;
 use App\Services\DemandesAcompte;
+use App\Services\DevisesVente;
 use App\Support\TenantRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -110,6 +111,7 @@ class DemandeAcompteController extends Controller
             'montant' => "{$requis}|numeric|min:0.01|max:9999999999",
             'devis_id' => 'sometimes|nullable|integer',
             'commande_id' => 'sometimes|nullable|integer',
+            ...($creation ? DevisesVente::regles() : []),
         ]);
     }
 

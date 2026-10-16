@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Acompte;
 use App\Models\AcompteRemboursement;
+use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\DemandeAcompte;
 use App\Models\Facture;
@@ -36,13 +37,18 @@ class Acomptes
     private const TOLERANCE = 0.005;
 
     /**
-     * @param  array{client_id: int, date_acompte: string, mode: string, reference?: ?string, montant: float|string, commande_id?: ?int, demande_id?: ?int, notes?: ?string}  $donnees
+     * @param  array{client_id: int, date_acompte: string, mode: string, reference?: ?string, montant: float|string, commande_id?: ?int, demande_id?: ?int, notes?: ?string, devise?: ?string, taux_change?: mixed}  $donnees
      */
     public function recevoir(array $donnees, ?int $auteur = null): Acompte
     {
         $this->verifierCommande((int) $donnees['client_id'], $donnees['commande_id'] ?? null);
+        // Devise de l'acompte : celle demandée, sinon celle du client (ou de la commande réservée).
+        $commande = ! empty($donnees['commande_id']) ? ComClientEntete::find((int) $donnees['commande_id']) : null;
+        $devise = array_key_exists('devise', $donnees) || ! $commande
+            ? app(DevisesVente::class)->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, Client::find((int) $donnees['client_id']))
+            : ['devise' => $commande->devise, 'taux_change' => (float) ($commande->taux_change ?: 1)];
 
-        return Acompte::create([
+        return Acompte::create($devise + [
             'client_id' => $donnees['client_id'],
             'date_acompte' => $donnees['date_acompte'],
             'mode' => $donnees['mode'],
@@ -88,6 +94,9 @@ class Acomptes
             if (! in_array($facture->statut, self::FACTURES_DUES, true)) {
                 throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} ne reste pas due."]);
             }
+            if (! DevisesVente::memeDevise($acompte->devise, $facture->devise)) {
+                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} n'est pas dans la devise de l'acompte."]);
+            }
             if ($acompte->disponible <= 0) {
                 throw new DomainException("Il ne reste rien de l'acompte du {$acompte->date_acompte->format('d/m/Y')}.");
             }
@@ -131,6 +140,9 @@ class Acomptes
             ->orderBy('date_acompte')->orderBy('id')->get();
         foreach ($acomptes as $acompte) {
             $facture->refresh();
+            if (! DevisesVente::memeDevise($acompte->devise, $facture->devise)) {
+                continue;
+            }
             $reste = (float) $facture->reste_a_payer;
             if ($reste <= self::TOLERANCE || ! in_array($facture->statut, self::FACTURES_DUES, true)) {
                 break;

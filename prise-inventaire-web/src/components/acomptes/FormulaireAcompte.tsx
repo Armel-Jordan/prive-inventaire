@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie } from '@/lib/documents';
+import { aujourdhui, dateSaisie, tauxPropose, useCodeDevise } from '@/lib/documents';
+import ChampDevise from '@/components/ChampDevise';
 import { getClientsActifs, getCommandesClient, type Client, type ComClientEntete } from '@/services/api';
 import { creerAcompte, MODES_ACOMPTE, modifierAcompte, type Acompte, type ModeAcompte } from '@/services/acomptes';
 
@@ -23,6 +24,7 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
 }) {
   const { t } = useLanguage();
   const td = t.deposits;
+  const deviseEntreprise = useCodeDevise();
   const [clients, setClients] = useState<Client[]>([]);
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
   const [saisie, setSaisie] = useState({
@@ -33,6 +35,9 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
     montant: acompte ? String(Number(acompte.montant)) : '',
     commande_id: String(acompte?.commande_id ?? commandeId ?? ''),
     notes: acompte?.notes ?? '',
+    // Devise de l'acompte (vide : celle de l'entreprise) ; par défaut, celle du client (ou de la commande).
+    devise: acompte?.devise ?? '',
+    taux: String(acompte?.taux_change ?? 1),
   });
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
@@ -71,9 +76,12 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
       notes: saisie.notes.trim() || null,
     };
     try {
+      // À la création : la devise choisie (celle de l'entreprise l'emporte alors sur celle du client), sauf pour un acompte
+      // réservé à une commande, qui prend la devise de la commande.
+      const devise = saisie.commande_id ? {} : { devise: saisie.devise || deviseEntreprise, taux_change: saisie.devise ? Number(saisie.taux) : undefined };
       const resultat = acompte
         ? await modifierAcompte(acompte.id, verrouille ? { reference: donnees.reference, commande_id: donnees.commande_id, notes: donnees.notes } : donnees)
-        : await creerAcompte({ client_id: Number(saisie.client_id), ...donnees });
+        : await creerAcompte({ client_id: Number(saisie.client_id), ...donnees, ...devise });
       onEnregistre(resultat);
     } catch (err) {
       setErreur(messageErreur(err, td.error));
@@ -93,7 +101,12 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
 
         {!clientFixe && (
           <label className="block text-xs text-gray-500 dark:text-gray-400">{td.customer}
-            <select required value={saisie.client_id} onChange={e => setSaisie({ ...saisie, client_id: e.target.value, commande_id: '' })} className={classeChamp}>
+            <select required value={saisie.client_id} onChange={e => {
+              // Devise du client proposée, avec son taux.
+              const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
+              setSaisie({ ...saisie, client_id: e.target.value, commande_id: '', devise: deviseClient, taux: deviseClient ? '' : '1' });
+              if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setSaisie(s => (s.devise === deviseClient ? { ...s, taux } : s)));
+            }} className={classeChamp}>
               <option value="">{td.chooseCustomer}</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.code} · {c.raison_sociale}</option>)}
             </select>
@@ -123,6 +136,9 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
             </select>
             <span className="block mt-0.5">{td.orderHelp}</span>
           </label>
+        )}
+        {!acompte && saisie.client_id && !saisie.commande_id && (
+          <ChampDevise valeur={{ devise: saisie.devise, taux: saisie.taux }} onChange={v => setSaisie(s => ({ ...s, devise: v.devise, taux: v.taux }))} />
         )}
         <label className="block text-xs text-gray-500 dark:text-gray-400">{td.notes}
           <textarea rows={2} maxLength={2000} value={saisie.notes} onChange={e => setSaisie({ ...saisie, notes: e.target.value })} className={classeChamp} />

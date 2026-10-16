@@ -43,6 +43,9 @@ export interface Avoir {
   montant_rembourse: string;
   credit_disponible: number;
   emis_le: string | null;
+  /** Devise de la note (celle de sa facture ; null : celle de l'entreprise). */
+  devise?: string | null;
+  taux_change?: string;
   client?: { id: number; code: string; raison_sociale: string; email?: string | null };
   facture?: { id: number; numero: string; date_facture?: string; statut?: string; montant_ttc?: string; reste_a_payer?: string };
   lignes?: AvoirLigne[];
@@ -70,7 +73,7 @@ export interface LigneProposee {
 
 export interface PropositionAvoir {
   facture: {
-    id: number; numero: string; statut: string; client_id: number; date_facture: string;
+    id: number; numero: string; statut: string; client_id: number; date_facture: string; devise?: string | null;
     montant_ht: string; montant_tva: string; montant_ttc: string; montant_paye: string; montant_credite: string; reste_a_payer: string;
     client: { id: number; code: string; raison_sociale: string } | null;
   };

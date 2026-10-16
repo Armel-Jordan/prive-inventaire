@@ -23,6 +23,9 @@ use Illuminate\Support\Collection;
  *
  * Acomptes : reçus, ils sont au crédit du client ; appliqués, ce sont des paiements de la facture (qui en réduisent
  * le reste dû) mais pas un nouveau mouvement du compte ; ce qui en reste (ni appliqué ni remboursé) est dû au client.
+ *
+ * Devises : tous les montants sont dans la devise de l'entreprise, chacun au taux de son document (une facture en
+ * USD, ses paiements, escomptes et notes de crédit au taux de la facture ; un acompte au sien).
  */
 class ComptesClients
 {
@@ -85,36 +88,39 @@ class ComptesClients
     public function releve(Client $client, string $du, string $au): array
     {
         $factures = Facture::where('client_id', $client->id)->whereIn('statut', self::STATUTS)
-            ->whereDate('date_facture', '<=', $au)->get(['id', 'numero', 'date_facture', 'date_echeance', 'montant_ttc']);
+            ->whereDate('date_facture', '<=', $au)->get(['id', 'numero', 'date_facture', 'date_echeance', 'montant_ttc', 'devise', 'taux_change']);
+        $taux = $factures->mapWithKeys(fn ($f) => [$f->id => $this->taux($f->taux_change)]);
         // Les paiements faits avec un acompte ne sont pas de nouveaux mouvements : l'acompte est déjà au crédit.
         $paiements = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereNull('acompte_id')->whereDate('date_paiement', '<=', $au)
             ->get(['facture_id', 'date_paiement', 'montant', 'escompte', 'mode_paiement', 'reference']);
         $avoirs = Avoir::with('facture:id,numero')->where('client_id', $client->id)->whereIn('statut', Avoir::EMISES)
-            ->whereDate('date_avoir', '<=', $au)->get(['id', 'numero', 'facture_id', 'date_avoir', 'montant_ttc']);
+            ->whereDate('date_avoir', '<=', $au)->get(['id', 'numero', 'facture_id', 'date_avoir', 'montant_ttc', 'taux_change']);
+        $tauxAvoirs = $avoirs->mapWithKeys(fn ($a) => [$a->id => $this->taux($a->taux_change)]);
         $remboursements = AvoirRemboursement::whereIn('avoir_id', $avoirs->pluck('id'))->whereDate('date_remboursement', '<=', $au)
             ->get(['avoir_id', 'date_remboursement', 'montant', 'mode', 'reference']);
         $acomptes = Acompte::where('client_id', $client->id)->whereDate('date_acompte', '<=', $au)
-            ->get(['id', 'date_acompte', 'montant', 'mode', 'reference']);
+            ->get(['id', 'date_acompte', 'montant', 'mode', 'reference', 'taux_change']);
+        $tauxAcomptes = $acomptes->mapWithKeys(fn ($a) => [$a->id => $this->taux($a->taux_change)]);
         $remboursementsAcomptes = AcompteRemboursement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_remboursement', '<=', $au)
             ->get(['acompte_id', 'date_remboursement', 'montant', 'mode', 'reference']);
         $numeros = $factures->pluck('numero', 'id');
         $numerosAvoirs = $avoirs->pluck('numero', 'id');
 
         $tous = $factures->map(fn ($f) => ['date' => $f->date_facture->toDateString(), 'type' => 'facture', 'piece' => $f->numero,
-            'libelle' => 'Facture '.$f->numero, 'debit' => round((float) $f->montant_ttc, 2), 'credit' => 0.0])
+            'libelle' => 'Facture '.$f->numero.$this->enDevise($f->devise, $f->montant_ttc), 'debit' => round((float) $f->montant_ttc * $taux[$f->id], 2), 'credit' => 0.0])
             ->concat($avoirs->map(fn ($a) => ['date' => $a->date_avoir->toDateString(), 'type' => 'avoir', 'piece' => $a->numero,
-                'libelle' => 'Note de crédit '.$a->numero.($a->facture ? " (facture {$a->facture->numero})" : ''), 'debit' => 0.0, 'credit' => round((float) $a->montant_ttc, 2)]))
+                'libelle' => 'Note de crédit '.$a->numero.($a->facture ? " (facture {$a->facture->numero})" : ''), 'debit' => 0.0, 'credit' => round((float) $a->montant_ttc * $tauxAvoirs[$a->id], 2)]))
             ->concat($paiements->map(fn ($p) => ['date' => $p->date_paiement->toDateString(), 'type' => 'paiement', 'piece' => $numeros[$p->facture_id] ?? null,
-                'libelle' => trim('Paiement '.$this->mode($p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant, 2)]))
+                'libelle' => trim('Paiement '.$this->mode($p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant * ($taux[$p->facture_id] ?? 1.0), 2)]))
             ->concat($remboursements->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $numerosAvoirs[$r->avoir_id] ?? null,
-                'libelle' => trim('Remboursement '.$this->mode($r->mode).($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]))
+                'libelle' => trim('Remboursement '.$this->mode($r->mode).($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant * ($tauxAvoirs[$r->avoir_id] ?? 1.0), 2), 'credit' => 0.0]))
             // Escompte accordé avec un paiement : au crédit, comme le paiement qui l'accompagne.
             ->concat($paiements->filter(fn ($p) => (float) $p->escompte > 0)->map(fn ($p) => ['date' => $p->date_paiement->toDateString(), 'type' => 'escompte', 'piece' => $numeros[$p->facture_id] ?? null,
-                'libelle' => 'Escompte', 'debit' => 0.0, 'credit' => round((float) $p->escompte, 2)])->values())
+                'libelle' => 'Escompte', 'debit' => 0.0, 'credit' => round((float) $p->escompte * ($taux[$p->facture_id] ?? 1.0), 2)])->values())
             ->concat($acomptes->map(fn ($a) => ['date' => $a->date_acompte->toDateString(), 'type' => 'acompte', 'piece' => $a->reference,
-                'libelle' => trim('Acompte '.$this->mode($a->mode)), 'debit' => 0.0, 'credit' => round((float) $a->montant, 2)]))
+                'libelle' => trim('Acompte '.$this->mode($a->mode)), 'debit' => 0.0, 'credit' => round((float) $a->montant * $tauxAcomptes[$a->id], 2)]))
             ->concat($remboursementsAcomptes->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $r->reference,
-                'libelle' => trim("Remboursement d'acompte ".$this->mode($r->mode)), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]));
+                'libelle' => trim("Remboursement d'acompte ".$this->mode($r->mode)), 'debit' => round((float) $r->montant * ($tauxAcomptes[$r->acompte_id] ?? 1.0), 2), 'credit' => 0.0]));
 
         $avant = $tous->filter(fn (array $m) => $m['date'] < $du);
         $ouverture = round((float) $avant->sum('debit') - (float) $avant->sum('credit'), 2);
@@ -158,7 +164,7 @@ class ComptesClients
             ->whereDate('date_facture', '<=', $date)
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
             ->orderBy('date_facture')->orderBy('id')
-            ->get(['id', 'numero', 'client_id', 'date_facture', 'date_echeance', 'montant_ttc']);
+            ->get(['id', 'numero', 'client_id', 'date_facture', 'date_echeance', 'montant_ttc', 'devise', 'taux_change']);
         // Paiements et escomptes accordés avec eux.
         $payes = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereDate('date_paiement', '<=', $date)
             ->groupBy('facture_id')->selectRaw('facture_id, SUM(montant + escompte) AS total')->pluck('total', 'facture_id');
@@ -167,7 +173,10 @@ class ComptesClients
         $jour = Carbon::parse($date)->startOfDay();
 
         return $factures->map(function (Facture $f) use ($payes, $credites, $jour) {
-            $reste = round((float) $f->montant_ttc - (float) ($payes[$f->id] ?? 0) - (float) ($credites[$f->id] ?? 0), 2);
+            // Reste dans la devise de la facture, puis dans celle de l'entreprise (au taux de la facture).
+            $resteDevise = round((float) $f->montant_ttc - (float) ($payes[$f->id] ?? 0) - (float) ($credites[$f->id] ?? 0), 2);
+            $taux = $this->taux($f->taux_change);
+            $reste = round($resteDevise * $taux, 2);
             $echeance = ($f->date_echeance ?? $f->date_facture)->copy()->startOfDay();
             $retard = max(0, (int) $echeance->diffInDays($jour, false));
 
@@ -179,8 +188,11 @@ class ComptesClients
                 'client' => $f->client?->raison_sociale,
                 'date_facture' => $f->date_facture->toDateString(),
                 'date_echeance' => $f->date_echeance?->toDateString(),
-                'montant' => round((float) $f->montant_ttc, 2),
+                'montant' => round((float) $f->montant_ttc * $taux, 2),
                 'reste' => $reste,
+                // Devise de la facture (null : celle de l'entreprise) et reste dans cette devise.
+                'devise' => $f->devise,
+                'reste_devise' => $resteDevise,
                 'retard' => $retard,
                 'tranche' => match (true) {
                     $retard === 0 => 'non_echu',
@@ -205,7 +217,7 @@ class ComptesClients
             ->whereDate('date_avoir', '<=', $date)
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
             ->orderBy('date_avoir')->orderBy('id')
-            ->get(['id', 'numero', 'client_id', 'date_avoir', 'montant_ttc']);
+            ->get(['id', 'numero', 'client_id', 'date_avoir', 'montant_ttc', 'taux_change']);
         $imputes = AvoirImputation::whereIn('avoir_id', $avoirs->pluck('id'))->whereDate('date_imputation', '<=', $date)
             ->groupBy('avoir_id')->selectRaw('avoir_id, SUM(montant) AS total')->pluck('total', 'avoir_id');
         $rembourses = AvoirRemboursement::whereIn('avoir_id', $avoirs->pluck('id'))->whereDate('date_remboursement', '<=', $date)
@@ -218,14 +230,26 @@ class ComptesClients
             'client_code' => $a->client?->code,
             'client' => $a->client?->raison_sociale,
             'date_avoir' => $a->date_avoir->toDateString(),
-            'montant' => round((float) $a->montant_ttc, 2),
-            'disponible' => round((float) $a->montant_ttc - (float) ($imputes[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0), 2),
+            'montant' => round((float) $a->montant_ttc * $this->taux($a->taux_change), 2),
+            'disponible' => round(((float) $a->montant_ttc - (float) ($imputes[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0)) * $this->taux($a->taux_change), 2),
         ])->filter(fn (array $c) => $c['disponible'] > 0.004)->values();
     }
 
     private function mode(?string $mode): string
     {
         return self::MODES[$mode] ?? (string) $mode;
+    }
+
+    /** Taux d'un document (1 sans devise étrangère). */
+    private function taux(mixed $taux): float
+    {
+        return (float) $taux > 0 ? (float) $taux : 1.0;
+    }
+
+    /** Montant d'origine d'un document en devise étrangère, ajouté au libellé (« (1 200,00 USD) »). */
+    private function enDevise(?string $devise, mixed $montant): string
+    {
+        return $devise ? ' ('.number_format((float) $montant, 2, ',', ' ')." {$devise})" : '';
     }
 
     /**
@@ -239,7 +263,7 @@ class ComptesClients
         $acomptes = Acompte::with('client:id,code,raison_sociale')->whereDate('date_acompte', '<=', $date)
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
             ->orderBy('date_acompte')->orderBy('id')
-            ->get(['id', 'client_id', 'date_acompte', 'mode', 'reference', 'montant']);
+            ->get(['id', 'client_id', 'date_acompte', 'mode', 'reference', 'montant', 'taux_change']);
         $appliques = FacturePaiement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_paiement', '<=', $date)
             ->groupBy('acompte_id')->selectRaw('acompte_id, SUM(montant) AS total')->pluck('total', 'acompte_id');
         $rembourses = AcompteRemboursement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_remboursement', '<=', $date)
@@ -253,8 +277,8 @@ class ComptesClients
             'date_acompte' => $a->date_acompte->toDateString(),
             'mode' => $a->mode,
             'reference' => $a->reference,
-            'montant' => round((float) $a->montant, 2),
-            'disponible' => round((float) $a->montant - (float) ($appliques[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0), 2),
+            'montant' => round((float) $a->montant * $this->taux($a->taux_change), 2),
+            'disponible' => round(((float) $a->montant - (float) ($appliques[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0)) * $this->taux($a->taux_change), 2),
         ])->filter(fn (array $c) => $c['disponible'] > 0.004)->values();
     }
 }

@@ -27,7 +27,8 @@ import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
-import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import ChampDevise from '@/components/ChampDevise';
 import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
 import { appliquerAcompte, getAcomptes, type Acompte } from '@/services/acomptes';
 import Toasts from '@/components/Toasts';
@@ -38,8 +39,10 @@ import { useLanguage } from '@/i18n/useLanguage';
 export default function FacturesPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut, canCreate } = usePermissions();
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
+  // Montants dans la devise de chaque facture (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
+  const deviseEntreprise = useCodeDevise();
   const { t } = useLanguage();
   const { toasts, toast, dismiss } = useToast();
   // Facture en cours de crédit (note de crédit).
@@ -69,6 +72,9 @@ export default function FacturesPage() {
     date_echeance: '',
     notes: '',
     condition_paiement_id: '',
+    // Devise de la facture (vide : celle de l'entreprise) et son taux ; par défaut, celle du client.
+    devise: '',
+    taux: '1',
   });
   // Conditions de paiement du référentiel ; escompte possible pour le paiement en cours.
   const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
@@ -161,11 +167,14 @@ export default function FacturesPage() {
         date_facture: createForm.date_facture,
         date_echeance: createForm.date_echeance || undefined,
         condition_paiement_id: createForm.condition_paiement_id ? Number(createForm.condition_paiement_id) : undefined,
+        // Toujours envoyée : la devise de l'entreprise choisie pour un client étranger l'emporte sur la sienne.
+        devise: createForm.devise || deviseEntreprise,
+        taux_change: createForm.devise ? Number(createForm.taux) : undefined,
         notes: createForm.notes || undefined,
         lignes: createLignes,
       });
       setShowCreateModal(false);
-      setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '' });
+      setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
       setCreateLignes([]);
       loadFactures();
     } catch (error) {
@@ -182,7 +191,9 @@ export default function FacturesPage() {
     if (peut('acomptes', 'appliquer')) {
       // Un acompte réservé à une autre commande n'est pas proposé (il appartient à cette commande).
       getAcomptes({ client_id: facture.client_id, disponibilite: 'avec_solde', per_page: 20 })
-        .then(r => setAcomptesClient((r.data ?? []).filter(a => !a.commande_id || a.commande_id === facture.commande_id)), () => {});
+        .then(r => setAcomptesClient((r.data ?? []).filter(a => (!a.commande_id || a.commande_id === facture.commande_id)
+          // Seulement dans la devise de la facture.
+          && (a.devise ?? null) === (facture.devise ?? null))), () => {});
     }
   };
 
@@ -307,11 +318,11 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(facture.date_facture)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {montant(facture.montant_ttc)}
+                    {montant(facture.montant_ttc, facture.devise)}
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     <span className={Number(facture.reste_a_payer) > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                      {montant(Number(facture.reste_a_payer ?? 0))}
+                      {montant(Number(facture.reste_a_payer ?? 0), facture.devise)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(facture.statut)}</td>
@@ -444,8 +455,8 @@ export default function FacturesPage() {
                         <tr key={idx} className="dark:text-gray-300">
                           <td className="py-1">{ligne.produit?.description ?? `Produit #${ligne.produit_id}`}</td>
                           <td className="py-1 text-right">{ligne.quantite}</td>
-                          <td className="py-1 text-right">{montant(Number(ligne.prix_unitaire_ht ?? 0))}</td>
-                          <td className="py-1 text-right">{montant(Number(ligne.montant_ht ?? 0))}</td>
+                          <td className="py-1 text-right">{montant(Number(ligne.prix_unitaire_ht ?? 0), selectedFacture?.devise)}</td>
+                          <td className="py-1 text-right">{montant(Number(ligne.montant_ht ?? 0), selectedFacture?.devise)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -456,41 +467,41 @@ export default function FacturesPage() {
               <div className="border-t pt-4 dark:border-gray-700">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total HT:</span>
-                  <span className="dark:text-white">{montant(selectedFacture.montant_ht)}</span>
+                  <span className="dark:text-white">{montant(selectedFacture.montant_ht, selectedFacture?.devise)}</span>
                 </div>
                 {/* Détail par taxe quand la facture utilise des groupes de taxes, sinon la TVA globale. */}
                 {selectedFacture.recapitulatif_taxes && selectedFacture.recapitulatif_taxes.length > 0 ? (
-                  <RecapitulatifTaxes recapitulatif={selectedFacture.recapitulatif_taxes} />
+                  <RecapitulatifTaxes recapitulatif={selectedFacture.recapitulatif_taxes} devise={selectedFacture.devise} />
                 ) : (
                   <div className="flex justify-between">
                     <span className="text-gray-500">TVA:</span>
-                    <span className="dark:text-white">{montant(selectedFacture.montant_tva)}</span>
+                    <span className="dark:text-white">{montant(selectedFacture.montant_tva, selectedFacture?.devise)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg">
                   <span className="dark:text-white">Total TTC:</span>
-                  <span className="dark:text-white">{montant(selectedFacture.montant_ttc)}</span>
+                  <span className="dark:text-white">{montant(selectedFacture.montant_ttc, selectedFacture?.devise)}</span>
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-gray-500">Payé:</span>
-                  <span className="text-green-600">{montant(Number(selectedFacture.montant_paye ?? 0))}</span>
+                  <span className="text-green-600">{montant(Number(selectedFacture.montant_paye ?? 0), selectedFacture?.devise)}</span>
                 </div>
                 {Number(selectedFacture.montant_escompte ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Escompte:</span>
-                    <span className="text-green-600">{montant(Number(selectedFacture.montant_escompte))}</span>
+                    <span className="text-green-600">{montant(Number(selectedFacture.montant_escompte), selectedFacture?.devise)}</span>
                   </div>
                 )}
                 {Number(selectedFacture.montant_credite ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Crédité:</span>
-                    <span className="text-indigo-600">{montant(Number(selectedFacture.montant_credite))}</span>
+                    <span className="text-indigo-600">{montant(Number(selectedFacture.montant_credite), selectedFacture?.devise)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-medium">
                   <span className="text-gray-500">Reste à payer:</span>
                   <span className={Number(selectedFacture.reste_a_payer) > 0 ? 'text-red-600' : 'text-green-600'}>
-                    {montant(Number(selectedFacture.reste_a_payer ?? 0))}
+                    {montant(Number(selectedFacture.reste_a_payer ?? 0), selectedFacture?.devise)}
                   </span>
                 </div>
               </div>
@@ -505,7 +516,7 @@ export default function FacturesPage() {
                           {avoir.numero ?? t.creditNotes.draft}
                         </Link>
                         <span className="text-gray-500">{formatDateDocument(avoir.date_avoir)} · {t.creditNotes.statuses[avoir.statut] ?? avoir.statut}</span>
-                        <span className="dark:text-white">{montant(avoir.montant_ttc)}</span>
+                        <span className="dark:text-white">{montant(avoir.montant_ttc, selectedFacture?.devise)}</span>
                       </li>
                     ))}
                   </ul>
@@ -519,7 +530,7 @@ export default function FacturesPage() {
                     {selectedFacture.echeances.map((ech, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
                         <span className="dark:text-gray-300">{formatDateDocument(ech.date_echeance)}</span>
-                        <span className="dark:text-white">{montant(Number(ech.montant ?? 0))}</span>
+                        <span className="dark:text-white">{montant(Number(ech.montant ?? 0), selectedFacture?.devise)}</span>
                         <span className={ech.statut === 'payee' ? 'text-green-600' : 'text-yellow-600'}>
                           {ech.statut === 'payee' ? 'Payée' : ech.statut === 'partiellement_payee' ? 'Partiel' : 'En attente'}
                         </span>
@@ -556,7 +567,12 @@ export default function FacturesPage() {
                   <select
                     required
                     value={createForm.client_id}
-                    onChange={(e) => setCreateForm({ ...createForm, client_id: e.target.value })}
+                    onChange={(e) => {
+                      // Devise du client proposée, avec son taux.
+                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
+                      setCreateForm({ ...createForm, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
+                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
+                    }}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="">Sélectionner...</option>
@@ -576,6 +592,8 @@ export default function FacturesPage() {
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   <span className="text-xs text-gray-500">Vide : selon la condition de paiement.</span>
                 </div>
+                <ChampDevise className="col-span-2" valeur={{ devise: createForm.devise, taux: createForm.taux }}
+                  onChange={v => setCreateForm(f => ({ ...f, devise: v.devise, taux: v.taux }))} />
                 <div>
                   <label className="block text-sm font-medium mb-1 dark:text-gray-300">Condition de paiement</label>
                   <select value={createForm.condition_paiement_id}
@@ -610,9 +628,11 @@ export default function FacturesPage() {
                           onChange={(e) => {
                             const n = [...createLignes];
                             n[idx].produit_id = parseInt(e.target.value);
-                            // Prix du produit proposé tant qu'aucun prix n'a été saisi.
+                            // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une facture en devise étrangère).
                             const produit = produits.find(p => p.id === n[idx].produit_id);
-                            if (produit && n[idx].prix_unitaire_ht === 0) n[idx].prix_unitaire_ht = Number(produit.prix_unitaire) || 0;
+                            const taux = Number(createForm.taux);
+                            const prix = Number(produit?.prix_unitaire) || 0;
+                            if (produit && n[idx].prix_unitaire_ht === 0) n[idx].prix_unitaire_ht = createForm.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
                             setCreateLignes(n);
                           }}
                           aria-label="Produit"
@@ -627,14 +647,14 @@ export default function FacturesPage() {
                           onChange={(e) => { const n = [...createLignes]; n[idx].prix_unitaire_ht = parseFloat(e.target.value) || 0; setCreateLignes(n); }}
                           className="w-24 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Prix HT" />
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
-                          {montant((l.quantite * l.prix_unitaire_ht))}
+                          {montant((l.quantite * l.prix_unitaire_ht), createForm.devise || null)}
                         </span>
                         <button type="button" onClick={() => setCreateLignes(createLignes.filter((_, i) => i !== idx))}
                           className="text-red-500 hover:text-red-700"><X size={16} /></button>
                       </div>
                     ))}
                     <div className="text-right font-medium dark:text-white">
-                      Total HT: {montant(createLignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0))}
+                      Total HT: {montant(createLignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0), createForm.devise || null)}
                     </div>
                   </div>
                 )}
@@ -672,7 +692,7 @@ export default function FacturesPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Enregistrer un paiement</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Facture {selectedFacture.numero} - Reste à payer: {montant(Number(selectedFacture.reste_a_payer ?? 0))}
+              Facture {selectedFacture.numero} - Reste à payer: {montant(Number(selectedFacture.reste_a_payer ?? 0), selectedFacture?.devise)}
             </p>
             {acomptesClient.length > 0 && (
               <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/60 dark:border-indigo-800 dark:bg-indigo-900/20 p-3">
@@ -685,7 +705,7 @@ export default function FacturesPage() {
                       </span>
                       <button type="button" onClick={() => { void appliquerDepuisPaiement(acompte); }}
                         className="px-2 py-1 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700 whitespace-nowrap">
-                        {t.deposits.applyToInvoice.replace('{montant}', montant(Math.min(acompte.disponible, Number(selectedFacture.reste_a_payer))))}
+                        {t.deposits.applyToInvoice.replace('{montant}', montant(Math.min(acompte.disponible, Number(selectedFacture.reste_a_payer)), selectedFacture.devise))}
                       </button>
                     </li>
                   ))}
@@ -727,7 +747,7 @@ export default function FacturesPage() {
                     }}
                   />
                   <span>
-                    Escompte {escompte.condition} : {escompte.pourcentage} %, soit {montant(escompte.escompte)} ; à payer {montant(escompte.a_payer)}
+                    Escompte {escompte.condition} : {escompte.pourcentage} %, soit {montant(escompte.escompte, selectedFacture?.devise)} ; à payer {montant(escompte.a_payer, selectedFacture?.devise)}
                     <span className="block text-xs">
                       {escompte.applicable ? `Paiement au plus tard le ${formatDateDocument(escompte.date_limite)}, réglant tout le reste.` : `Délai dépassé (jusqu'au ${formatDateDocument(escompte.date_limite)}).`}
                     </span>

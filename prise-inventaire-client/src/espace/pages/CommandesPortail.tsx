@@ -49,7 +49,7 @@ export default function CommandesPortail() {
                   </div>
                   <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-4">
                     <BadgeCommande statut={commande.statut} />
-                    <span className="text-sm font-medium whitespace-nowrap sm:w-32 sm:text-right">{montant(commande.montant_ttc, language, devise)}</span>
+                    <span className="text-sm font-medium whitespace-nowrap sm:w-32 sm:text-right">{montant(commande.montant_ttc, language, commande.devise ?? devise)}</span>
                   </div>
                   <ChevronRight size={18} className="text-gray-400 shrink-0" />
                 </Link>

@@ -39,7 +39,7 @@ class FinanceDashboardService
     private function chiffreAffaires(int $tenantId, Carbon $dateFrom, Carbon $dateTo): float
     {
         $r = DB::selectOne(
-            'SELECT COALESCE(SUM(montant_ttc), 0) AS ca
+            'SELECT COALESCE(SUM(montant_ttc * taux_change), 0) AS ca
              FROM factures
              WHERE tenant_id = ?
                AND statut IN (\'emise\', \'partiellement_payee\', \'payee\')
@@ -57,7 +57,7 @@ class FinanceDashboardService
     private function encaisse(int $tenantId, Carbon $dateFrom, Carbon $dateTo): float
     {
         $r = DB::selectOne(
-            'SELECT COALESCE(SUM(fp.montant), 0) AS total_encaisse
+            'SELECT COALESCE(SUM(fp.montant * f.taux_change), 0) AS total_encaisse
              FROM facture_paiements fp
              INNER JOIN factures f ON f.id = fp.facture_id
              WHERE f.tenant_id = ?
@@ -75,7 +75,7 @@ class FinanceDashboardService
     private function montantImpaye(int $tenantId, Carbon $dateFrom, Carbon $dateTo): float
     {
         $r = DB::selectOne(
-            'SELECT COALESCE(SUM(reste_a_payer), 0) AS total_impaye
+            'SELECT COALESCE(SUM(reste_a_payer * taux_change), 0) AS total_impaye
              FROM factures
              WHERE tenant_id = ?
                AND statut IN (\'emise\', \'partiellement_payee\')',
@@ -91,7 +91,7 @@ class FinanceDashboardService
     private function depensesAchats(int $tenantId, Carbon $dateFrom, Carbon $dateTo): float
     {
         $r = DB::selectOne(
-            'SELECT COALESCE(SUM(montant_total), 0) AS total_depenses
+            'SELECT COALESCE(SUM(montant_total * COALESCE(NULLIF(taux_change, 0), 1)), 0) AS total_depenses
              FROM com_four_entete
              WHERE tenant_id = ?
                AND statut != \'annulee\'

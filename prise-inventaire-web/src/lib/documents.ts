@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getParametres } from '@/services/api';
+import { getParametres, getTauxChange } from '@/services/api';
 import { getAuthHeaders } from '@/services/http';
+import { useLanguage } from '@/i18n/useLanguage';
 
 /**
  * Affichage des documents de vente et d'achat : montants dans la devise de l'entreprise (et non en euros
@@ -97,4 +98,27 @@ export function useDevise(): string {
 /** Code ISO de la devise de l'entreprise (« XAF », « CAD »), valeur par défaut des devises à saisir. */
 export function useCodeDevise(): string {
   return useDeviseEntreprise().code;
+}
+
+/**
+ * Montant d'un document de vente : dans sa devise s'il en a une (client étranger : « 120,00 $US »), sinon dans
+ * celle de l'entreprise.
+ */
+export function useMontantDocument(): (valeur: number | string | null | undefined, devise?: string | null) => string {
+  const symbole = useDevise();
+  const { language } = useLanguage();
+  return (valeur, devise) => (devise ? formatMontantIso(valeur, devise, language) : formatMontant(valeur, symbole, language));
+}
+
+/**
+ * Taux proposé pour une devise (valeur d'une unité dans la devise de l'entreprise) : 1 pour la devise de
+ * l'entreprise, sinon celui du référentiel ou le cours du jour ; vide s'il est introuvable (à saisir).
+ */
+export async function tauxPropose(devise: string | null | undefined, reference: string): Promise<string> {
+  if (!devise || devise === reference) return '1';
+  try {
+    return String((await getTauxChange(devise, reference)).taux);
+  } catch {
+    return '';
+  }
 }

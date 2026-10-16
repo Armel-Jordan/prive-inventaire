@@ -4,7 +4,8 @@ import { CircleDollarSign, Eye, FileClock, Pencil, Plus, Send, Trash2, X } from 
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import ChampDevise from '@/components/ChampDevise';
 import { getClientsActifs, getCommandesClient, type Client, type ComClientEntete, type PageResultats } from '@/services/api';
 import {
   creerDemandeAcompte, encaisserDemandeAcompte, envoyerDemandeAcompte, getDemandeAcompte, getDemandesAcompte, getDevisDuClient,
@@ -35,8 +36,9 @@ const COMMANDES_OUVERTES = ['brouillon', 'en_attente', 'acceptee', 'facturee'];
 export default function DemandesAcomptePage() {
   const { t, language } = useLanguage();
   const tr = t.depositRequests;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   const [parametres] = useSearchParams();
@@ -150,7 +152,7 @@ export default function DemandesAcomptePage() {
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{formatDateDocument(demande.date_demande, language)}</td>
                 <td className="px-3 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">{[demande.devis?.numero, demande.commande?.numero].filter(Boolean).join(' · ') || '—'}</td>
-                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(demande.montant)}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(demande.montant, demande.devise)}</td>
                 <td className="px-3 py-2 text-center">{badge(demande.etat)}</td>
                 <td className="px-3 py-2">
                   <div className="flex justify-center gap-1">
@@ -204,7 +206,7 @@ export default function DemandesAcomptePage() {
             </div>
             <p className="whitespace-pre-line text-gray-800 dark:text-gray-200">{detail.description}</p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <dt className="text-gray-500">{tr.amount}</dt><dd className="text-right font-semibold text-gray-900 dark:text-white">{montant(detail.montant)}</dd>
+              <dt className="text-gray-500">{tr.amount}</dt><dd className="text-right font-semibold text-gray-900 dark:text-white">{montant(detail.montant, detail.devise)}</dd>
               {detail.devis && <><dt className="text-gray-500">{tr.quote}</dt><dd className="text-right font-mono text-gray-900 dark:text-white">{detail.devis.numero}</dd></>}
               {detail.commande && <><dt className="text-gray-500">{tr.order}</dt><dd className="text-right font-mono text-gray-900 dark:text-white">{detail.commande.numero}</dd></>}
               {detail.acompte && (
@@ -212,7 +214,7 @@ export default function DemandesAcomptePage() {
                   <dt className="text-gray-500">{tr.deposit}</dt>
                   <dd className="text-right text-gray-900 dark:text-white">{formatDateDocument(detail.acompte.date_acompte ?? null, language)} · {t.deposits.modes[detail.acompte.mode ?? ''] ?? detail.acompte.mode}</dd>
                   <dt className="text-gray-500">{t.deposits.applied}</dt>
-                  <dd className="text-right text-gray-900 dark:text-white">{montant(detail.acompte.montant_applique)}</dd>
+                  <dd className="text-right text-gray-900 dark:text-white">{montant(detail.acompte.montant_applique, detail.devise)}</dd>
                 </>
               )}
             </dl>
@@ -221,7 +223,7 @@ export default function DemandesAcomptePage() {
                 {detail.acompte!.applications!.map(a => (
                   <li key={a.id} className="flex justify-between gap-2 py-1">
                     <span className="text-gray-700 dark:text-gray-300">{formatDateDocument(a.date_paiement, language)} · <span className="font-mono">{a.facture?.numero}</span></span>
-                    <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(a.montant)}</span>
+                    <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(a.montant, detail.devise)}</span>
                   </li>
                 ))}
               </ul>
@@ -247,6 +249,7 @@ export default function DemandesAcomptePage() {
 function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAcompte | null; onClose: () => void; onEnregistre: () => void }) {
   const { t } = useLanguage();
   const tr = t.depositRequests;
+  const deviseEntreprise = useCodeDevise();
   const [clients, setClients] = useState<Client[]>([]);
   const [devis, setDevis] = useState<{ id: number; numero: string }[]>([]);
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
@@ -257,6 +260,9 @@ function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAc
     montant: demande ? String(Number(demande.montant)) : '',
     devis_id: String(demande?.devis_id ?? ''),
     commande_id: String(demande?.commande_id ?? ''),
+    // Devise de la demande (vide : celle de l'entreprise) ; par défaut, celle du client.
+    devise: demande?.devise ?? '',
+    taux: String(demande?.taux_change ?? 1),
   });
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
@@ -288,9 +294,11 @@ function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAc
       devis_id: saisie.devis_id ? Number(saisie.devis_id) : null,
       commande_id: saisie.commande_id ? Number(saisie.commande_id) : null,
     };
+    // À la création : devise toujours envoyée (celle de l'entreprise l'emporte alors sur celle du client).
+    const devise = demande ? {} : { devise: saisie.devise || deviseEntreprise, taux_change: saisie.devise ? Number(saisie.taux) : undefined };
     try {
       if (demande) await modifierDemandeAcompte(demande.id, donnees);
-      else await creerDemandeAcompte(donnees);
+      else await creerDemandeAcompte({ ...donnees, ...devise });
       onEnregistre();
     } catch (err) {
       setErreur(messageErreur(err, tr.error));
@@ -307,7 +315,12 @@ function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAc
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={tr.close}><X size={18} /></button>
         </div>
         <label className="block text-xs text-gray-500 dark:text-gray-400">{tr.customer}
-          <select required value={saisie.client_id} onChange={e => setSaisie({ ...saisie, client_id: e.target.value, devis_id: '', commande_id: '' })} className={classeChamp}>
+          <select required value={saisie.client_id} onChange={e => {
+            // Devise du client proposée, avec son taux.
+            const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
+            setSaisie({ ...saisie, client_id: e.target.value, devis_id: '', commande_id: '', devise: deviseClient, taux: deviseClient ? '' : '1' });
+            if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setSaisie(s => (s.devise === deviseClient ? { ...s, taux } : s)));
+          }} className={classeChamp}>
             <option value="">{tr.chooseCustomer}</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.code} · {c.raison_sociale}</option>)}
           </select>
@@ -320,6 +333,7 @@ function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAc
             <input type="number" required min="0.01" step="0.01" value={saisie.montant} onChange={e => setSaisie({ ...saisie, montant: e.target.value })} className={classeChamp} />
           </label>
         </div>
+        {!demande && <ChampDevise valeur={{ devise: saisie.devise, taux: saisie.taux }} onChange={v => setSaisie(s => ({ ...s, devise: v.devise, taux: v.taux }))} />}
         <label className="block text-xs text-gray-500 dark:text-gray-400">{tr.description}
           <textarea required rows={4} maxLength={5000} value={saisie.description} placeholder={tr.descriptionHelp}
             onChange={e => setSaisie({ ...saisie, description: e.target.value })} className={classeChamp} />
@@ -352,9 +366,9 @@ function EditeurDemande({ demande, onClose, onEnregistre }: { demande: DemandeAc
 
 /** Dépôt reçu : date, mode et référence ; l'acompte est enregistré au dossier du client. */
 function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAcompte; onClose: () => void; onEncaisse: () => void }) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const tr = t.depositRequests;
-  const devise = useDevise();
+  const montantDoc = useMontantDocument();
   const [saisie, setSaisie] = useState({ date: aujourdhui(), mode: 'virement' as ModeAcompte, reference: '' });
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
@@ -382,7 +396,7 @@ function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAc
           <h2 id="encaisser-titre" className="text-lg font-bold text-gray-900 dark:text-white">{tr.payTitle.replace('{numero}', demande.numero)}</h2>
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={tr.close}><X size={18} /></button>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">{tr.payHelp.replace('{montant}', formatMontant(demande.montant, devise, language)).replace('{commande}', commande)}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">{tr.payHelp.replace('{montant}', montantDoc(demande.montant, demande.devise)).replace('{commande}', commande)}</p>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs text-gray-500 dark:text-gray-400">{tr.date}
             <input type="date" required value={saisie.date} min={dateSaisie(demande.date_demande)} onChange={e => setSaisie({ ...saisie, date: e.target.value })} className={classeChamp} />

@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { creerAvoir, emettreAvoir, getPropositionAvoir, modifierAvoir, type Avoir, type LigneProposee, type PropositionAvoir } from '@/services/avoirs';
 
 interface Saisie { quantite: string; prix: string }
@@ -27,10 +27,11 @@ export default function EditeurNoteCredit({ factureId, brouillon, onClose, onEnr
 }) {
   const { t, language } = useLanguage();
   const tc = t.creditNotes;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  const montantDoc = useMontantDocument();
   const { peut } = usePermissions();
   const [proposition, setProposition] = useState<PropositionAvoir | null>(null);
+  // Montants dans la devise de la facture créditée.
+  const montant = (v: number | string | null | undefined) => montantDoc(v, proposition?.facture.devise);
   const [saisies, setSaisies] = useState<Record<number, Saisie>>({});
   const [entete, setEntete] = useState({
     date_avoir: brouillon ? dateSaisie(brouillon.date_avoir) : aujourdhui(),

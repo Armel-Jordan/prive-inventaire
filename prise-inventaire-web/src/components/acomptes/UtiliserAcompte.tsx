@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { getFactures, type Facture } from '@/services/api';
 import { appliquerAcompte, MODES_ACOMPTE, rembourserAcompte, type Acompte, type ModeAcompte } from '@/services/acomptes';
 
@@ -20,8 +20,9 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
 }) {
   const { t, language } = useLanguage();
   const td = t.deposits;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  const montantDoc = useMontantDocument();
+  // Dans la devise de l'acompte (seules les factures de cette devise peuvent être payées avec).
+  const montant = (v: number | string | null | undefined) => montantDoc(v, acompte.devise);
   const disponible = Number(acompte.disponible);
   const [factures, setFactures] = useState<Facture[] | null>(mode === 'appliquer' ? null : []);
   const [factureId, setFactureId] = useState<number | null>(null);
@@ -34,7 +35,7 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
     let actif = true;
     getFactures({ client_id: acompte.client_id, statuts: 'emise,partiellement_payee', per_page: 50 }).then(r => {
       if (!actif) return;
-      const dues = (r.data ?? []).filter(f => Number(f.reste_a_payer) > 0);
+      const dues = (r.data ?? []).filter(f => Number(f.reste_a_payer) > 0 && (f.devise ?? null) === (acompte.devise ?? null));
       setFactures(dues);
       if (dues[0]) {
         setFactureId(dues[0].id);
@@ -42,7 +43,7 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
       }
     }, e => { if (actif) setErreur(messageErreur(e, td.error)); });
     return () => { actif = false; };
-  }, [acompte.client_id, mode, disponible, td.error]);
+  }, [acompte.client_id, acompte.devise, mode, disponible, td.error]);
 
   const choisirFacture = (id: number) => {
     setFactureId(id);

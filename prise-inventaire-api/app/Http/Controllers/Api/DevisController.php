@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\DevisLigne;
+use App\Services\DevisesVente;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -59,17 +61,20 @@ class DevisController extends Controller
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            ...DevisesVente::regles(),
         ]);
+        // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise.
+        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('devis', $tenantId);
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
         }
-        $devis = DB::transaction(function () use ($validated, $request, $tenantId) {
+        $devis = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('devis', $tenantId);
 
-            $devis = Devis::create([
+            $devis = Devis::create($devise + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
@@ -226,6 +231,9 @@ class DevisController extends Controller
             $commande = ComClientEntete::create([
                 'numero' => $numero,
                 'client_id' => $devis->client_id,
+                // La commande reste dans la devise du devis, à son taux.
+                'devise' => $devis->devise,
+                'taux_change' => $devis->taux_change ?? 1,
                 'date_commande' => now()->toDateString(),
                 'statut' => 'brouillon',
                 'montant_ht' => 0,

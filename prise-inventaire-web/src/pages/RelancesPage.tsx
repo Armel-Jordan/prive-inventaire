@@ -3,7 +3,7 @@ import { BellRing, History, PhoneCall, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import {
   getFacturesEnRetard, getRelancesFacture, MODES_RELANCE, noterRelance,
   type FactureEnRetard, type ListeRelances, type ModeRelance, type Relance,
@@ -27,8 +27,9 @@ const couleurRetard = (jours: number) => (jours > 90 ? 'bg-red-200 text-red-950'
 export default function RelancesPage() {
   const { t, language } = useLanguage();
   const tr = t.reminders;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   const [recherche, setRecherche] = useState('');
@@ -137,7 +138,7 @@ export default function RelancesPage() {
                 <td className="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">{f.numero}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{formatDateDocument(f.date_echeance ?? f.date_facture, language)}</td>
                 <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${couleurRetard(f.retard)}`}>{tr.daysLate.replace('{n}', String(f.retard))}</span></td>
-                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(f.reste_a_payer)}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(f.reste_a_payer, f.devise)}</td>
                 <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
                   {f.nb_relances > 0 && <span className="font-medium">{tr.count.replace('{n}', String(f.nb_relances))} · </span>}
                   <span className={f.nb_relances > 0 ? '' : 'text-gray-400'}>{derniere(f)}</span>

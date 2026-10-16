@@ -17,7 +17,7 @@ class Facture extends Model
         'tenant_id', 'numero', 'commande_id', 'client_id', 'facture_mere_id',
         'date_facture', 'date_echeance', 'condition_paiement_id', 'statut',
         'montant_ht', 'montant_tva', 'montant_ttc',
-        'montant_paye', 'montant_credite', 'montant_escompte', 'reste_a_payer', 'notes',
+        'montant_paye', 'montant_credite', 'montant_escompte', 'reste_a_payer', 'notes', 'devise', 'taux_change',
     ];
 
     protected $casts = [

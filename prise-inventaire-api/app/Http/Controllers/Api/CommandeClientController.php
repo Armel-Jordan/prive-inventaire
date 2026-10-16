@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
+use App\Services\DevisesVente;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -68,17 +70,20 @@ class CommandeClientController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            ...DevisesVente::regles(),
         ]);
+        // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise.
+        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Configuration numérotation manquante'], 422);
         }
-        $commande = DB::transaction(function () use ($validated, $request, $tenantId) {
+        $commande = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('commande', $tenantId);
 
-            $commande = ComClientEntete::create([
+            $commande = ComClientEntete::create($devise + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
@@ -194,7 +199,8 @@ class CommandeClientController extends Controller
         }
 
         $client = $commande->client;
-        if (! $client->peutCommander($commande->montant_ttc)) {
+        // Encours dans la devise de l'entreprise : la commande à son taux.
+        if (! $client->peutCommander((float) $commande->montant_ttc * (float) ($commande->taux_change ?: 1))) {
             return response()->json([
                 'message' => 'Dépassement de l\'encours maximum autorisé',
                 'encours_actuel' => $client->encours_actuel,

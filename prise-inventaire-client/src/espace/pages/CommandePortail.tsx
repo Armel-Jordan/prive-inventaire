@@ -132,17 +132,17 @@ export default function CommandePortail() {
                     {ligne.produit && <p className="text-xs text-gray-500">{ligne.produit.numero}</p>}
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">{ligne.quantite}{ligne.produit?.mesure ? ` ${ligne.produit.mesure}` : ''}</td>
-                  <td className="px-4 py-2 text-right whitespace-nowrap hidden sm:table-cell">{montant(ligne.prix_unitaire_ht, language, devise)}</td>
-                  <td className="px-4 py-2 text-right whitespace-nowrap">{montant(ligne.montant_ht, language, devise)}</td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap hidden sm:table-cell">{montant(ligne.prix_unitaire_ht, language, commande.devise ?? devise)}</td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">{montant(ligne.montant_ht, language, commande.devise ?? devise)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <dl className="border-t border-gray-100 px-4 py-3 text-sm space-y-1 sm:w-80 sm:ml-auto">
-          <div className="flex justify-between gap-4"><dt className="text-gray-600">{tp.subtotal}</dt><dd className="whitespace-nowrap">{montant(commande.montant_ht, language, devise)}</dd></div>
-          <div className="flex justify-between gap-4"><dt className="text-gray-600">{tp.taxes}</dt><dd className="whitespace-nowrap">{montant(commande.montant_tva, language, devise)}</dd></div>
-          <div className="flex justify-between gap-4 font-semibold text-base"><dt>{tp.total}</dt><dd className="whitespace-nowrap">{montant(commande.montant_ttc, language, devise)}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-gray-600">{tp.subtotal}</dt><dd className="whitespace-nowrap">{montant(commande.montant_ht, language, commande.devise ?? devise)}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-gray-600">{tp.taxes}</dt><dd className="whitespace-nowrap">{montant(commande.montant_tva, language, commande.devise ?? devise)}</dd></div>
+          <div className="flex justify-between gap-4 font-semibold text-base"><dt>{tp.total}</dt><dd className="whitespace-nowrap">{montant(commande.montant_ttc, language, commande.devise ?? devise)}</dd></div>
         </dl>
       </section>
 

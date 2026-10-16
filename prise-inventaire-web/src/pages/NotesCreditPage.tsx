@@ -4,7 +4,7 @@ import { Banknote, Eye, Pencil, Plus, ReceiptText, Send, Trash2, Undo2, X } from
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { formatDateDocument, formatMontant, useDevise, useMontantDocument } from '@/lib/documents';
 import { getFactures, type Facture, type PageResultats } from '@/services/api';
 import { emettreAvoir, getAvoir, getAvoirs, STATUTS_AVOIR, supprimerAvoir, type Avoir } from '@/services/avoirs';
 import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
@@ -32,8 +32,9 @@ const nomPdf = (avoir: Avoir) => `note-credit-${avoir.numero ?? `brouillon-${avo
 export default function NotesCreditPage() {
   const { t, language } = useLanguage();
   const tc = t.creditNotes;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   // Lien de la recherche globale : /notes-credit?recherche=AV-00001.
@@ -165,8 +166,8 @@ export default function NotesCreditPage() {
                   {avoir.motif && <span className="block text-xs text-gray-500 dark:text-gray-400">{avoir.motif}</span>}
                 </td>
                 <td className="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{formatDateDocument(avoir.date_avoir, language)}</td>
-                <td className="px-3 py-2 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{montant(avoir.montant_ttc)}</td>
-                <td className={`px-3 py-2 text-right whitespace-nowrap ${avoir.credit_disponible > 0 ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-400'}`}>{avoir.statut === 'brouillon' ? '—' : montant(avoir.credit_disponible)}</td>
+                <td className="px-3 py-2 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{montant(avoir.montant_ttc, avoir.devise)}</td>
+                <td className={`px-3 py-2 text-right whitespace-nowrap ${avoir.credit_disponible > 0 ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-400'}`}>{avoir.statut === 'brouillon' ? '—' : montant(avoir.credit_disponible, avoir.devise)}</td>
                 <td className="px-3 py-2 text-center">{statutBadge(avoir.statut)}</td>
                 <td className="px-3 py-2">
                   <div className="flex justify-center gap-1">
@@ -244,8 +245,9 @@ export default function NotesCreditPage() {
 function DetailNoteCredit({ avoir, onClose, actions }: { avoir: Avoir; onClose: () => void; actions: React.ReactNode }) {
   const { t, language } = useLanguage();
   const tc = t.creditNotes;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  const montantDoc = useMontantDocument();
+  // Dans la devise de la note (celle de sa facture).
+  const montant = (v: number | string | null | undefined) => montantDoc(v, avoir.devise);
   const ligneTotal = (libelle: string, valeur: number | string, classe = '') => (
     <div className={`flex justify-between gap-4 ${classe}`}><span className="text-gray-500 dark:text-gray-400">{libelle}</span><span className="text-gray-900 dark:text-white">{montant(valeur)}</span></div>
   );
@@ -305,7 +307,7 @@ function DetailNoteCredit({ avoir, onClose, actions }: { avoir: Avoir; onClose: 
         <div className="ml-auto max-w-sm space-y-1 text-sm">
           {ligneTotal(tc.totalHt, avoir.montant_ht)}
           {avoir.recapitulatif_taxes && avoir.recapitulatif_taxes.length > 0
-            ? <RecapitulatifTaxes recapitulatif={avoir.recapitulatif_taxes} />
+            ? <RecapitulatifTaxes recapitulatif={avoir.recapitulatif_taxes} devise={avoir.devise} />
             : ligneTotal(tc.taxes, avoir.montant_tva)}
           {ligneTotal(tc.amount, avoir.montant_ttc, 'font-semibold text-base')}
           {avoir.statut !== 'brouillon' && (

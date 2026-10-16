@@ -1122,6 +1122,8 @@ export interface Client {
   taux_remise_global: number;
   /** Condition de paiement (référentiel), reprise par les factures du client. */
   condition_paiement_id?: number | null;
+  /** Devise du client (null : celle de l'entreprise), reprise par ses documents de vente. */
+  devise?: string | null;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
   categorie_id?: number | null;
@@ -1155,6 +1157,9 @@ export interface ComClientEntete {
   date_commande: string;
   date_livraison_souhaitee?: string;
   statut: 'brouillon' | 'en_attente' | 'acceptee' | 'refusee' | 'facturee' | 'annulee';
+  /** Devise de la commande (null : celle de l'entreprise) et son taux. */
+  devise?: string | null;
+  taux_change?: number | string;
   remise_globale: number;
   montant_ht: number;
   montant_tva: number;
@@ -1197,6 +1202,9 @@ export interface Facture {
   montant_escompte?: number | string;
   condition_paiement_id?: number | null;
   condition_paiement?: { id: number; libelle: string; escompte_pourcentage: string | null; escompte_jours: number | null } | null;
+  /** Devise de la facture (null : celle de l'entreprise) et son taux vers la devise de l'entreprise. */
+  devise?: string | null;
+  taux_change?: number | string;
   reste_a_payer: number;
   lignes?: FactureLigne[];
   echeances?: FactureEcheance[];
@@ -1595,6 +1603,8 @@ export async function createFacture(data: {
   client_id: number;
   date_facture: string;
   condition_paiement_id?: number | null;
+  devise?: string;
+  taux_change?: number;
   date_echeance?: string;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
@@ -2264,6 +2274,9 @@ export interface DevisRecord {
   /** Commande issue de la conversion : un devis ne se convertit qu'une fois. */
   commande_id?: number | null;
   commande?: { id: number; numero: string } | null;
+  /** Devise du devis (null : celle de l'entreprise) et son taux. */
+  devise?: string | null;
+  taux_change?: number | string;
 }
 
 export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {
@@ -2279,6 +2292,8 @@ export async function createDevis(data: {
   date_devis: string;
   date_validite: string;
   notes?: string;
+  devise?: string;
+  taux_change?: number;
   lignes: { produit_id: number; quantite: number; prix_unitaire: number }[];
 }): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
