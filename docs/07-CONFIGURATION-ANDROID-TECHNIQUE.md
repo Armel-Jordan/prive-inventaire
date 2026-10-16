@@ -90,9 +90,9 @@ android {
     signingConfigs {
         release {
             storeFile file('../Tircis.key')
-            storePassword 'Tircis2024'
+            storePassword '<mot-de-passe-keystore>'
             keyAlias 'tircis'
-            keyPassword 'Tircis2024'
+            keyPassword '<mot-de-passe-keystore>'
         }
     }
 
@@ -125,9 +125,9 @@ android {
 | **Fichier** | `Tircis.key` |
 | **Emplacement** | `/prise-inventaire-android/Tircis.key` |
 | **Type** | JKS (Java KeyStore) |
-| **Mot de passe du store** | `Tircis2024` |
+| **Mot de passe du store** | `<mot-de-passe-keystore>` |
 | **Alias de la clé** | `tircis` |
-| **Mot de passe de la clé** | `Tircis2024` |
+| **Mot de passe de la clé** | `<mot-de-passe-keystore>` |
 
 ### ⚠️ IMPORTANT - Sécurité
 
@@ -149,7 +149,7 @@ android {
 ### Vérifier le keystore
 
 ```bash
-keytool -list -v -keystore Tircis.key -storepass Tircis2024
+keytool -list -v -keystore Tircis.key -storepass <mot-de-passe-keystore>
 ```
 
 ---
@@ -214,9 +214,9 @@ companion object {
 3. Sélectionner **APK**
 4. Configurer la signature :
    - Key store path : `../Tircis.key`
-   - Key store password : `Tircis2024`
+   - Key store password : `<mot-de-passe-keystore>`
    - Key alias : `tircis`
-   - Key password : `Tircis2024`
+   - Key password : `<mot-de-passe-keystore>`
 5. Sélectionner **release**
 6. Cliquer **Create**
 
@@ -296,7 +296,7 @@ cd prise-inventaire-android
 **Solution** : Vérifier le mot de passe du keystore
 ```bash
 keytool -list -keystore Tircis.key
-# Entrer le mot de passe : Tircis2024
+# Entrer le mot de passe : <mot-de-passe-keystore>
 ```
 
 ### Erreur : "Could not resolve dependencies"
@@ -380,9 +380,9 @@ cd prise-inventaire-android
 | **Fichier** | `Tircis.key` |
 | **Emplacement** | `/Users/armeljordan/Documents/prise/prise-inventaire-android/Tircis.key` |
 | **Type** | PKCS12 |
-| **Store Password** | `tircis` |
+| **Store Password** | `<mot-de-passe-keystore>` |
 | **Key Alias** | `tircis` |
-| **Key Password** | `tircis` |
+| **Key Password** | `<mot-de-passe-keystore>` |
 | **Date de création** | 17 Juin 2022 |
 
 ### API Production
@@ -410,7 +410,7 @@ cd prise-inventaire-android
 | **Port** | `3306` |
 | **Database** | `prise_central` |
 | **User** | `admin` |
-| **Password** | `PriseInv2026!` |
+| **Password** | `<mot-de-passe>` |
 | **Connexion** | `mysql -h prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com -u admin -p prise_central` |
 
 ### Compte AWS
