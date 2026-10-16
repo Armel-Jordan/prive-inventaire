@@ -228,6 +228,10 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);
     Route::get('/scan/historique', [ScanTenantController::class, 'historique']);
     Route::get('/scan/stats', [ScanTenantController::class, 'stats']);
+    // Sur tout l'historique filtré (et non sur les 100 derniers scans) : export, statistiques, comparaison.
+    Route::get('/scan/export', [ScanTenantController::class, 'exporter']);
+    Route::get('/scan/statistiques', [ScanTenantController::class, 'statistiques']);
+    Route::get('/scan/comparaison', [ScanTenantController::class, 'comparaison']);
     Route::put('/scan/{id}', [ScanTenantController::class, 'modifier']);
     Route::delete('/scan/{id}', [ScanTenantController::class, 'supprimer']);
 

@@ -6,6 +6,8 @@ import { messageErreur } from '@/lib/erreurs';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { apiFetch } from '@/services/http';
+import Pagination from '@/components/Pagination';
+import type { PageHistorique } from '@/services/api';
 
 interface Mouvement {
   id: number;
@@ -50,6 +52,9 @@ export default function RelocalisationPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'single' | 'arrivage' | 'transfert' | 'batch'>('single');
   const [filterType, setFilterType] = useState<string>('');
+  // Historique complet, page par page (l'écran s'arrêtait aux 100 derniers mouvements).
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
@@ -75,17 +80,19 @@ export default function RelocalisationPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterType]);
+  }, [filterType, page]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const params = filterType ? `?type=${filterType}` : '';
+      const params = new URLSearchParams({ page: String(page), per_page: '50' });
+      if (filterType) params.append('type', filterType);
       const [mouvementsRes, secteursRes] = await Promise.all([
-        apiFetch<Mouvement[]>(`/relocalisation${params}`),
+        apiFetch<PageHistorique<Mouvement>>(`/relocalisation?${params}`),
         apiFetch<Secteur[]>('/secteurs'),
       ]);
-      setMouvements(mouvementsRes);
+      setMouvements(mouvementsRes.data || []);
+      setPagination({ dernierePage: mouvementsRes.last_page ?? 1, total: mouvementsRes.total ?? 0 });
       setSecteurs(secteursRes);
     } catch {
       toast('Erreur de chargement des données', 'error');
@@ -238,7 +245,8 @@ export default function RelocalisationPage() {
             <Filter size={18} className="text-gray-400" />
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
+              aria-label="Type de mouvement"
               className="border rounded-lg px-3 py-1.5 text-sm"
             >
               <option value="">Tous les types</option>
@@ -311,6 +319,7 @@ export default function RelocalisationPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal */}
