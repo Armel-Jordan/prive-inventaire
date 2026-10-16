@@ -1,7 +1,7 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
@@ -39,6 +39,8 @@ export default function ProduitsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
+  // Produits désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
+  const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
@@ -52,7 +54,7 @@ export default function ProduitsPage() {
 
   async function loadData() {
     try {
-      const [produitsData, secteursData] = await Promise.all([getProduits(), getSecteurs()]);
+      const [produitsData, secteursData] = await Promise.all([getProduits(filterStatut), getSecteurs()]);
       setProduits(produitsData);
       setSecteurs(secteursData);
     } catch {
@@ -63,9 +65,23 @@ export default function ProduitsPage() {
   }
 
   useEffect(() => {
-    loadData();
     getConfiguration('produit').then(setConfigNumero).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatut]);
+
+  async function handleReactiver(produit: Produit) {
+    try {
+      await updateProduit(produit.id!, { actif: true });
+      toast('Produit réactivé');
+      loadData();
+    } catch {
+      toast('Erreur lors de la réactivation', 'error');
+    }
+  }
 
   // Unique types for filter
   const types = [...new Set(produits.map(p => p.type).filter(Boolean))].sort();
@@ -246,6 +262,13 @@ export default function ProduitsPage() {
               {secteurs.map(s => <option key={s.id} value={String(s.id)}>{s.code} — {s.nom}</option>)}
             </select>
           </div>
+          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
+            aria-label="Statut"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+            <option value="actifs">Actifs</option>
+            <option value="inactifs">Désactivés</option>
+            <option value="tous">Tous</option>
+          </select>
           {hasFilters && (
             <button onClick={() => { setFilterType(''); setFilterSecteur(''); }}
               className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
@@ -281,6 +304,9 @@ export default function ProduitsPage() {
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
                     <td className="px-4 py-3 text-sm dark:text-gray-200">
                       {produit.description}
+                      {produit.actif === false && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
+                      )}
                       <BalisesFiche entite="produit" entiteId={produit.id!} />
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -310,8 +336,14 @@ export default function ProduitsPage() {
                           <Edit2 size={16} />
                         </button>
                       )}
-                      {canDelete('produits') && (
-                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
+                      {produit.actif === false ? (
+                        canEdit('produits') && (
+                          <button onClick={() => handleReactiver(produit)} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                            <RotateCcw size={16} />
+                          </button>
+                        )
+                      ) : canDelete('produits') && (
+                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -419,8 +451,9 @@ export default function ProduitsPage() {
 
       <ConfirmModal
         open={confirmId !== null}
-        title="Supprimer le produit"
-        message="Cette action est irréversible. Le produit sera définitivement supprimé."
+        title="Désactiver le produit"
+        message="Le produit n'apparaîtra plus dans les listes de choix ni dans l'application mobile. Son historique (scans, mouvements, documents) est conservé, et vous pourrez le réactiver depuis le filtre « Désactivés »."
+        confirmLabel="Désactiver"
         onConfirm={() => confirmId !== null && handleDelete(confirmId)}
         onCancel={() => setConfirmId(null)}
       />
