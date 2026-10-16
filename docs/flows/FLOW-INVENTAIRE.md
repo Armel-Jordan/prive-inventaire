@@ -364,22 +364,36 @@ Chaque rapport fusionne deux sources :
 
 ### 9.1 Ce que c'est
 
-Le **journal d'audit** enregistre automatiquement toutes les créations, modifications et suppressions importantes dans le système. Il permet de savoir qui a fait quoi et quand.
+Le **journal d'audit** (écran Historique) enregistre automatiquement les créations, modifications et
+suppressions des fiches et des documents. Il permet de savoir qui a fait quoi et quand.
+
+Il est alimenté par l'observateur `App\Observers\JournalModifications`, enregistré pour chaque modèle suivi
+dans `AppServiceProvider`. Le journal existait auparavant (table, écran, `AuditLog::log`) sans que rien ne
+l'écrive : il restait vide.
 
 ### 9.2 Ce qui est tracé
 
-Chaque entrée d'audit contient :
+| Objet (`model_type`) | Actions |
+|---|---|
+| Produit, Secteur, Employé, Compte utilisateur, Client, Fournisseur | création, modification, suppression |
+| Devis, Commande client, Commande fournisseur, Facture, Bon de livraison | création, modification, suppression |
+| Paramètres, Taxe, Numérotation | création, modification, suppression |
+| Scan, Mouvement (très nombreux, déjà historisés) | modification et suppression seulement |
+
+Chaque entrée contient :
 
 | Champ | Description |
 |-------|-------------|
-| `action` | `create`, `update`, `delete`, `approve`, `reject`, `send`, `cancel` |
-| `model_type` | Type de l'objet modifié (ex: `Produit`, `CommandeClient`) |
-| `model_id` | ID de l'objet modifié |
-| `changes` | JSON des champs avant/après (pour les mises à jour) |
-| `user_id` | L'employé qui a fait l'action |
-| `user_name` | Son nom |
-| `ip_address` | Adresse IP |
-| `tenant_id` | Isolation multi-tenant |
+| `action` | `create`, `update`, `delete` |
+| `model_type` / `model_id` | Objet concerné (libellé ci-dessus) et son identifiant |
+| `old_values` / `new_values` | Valeurs avant / après. Pour une modification : seulement les champs modifiés |
+| `user_id` / `user_name` | Utilisateur connecté qui a fait l'action |
+| `ip_address`, `user_agent` | Origine de la requête |
+| `tenant_id` | Entreprise : chaque entreprise ne voit que son journal |
+
+Ne sont jamais journalisés : les mots de passe, les secrets de double authentification, les champs masqués
+du modèle et les horodatages techniques. Une erreur d'écriture du journal n'empêche jamais l'opération ; hors
+d'un contexte d'entreprise (commandes, initialisation des données), rien n'est journalisé.
 
 ### 9.3 Endpoints
 
