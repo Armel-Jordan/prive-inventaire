@@ -21,15 +21,17 @@ class ReferentielController extends Controller
     public function index(Request $request, string $type): JsonResponse
     {
         $def = Referentiels::definition($type);
-        [$colonne, $sens] = $def['ordre'];
 
-        $fiches = $def['modele']::query()
+        $requete = $def['modele']::query()
             ->with($def['avec'] ?? [])
-            ->when($request->boolean('actif'), fn ($q) => $q->where('actif', true))
-            ->orderBy($colonne, $sens)
-            ->get();
+            ->when($request->boolean('actif'), fn ($q) => $q->where('actif', true));
 
-        return response()->json($fiches);
+        // `ordre` : une paire [colonne, sens] ou une liste de paires.
+        foreach (is_array($def['ordre'][0]) ? $def['ordre'] : [$def['ordre']] as [$colonne, $sens]) {
+            $requete->orderBy($colonne, $sens);
+        }
+
+        return response()->json($requete->get());
     }
 
     public function store(Request $request, string $type): JsonResponse

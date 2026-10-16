@@ -403,8 +403,12 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
 | Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
 | Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
+| Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types) |
+| Statuts personnalisés | Statuts de suivi propres à l'entreprise, par type de document, avec couleur et ordre d'affichage | Code unique par type de document, couleur au format `#RRGGBB` |
 
-Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement et finance, Logistique, Commercial.
+Les motifs saisis aujourd'hui en texte libre (mouvements, refus de commande) ne changent pas : les écrans proposeront ces raisons au fil des fonctionnalités.
+
+Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement et finance, Logistique, Commercial, Suivi des opérations.
 
 Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
 
@@ -420,7 +424,7 @@ Une seule API générique :
 | DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
 | GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
 
-`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
 
 ### 11.3 Droits
 

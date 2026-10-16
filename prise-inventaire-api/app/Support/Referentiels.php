@@ -11,7 +11,9 @@ use App\Models\Entrepot;
 use App\Models\Fabricant;
 use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\Raison;
 use App\Models\Representant;
+use App\Models\StatutPersonnalise;
 use App\Models\Territoire;
 use App\Models\Transporteur;
 use App\Models\Unite;
@@ -26,7 +28,7 @@ use Illuminate\Validation\Rule;
  * Clés d'une définition :
  *  - modele            : classe Eloquent, porteuse de BelongsToTenant
  *  - regles            : fn (?int $id): array — règles de validation (id de la fiche modifiée)
- *  - ordre             : [colonne, sens] de la liste
+ *  - ordre             : [colonne, sens] de la liste, ou liste de paires [[colonne, sens], …]
  *  - avec              : relations chargées avec la liste et les réponses
  *  - majuscules        : champs normalisés en majuscules avant validation
  *  - controle          : fn (array $donnees, ?Model $fiche): ?array — [champ => message] si refus
@@ -258,6 +260,39 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => ['nom', 'asc'],
+            ],
+
+            'raisons' => [
+                'modele' => Raison::class,
+                'regles' => fn (?int $id) => [
+                    'type' => ['required', Rule::in(Raison::TYPES)],
+                    'code' => ['required', 'string', 'max:20'],
+                    'libelle' => ['required', 'string', 'max:150'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => [['type', 'asc'], ['code', 'asc']],
+                // Le code est unique par type de raison : le même code peut servir à deux types.
+                'controle' => fn (array $d, ?Model $fiche) => Raison::where('type', $d['type'])
+                    ->where('code', $d['code'])
+                    ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
+                    ->exists() ? ['code' => 'Ce code existe déjà pour ce type de raison.'] : null,
+            ],
+
+            'statuts_personnalises' => [
+                'modele' => StatutPersonnalise::class,
+                'regles' => fn (?int $id) => [
+                    'document' => ['required', Rule::in(StatutPersonnalise::DOCUMENTS)],
+                    'code' => ['required', 'string', 'max:20'],
+                    'libelle' => ['required', 'string', 'max:100'],
+                    'couleur' => ['sometimes', 'regex:/^#[0-9a-fA-F]{6}$/'],
+                    'ordre' => ['sometimes', 'integer', 'min:0', 'max:999'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => [['document', 'asc'], ['ordre', 'asc'], ['libelle', 'asc']],
+                'controle' => fn (array $d, ?Model $fiche) => StatutPersonnalise::where('document', $d['document'])
+                    ->where('code', $d['code'])
+                    ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
+                    ->exists() ? ['code' => 'Ce code existe déjà pour ce type de document.'] : null,
             ],
         ];
     }

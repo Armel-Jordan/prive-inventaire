@@ -983,7 +983,9 @@ export type TypeReferentiel =
   | 'territoires'
   | 'itineraires'
   | 'representants'
-  | 'transporteurs';
+  | 'transporteurs'
+  | 'raisons'
+  | 'statuts_personnalises';
 
 export interface FicheReferentiel {
   id: number;
