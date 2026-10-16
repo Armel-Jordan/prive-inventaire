@@ -1211,6 +1211,8 @@ export interface Facture {
   bon_livraison?: BonLivraison;
   /** Notes de crédit établies sur la facture (détail). */
   avoirs?: { id: number; numero: string | null; statut: string; date_avoir: string; montant_ttc: string }[];
+  /** Retours de marchandise de la facture. */
+  retours?: { id: number; numero: string | null; statut: string; date_retour: string }[];
 }
 
 /** Produit d'une ligne de document, tel que renvoyé par le détail (même s'il a été retiré du catalogue). */

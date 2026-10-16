@@ -27,6 +27,9 @@ const ENTITY_LABELS: Record<string, string> = {
   commande:      'Commandes clients',
   commande_fournisseur: 'Commandes fournisseur',
   facture:       'Factures',
+  avoir:         'Notes de crédit',
+  demande_acompte: "Demandes d'acompte",
+  retour_client: 'Retours clients',
   bon_livraison: 'Bons Livraison',
   tournee:       'Tournées',
 };
@@ -41,6 +44,9 @@ const DEFAULT_CONFIGS: FormatConfig[] = [
   { entite: 'commande',      label: 'Commandes clients', prefixe: 'CMD', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'CMD-00001' },
   { entite: 'commande_fournisseur', label: 'Commandes fournisseur', prefixe: 'BC', suffixe: '', longueur: 5, separateur: '-', auto_increment: true, prochain_numero: 1, format_exemple: 'BC-00001' },
   { entite: 'facture',       label: 'Factures',       prefixe: 'FAC', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'FAC-00001' },
+  { entite: 'avoir',         label: 'Notes de crédit', prefixe: 'AV', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'AV-00001' },
+  { entite: 'demande_acompte', label: "Demandes d'acompte", prefixe: 'DA', suffixe: '', longueur: 5, separateur: '-', auto_increment: true, prochain_numero: 1, format_exemple: 'DA-00001' },
+  { entite: 'retour_client', label: 'Retours clients', prefixe: 'RC', suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'RC-00001' },
   { entite: 'bon_livraison', label: 'Bons Livraison', prefixe: 'BL',  suffixe: '', longueur: 5, separateur: '-', auto_increment: true,  prochain_numero: 1, format_exemple: 'BL-00001' },
   { entite: 'tournee',       label: 'Tournées',       prefixe: 'T',   suffixe: '', longueur: 4, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'T0001' },
 ];

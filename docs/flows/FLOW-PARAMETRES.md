@@ -274,7 +274,7 @@ Le catalogue (`App\Support\Permissions`, servi par `GET /permissions/catalogue`)
 | Sorte | Exemples | Ce qu'elle ouvre |
 |---|---|---|
 | **Droits de base** | Consulter, Créer, Modifier, Supprimer | L'écran et les écritures de ses données |
-| **Actions nommées** | Émettre une facture, Enregistrer un paiement, Émettre une note de crédit, Rembourser ou imputer un crédit, Appliquer ou rembourser un acompte, Marquer une demande d'acompte envoyée ou payée, Accepter ou refuser une commande, Envoyer / accepter / convertir un devis, Préparer / livrer / annuler un bon de livraison, Valider / clôturer / annuler une commande fournisseur, Approuver ou rejeter, Exécuter un transfert planifié, Piloter une tournée, Gérer les prises d'inventaire, Gérer les coordonnées bancaires des fournisseurs, Gérer les catégories de clients, Voir les états comptables, Saisir des écritures, Modifier le plan comptable et les exercices, Clôturer ou rouvrir un exercice | Une opération précise |
+| **Actions nommées** | Émettre une facture, Enregistrer un paiement, Émettre une note de crédit, Rembourser ou imputer un crédit, Traiter un retour client, Appliquer ou rembourser un acompte, Marquer une demande d'acompte envoyée ou payée, Accepter ou refuser une commande, Envoyer / accepter / convertir un devis, Préparer / livrer / annuler un bon de livraison, Valider / clôturer / annuler une commande fournisseur, Approuver ou rejeter, Exécuter un transfert planifié, Piloter une tournée, Gérer les prises d'inventaire, Gérer les coordonnées bancaires des fournisseurs, Gérer les catégories de clients, Voir les états comptables, Saisir des écritures, Modifier le plan comptable et les exercices, Clôturer ou rouvrir un exercice | Une opération précise |
 
 Une **action nommée** qu'un groupe ne règle pas suit un droit de base du même écran (indiqué dans le catalogue). Par exemple, « Émettre une facture » suit « Modifier » des factures. Les groupes enregistrés depuis l'écran des rôles règlent toutes leurs actions explicitement.
 
@@ -427,6 +427,7 @@ La numérotation automatique génère les numéros de documents dans tout le sys
 | `facture` | FAC-00001 |
 | `avoir` (notes de crédit) | AV-00001 |
 | `demande_acompte` | DA-00001 |
+| `retour_client` | RC-00001 |
 | `bon_livraison` | BL-00001 |
 | `tournee` | T0001 |
 
@@ -612,7 +613,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
 | Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
 | Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
-| Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types) |
+| Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types). Les raisons « Retour client » qualifient les lignes des retours clients, et deviennent obligatoires dès qu'il y en a une (FLOW-VENTES §5.12) |
 | Statuts personnalisés | Statuts de suivi propres à l'entreprise, par type de document, avec couleur et ordre d'affichage | Code unique par type de document, couleur au format `#RRGGBB` |
 
 Les motifs saisis aujourd'hui en texte libre (mouvements, refus de commande) ne changent pas : les écrans proposeront ces raisons au fil des fonctionnalités.

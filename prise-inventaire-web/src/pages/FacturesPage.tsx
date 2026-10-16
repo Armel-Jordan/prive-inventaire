@@ -3,7 +3,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link } from 'react-router-dom';
-import { Eye, CreditCard, FileText, ReceiptText, Send, Trash2, Plus, X } from 'lucide-react';
+import { ArchiveRestore, Eye, CreditCard, FileText, ReceiptText, Send, Trash2, Plus, X } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -382,6 +382,17 @@ export default function FacturesPage() {
                           </button>
                         )}</>
                       )}
+                      {/* Retour de marchandise : remise en stock ou rebut, sur une facture émise (même créditée). */}
+                      {['emise', 'partiellement_payee', 'payee', 'creditee'].includes(facture.statut) && peut('retours_clients', 'creer') && (
+                        <Link
+                          to={`/retours-clients?facture=${facture.id}`}
+                          className="p-1 text-teal-600 hover:bg-teal-50 rounded"
+                          title={t.customerReturns.returnGoods}
+                          aria-label={`${t.customerReturns.returnGoods} — ${facture.numero}`}
+                        >
+                          <ArchiveRestore size={18} />
+                        </Link>
+                      )}
                       {/* Une facture émise, même payée, se livre une fois : le bouton disparaît avec le bon en cours. */}
                       {['emise', 'partiellement_payee', 'payee'].includes(facture.statut) && !facture.bon_livraison && (
                         <>{canCreate('bons_livraison') && (
@@ -517,6 +528,22 @@ export default function FacturesPage() {
                         </Link>
                         <span className="text-gray-500">{formatDateDocument(avoir.date_avoir)} · {t.creditNotes.statuses[avoir.statut] ?? avoir.statut}</span>
                         <span className="dark:text-white">{montant(avoir.montant_ttc, selectedFacture?.devise)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedFacture.retours && selectedFacture.retours.length > 0 && (
+                <div className="border-t pt-4 dark:border-gray-700">
+                  <h3 className="font-medium mb-2 dark:text-white">{t.customerReturns.invoiceReturns}</h3>
+                  <ul className="space-y-1 text-sm">
+                    {selectedFacture.retours.map(retour => (
+                      <li key={retour.id} className="flex justify-between gap-2">
+                        <Link to={`/retours-clients?recherche=${encodeURIComponent(retour.numero ?? selectedFacture.numero ?? '')}`} className="font-mono text-teal-600 hover:underline">
+                          {retour.numero ?? t.customerReturns.draft}
+                        </Link>
+                        <span className="text-gray-500">{formatDateDocument(retour.date_retour)} · {t.customerReturns.statuses[retour.statut] ?? retour.statut}</span>
                       </li>
                     ))}
                   </ul>

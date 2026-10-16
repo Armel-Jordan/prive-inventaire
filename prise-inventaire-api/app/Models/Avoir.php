@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Note de crédit (avoir) sur une facture émise. Brouillon modifiable, puis émise : numérotée et imputée sur ce qui
@@ -66,6 +67,12 @@ class Avoir extends Model
     public function remboursements(): HasMany
     {
         return $this->hasMany(AvoirRemboursement::class)->orderBy('date_remboursement')->orderBy('id');
+    }
+
+    /** Retour de marchandise dont la note est issue. */
+    public function retour(): HasOne
+    {
+        return $this->hasOne(RetourClient::class);
     }
 
     public function auteur(): BelongsTo

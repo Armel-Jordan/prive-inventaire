@@ -54,6 +54,8 @@ export interface Avoir {
   recapitulatif_taxes?: { nom: string; taux: number; base: number; montant: number }[];
   auteur?: { id: number; nom: string } | null;
   emetteur?: { id: number; nom: string } | null;
+  /** Retour de marchandise dont la note est issue. */
+  retour?: { id: number; numero: string | null } | null;
 }
 
 export interface LigneProposee {

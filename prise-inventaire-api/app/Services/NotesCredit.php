@@ -10,6 +10,7 @@ use App\Models\Configuration;
 use App\Models\DocumentTaxe;
 use App\Models\Facture;
 use App\Models\FactureLigne;
+use App\Models\RetourClient;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -26,7 +27,8 @@ use Illuminate\Validation\ValidationException;
  * - Le crédit encore disponible (facture déjà payée) se rembourse au client ou s'impute sur une autre de ses
  *   factures dues. Entièrement utilisée, la note est soldée.
  *
- * Financier seulement : une note de crédit ne remet rien en stock.
+ * Financier seulement : une note de crédit ne remet rien en stock (la marchandise revient par un retour client,
+ * qui peut donner sa note : App\Services\RetoursClients).
  */
 class NotesCredit
 {
@@ -254,6 +256,8 @@ class NotesCredit
         }
         DB::transaction(function () use ($avoir) {
             $this->taxes->supprimer('avoir', $avoir->lignes()->pluck('id'));
+            // Le retour dont la note était issue pourra en donner une autre.
+            RetourClient::where('avoir_id', $avoir->id)->update(['avoir_id' => null]);
             $avoir->delete();
         });
     }
@@ -388,7 +392,8 @@ class NotesCredit
         return ['ht' => round((float) $totaux->ht, 2), 'tva' => round((float) $totaux->tva, 2), 'ttc' => round((float) $totaux->ttc, 2)];
     }
 
-    private function verifierCreditable(Facture $facture): void
+    /** Seule une facture émise (payée ou non) se crédite, tant qu'elle n'est pas entièrement créditée. */
+    public function verifierCreditable(Facture $facture): void
     {
         if (! in_array($facture->statut, self::FACTURES_CREDITABLES, true)) {
             throw new DomainException($facture->statut === 'creditee'

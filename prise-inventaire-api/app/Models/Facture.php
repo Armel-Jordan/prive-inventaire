@@ -94,6 +94,12 @@ class Facture extends Model
         return $this->hasMany(FactureRelance::class);
     }
 
+    /** Retours de marchandise de la facture. */
+    public function retours(): HasMany
+    {
+        return $this->hasMany(RetourClient::class);
+    }
+
     /** Crédits imputés sur la facture (de ses propres notes de crédit ou d'autres notes du client). */
     public function imputations(): HasMany
     {
