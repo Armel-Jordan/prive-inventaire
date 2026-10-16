@@ -320,3 +320,26 @@ export async function getSoldesOuverture(): Promise<SoldesOuverture> {
 export async function enregistrerSoldesOuverture(lignes: { compte_id: number; debit: number; credit: number }[]): Promise<{ message: string; ecriture: { id: number; numero: string } | null }> {
   return apiFetch('/comptabilite/soldes-ouverture', { method: 'PUT', body: JSON.stringify({ lignes }), timeoutMs: 120000 });
 }
+
+// === Clôture d'exercice ===
+
+export interface ApercuCloture {
+  produits: number;
+  charges: number;
+  resultat: number;
+  comptes_soldes: number;
+  compte: { id: number; numero: string; libelle: string } | null;
+  bloquant: string | null;
+}
+
+export async function getApercuCloture(id: number): Promise<ApercuCloture> {
+  return apiFetch(`/comptabilite/exercices/${id}/cloture`);
+}
+
+export async function cloturerExercice(id: number): Promise<ExerciceComptable> {
+  return apiFetch(`/comptabilite/exercices/${id}/cloturer`, { method: 'POST', timeoutMs: 120000 });
+}
+
+export async function rouvrirExercice(id: number): Promise<ExerciceComptable> {
+  return apiFetch(`/comptabilite/exercices/${id}/rouvrir`, { method: 'POST' });
+}

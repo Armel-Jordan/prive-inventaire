@@ -1,9 +1,11 @@
 # COMPTABILITÉ GÉNÉRALE — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — journal général, soldes d'ouverture, balance et grand livre (phase 4.2)
+> Dernière mise à jour : 2026-10-16 — clôture et réouverture d'exercice
 >
-> Historique : 2026-10-16 — plan comptable, exercices et périodes (phase 4.1)
+> Historique (2026-10-16) :
+> - plan comptable, exercices et périodes (phase 4.1) ;
+> - journal général, soldes d'ouverture, balance et grand livre (phase 4.2).
 
 ---
 
@@ -22,7 +24,7 @@ Prochaines étapes du plan de parité :
 
 | Phase | Contenu |
 |---|---|
-| 4.2b | Clôture d'exercice (report du résultat), écritures récurrentes |
+| 4.2c | Écritures récurrentes, générées par une tâche planifiée |
 | 4.3 | Écritures générées automatiquement à partir des ventes, des achats et des paiements |
 | 4.8 | États financiers : bilan, compte de résultat |
 
@@ -107,6 +109,32 @@ numero;libelle;nature;type;parent
   - la date et l'auteur sont conservés.
 - **Rouvrir une période** : administrateurs seulement, et tant que l'exercice n'est pas clôturé.
 
+### Clôture d'exercice
+
+Bouton **Clôturer** (administrateurs). Une fenêtre montre d'abord les produits, les charges, le bénéfice ou la perte, et le compte qui recevra le résultat.
+
+**Conditions** :
+
+| Condition | Message |
+|---|---|
+| Les exercices précédents sont clôturés | « Clôturez d'abord l'exercice 2025. » |
+| S'il y a des produits ou des charges, un compte de type « Résultat de l'exercice » existe | « Désignez d'abord, dans le plan comptable, le compte qui reçoit le résultat… » |
+
+**Effets** :
+- **Écriture de clôture** :
+  - datée du dernier jour de l'exercice, au journal des opérations diverses ;
+  - elle solde chaque compte de produits et de charges ;
+  - elle porte le résultat sur le compte de résultat : au crédit pour un bénéfice, au débit pour une perte ;
+  - elle passe même si les périodes sont déjà fermées ou si un compte soldé a été désactivé.
+- **Périodes** : toutes sont fermées, et l'exercice passe à « Clôturé », avec la date et l'auteur.
+- **Exercice suivant** : il repart avec des comptes de résultat à zéro. Le résultat apparaît dans le solde d'ouverture du compte de résultat.
+- **Écritures** : plus aucune n'est acceptée sur l'exercice. L'écriture de clôture ne se modifie pas et ne se contre-passe pas.
+
+**Réouverture** (administrateurs) :
+- elle porte sur le dernier exercice clôturé ; un exercice suivant déjà clôturé doit être rouvert d'abord ;
+- l'écriture de clôture est supprimée ;
+- les périodes restent fermées et se rouvrent une à une.
+
 ---
 
 ## 4. Journal comptable
@@ -180,7 +208,7 @@ Les deux états se calculent à partir des lignes d'écritures, sur une période
 |---|---|
 | Consulter (plan, exercices, journal, états) | Tout compte de l'entreprise, si elle a le module Finance (menu : droit « Comptabilité ») |
 | Créer, modifier, importer, fermer une période, saisir des écritures et des soldes d'ouverture, gérer les journaux | Administrateurs et responsables |
-| Rouvrir une période | Administrateurs |
+| Rouvrir une période, clôturer ou rouvrir un exercice | Administrateurs |
 
 Les données sont cloisonnées par entreprise, comme le reste de l'application.
 
@@ -199,6 +227,8 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/exercices` | Exercices et périodes, période en cours |
 | `POST /comptabilite/exercices`, `PUT` et `DELETE /comptabilite/exercices/{id}` | `{libelle, date_debut, date_fin, decoupage}` |
 | `POST /comptabilite/periodes/{id}/fermer`, `/rouvrir` | Fermeture, réouverture |
+| `GET /comptabilite/exercices/{id}/cloture` | Aperçu : produits, charges, résultat, compte de résultat, `bloquant` |
+| `POST /comptabilite/exercices/{id}/cloturer`, `/rouvrir` | Clôture, réouverture (administrateurs) |
 | `GET /comptabilite/journaux`, `POST`, `PUT` et `DELETE /comptabilite/journaux/{id}` | Journaux (créés au premier accès) |
 | `GET /comptabilite/ecritures?du=&au=&journal_id=&compte_id=&source=&recherche=&page=` | Écritures paginées, avec leurs lignes |
 | `GET /comptabilite/ecritures/{id}`, `POST /comptabilite/ecritures`, `PUT` et `DELETE /comptabilite/ecritures/{id}` | `{journal_id, date, libelle, reference, lignes: [{compte_id, libelle, debit, credit}]}` |
@@ -210,7 +240,7 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 
 Code :
 - **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`.
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes}`.
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures}`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
 - **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage` ; service `src/services/comptabilite.ts`.

@@ -616,6 +616,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/comptes/export', [CompteComptableController::class, 'exporter']);
         Route::get('/plans-types', [CompteComptableController::class, 'plans']);
         Route::get('/exercices', [ExerciceComptableController::class, 'index']);
+        Route::get('/exercices/{id}/cloture', [ExerciceComptableController::class, 'apercuCloture'])->whereNumber('id');
         Route::get('/journaux', [JournalComptableController::class, 'index']);
         Route::get('/ecritures', [EcritureComptableController::class, 'index']);
         Route::get('/ecritures/export', [EcritureComptableController::class, 'exporter']);
@@ -644,6 +645,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
             Route::post('/periodes/{id}/fermer', [ExerciceComptableController::class, 'fermerPeriode'])->whereNumber('id');
         });
         Route::post('/periodes/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrirPeriode'])->whereNumber('id')->middleware('role:admin');
+        Route::post('/exercices/{id}/cloturer', [ExerciceComptableController::class, 'cloturer'])->whereNumber('id')->middleware('role:admin');
+        Route::post('/exercices/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrir'])->whereNumber('id')->middleware('role:admin');
     });
 
     // Mouvements d'inventaire et Localisations
