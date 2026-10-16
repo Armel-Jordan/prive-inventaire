@@ -37,6 +37,11 @@ class CourrielsEnvoisTest extends TestCase
     {
         parent::setUp();
 
+        // Ces tests vérifient l'envoi pendant la requête, comme en production (QUEUE_CONNECTION=sync,
+        // cf. .env.production.example), et lisent les courriels du transport « array ». La CI part de
+        // .env.example (file « database », courriels « log ») : on fixe donc la file et le transport ici.
+        config(['queue.default' => 'sync', 'mail.default' => 'array']);
+
         $this->tenant = Tenant::factory()->create(['modules' => ['ventes', 'achats']]);
         [$this->clientId, $this->produitId] = $this->chezLeTenant(function () {
             Configuration::create(['entite' => 'facture', 'prefixe' => 'FAC', 'separateur' => '-', 'longueur' => 4, 'auto_increment' => true, 'prochain_numero' => 1]);
