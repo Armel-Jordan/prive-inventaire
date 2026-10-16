@@ -48,7 +48,11 @@ class FactureController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $facture = Facture::with(['client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison'])->findOrFail($id);
+        // Produit de chaque ligne (même retiré du catalogue) : le détail affichait « Produit #12 ».
+        $facture = Facture::with([
+            'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison',
+            'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
+        ])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $facture->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('facture', $facture->lignes->pluck('id')));
 

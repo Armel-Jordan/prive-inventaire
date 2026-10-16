@@ -12,6 +12,9 @@ import {
 } from '../services/api';
 import type { Client } from '../services/api';
 import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { formatMontant, useDevise } from '@/lib/documents';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -23,6 +26,10 @@ interface ConfigNumero {
 }
 
 export default function ClientsPage() {
+  const devise = useDevise();
+  const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -62,8 +69,9 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const response = await getClients({ search: search || undefined, ...filtres });
+      const response = await getClients({ search: search || undefined, ...filtres, page });
       setClients(response.data || []);
+      setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
       console.error('Erreur chargement clients:', error);
     } finally {
@@ -76,7 +84,7 @@ export default function ClientsPage() {
       loadClients();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, filtres]);
+  }, [search, filtres, page]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +104,7 @@ export default function ClientsPage() {
       resetForm();
       loadClients();
     } catch (error) {
-      console.error('Erreur sauvegarde client:', error);
+      signaler(error, 'Erreur lors de l\'enregistrement du client');
     }
   };
 
@@ -125,7 +133,7 @@ export default function ClientsPage() {
       await deleteClient(id);
       loadClients();
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      signaler(error, 'Impossible de supprimer ce client');
     }
   };
 
@@ -167,11 +175,11 @@ export default function ClientsPage() {
             type="text"
             placeholder="Rechercher par nom, code ou ville..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         </div>
-        <FiltresClients valeur={filtres} onChange={setFiltres} />
+        <FiltresClients valeur={filtres} onChange={f => { setFiltres(f); setPage(1); }} />
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
@@ -232,10 +240,10 @@ export default function ClientsPage() {
                           ? 'text-red-600'
                           : 'text-gray-900 dark:text-white'
                       }`}>
-                        {Number(client.encours_actuel).toFixed(2)} €
+                        {montant(Number(client.encours_actuel))}
                       </span>
                       {client.encours_max && (
-                        <div className="text-xs text-gray-500">/ {Number(client.encours_max).toFixed(2)} €</div>
+                        <div className="text-xs text-gray-500">/ {montant(Number(client.encours_max))}</div>
                       )}
                     </div>
                   </td>
@@ -271,10 +279,11 @@ export default function ClientsPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               {editingClient ? 'Modifier le client' : 'Nouveau client'}
@@ -387,7 +396,7 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Encours max (€)</label>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Encours max{devise ? ` (${devise})` : ''}</label>
                   <input
                     type="number"
                     step="0.01"

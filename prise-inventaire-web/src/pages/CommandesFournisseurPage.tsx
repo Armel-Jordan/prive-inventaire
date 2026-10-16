@@ -5,6 +5,9 @@ import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'luci
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
 import {
   getCommandesFournisseur,
   getCommandeFournisseur,
@@ -44,13 +47,16 @@ export default function CommandesFournisseurPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [recherche, setRecherche] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCommande, setSelectedCommande] = useState<ComFourEntete | null>(null);
 
   const [formFournisseur, setFormFournisseur] = useState<number>(0);
-  const [formDateCommande, setFormDateCommande] = useState(new Date().toISOString().split('T')[0]);
+  const [formDateCommande, setFormDateCommande] = useState(aujourdhui());
   const [formDateLivraison, setFormDateLivraison] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
@@ -58,59 +64,77 @@ export default function CommandesFournisseurPage() {
   const [formTauxChange, setFormTauxChange] = useState(1);
   const [deviseLocale, setDeviseLocale] = useState('EUR');
   const [loadingTaux, setLoadingTaux] = useState(false);
+  // Origine du taux affiché : référentiel de l'entreprise, cours du jour, ou saisie (taux introuvable ou corrigé).
+  const [sourceTaux, setSourceTaux] = useState<'entreprise' | 'frankfurter' | 'saisie' | null>(null);
   const [configNumero, setConfigNumero] = useState<{ prefixe: string; separateur: string; longueur: number; prochain_numero: number; suffixe: string } | null>(null);
+
+  // La recherche part 300 ms après la dernière frappe, et non à chaque caractère.
+  useEffect(() => {
+    const minuterie = setTimeout(() => { setRecherche(search.trim()); setPage(1); }, 300);
+    return () => clearTimeout(minuterie);
+  }, [search]);
 
   const loadData = useCallback(async () => {
     try {
-      const [commandesRes, fournisseursRes, produitsRes] = await Promise.all([
-        getCommandesFournisseur({ search: search || undefined, statut: statutFilter || undefined }),
-        getFournisseursActifs(),
-        getProduits(),
-      ]);
+      const commandesRes = await getCommandesFournisseur({ search: recherche || undefined, statut: statutFilter || undefined, page });
       setCommandes(commandesRes.data || []);
-      setFournisseurs(fournisseursRes || []);
-      setProduits(produitsRes || []);
+      setPagination({ dernierePage: commandesRes.last_page ?? 1, total: commandesRes.total ?? 0 });
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
       setLoading(false);
     }
-  }, [search, statutFilter]);
+  }, [recherche, statutFilter, page]);
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Fournisseurs, produits, numérotation et devise : une fois, et non à chaque recherche ou page.
+  useEffect(() => {
+    getFournisseursActifs().then(f => setFournisseurs(f || [])).catch(() => {});
+    getProduits().then(p => setProduits(p || [])).catch(() => {});
     getConfiguration('commande_fournisseur').then(setConfigNumero).catch(() => {});
     getParametres().then(p => setDeviseLocale(p.devise_code || 'EUR')).catch(() => {});
-  }, [loadData]);
+  }, []);
+
+  /** Montant d'une commande dans sa devise (celle du fournisseur), et non en euros d'office. */
+  const montantCommande = (valeur: number | string | null | undefined, devise?: string | null) =>
+    formatMontantIso(valeur, devise || deviseLocale);
 
   async function handleFournisseurChange(id: number) {
     setFormFournisseur(id);
     const fournisseur = fournisseurs.find(f => f.id === id);
-    const devise = fournisseur?.devise || 'EUR';
+    const devise = fournisseur?.devise || deviseLocale;
     setFormDevise(devise);
     if (devise !== deviseLocale) {
       setLoadingTaux(true);
       try {
         const res = await getTauxChange(devise, deviseLocale);
-        setFormTauxChange(res.taux);
+        setFormTauxChange(Number(res.taux));
+        setSourceTaux(res.source === 'entreprise' ? 'entreprise' : 'frankfurter');
       } catch {
-        setFormTauxChange(1);
+        // Taux introuvable : à saisir. L'enregistrer à 1 faussait en silence tous les montants convertis.
+        setFormTauxChange(0);
+        setSourceTaux('saisie');
       } finally {
         setLoadingTaux(false);
       }
     } else {
       setFormTauxChange(1);
+      setSourceTaux(null);
     }
   }
 
   function openCreate() {
     setFormFournisseur(0);
-    setFormDateCommande(new Date().toISOString().split('T')[0]);
+    setFormDateCommande(aujourdhui());
     setFormDateLivraison('');
     setFormNotes('');
     setFormLignes([{ produit_id: 0, quantite_commandee: 1, prix_unitaire: 0 }]);
     setFormDevise(deviseLocale);
     setFormTauxChange(1);
+    setSourceTaux(null);
     setShowModal(true);
   }
 
@@ -139,6 +163,10 @@ export default function CommandesFournisseurPage() {
     setFormLignes(newLignes);
   }
 
+  const libelleSourceTaux = sourceTaux === 'entreprise'
+    ? 'taux du référentiel des devises'
+    : sourceTaux === 'frankfurter' ? 'cours du jour (Frankfurter)' : 'taux saisi';
+
   function getProduitConditionnement(produitId: number) {
     const p = produits.find(p => p.id === produitId);
     if (!p?.unite_achat || (p.qte_par_unite_achat ?? 1) <= 1) return null;
@@ -159,6 +187,10 @@ export default function CommandesFournisseurPage() {
       alert('Veuillez remplir correctement toutes les lignes');
       return;
     }
+    if (formDevise !== deviseLocale && !(formTauxChange > 0)) {
+      alert(`Indiquez le taux de change ${formDevise} → ${deviseLocale}.`);
+      return;
+    }
 
     try {
       await createCommandeFournisseur({
@@ -173,8 +205,7 @@ export default function CommandesFournisseurPage() {
       setShowModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la création');
+      signaler(error, 'Erreur lors de la création');
     }
   }
 
@@ -185,8 +216,7 @@ export default function CommandesFournisseurPage() {
       loadData();
       setShowDetailModal(false);
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la validation');
+      signaler(error, 'Erreur lors de la validation');
     }
   }
 
@@ -197,8 +227,7 @@ export default function CommandesFournisseurPage() {
       loadData();
       setShowDetailModal(false);
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'annulation');
+      signaler(error, 'Erreur lors de l\'annulation');
     }
   }
 
@@ -209,8 +238,7 @@ export default function CommandesFournisseurPage() {
       loadData();
       setShowDetailModal(false);
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la clôture');
+      signaler(error, 'Erreur lors de la clôture');
     }
   }
 
@@ -220,8 +248,7 @@ export default function CommandesFournisseurPage() {
       await deleteCommandeFournisseur(id);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Seules les commandes en brouillon peuvent être supprimées');
+      signaler(error, 'Seules les commandes en brouillon peuvent être supprimées');
     }
   }
 
@@ -245,6 +272,7 @@ export default function CommandesFournisseurPage() {
             <input
               type="text"
               placeholder="Rechercher par numéro ou fournisseur..."
+              aria-label="Rechercher une commande"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg"
@@ -252,7 +280,8 @@ export default function CommandesFournisseurPage() {
           </div>
           <select
             value={statutFilter}
-            onChange={(e) => setStatutFilter(e.target.value)}
+            onChange={(e) => { setStatutFilter(e.target.value); setPage(1); }}
+            aria-label="Filtrer par statut"
             className="px-4 py-2 border rounded-lg"
           >
             <option value="">Tous les statuts</option>
@@ -293,15 +322,13 @@ export default function CommandesFournisseurPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">{commande.fournisseur?.raison_sociale}</td>
                     <td className="px-4 py-3 text-sm">
-                      {new Date(commande.date_commande).toLocaleDateString('fr-FR')}
+                      {formatDateDocument(commande.date_commande)}
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {commande.date_livraison_prevue 
-                        ? new Date(commande.date_livraison_prevue).toLocaleDateString('fr-FR')
-                        : '-'}
+                      {formatDateDocument(commande.date_livraison_prevue)}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-medium">
-                      {Number(commande.montant_total).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                      {montantCommande(commande.montant_total, commande.devise)}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${statutLabels[commande.statut]?.color}`}>
@@ -371,6 +398,7 @@ export default function CommandesFournisseurPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal création */}
@@ -408,11 +436,31 @@ export default function CommandesFournisseurPage() {
                     ))}
                   </select>
                   {formDevise !== deviseLocale && (
-                    <div className="mt-1.5 flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                    <div className="mt-1.5 text-xs text-orange-700 bg-orange-50 px-2 py-1.5 rounded space-y-1">
                       {loadingTaux ? (
                         <span>Récupération du taux...</span>
                       ) : (
-                        <span>1 {formDevise} = {formTauxChange.toFixed(4)} {deviseLocale} (Frankfurter · aujourd'hui)</span>
+                        <>
+                          <label className="flex items-center gap-1.5">
+                            <span>1 {formDevise} =</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step="any"
+                              value={formTauxChange || ''}
+                              onChange={(e) => { setFormTauxChange(Number(e.target.value)); setSourceTaux('saisie'); }}
+                              aria-label={`Taux de change ${formDevise} vers ${deviseLocale}`}
+                              className="w-28 px-1.5 py-0.5 border border-orange-300 rounded bg-white text-gray-900"
+                              required
+                            />
+                            <span>{deviseLocale}</span>
+                          </label>
+                          <p>
+                            {formTauxChange > 0
+                              ? libelleSourceTaux
+                              : 'Taux introuvable : saisissez-le (ou renseignez la devise dans le référentiel des devises).'}
+                          </p>
+                        </>
                       )}
                     </div>
                   )}
@@ -513,7 +561,7 @@ export default function CommandesFournisseurPage() {
                             />
                           </td>
                           <td className="px-3 py-2 text-right text-sm font-medium">
-                            {(ligne.quantite_commandee * ligne.prix_unitaire).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                            {montantCommande(ligne.quantite_commandee * ligne.prix_unitaire, formDevise)}
                           </td>
                           <td className="px-3 py-2">
                             {formLignes.length > 1 && (
@@ -534,7 +582,12 @@ export default function CommandesFournisseurPage() {
                       <tr>
                         <td colSpan={3} className="px-3 py-2 text-right font-medium">Total:</td>
                         <td className="px-3 py-2 text-right font-bold">
-                          {getMontantTotal().toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          {montantCommande(getMontantTotal(), formDevise)}
+                          {formDevise !== deviseLocale && formTauxChange > 0 && (
+                            <div className="text-xs font-normal text-gray-500">
+                              ≈ {montantCommande(getMontantTotal() * formTauxChange, deviseLocale)}
+                            </div>
+                          )}
                         </td>
                         <td></td>
                       </tr>
@@ -591,21 +644,24 @@ export default function CommandesFournisseurPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Date commande</p>
-                  <p className="font-medium">{new Date(selectedCommande.date_commande).toLocaleDateString('fr-FR')}</p>
+                  <p className="font-medium">{formatDateDocument(selectedCommande.date_commande)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Livraison prévue</p>
                   <p className="font-medium">
-                    {selectedCommande.date_livraison_prevue 
-                      ? new Date(selectedCommande.date_livraison_prevue).toLocaleDateString('fr-FR')
-                      : '-'}
+                    {formatDateDocument(selectedCommande.date_livraison_prevue)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Montant total</p>
                   <p className="font-bold text-lg">
-                    {Number(selectedCommande.montant_total).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                    {montantCommande(selectedCommande.montant_total, selectedCommande.devise)}
                   </p>
+                  {selectedCommande.devise && selectedCommande.devise !== deviseLocale && Number(selectedCommande.taux_change) > 0 && (
+                    <p className="text-xs text-gray-500">
+                      ≈ {montantCommande(Number(selectedCommande.montant_total) * Number(selectedCommande.taux_change), deviseLocale)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -652,10 +708,10 @@ export default function CommandesFournisseurPage() {
                             </span>
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
-                            {Number(ligne.prix_unitaire).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                            {montantCommande(ligne.prix_unitaire, selectedCommande.devise)}
                           </td>
                           <td className="px-3 py-2 text-sm text-right font-medium">
-                            {Number(ligne.montant_ligne).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                            {montantCommande(ligne.montant_ligne, selectedCommande.devise)}
                           </td>
                         </tr>
                       ))}

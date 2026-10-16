@@ -209,10 +209,11 @@ Ce que ça fait :
 
 ### 3.10 Multi-devise
 
-Si le fournisseur facture en USD mais que l'entreprise utilise EUR :
-- Le `taux_change` est chargé automatiquement depuis l'API externe **Frankfurter** (`api.frankfurter.app`)
-- Les montants sont stockés dans la devise du fournisseur
-- La conversion s'affiche pour information
+Si le fournisseur facture en USD mais que l'entreprise utilise une autre devise (XAF, CAD…) :
+- Le choix du fournisseur reprend sa devise et propose un taux (voir §8), modifiable avant l'enregistrement.
+- Sans taux disponible, le formulaire le demande : la commande n'est plus enregistrée au taux 1.
+- Les montants sont stockés et affichés dans la devise du fournisseur, avec leur équivalent dans la devise de
+  l'entreprise (« 25,00 $US ≈ 15 000 FCFA »).
 
 ---
 
@@ -398,10 +399,17 @@ L'application gère plusieurs devises pour les achats internationaux.
 
 ### Taux de change
 
-- Chargé automatiquement depuis **Frankfurter API** (`api.frankfurter.app`)
-- Endpoint interne : `GET /taux-change?from=USD&to=EUR`
-- Le taux est stocké dans la commande au moment de sa création
-- Le taux ne change pas rétroactivement — il est figé dans la commande
+Endpoint interne : `GET /taux-change?from=USD&to=XAF`. Sources, dans l'ordre :
+1. **Référentiel des devises de l'entreprise** (Paramètres › Référentiels › Devises) : chaque taux y exprime une
+   unité de la devise dans la devise de référence. Un taux croisé passe par cette devise de référence. Réponse
+   `source: "entreprise"`.
+2. **Cours du jour de Frankfurter** (`api.frankfurter.app`), mis en cache pour la journée. Réponse
+   `source: "frankfurter"`.
+3. Sinon **404** avec un message : le formulaire demande le taux. Un échec du cours du jour (devise inconnue du
+   service, comme XAF, ou service injoignable) est retenu dix minutes.
+
+Le taux est stocké dans la commande au moment de sa création et ne change pas rétroactivement. Un taux nul ou
+négatif est refusé (`taux_change` > 0).
 
 ### Affichage
 

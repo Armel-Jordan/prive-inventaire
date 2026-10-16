@@ -2,6 +2,14 @@ export type Language = 'fr' | 'en';
 
 export const translations = {
   fr: {
+    // Pied des listes paginées
+    pagination: {
+      label: 'Pagination',
+      total: '{n} au total',
+      page: 'Page {page} sur {pages}',
+      previous: 'Précédente',
+      next: 'Suivante',
+    },
     // Recherche globale (en-tête)
     globalSearch: {
       label: 'Recherche globale',
@@ -1277,6 +1285,14 @@ export const translations = {
     },
   },
   en: {
+    // Paginated list footer
+    pagination: {
+      label: 'Pagination',
+      total: '{n} in total',
+      page: 'Page {page} of {pages}',
+      previous: 'Previous',
+      next: 'Next',
+    },
     // Global search (header)
     globalSearch: {
       label: 'Global search',
