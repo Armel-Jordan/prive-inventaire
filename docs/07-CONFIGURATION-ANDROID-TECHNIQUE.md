@@ -182,7 +182,8 @@ companion object {
 
 | Endpoint | Méthode | Description |
 |----------|---------|-------------|
-| `/mobile/login` | POST | Authentification |
+| `/auth/login` | POST | Authentification (code entreprise, email, mot de passe). Réponse 403 avec `deux_facteurs` et `defi` si le compte a la double authentification |
+| `/auth/login/deux-facteurs` | POST | Seconde étape : `defi` et `code` (application d'authentification ou code de secours). 422 avec `defi_expire` si le défi a expiré : retour au mot de passe |
 | `/mobile/secteurs` | GET | Liste des secteurs |
 | `/mobile/scans` | GET/POST | Gestion des scans |
 | `/mobile/historique` | GET | Historique |
