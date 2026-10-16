@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getScans, getProduits, getSecteurs, getEmployes } from '@/services/api';
 import { apiFetch } from '@/services/http';
+import { useAuth } from '@/contexts/AuthContext';
 
 const REFRESH_INTERVAL = 30000; // 30 secondes
 
@@ -207,6 +208,9 @@ function SectionHeader({ title, dotColor }: SectionHeaderProps) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  // Sections Ventes, Achats et Finance seulement pour les modules souscrits (elles s'affichaient à 0).
+  const { tenant } = useAuth();
+  const moduleActif = (module: string) => !Array.isArray(tenant?.modules) || tenant.modules.includes(module);
 
   // Legacy state (fallback)
   const [legacyStats, setLegacyStats] = useState<LegacyStats>({
@@ -442,6 +446,7 @@ export default function Dashboard() {
           )}
 
           {/* ── Section Ventes (Blue 600) ──────────────────────────────────── */}
+          {moduleActif('ventes') && (<>
           <SectionHeader title="Ventes" dotColor="bg-blue-600" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
@@ -485,8 +490,10 @@ export default function Dashboard() {
               onClick={() => navigate('/factures')}
             />
           </div>
+          </>)}
 
           {/* ── Section Achats (Orange 500) ────────────────────────────────── */}
+          {moduleActif('achats') && (<>
           <SectionHeader title="Achats" dotColor="bg-orange-500" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
@@ -530,8 +537,10 @@ export default function Dashboard() {
               onClick={() => navigate('/fournisseurs')}
             />
           </div>
+          </>)}
 
           {/* ── Section Finance (Green 600) ────────────────────────────────── */}
+          {moduleActif('finance') && (<>
           <SectionHeader title="Finance" dotColor="bg-green-600" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
@@ -575,6 +584,7 @@ export default function Dashboard() {
               onClick={() => navigate('/comptabilite')}
             />
           </div>
+          </>)}
 
           {/* ── Section Inventaire (Purple 600) ───────────────────────────── */}
           <SectionHeader title="Inventaire" dotColor="bg-purple-600" />

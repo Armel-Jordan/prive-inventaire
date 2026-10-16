@@ -230,6 +230,12 @@ export const translations = {
       scheduled7d: 'Planifiés (7j)',
       approvals: 'Approbations',
     },
+    // Page d'un module que l'entreprise n'a pas souscrit
+    moduleDisabled: {
+      title: 'Module non activé',
+      message: 'Le module « {module} » n\'est pas activé pour votre entreprise. Contactez votre fournisseur pour l\'ajouter à votre abonnement.',
+      back: 'Retour au tableau de bord',
+    },
     // Page ouverte par son adresse sans le droit de la consulter
     accessDenied: {
       title: 'Accès refusé',
@@ -1638,6 +1644,12 @@ export const translations = {
       notifications: 'Notifications',
       scheduled7d: 'Scheduled (7d)',
       approvals: 'Approvals',
+    },
+    // Page of a module the company has not subscribed to
+    moduleDisabled: {
+      title: 'Module not enabled',
+      message: 'The “{module}” module is not enabled for your company. Contact your provider to add it to your subscription.',
+      back: 'Back to the dashboard',
     },
     // Page opened by its address without the right to view it
     accessDenied: {
