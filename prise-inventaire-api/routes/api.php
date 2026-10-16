@@ -62,6 +62,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
+use App\Http\Controllers\Inventaire\PriseInventaireController;
 use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\MouvementTenantController;
@@ -382,6 +383,21 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/stats', [InventaireTournantController::class, 'stats']);
         Route::get('/planning', [InventaireTournantController::class, 'planning']);
         Route::get('/secteur/{secteur}', [InventaireTournantController::class, 'historiqueSecteur']);
+    });
+
+    // Prises d'inventaire : sessions de comptage par-dessus les scans, écarts, validation (inventaire officiel).
+    Route::prefix('prises-inventaire')->group(function () {
+        Route::get('/', [PriseInventaireController::class, 'index']);
+        Route::get('/officiel', [PriseInventaireController::class, 'officiel']);
+        Route::get('/{id}', [PriseInventaireController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/lignes', [PriseInventaireController::class, 'lignes'])->whereNumber('id');
+        Route::get('/{id}/export', [PriseInventaireController::class, 'exporter'])->whereNumber('id');
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::post('/', [PriseInventaireController::class, 'store']);
+            Route::put('/{id}/corrections', [PriseInventaireController::class, 'corriger'])->whereNumber('id');
+            Route::post('/{id}/valider', [PriseInventaireController::class, 'valider'])->whereNumber('id');
+            Route::post('/{id}/annuler', [PriseInventaireController::class, 'annuler'])->whereNumber('id');
+        });
     });
 
     // Utilisateurs admin CRUD (admin uniquement)

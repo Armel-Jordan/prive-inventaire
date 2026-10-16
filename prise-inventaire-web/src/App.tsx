@@ -8,6 +8,8 @@ import Toaster from '@/components/Toaster';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
 import ScansPage from '@/pages/ScansPage';
+import PrisesInventairePage from '@/pages/PrisesInventairePage';
+import PriseInventairePage from '@/pages/PriseInventairePage';
 import ProduitsPage from '@/pages/ProduitsPage';
 import SecteursPage from '@/pages/SecteursPage';
 import EmployesPage from '@/pages/EmployesPage';
@@ -93,6 +95,8 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="securite" element={<SecuriteComptePage />} />
         <Route path="scans" element={<ScansPage />} />
+        <Route path="prises-inventaire" element={<PrisesInventairePage />} />
+        <Route path="prises-inventaire/:id" element={<PriseInventairePage />} />
         <Route path="produits" element={<ProduitsPage />} />
         <Route path="secteurs" element={<SecteursPage />} />
         <Route path="employes" element={<EmployesPage />} />
