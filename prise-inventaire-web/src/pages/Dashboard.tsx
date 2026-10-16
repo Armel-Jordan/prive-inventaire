@@ -57,6 +57,9 @@ interface FinanceStats {
 interface InventaireStats {
   produits: { total: number; en_alerte: number; rupture: number };
   mouvements: { total_periode: number; entrees: number; sorties: number };
+  /** Secteurs et employés actifs (absents des anciennes versions de l'API). */
+  secteurs?: number;
+  employes_actifs?: number;
 }
 
 interface AlerteInfo {
@@ -579,7 +582,7 @@ export default function Dashboard() {
             <KpiCard
               label="Produits"
               value={formatCount(inventaire.produits.total || legacyStats.produits)}
-              subLabel={`${formatCount(legacyStats.secteurs || 0)} secteurs`}
+              subLabel={`${formatCount(inventaire.secteurs ?? legacyStats.secteurs ?? 0)} secteurs`}
               icon={Package}
               accentBg="bg-purple-600"
               iconBg="bg-purple-50 dark:bg-purple-900/30"
@@ -598,7 +601,7 @@ export default function Dashboard() {
             />
             <KpiCard
               label="Mouvements"
-              value={formatCount(inventaire.mouvements.total_periode || legacyStats.scans)}
+              value={formatCount(inventaire.mouvements.total_periode)}
               subLabel="ce mois"
               icon={ArrowRightLeft}
               accentBg="bg-purple-600"
@@ -622,7 +625,7 @@ export default function Dashboard() {
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
               label="Employés"
-              value={formatCount(legacyStats.employes)}
+              value={formatCount(inventaire.employes_actifs ?? legacyStats.employes)}
               subLabel="actifs"
               icon={Users}
               accentBg="bg-gray-400"

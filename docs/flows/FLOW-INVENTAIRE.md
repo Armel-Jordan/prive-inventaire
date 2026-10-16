@@ -496,3 +496,41 @@ Toutes les tables du module Inventaire sont isolées par `tenant_id` :
 ## 13. Prises d'inventaire (sessions de comptage)
 
 Sessions de comptage par-dessus les scans : écarts avec le dernier inventaire validé, mouvements connus depuis, corrections, validation qui forme l'inventaire officiel. Voir [FLOW-PRISE-INVENTAIRE.md](./FLOW-PRISE-INVENTAIRE.md).
+
+---
+
+## 14. Historique des scans, statistiques, comparaison, tableau de bord
+
+Les écrans travaillent sur **tout l'historique**, filtré par l'API. Ils voyaient auparavant les 100 derniers
+scans ou mouvements : filtres de dates vides, export de 100 lignes, statistiques identiques sur 7, 30 et
+90 jours.
+
+**Dates et fuseau horaire :** une période choisie à l'écran (« du 15/10 au 15/10 ») est envoyée en instants,
+du début du premier jour au début du lendemain du dernier, dans le fuseau du navigateur. Les jours des
+graphiques sont regroupés dans ce même fuseau (paramètre `fuseau`, par exemple `America/Toronto`). La
+planification envoie l'heure saisie avec son fuseau : 9 h saisi à Montréal reste 9 h à l'affichage.
+
+**Secteur :** un filtre par secteur retrouve les scans enregistrés sous son code (web) comme sous son nom
+(application mobile). Les statistiques comptent ce secteur une seule fois.
+
+| Endpoint | Rôle |
+|---|---|
+| `GET /scan/historique?page=&per_page=&secteur=&employe=&produit=&depuis=&jusqu_a=` | Historique paginé (500 par page au plus). Sans `page` : liste des 100 derniers, format attendu par l'application mobile |
+| `GET /scan/export?…&fuseau=` | CSV de tous les scans filtrés (BOM UTF-8, `;`, virgule décimale) |
+| `GET /scan/statistiques?depuis=&jusqu_a=&fuseau=` | Total, jours d'activité, moyenne par jour, secteurs et employés distincts ; répartition par jour, secteur (8 premiers), employé (10 premiers) et type |
+| `GET /scan/comparaison?a_depuis=&a_jusqu_a=&b_depuis=&b_jusqu_a=` | Quantités comptées par produit sur deux périodes, écart et variation |
+| `GET /scan/stats` | Total, scans du jour, instants du premier et du dernier scan |
+| `GET /relocalisation?page=&per_page=` | Historique des mouvements paginé (sans `page` : liste limitée, comme avant) |
+
+**Comparaison :** elle met face à face les quantités **comptées** à chacune des deux dates. Elle additionnait
+auparavant tous les scans jusqu'à chaque date : ce cumul ne faisait que croître, et « Diminutions » restait
+à 0.
+
+**Tableau de bord, section Inventaire :**
+- produits actifs (les désactivés ne comptent plus) ;
+- alertes et ruptures parmi les produits suivis (seuil d'alerte > 0), avec le stock calculé comme sur l'écran
+  Alertes (somme des quantités scannées) ;
+- secteurs et employés actifs ;
+- mouvements de relocalisation de la période (arrivages = entrées, sorties).
+
+Il lisait auparavant d'anciennes tables vides.
