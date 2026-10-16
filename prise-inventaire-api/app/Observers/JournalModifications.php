@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\Acompte;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Avoir;
@@ -10,6 +11,7 @@ use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
 use App\Models\Configuration;
+use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
 use App\Models\Facture;
@@ -49,6 +51,8 @@ class JournalModifications
         ComFourEntete::class => ['Commande fournisseur', ['create', 'update', 'delete']],
         Facture::class => ['Facture', ['create', 'update', 'delete']],
         Avoir::class => ['Note de crédit', ['create', 'update', 'delete']],
+        Acompte::class => ['Acompte', ['create', 'update', 'delete']],
+        DemandeAcompte::class => ["Demande d'acompte", ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],
         TenantTaxe::class => ['Taxe', ['create', 'update', 'delete']],

@@ -2,7 +2,11 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
+import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet } from 'lucide-react';
+import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
+import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -32,6 +36,10 @@ import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } 
 export default function CommandesClientPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut, canCreate } = usePermissions();
+  const { t } = useLanguage();
+  const { toasts, toast, dismiss } = useToast();
+  // Commande pour laquelle saisir un acompte (réservé à elle, appliqué à sa facture à l'émission).
+  const [acomptePour, setAcomptePour] = useState<ComClientEntete | null>(null);
   const devise = useDevise();
   const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
   const [page, setPage] = useState(1);
@@ -323,6 +331,18 @@ export default function CommandesClientPage() {
                       </button>
                       <BoutonPdf chemin={`/commandes-client/${cmd.id}/pdf`} nomFichier={`commande-${cmd.numero}.pdf`} />
                       <BoutonCourriel type="commande_client" documentId={cmd.id} />
+                      {['brouillon', 'en_attente', 'acceptee'].includes(cmd.statut) && (
+                        <>{peut('acomptes', 'creer') && (
+                          <button
+                            onClick={() => setAcomptePour(cmd)}
+                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                            title={t.deposits.newDeposit}
+                            aria-label={`${t.deposits.newDeposit} — ${cmd.numero}`}
+                          >
+                            <Wallet size={18} />
+                          </button>
+                        )}</>
+                      )}
                       {cmd.statut === 'brouillon' && (
                         <>
                           <button
@@ -626,6 +646,15 @@ export default function CommandesClientPage() {
           </div>
         </div>
       )}
+      {acomptePour && (
+        <FormulaireAcompte
+          clientId={acomptePour.client_id}
+          commandeId={acomptePour.id}
+          onClose={() => setAcomptePour(null)}
+          onEnregistre={() => { setAcomptePour(null); toast(t.deposits.saved); }}
+        />
+      )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

@@ -215,7 +215,7 @@ export default function ComptesClientsPage() {
                       {releve.donnees.lignes.map((ligne, index) => (
                         <tr key={index} className="border-t dark:border-gray-700">
                           <td className="py-1.5 pr-3 whitespace-nowrap text-gray-700 dark:text-gray-300">{jour(ligne.date)}</td>
-                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{(ligne.type === 'paiement' || ligne.type === 'remboursement') && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
+                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{(ligne.type === 'paiement' || ligne.type === 'remboursement' || ligne.type === 'acompte') && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-gray-900 dark:text-white">{montant(ligne.debit)}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-green-700">{montant(ligne.credit)}</td>
                           <td className="py-1.5 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">{solde(ligne.solde)}</td>
@@ -248,6 +248,21 @@ export default function ComptesClientsPage() {
                     </ul>
                   )}
                 </div>
+                {releve.donnees.acomptes_disponibles.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{tr.availableDeposits.replace('{date}', jour(releve.donnees.au))}</h3>
+                    <ul className="text-sm divide-y dark:divide-gray-700">
+                      {releve.donnees.acomptes_disponibles.map(a => (
+                        <li key={a.acompte_id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                          <Link to={`/acomptes?recherche=${encodeURIComponent(a.reference ?? '')}`} className="text-indigo-700 dark:text-indigo-300 hover:underline">
+                            {tr.deposit} · {jour(a.date_acompte)}{a.reference && ` · ${a.reference}`}
+                          </Link>
+                          <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{montant(a.disponible)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {releve.donnees.credits_disponibles.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{tr.availableCredits.replace('{date}', jour(releve.donnees.au))}</h3>

@@ -15,6 +15,7 @@ const ROUTES_PDF: Record<TypeDocumentCourriel, string> = {
   commande_client: 'commandes-client',
   facture: 'factures',
   avoir: 'avoirs',
+  demande_acompte: 'demandes-acompte',
   bon_livraison: 'bons-livraison',
   commande_fournisseur: 'commandes-fournisseur',
 };

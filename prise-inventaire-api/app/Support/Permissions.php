@@ -113,6 +113,22 @@ class Permissions
                 'aide_fr' => "Rembourser au client le crédit disponible d'une note, ou l'imputer sur une autre de ses factures.",
                 'aide_en' => "Refund a credit note's available credit to the customer, or apply it to another of their invoices."],
         ]],
+        'acomptes' => ['onglet' => 'ventes', 'fr' => 'Acomptes', 'en' => 'Deposits', 'actions' => [
+            'appliquer' => ['base' => 'modifier', 'fr' => 'Appliquer un acompte sur une facture', 'en' => 'Apply a deposit to an invoice',
+                'aide_fr' => "Utiliser ce qui reste d'un acompte pour payer une facture du client.",
+                'aide_en' => "Use what is left of a deposit to pay one of the customer's invoices."],
+            'rembourser' => ['base' => 'modifier', 'fr' => 'Rembourser un acompte', 'en' => 'Refund a deposit',
+                'aide_fr' => "Rendre au client tout ou partie de ce qui reste d'un acompte.",
+                'aide_en' => 'Give back to the customer all or part of what is left of a deposit.'],
+        ]],
+        'demandes_acompte' => ['onglet' => 'ventes', 'fr' => "Demandes d'acompte", 'en' => 'Deposit requests', 'actions' => [
+            'envoyer' => ['base' => 'modifier', 'fr' => "Marquer une demande d'acompte envoyée", 'en' => 'Mark a deposit request as sent',
+                'aide_fr' => 'Marquer une demande comme envoyée au client (son envoi par courriel le fait aussi) : elle ne se modifie plus.',
+                'aide_en' => 'Mark a request as sent to the customer (sending it by email does it too): it can no longer be changed.'],
+            'encaisser' => ['base' => 'modifier', 'fr' => "Marquer une demande d'acompte payée", 'en' => 'Mark a deposit request as paid',
+                'aide_fr' => "Enregistrer le dépôt reçu (date, mode, référence) : l'acompte est créé au dossier du client.",
+                'aide_en' => "Record the deposit received (date, method, reference): the deposit is added to the customer's account."],
+        ]],
         'comptes_clients' => ['onglet' => 'ventes', 'fr' => 'Comptes clients', 'en' => 'Receivables', 'crud' => ['voir']],
         'bons_livraison' => ['onglet' => 'ventes', 'fr' => 'Bons de livraison', 'en' => 'Delivery notes', 'actions' => [
             'preparer' => ['base' => 'modifier', 'fr' => 'Préparer un bon de livraison', 'en' => 'Prepare a delivery note',

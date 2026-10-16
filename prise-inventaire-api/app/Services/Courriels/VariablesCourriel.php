@@ -99,6 +99,12 @@ class VariablesCourriel
                 'montant_ttc' => $montant($d->montant_ttc),
                 'credit_disponible' => $montant($d->credit_disponible),
             ] + $this->client($d->client),
+            'demande_acompte' => [
+                'numero' => $d->numero,
+                'date' => $date($d->date_demande),
+                'montant' => $montant($d->montant),
+                'description' => $d->description,
+            ] + $this->client($d->client),
             'bon_livraison' => [
                 'numero' => $d->numero,
                 'date_livraison' => $date($d->date_livraison),
@@ -143,7 +149,7 @@ class VariablesCourriel
     {
         $en = $langue === 'en';
         $jour = Carbon::today();
-        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'avoir' => 'AV', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC'];
+        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC'];
 
         $valeurs = [
             'numero' => ($prefixes[$type] ?? 'DOC').'-00001',
@@ -166,6 +172,8 @@ class VariablesCourriel
             'reste_a_payer' => $this->montant(1200, $langue, $devise),
             'motif' => $en ? 'Returned goods' : 'Marchandise retournée',
             'credit_disponible' => $this->montant(0, $langue, $devise),
+            'montant' => $this->montant(300, $langue, $devise),
+            'description' => $en ? 'Deposit before starting the work' : 'Acompte avant le début des travaux',
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));

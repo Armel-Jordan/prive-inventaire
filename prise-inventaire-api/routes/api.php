@@ -24,6 +24,7 @@ Route::get('/health', function () {
 use App\Http\Controllers\AccesCompteController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AlerteStockController;
+use App\Http\Controllers\Api\AcompteController;
 use App\Http\Controllers\Api\AvoirController;
 use App\Http\Controllers\Api\BaliseController;
 use App\Http\Controllers\Api\BonCommandePdfController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
 use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Http\Controllers\Api\DemandeAcompteController;
 use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
@@ -598,6 +600,29 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/imputer', [AvoirController::class, 'imputer'])->whereNumber('id');
         Route::post('/{id}/rembourser', [AvoirController::class, 'rembourser'])->whereNumber('id');
         Route::delete('/{id}', [AvoirController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Acomptes : paiements reçus avant la facture, appliqués au paiement des factures ou remboursés.
+    Route::prefix('acomptes')->middleware('module:ventes')->group(function () {
+        Route::get('/', [AcompteController::class, 'index']);
+        Route::get('/{id}', [AcompteController::class, 'show'])->whereNumber('id');
+        Route::post('/', [AcompteController::class, 'store']);
+        Route::put('/{id}', [AcompteController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [AcompteController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/appliquer', [AcompteController::class, 'appliquer'])->whereNumber('id');
+        Route::post('/{id}/rembourser', [AcompteController::class, 'rembourser'])->whereNumber('id');
+    });
+
+    // Demandes d'acompte : dépôt demandé au client ; la marquer payée enregistre l'acompte.
+    Route::prefix('demandes-acompte')->middleware('module:ventes')->group(function () {
+        Route::get('/', [DemandeAcompteController::class, 'index']);
+        Route::get('/{id}', [DemandeAcompteController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'demandeAcompte'])->whereNumber('id');
+        Route::post('/', [DemandeAcompteController::class, 'store']);
+        Route::put('/{id}', [DemandeAcompteController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [DemandeAcompteController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/envoyer', [DemandeAcompteController::class, 'envoyer'])->whereNumber('id');
+        Route::post('/{id}/encaisser', [DemandeAcompteController::class, 'encaisser'])->whereNumber('id');
     });
 
     // Comptes clients : analyse chronologique des sommes dues, relevé de compte d'un client.

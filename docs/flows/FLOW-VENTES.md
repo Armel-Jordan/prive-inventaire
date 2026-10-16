@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — notes de crédit (§5.8)
+> Dernière mise à jour : 2026-10-16 — acomptes et demandes d'acompte (§5.9)
 
 ---
 
@@ -134,6 +134,7 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Émettre | ✅ | Statut `brouillon` |
 | Enregistrer paiement | ✅ | Statuts `emise` ou `partiellement_payee` |
 | Créditer (note de crédit) | ✅ | Statuts `emise`, `partiellement_payee` ou `payee` (§5.8) |
+| Payer avec un acompte | ✅ | Statuts `emise` ou `partiellement_payee`, acompte disponible du client (§5.9) |
 | Créer BL | ✅ | Statut `emise`, si aucun BL existant |
 
 ### Bons de Livraison
@@ -610,6 +611,127 @@ Code :
 - API : service `App\Services\NotesCredit`, contrôleur `App\Http\Controllers\Api\AvoirController`, migration `2026_10_16_100030_creer_notes_de_credit` ;
 - web : écran `NotesCreditPage`, éditeur `components/avoirs/EditeurNoteCredit`, fenêtre `components/avoirs/ReglerCredit`, service `src/services/avoirs.ts`.
 
+### 5.9 Acomptes et demandes d'acompte (Ventes → Acomptes, Demandes d'acompte)
+
+Plan de parité fripv2, phase 1.5 : les acomptes et les demandes d'acompte de fripv2.
+
+#### Acomptes
+
+Un **acompte** est un paiement reçu d'un client avant sa facture : date, mode (virement, chèque, espèces, carte, autre), référence, montant et notes. Il appartient au client.
+
+**Saisir un acompte :**
+- **Ventes → Acomptes → Nouvel acompte** : un acompte libre, ou réservé à une commande du client ;
+- bouton **Nouvel acompte** d'une commande brouillon, en attente ou acceptée (liste des commandes) : l'acompte est réservé à cette commande ;
+- une **demande d'acompte** marquée payée (plus bas).
+
+**Utiliser un acompte :**
+- **Réservé à une commande** : à l'émission de la facture de cette commande, l'acompte s'applique de lui-même à son paiement, au plus ce qui reste dû. Ce qui en reste redevient un crédit libre du client.
+- **Payer une facture** : la fenêtre « Enregistrer un paiement » d'une facture liste les acomptes disponibles du client, sauf ceux réservés à une autre commande. « Appliquer » paie la facture avec l'acompte, au plus ce qui en reste et ce qui reste dû.
+- **Appliquer sur une facture**, depuis l'écran Acomptes : une facture due du même client, montant et date au choix.
+- **Rembourser** ce qui reste : montant, date, mode et référence. Par défaut, le mode est celui de l'acompte : l'argent ressort par où il est entré.
+
+**Effet sur la facture :** une application est un **paiement de la facture** rattaché à l'acompte (`facture_paiements.acompte_id`). Le reste à payer, le statut, les échéances et l'encours du client suivent donc comme pour tout paiement.
+
+**Contrôles :**
+- le montant ne dépasse ni ce qui reste de l'acompte, ni ce qui reste dû sur la facture ;
+- la date ne précède ni l'acompte ni la facture ;
+- la facture appartient au même client ;
+- un acompte déjà appliqué ou remboursé ne change plus de date, de mode ni de montant, et ne se supprime plus.
+
+**État d'un acompte :**
+
+| État | Signification |
+|---|---|
+| `disponible` | Rien n'en a encore servi |
+| `entame` | Appliqué ou remboursé en partie |
+| `utilise` | Plus rien de disponible |
+
+**L'écran Acomptes** liste tous les acomptes, tous clients confondus, du plus récent au plus ancien :
+- **Recherche** par référence, client ou montant.
+- **Filtre** « avec solde disponible » ou « utilisés ».
+- **Totaux** de la sélection : montant et disponible.
+- **Détail** d'un acompte : factures payées avec, et remboursements.
+
+#### Demandes d'acompte
+
+Une **demande d'acompte** demande un dépôt au client avant des travaux ou une commande. Ce n'est pas une facture : elle n'a aucun effet sur le compte du client tant qu'elle n'est pas payée.
+
+**Contenu :**
+- numéro, attribué à la création (numérotation `demande_acompte`, `DA-00001` par défaut) ;
+- client, date ;
+- description sur plusieurs lignes ;
+- montant, sans taxe ;
+- au besoin, un devis et une commande du client.
+
+**Statuts :**
+
+| Statut | Signification | Actions |
+|---|---|---|
+| `brouillon` | Modifiable | Modifier, Marquer envoyée, Marquer payée, Supprimer |
+| `envoyee` | Envoyée au client ; ne se modifie plus | Marquer payée, Supprimer |
+| `payee` | Dépôt reçu : l'acompte est enregistré | Lecture seule |
+
+- **Envoyée** : marquée à la main, ou d'elle-même quand la demande part par courriel (type `demande_acompte`, PDF joint).
+- **Marquer payée** : date, mode et référence du dépôt. L'acompte est créé au dossier du client, réservé à la commande de la demande si elle est toujours en cours.
+- **Après le paiement**, l'usage de cet acompte donne l'état affiché : **partiellement appliquée**, puis **appliquée**.
+- **Supprimer un acompte** inutilisé venant d'une demande remet la demande dans son état d'avant le paiement.
+
+**PDF** « Demande d'acompte » : la description, le montant demandé et la mention « Aucune taxe : ce document n'est pas une facture ».
+
+#### Ailleurs dans l'application
+
+- **Comptes clients** (§7 bis) :
+  - un acompte reçu est au crédit du relevé, son remboursement au débit ;
+  - son application n'est pas un nouveau mouvement, car l'acompte est déjà au crédit ;
+  - ce qui reste d'un acompte compte dans les crédits dus au client.
+- **Recherche globale** : les demandes d'acompte, par numéro, description ou client.
+- **Journal des modifications** : création, modification et suppression des acomptes et des demandes.
+- **Hors périmètre** : aucune écriture comptable n'est passée, comme pour les autres documents de vente pour l'instant.
+
+**Permissions :**
+
+| Écran | Module | Actions nommées |
+|---|---|---|
+| Acomptes | `acomptes` | « Appliquer un acompte sur une facture » (`acomptes.appliquer`), « Rembourser un acompte » (`acomptes.rembourser`) |
+| Demandes d'acompte | `demandes_acompte` | « Marquer une demande d'acompte envoyée » (`demandes_acompte.envoyer`), « Marquer une demande d'acompte payée » (`demandes_acompte.encaisser`) |
+
+À la mise en place, chaque groupe reçoit sur ces deux écrans ses droits sur les factures :
+- appliquer, rembourser et marquer payée suivent « Enregistrer un paiement » ;
+- marquer envoyée suit « Émettre une facture ».
+
+Pour les rôles système, cela donne :
+- administrateur et responsable : tout ;
+- utilisateur et lecture seule : consultation.
+
+| Route | Rôle |
+|---|---|
+| `GET /acomptes?client_id=&commande_id=&disponibilite=avec_solde\|utilise&recherche=` | Liste paginée et totaux de la sélection |
+| `GET /acomptes/{id}` | Détail : factures payées avec l'acompte, remboursements |
+| `POST /acomptes` | Recevoir un acompte (`client_id`, `date_acompte`, `mode`, `reference`, `montant`, `commande_id`, `notes`) |
+| `PUT /acomptes/{id}` | Modifier (référence, réservation et notes toujours ; date, mode et montant tant qu'il n'a pas servi) |
+| `DELETE /acomptes/{id}` | Supprimer un acompte qui n'a pas servi |
+| `POST /acomptes/{id}/appliquer` | Payer une facture (`facture_id`, `montant`, `date`) |
+| `POST /acomptes/{id}/rembourser` | Rembourser (`montant`, `date_remboursement`, `mode`, `reference`) |
+| `GET /demandes-acompte?statut=&client_id=&recherche=` | Liste paginée |
+| `GET /demandes-acompte/{id}` (`/pdf`) | Détail, PDF |
+| `POST /demandes-acompte`, `PUT /demandes-acompte/{id}` | Saisie (brouillon) |
+| `DELETE /demandes-acompte/{id}` | Supprimer une demande non payée |
+| `POST /demandes-acompte/{id}/envoyer` | Marquer envoyée |
+| `POST /demandes-acompte/{id}/encaisser` | Marquer payée (`date`, `mode`, `reference`) : crée l'acompte |
+
+**Données :**
+
+| Table | Contenu |
+|---|---|
+| `acomptes` | Client, date, mode, référence, montant, commande réservée, demande d'origine, `montant_applique`, `montant_rembourse` |
+| `acompte_remboursements` | Remboursements d'un acompte |
+| `facture_paiements.acompte_id` | Paiement d'une facture fait avec un acompte |
+| `demandes_acompte` | Numéro, client, date, description, montant, statut, devis, commande, acompte |
+
+Code :
+- API : services `App\Services\Acomptes` et `App\Services\DemandesAcompte`, contrôleurs `AcompteController` et `DemandeAcompteController`, migration `2026_10_16_100031_creer_acomptes` ;
+- web : écrans `AcomptesPage` et `DemandesAcomptePage`, composants `components/acomptes/FormulaireAcompte` et `components/acomptes/UtiliserAcompte`, service `src/services/acomptes.ts`.
+
 ---
 
 ## 6. Bons de Livraison
@@ -772,7 +894,7 @@ Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'e
 
 - **Factures prises en compte** : les factures émises, partiellement payées, payées ou créditées, datées au plus tard ce jour. Les brouillons et les factures annulées sont exclus.
 - **Reste dû à une date** : le montant TTC, moins les paiements et les crédits de notes de crédit imputés jusqu'à ce jour. Une facture payée depuis compte donc encore comme due à une date antérieure.
-- **Crédits** : le crédit des notes de crédit qui n'est ni imputé ni remboursé à cette date est dû au client (§5.8).
+- **Crédits** : le crédit des notes de crédit qui n'est ni imputé ni remboursé à cette date est dû au client (§5.8), comme ce qui reste des acomptes ni appliqué ni remboursé (§5.9).
 - **Analyse chronologique** :
   - le retard se compte depuis l'échéance, ou depuis la date de facture si la facture n'a pas d'échéance ;
   - tranches : non échu, 1 à 30 jours, 31 à 60, 61 à 90, plus de 90 ;
@@ -783,11 +905,12 @@ Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'e
 - **Relevé de compte d'un client** (bouton de la ligne, du 1er janvier à la date choisie par défaut) :
   - solde d'ouverture (mouvements antérieurs) ;
   - au débit : les factures et les remboursements au client ;
-  - au crédit : les paiements et les notes de crédit ;
-  - solde progressif ; le même jour, l'ordre est : facture, note de crédit, paiement, remboursement ;
+  - au crédit : les paiements, les notes de crédit et les acomptes reçus ;
+  - un paiement fait avec un acompte n'est pas un mouvement de plus : l'acompte est déjà au crédit ;
+  - solde progressif ; le même jour, l'ordre est : facture, note de crédit, acompte, paiement, remboursement ;
   - solde final ;
   - factures encore dues au dernier jour, avec leur retard ;
-  - crédits encore disponibles au dernier jour ;
+  - crédits des notes de crédit et acomptes encore disponibles au dernier jour ;
   - export CSV.
 
 | Route | Rôle |

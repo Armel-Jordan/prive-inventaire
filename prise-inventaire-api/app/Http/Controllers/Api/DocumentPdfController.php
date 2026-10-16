@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
+use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
 use App\Services\DocumentsVentePdf;
@@ -45,6 +46,13 @@ class DocumentPdfController extends Controller
         $nom = $avoir->numero ?? 'brouillon-'.$avoir->id;
 
         return $this->documents->pdf($this->documents->avoir($avoir))->stream("note-credit-{$nom}.pdf");
+    }
+
+    public function demandeAcompte(int $id): Response
+    {
+        $demande = DemandeAcompte::findOrFail($id);
+
+        return $this->documents->pdf($this->documents->demandeAcompte($demande))->stream("demande-acompte-{$demande->numero}.pdf");
     }
 
     public function bonLivraison(int $id): Response

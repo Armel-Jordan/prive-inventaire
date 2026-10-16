@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Acompte;
+use App\Models\AcompteRemboursement;
 use App\Models\Avoir;
 use App\Models\AvoirImputation;
 use App\Models\AvoirRemboursement;
@@ -18,6 +20,9 @@ use Illuminate\Support\Collection;
  *
  * Notes de crédit : leur part imputée sur une facture réduit ce qui reste dû de celle-ci (à la date de
  * l'imputation) ; leur crédit encore disponible (ni imputé ni remboursé) est dû au client et réduit son solde.
+ *
+ * Acomptes : reçus, ils sont au crédit du client ; appliqués, ce sont des paiements de la facture (qui en réduisent
+ * le reste dû) mais pas un nouveau mouvement du compte ; ce qui en reste (ni appliqué ni remboursé) est dû au client.
  */
 class ComptesClients
 {
@@ -27,12 +32,15 @@ class ComptesClients
     /** Factures qui engagent le client : les brouillons et les factures annulées n'en font pas partie. */
     private const STATUTS = ['emise', 'partiellement_payee', 'payee', 'creditee'];
 
+    /** Modes de paiement, tels qu'écrits dans les libellés du relevé. */
+    private const MODES = ['especes' => 'espèces', 'cheque' => 'chèque', 'virement' => 'virement', 'carte' => 'carte', 'autre' => 'autre'];
+
     /** Mouvements d'un même jour : la facture, puis ce qui la crédite, la règle ou rembourse le client. */
-    private const ORDRE = ['facture' => 0, 'avoir' => 1, 'paiement' => 2, 'remboursement' => 3];
+    private const ORDRE = ['facture' => 0, 'avoir' => 1, 'acompte' => 2, 'paiement' => 3, 'remboursement' => 4];
 
     /**
      * Sommes dues par client à une date, réparties par ancienneté du retard ; crédits encore disponibles des notes
-     * de crédit (dus au client) et solde net.
+     * de crédit et des acomptes (dus au client) et solde net.
      */
     public function analyse(string $date): array
     {
@@ -51,7 +59,7 @@ class ComptesClients
             $totaux[$facture['tranche']] = round($totaux[$facture['tranche']] + $facture['reste'], 2);
             $totaux['total'] = round($totaux['total'] + $facture['reste'], 2);
         }
-        foreach ($this->creditsDisponibles(null, $date) as $credit) {
+        foreach ($this->creditsDisponibles(null, $date)->concat($this->acomptesDisponibles(null, $date)) as $credit) {
             $id = $credit['client_id'];
             $clients[$id] ??= $nouveau($id, $credit['client_code'], $credit['client']);
             $clients[$id]['credits'] = round($clients[$id]['credits'] + $credit['disponible'], 2);
@@ -78,12 +86,17 @@ class ComptesClients
     {
         $factures = Facture::where('client_id', $client->id)->whereIn('statut', self::STATUTS)
             ->whereDate('date_facture', '<=', $au)->get(['id', 'numero', 'date_facture', 'date_echeance', 'montant_ttc']);
-        $paiements = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereDate('date_paiement', '<=', $au)
+        // Les paiements faits avec un acompte ne sont pas de nouveaux mouvements : l'acompte est déjà au crédit.
+        $paiements = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereNull('acompte_id')->whereDate('date_paiement', '<=', $au)
             ->get(['facture_id', 'date_paiement', 'montant', 'mode_paiement', 'reference']);
         $avoirs = Avoir::with('facture:id,numero')->where('client_id', $client->id)->whereIn('statut', Avoir::EMISES)
             ->whereDate('date_avoir', '<=', $au)->get(['id', 'numero', 'facture_id', 'date_avoir', 'montant_ttc']);
         $remboursements = AvoirRemboursement::whereIn('avoir_id', $avoirs->pluck('id'))->whereDate('date_remboursement', '<=', $au)
             ->get(['avoir_id', 'date_remboursement', 'montant', 'mode', 'reference']);
+        $acomptes = Acompte::where('client_id', $client->id)->whereDate('date_acompte', '<=', $au)
+            ->get(['id', 'date_acompte', 'montant', 'mode', 'reference']);
+        $remboursementsAcomptes = AcompteRemboursement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_remboursement', '<=', $au)
+            ->get(['acompte_id', 'date_remboursement', 'montant', 'mode', 'reference']);
         $numeros = $factures->pluck('numero', 'id');
         $numerosAvoirs = $avoirs->pluck('numero', 'id');
 
@@ -92,9 +105,13 @@ class ComptesClients
             ->concat($avoirs->map(fn ($a) => ['date' => $a->date_avoir->toDateString(), 'type' => 'avoir', 'piece' => $a->numero,
                 'libelle' => 'Note de crédit '.$a->numero.($a->facture ? " (facture {$a->facture->numero})" : ''), 'debit' => 0.0, 'credit' => round((float) $a->montant_ttc, 2)]))
             ->concat($paiements->map(fn ($p) => ['date' => $p->date_paiement->toDateString(), 'type' => 'paiement', 'piece' => $numeros[$p->facture_id] ?? null,
-                'libelle' => trim('Paiement '.($p->mode_paiement ?? '').($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant, 2)]))
+                'libelle' => trim('Paiement '.$this->mode($p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant, 2)]))
             ->concat($remboursements->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $numerosAvoirs[$r->avoir_id] ?? null,
-                'libelle' => trim('Remboursement '.($r->mode ?? '').($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]));
+                'libelle' => trim('Remboursement '.$this->mode($r->mode).($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]))
+            ->concat($acomptes->map(fn ($a) => ['date' => $a->date_acompte->toDateString(), 'type' => 'acompte', 'piece' => $a->reference,
+                'libelle' => trim('Acompte '.$this->mode($a->mode)), 'debit' => 0.0, 'credit' => round((float) $a->montant, 2)]))
+            ->concat($remboursementsAcomptes->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $r->reference,
+                'libelle' => trim("Remboursement d'acompte ".$this->mode($r->mode)), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]));
 
         $avant = $tous->filter(fn (array $m) => $m['date'] < $du);
         $ouverture = round((float) $avant->sum('debit') - (float) $avant->sum('credit'), 2);
@@ -121,6 +138,7 @@ class ComptesClients
             'solde_final' => $solde,
             'factures_dues' => $this->facturesDues($client->id, $au)->values()->all(),
             'credits_disponibles' => $this->creditsDisponibles($client->id, $au)->values()->all(),
+            'acomptes_disponibles' => $this->acomptesDisponibles($client->id, $au)->values()->all(),
         ];
     }
 
@@ -198,6 +216,41 @@ class ComptesClients
             'date_avoir' => $a->date_avoir->toDateString(),
             'montant' => round((float) $a->montant_ttc, 2),
             'disponible' => round((float) $a->montant_ttc - (float) ($imputes[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0), 2),
+        ])->filter(fn (array $c) => $c['disponible'] > 0.004)->values();
+    }
+
+    private function mode(?string $mode): string
+    {
+        return self::MODES[$mode] ?? (string) $mode;
+    }
+
+    /**
+     * Acomptes dont il reste quelque chose à une date (montant moins applications et remboursements datés jusqu'à
+     * ce jour) : sommes dues au client.
+     *
+     * @return Collection<int, array>
+     */
+    private function acomptesDisponibles(?int $clientId, string $date): Collection
+    {
+        $acomptes = Acompte::with('client:id,code,raison_sociale')->whereDate('date_acompte', '<=', $date)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->orderBy('date_acompte')->orderBy('id')
+            ->get(['id', 'client_id', 'date_acompte', 'mode', 'reference', 'montant']);
+        $appliques = FacturePaiement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_paiement', '<=', $date)
+            ->groupBy('acompte_id')->selectRaw('acompte_id, SUM(montant) AS total')->pluck('total', 'acompte_id');
+        $rembourses = AcompteRemboursement::whereIn('acompte_id', $acomptes->pluck('id'))->whereDate('date_remboursement', '<=', $date)
+            ->groupBy('acompte_id')->selectRaw('acompte_id, SUM(montant) AS total')->pluck('total', 'acompte_id');
+
+        return $acomptes->map(fn (Acompte $a) => [
+            'acompte_id' => $a->id,
+            'client_id' => $a->client_id,
+            'client_code' => $a->client?->code,
+            'client' => $a->client?->raison_sociale,
+            'date_acompte' => $a->date_acompte->toDateString(),
+            'mode' => $a->mode,
+            'reference' => $a->reference,
+            'montant' => round((float) $a->montant, 2),
+            'disponible' => round((float) $a->montant - (float) ($appliques[$a->id] ?? 0) - (float) ($rembourses[$a->id] ?? 0), 2),
         ])->filter(fn (array $c) => $c['disponible'] > 0.004)->values();
     }
 }

@@ -13,7 +13,7 @@ class FacturePaiement extends Model
     protected $table = 'facture_paiements';
 
     protected $fillable = [
-        'facture_id', 'echeance_id', 'date_paiement', 'montant',
+        'facture_id', 'echeance_id', 'acompte_id', 'date_paiement', 'montant',
         'mode_paiement', 'reference', 'notes', 'enregistre_par',
     ];
 
@@ -30,6 +30,12 @@ class FacturePaiement extends Model
     public function echeance(): BelongsTo
     {
         return $this->belongsTo(FactureEcheance::class, 'echeance_id');
+    }
+
+    /** Acompte avec lequel le paiement a été fait (application d'un acompte), sinon null. */
+    public function acompte(): BelongsTo
+    {
+        return $this->belongsTo(Acompte::class);
     }
 
     protected static function booted(): void
