@@ -1,7 +1,9 @@
 # PRISE D'INVENTAIRE — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — création (plan de parité fripv2, phase 2.7)
+> Dernière mise à jour : 2026-10-16 — valorisation de l'inventaire officiel (phase 2.6)
+>
+> Historique : 2026-10-15 — création (plan de parité fripv2, phase 2.7)
 
 ---
 
@@ -81,8 +83,29 @@ Une session :
 ## 5. Ce qui ne change pas
 
 - Les scans, l'application Android, la comparaison, l'inventaire tournant, les alertes et les rapports gardent leur fonctionnement.
-- L'inventaire officiel est **une nouvelle donnée**, qui pourra servir plus tard (valorisation du stock, alertes).
+- L'inventaire officiel est **une nouvelle donnée**. Il sert aujourd'hui à la valorisation du stock (section 5 bis) ; il pourra servir plus tard aux alertes.
 - Limite connue : l'application Android, hors ligne, renvoie ses scans sans leur heure de saisie. Un scan synchronisé après la clôture d'une session n'y entre donc pas.
+
+---
+
+## 5 bis. Valorisation de l'inventaire (Inventaire → Valorisation)
+
+Phase 2.6 du plan de parité. La valeur de l'inventaire officiel vaut, pour chaque secteur, les quantités retenues par sa dernière prise validée multipliées par un coût unitaire. Rien n'est enregistré : c'est un état, qui se recalcule à chaque consultation.
+
+| Méthode | Coût unitaire |
+|---|---|
+| Coût moyen pondéré (par défaut) | Moyenne des prix des commandes fournisseur, pondérée par les quantités reçues (commandées si rien n'est encore reçu) |
+| Dernier coût d'achat | Prix de la dernière commande fournisseur envoyée, partiellement reçue ou reçue, avec son numéro et sa date |
+| Prix de vente | Prix unitaire de la fiche produit |
+
+- **Commandes prises en compte** : les brouillons et les commandes annulées sont ignorés.
+- **Prix d'achat** : ils sont ramenés à l'unité de stock (un carton de 12 à 9 000 coûte 750 l'unité) et à la devise de l'entreprise, avec le taux de change figé sur la commande.
+- **Produits sans coût** : ils sont comptés et signalés, sans valeur. Un produit est sans coût s'il n'a aucune commande fournisseur, ou pas de prix de vente pour la méthode « Prix de vente ».
+- **Écran** :
+  - total, nombre de produits valorisés, produits sans coût ;
+  - détail par secteur (prise de référence, valeur) et par produit (secteurs, quantité, coût unitaire et sa référence, valeur) ;
+  - filtre par secteur, recherche, export CSV.
+- **Accès** : administrateurs et responsables, car la valorisation révèle les coûts. Les autres comptes voient un message.
 
 ---
 
@@ -99,9 +122,10 @@ Une session :
 | `POST /prises-inventaire/{id}/valider` | Admin, responsable | Fige les lignes (inventaire officiel) |
 | `POST /prises-inventaire/{id}/annuler` | Admin, responsable | Clôt sans valider |
 | `GET /prises-inventaire/officiel?secteur_id=&recherche=&page=` | Tous | Inventaire officiel |
+| `GET /prises-inventaire/valorisation?methode=&secteur_id=[&format=csv]` | Admin, responsable | Valorisation (`cout_moyen`, `dernier_achat` ou `prix_vente`) |
 
 **Tables :** `prises_inventaire`, `prises_inventaire_secteurs`, `prises_inventaire_corrections` et `prises_inventaire_lignes`, toutes cloisonnées par entreprise (migration `2026_10_15_100018`).
 
 **Code :**
-- API : `App\Services\PrisesInventaire`, `App\Http\Controllers\Inventaire\PriseInventaireController` ;
-- front : `PrisesInventairePage`, `PriseInventairePage`, `services/prisesInventaire.ts`.
+- API : `App\Services\PrisesInventaire`, `App\Http\Controllers\Inventaire\PriseInventaireController` ; valorisation : `App\Services\ValorisationInventaire`, `ValorisationInventaireController` ;
+- front : `PrisesInventairePage`, `PriseInventairePage`, `ValorisationInventairePage`, `services/prisesInventaire.ts`, `services/valorisation.ts`.
