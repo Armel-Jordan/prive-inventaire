@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\NettoyerNotifications;
+use App\Taches\RelancerFacturesEnRetard;
 use App\Taches\SignalerAlertesStock;
 use App\Taches\SignalerCommandesFournisseurEnRetard;
 use App\Taches\SignalerControlesTechniques;
@@ -26,6 +27,7 @@ final class TachesPlanifiees
         'alertes_stock' => [SignalerAlertesStock::class, 'quotidienne', '07:00'],
         'nettoyage_notifications' => [NettoyerNotifications::class, 'quotidienne', '02:00'],
         'factures_impayees' => [SignalerFacturesImpayees::class, 'quotidienne', '07:00'],
+        'relances_paiement' => [RelancerFacturesEnRetard::class, 'quotidienne', '08:00'],
         'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
@@ -37,6 +39,8 @@ final class TachesPlanifiees
      */
     public const PARAMETRES = [
         'factures_impayees' => ['jours' => 30],
+        // Retard minimal avant la 1re relance, puis intervalle entre deux relances.
+        'relances_paiement' => ['jours' => 15],
         'commandes_fournisseur_en_retard' => ['jours' => 0],
         'livraisons_en_retard' => ['jours' => 3],
         'controles_techniques' => ['jours' => 30],
@@ -45,6 +49,7 @@ final class TachesPlanifiees
     /** Module requis par une tâche : sans lui, l'écran des alertes ne la propose pas. */
     public const MODULES = [
         'factures_impayees' => 'ventes',
+        'relances_paiement' => 'ventes',
         'commandes_fournisseur_en_retard' => 'achats',
         'livraisons_en_retard' => 'ventes',
         'controles_techniques' => 'ventes',

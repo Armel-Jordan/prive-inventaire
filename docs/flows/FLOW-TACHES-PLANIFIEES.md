@@ -18,6 +18,7 @@ Des traitements automatiques prédéfinis par l'application. Chaque entreprise l
 | `alertes_stock` | Chaque jour à 07:00 | Notifie les produits sous leur seuil d'alerte (même calcul que l'écran Alertes stock) ; pas de nouvelle notification tant que la précédente n'est pas lue |
 | `nettoyage_notifications` | Chaque jour à 02:00 | Supprime les notifications lues depuis plus de 30 jours |
 | `factures_impayees` | Chaque jour à 07:00 | Notifie les factures émises ou partiellement payées dont il reste à payer, plus de **N jours** (30) après l'échéance (ou la date de facture, sans échéance) |
+| `relances_paiement` | Chaque jour à 08:00 | Envoie le courriel de relance (modèle « relance », facture jointe) pour chaque facture en retard d'au moins **N jours** (15) dont la dernière relance date d'au moins N jours ; 3 relances automatiques au plus par facture, seulement aux clients qui ont une adresse de courriel (FLOW-VENTES §7 ter) |
 | `commandes_fournisseur_en_retard` | Chaque jour à 07:00 | Notifie les commandes fournisseur envoyées ou partiellement reçues dont la livraison prévue est dépassée de plus de **N jours** (0 : dès le lendemain) |
 | `livraisons_en_retard` | Chaque jour à 07:00 | Notifie les bons de livraison pas encore livrés (créés, en préparation, prêts, en livraison) plus de **N jours** (3) après leur création |
 | `controles_techniques` | Chaque jour à 07:00 | Prévient **N jours** (30) avant l'expiration du contrôle technique d'un camion actif, et une fois la date dépassée |

@@ -2055,7 +2055,7 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
 }
 
 // === COURRIELS (paramètres d'envoi et modèles) ===
-export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'bon_livraison' | 'commande_fournisseur' | 'general';
 export type LangueCourriel = 'fr' | 'en';
 
 export interface ContenuModeleCourriel {

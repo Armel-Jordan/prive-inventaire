@@ -9,6 +9,7 @@ use App\Models\CourrielParametres;
 use App\Services\BonCommandePdf;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
+use App\Services\Relances;
 use App\Support\Courriels;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -139,6 +140,10 @@ class EnvoiCourriel
             if ($envoi->type === 'demande_acompte') {
                 app(DemandesAcompte::class)->apresEnvoiCourriel((int) $envoi->document_id);
             }
+            // Une relance envoyée est notée sur sa facture.
+            if ($envoi->type === 'relance') {
+                app(Relances::class)->apresEnvoiCourriel($envoi);
+            }
         } catch (ModelNotFoundException) {
             $envoi->fill(['statut' => CourrielEnvoi::ECHEC, 'erreur' => 'Le document à joindre est introuvable (supprimé ?).']);
         } catch (Throwable $erreur) {
@@ -191,7 +196,7 @@ class EnvoiCourriel
         $donnees = match ($type) {
             'devis' => $this->documents->devis($document),
             'commande_client' => $this->documents->commande($document),
-            'facture' => $this->documents->facture($document),
+            'facture', 'relance' => $this->documents->facture($document),
             'avoir' => $this->documents->avoir($document),
             'demande_acompte' => $this->documents->demandeAcompte($document),
             'bon_livraison' => $this->documents->bonLivraison($document),

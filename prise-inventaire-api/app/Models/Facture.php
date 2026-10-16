@@ -88,6 +88,12 @@ class Facture extends Model
         return $this->hasMany(Avoir::class);
     }
 
+    /** Relances de paiement de la facture. */
+    public function relances(): HasMany
+    {
+        return $this->hasMany(FactureRelance::class);
+    }
+
     /** Crédits imputés sur la facture (de ses propres notes de crédit ou d'autres notes du client). */
     public function imputations(): HasMany
     {

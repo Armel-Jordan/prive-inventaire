@@ -99,6 +99,17 @@ class VariablesCourriel
                 'montant_ttc' => $montant($d->montant_ttc),
                 'credit_disponible' => $montant($d->credit_disponible),
             ] + $this->client($d->client),
+            'relance' => [
+                'numero' => $d->numero,
+                'date' => $date($d->date_facture),
+                'date_echeance' => $date($d->date_echeance ?? $d->date_facture),
+                'jours_retard' => (string) max(0, (int) ($d->date_echeance ?? $d->date_facture)->copy()->startOfDay()->diffInDays(Carbon::today())),
+                // Niveau de la relance à envoyer : celles déjà faites, plus une.
+                'niveau' => (string) ($d->relances()->count() + 1),
+                'montant_ttc' => $montant($d->montant_ttc),
+                'montant_paye' => $montant($d->montant_paye),
+                'reste_a_payer' => $montant($d->reste_a_payer),
+            ] + $this->client($d->client),
             'demande_acompte' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_demande),
@@ -149,7 +160,7 @@ class VariablesCourriel
     {
         $en = $langue === 'en';
         $jour = Carbon::today();
-        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC'];
+        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'relance' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC'];
 
         $valeurs = [
             'numero' => ($prefixes[$type] ?? 'DOC').'-00001',
@@ -174,6 +185,8 @@ class VariablesCourriel
             'credit_disponible' => $this->montant(0, $langue, $devise),
             'montant' => $this->montant(300, $langue, $devise),
             'description' => $en ? 'Deposit before starting the work' : 'Acompte avant le début des travaux',
+            'jours_retard' => '15',
+            'niveau' => '1',
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));

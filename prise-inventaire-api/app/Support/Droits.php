@@ -52,6 +52,7 @@ class Droits
         'avoirs' => 'avoirs',
         'acomptes' => 'acomptes',
         'demandes-acompte' => 'demandes_acompte',
+        'relances' => 'relances',
         'bons-livraison' => 'bons_livraison',
         'camions' => 'camions',
         'tournees' => 'tournees',
@@ -79,6 +80,7 @@ class Droits
     private const LECTURES = [
         'comptabilite' => 'comptabilite',
         'comptes-clients' => 'comptes_clients',
+        'relances' => 'relances',
         'portail-clients' => 'espace_client',
     ];
 
@@ -128,6 +130,7 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        'POST api/factures/{id}/relances' => ['relances', 'creer'],
         'POST api/commandes-client/{id}/soumettre' => ['commandes_client', 'soumettre'],
         'POST api/commandes-client/{id}/accepter' => ['commandes_client', 'decider'],
         'POST api/commandes-client/{id}/refuser' => ['commandes_client', 'decider'],

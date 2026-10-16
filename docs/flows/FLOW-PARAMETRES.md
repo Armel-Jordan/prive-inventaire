@@ -669,6 +669,7 @@ Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personn
 | `facture` | Facture | `facture-{numero}.pdf` |
 | `avoir` | Note de crédit | `note-credit-{numero}.pdf` |
 | `demande_acompte` | Demande d'acompte | `demande-acompte-{numero}.pdf` |
+| `relance` | Relance de paiement d'une facture | `facture-{numero}.pdf` (la facture relancée) |
 | `bon_livraison` | Bon de livraison | `bon-livraison-{numero}.pdf` |
 | `commande_fournisseur` | Commande fournisseur | `bon-commande-{numero}.pdf` |
 | `general` | Courriel libre | — |

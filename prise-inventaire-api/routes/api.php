@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\PortailClientController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
+use App\Http\Controllers\Api\RelanceController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
@@ -586,6 +587,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
         Route::get('/{id}/avoir', [AvoirController::class, 'proposition']);
         Route::get('/{id}/escompte', [FactureController::class, 'escompte']);
+        Route::get('/{id}/relances', [RelanceController::class, 'deFacture']);
+        Route::post('/{id}/relances', [RelanceController::class, 'store']);
         Route::delete('/{id}', [FactureController::class, 'destroy']);
     });
 
@@ -624,6 +627,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [DemandeAcompteController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/envoyer', [DemandeAcompteController::class, 'envoyer'])->whereNumber('id');
         Route::post('/{id}/encaisser', [DemandeAcompteController::class, 'encaisser'])->whereNumber('id');
+    });
+
+    // Relances de paiement : factures en retard, historique des relances.
+    Route::prefix('relances')->middleware('module:ventes')->group(function () {
+        Route::get('/', [RelanceController::class, 'index']);
+        Route::get('/historique', [RelanceController::class, 'historique']);
     });
 
     // Comptes clients : analyse chronologique des sommes dues, relevé de compte d'un client.

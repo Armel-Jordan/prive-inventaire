@@ -16,6 +16,8 @@ const ROUTES_PDF: Record<TypeDocumentCourriel, string> = {
   facture: 'factures',
   avoir: 'avoirs',
   demande_acompte: 'demandes-acompte',
+  // La relance joint la facture relancée.
+  relance: 'factures',
   bon_livraison: 'bons-livraison',
   commande_fournisseur: 'commandes-fournisseur',
 };
