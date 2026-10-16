@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\ReceptionController;
+use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -60,6 +61,7 @@ use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
+use App\Support\Referentiels;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -455,6 +457,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/', [TenantTaxeController::class, 'store']);
         Route::put('/{id}', [TenantTaxeController::class, 'update']);
         Route::delete('/{id}', [TenantTaxeController::class, 'destroy']);
+    });
+
+    // Référentiels génériques (unités, catégories, devises…) : un seul contrôleur,
+    // piloté par le catalogue App\Support\Referentiels.
+    Route::get('/referentiels/devises/{id}/historique', [ReferentielController::class, 'historiqueDevise'])->whereNumber('id');
+    Route::prefix('referentiels/{type}')->where(['type' => implode('|', Referentiels::types())])->group(function () {
+        Route::get('/', [ReferentielController::class, 'index']);
+        Route::post('/', [ReferentielController::class, 'store']);
+        Route::put('/{id}', [ReferentielController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ReferentielController::class, 'destroy'])->whereNumber('id');
     });
 
     // Configuration des numéros

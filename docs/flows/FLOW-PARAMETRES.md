@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10
+> Dernière mise à jour : 2026-10-15
 
 ---
 
@@ -17,7 +17,8 @@
 8. [Configuration — Entreprise](#8-configuration--entreprise)
 9. [Configuration — Devise & TVA](#9-configuration--devise--tva)
 10. [Configuration — Délais & Alertes](#10-configuration--délais--alertes)
-11. [Ordre recommandé de configuration initiale](#11-ordre-recommandé-de-configuration-initiale)
+11. [Référentiels](#11-référentiels)
+12. [Ordre recommandé de configuration initiale](#12-ordre-recommandé-de-configuration-initiale)
 
 ---
 
@@ -32,7 +33,8 @@ PARAMÈTRES
 ├── Employés          ← les utilisateurs de l'application
 ├── Fiches Employés   ← détails RH complémentaires
 ├── Rôles             ← qui a le droit de faire quoi
-└── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+├── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+└── Référentiels      ← unités, catégories, fabricants, paiement, comptes bancaires, devises
 ```
 
 **Architecture multi-tenant :**
@@ -380,7 +382,46 @@ Les alertes sont vérifiées à chaque mouvement de stock.
 
 ---
 
-## 11. Ordre recommandé de configuration initiale
+## 11. Référentiels
+
+### 11.1 Ce que c'est
+
+Listes de référence réutilisées par toute l'application, gérées dans **Paramètres → Référentiels** (un onglet par liste). Elles sont propres à chaque entreprise (`tenant_id`) et ne modifient aucun écran existant : les fiches (produits, documents, paiements) s'y brancheront au fil du [plan de parité avec fripv2](../16-PLAN-PARITE-FRIPV2.md).
+
+| Onglet | Contenu | Règles |
+|---|---|---|
+| Unités | Unités de mesure : code, libellé, symbole, décimales | Code unique |
+| Conversions | 1 unité source = facteur × unité cible | Deux unités différentes de l'entreprise, facteur > 0, pas de doublon. Une unité utilisée dans une conversion ne peut pas être supprimée |
+| Catégories | Classement hiérarchique des produits | Parent de la même entreprise, pas de boucle, nom unique entre catégories sœurs. Une catégorie qui a des sous-catégories ne peut pas être supprimée |
+| Fabricants | Fabricants et marques | Nom et code uniques |
+| Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
+| Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé | Une seule condition « par défaut » |
+| Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
+| Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
+
+Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
+
+### 11.2 API
+
+Une seule API générique :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/api/referentiels/{type}` | Liste (`?actif=1` : fiches actives seulement) |
+| POST | `/api/referentiels/{type}` | Création |
+| PUT | `/api/referentiels/{type}/{id}` | Modification |
+| DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
+| GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
+
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+
+### 11.3 Droits
+
+Module de permission `referentiels` : l'admin a tous les droits, le manager peut consulter, créer et modifier. Les autres rôles s'ouvrent depuis l'écran des rôles.
+
+---
+
+## 12. Ordre recommandé de configuration initiale
 
 Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'ordre optimal :
 
@@ -389,10 +430,11 @@ Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'
 Étape 2 → Configuration Devise & TVA (quelle monnaie, quels taux)
 Étape 3 → Configuration Numérotation (format des numéros de documents)
 Étape 4 → Configuration Délais & Alertes
-Étape 5 → Créer les Secteurs de l'entrepôt
-Étape 6 → Créer les Produits du catalogue
-Étape 7 → Créer les Employés et leurs rôles
-Étape 8 → Commencer les Achats / Ventes
+Étape 5 → Référentiels (unités, catégories, devises, modes et conditions de paiement…)
+Étape 6 → Créer les Secteurs de l'entrepôt
+Étape 7 → Créer les Produits du catalogue
+Étape 8 → Créer les Employés et leurs rôles
+Étape 9 → Commencer les Achats / Ventes
 ```
 
 > Si on commence les Ventes sans avoir configuré la numérotation, les numéros seront générés avec les valeurs par défaut (ce qui peut ne pas correspondre à la charte de l'entreprise).
