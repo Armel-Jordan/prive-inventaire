@@ -6,9 +6,7 @@ use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
 use App\Models\Devis;
 use App\Models\Facture;
-use App\Models\Tenant;
-use App\Models\TenantParametres;
-use App\Support\TenantContext;
+use App\Support\EntreprisePdf;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DocumentPdf;
 use Carbon\Carbon;
@@ -121,25 +119,15 @@ class DocumentsVentePdf
     /** Champs communs à tous les documents. */
     private function document(string $titre, Model $document, array $infos, array $contenu): array
     {
-        $parametres = TenantParametres::first();
-        $tenant = Tenant::find(app(TenantContext::class)->getTenantId());
+        $entete = EntreprisePdf::entete();
 
         return $contenu + [
             'titre' => $titre,
             'numero' => $document->numero,
             'statut' => self::STATUTS[$document->statut] ?? ucfirst(str_replace('_', ' ', (string) $document->statut)),
             'infos' => array_filter($infos),
-            'devise' => $parametres?->devise_symbole ?: '€',
-            'entreprise' => [
-                'nom' => $parametres?->nom_entreprise ?: ($tenant?->nom ?? ''),
-                'adresse' => $parametres?->adresse,
-                'telephone' => $parametres?->telephone,
-                'email' => $parametres?->email,
-                'mentions' => implode(' — ', array_filter([
-                    $parametres?->siret ? 'N° d\'entreprise : '.$parametres->siret : null,
-                    $parametres?->tva_numero ? 'N° de taxe : '.$parametres->tva_numero : null,
-                ])),
-            ],
+            'devise' => $entete['devise'],
+            'entreprise' => $entete['entreprise'],
             'colonnes' => $contenu['colonnes'] ?? 'prix',
             'totaux' => $contenu['totaux'] ?? [],
             'reglement' => $contenu['reglement'] ?? [],

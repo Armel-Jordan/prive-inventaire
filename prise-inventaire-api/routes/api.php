@@ -100,10 +100,6 @@ Route::post('/auth/mot-de-passe-oublie', [MotDePasseController::class, 'oublie']
 Route::post('/auth/reinitialiser-mot-de-passe', [MotDePasseController::class, 'reinitialiser'])->middleware('throttle:10,1,reinitialisation-mot-de-passe');
 Route::post('/auth/login/deux-facteurs', [AuthController::class, 'connexionDeuxFacteurs'])->middleware('throttle:10,1,connexion-deux-facteurs');
 
-// PDF routes — auth via ?token= query param
-Route::get('/commandes-fournisseur/{id}/pdf', [BonCommandePdfController::class, 'generate']);
-Route::get('/commandes-fournisseur/{id}/pdf/preview', [BonCommandePdfController::class, 'preview']);
-
 // ============================================
 // Routes Mobile (sans authentification JWT)
 // Ces routes sont utilisées par l'app Android
@@ -443,6 +439,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/', [CommandeFournisseurController::class, 'index']);
         Route::post('/', [CommandeFournisseurController::class, 'store']);
         Route::get('/{commande}', [CommandeFournisseurController::class, 'show']);
+        Route::get('/{id}/pdf', BonCommandePdfController::class)->whereNumber('id');
         Route::put('/{commande}', [CommandeFournisseurController::class, 'update']);
         Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
         Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);

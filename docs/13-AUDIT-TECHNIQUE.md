@@ -121,6 +121,8 @@ Le middleware `CheckPermission` (`app/Http/Middleware/CheckPermission.php`) n'es
 
 **Recommandation** : `fetch` avec header `Authorization` + `blob`, ou token PDF à usage unique ; scoper la requête par tenant.
 
+**Corrigé le 2026-10-16** : la route du PDF est passée dans le groupe authentifié (module achats, entreprise résolue par le middleware) et le site l'ouvre avec `ouvrirPdf` (jeton en en-tête), comme les documents de vente ; `getCommandePdfUrl` et la route `/pdf/preview` sont supprimées.
+
 ---
 
 ## 4. API Laravel — détail

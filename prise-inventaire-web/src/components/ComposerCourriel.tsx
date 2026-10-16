@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, Paperclip, RotateCw } from 'lucide-react';
 import {
-  preparerCourriel, envoyerCourriel, getEnvoisCourriel, reessayerEnvoiCourriel, ouvrirPdf, getCommandePdfUrl,
+  preparerCourriel, envoyerCourriel, getEnvoisCourriel, reessayerEnvoiCourriel, ouvrirPdf,
   type TypeDocumentCourriel, type LangueCourriel, type EnvoiCourriel,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
@@ -10,11 +10,12 @@ import { useLanguage } from '@/i18n/useLanguage';
 import BadgeStatutCourriel from '@/components/BadgeStatutCourriel';
 
 /** Préfixe des routes PDF des documents de vente (récupérés avec l'en-tête d'authentification). */
-const ROUTES_PDF: Partial<Record<TypeDocumentCourriel, string>> = {
+const ROUTES_PDF: Record<TypeDocumentCourriel, string> = {
   devis: 'devis',
   commande_client: 'commandes-client',
   facture: 'factures',
   bon_livraison: 'bons-livraison',
+  commande_fournisseur: 'commandes-fournisseur',
 };
 
 const adresses = (texte: string) => texte.split(/[\s,;]+/).map(a => a.trim()).filter(Boolean);
@@ -116,11 +117,7 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
 
   function voirPdf() {
     const route = ROUTES_PDF[type];
-    if (route) {
-      ouvrirPdf(`/${route}/${documentId}/pdf`, pieceJointe ?? `${route}.pdf`).catch(() => alert(t.documents.pdfError));
-    } else {
-      window.open(getCommandePdfUrl(documentId), '_blank', 'noopener');
-    }
+    ouvrirPdf(`/${route}/${documentId}/pdf`, pieceJointe ?? `${route}.pdf`).catch(() => alert(t.documents.pdfError));
   }
 
   // Une fois le courriel parti (ou en file), la fenêtre ne renvoie plus : la relance se fait sur ce même courriel.
