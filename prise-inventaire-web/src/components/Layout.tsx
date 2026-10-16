@@ -37,6 +37,7 @@ import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/i18n/useLanguage';
+import { ClipboardCheck } from 'lucide-react';
 
 interface NavItem {
   path: string;
@@ -59,6 +60,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: ClipboardList,
     items: [
       { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
+      { path: '/prises-inventaire', label: t.stocktake.nav, icon: ClipboardCheck, module: 'inventaires' },
       { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
       { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
       { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },

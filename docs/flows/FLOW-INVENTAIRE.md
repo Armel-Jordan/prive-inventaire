@@ -486,3 +486,9 @@ Toutes les tables du module Inventaire sont isolées par `tenant_id` :
 3. **Les approbations bloquent les gros mouvements** — vérifier les seuils configurés si un mouvement ne passe pas directement.
 4. **La traçabilité fusionne deux sources** (mouvements + scans) — un produit peut apparaître dans l'historique même sans mouvement formel, via un scan d'inventaire.
 5. **Les alertes se basent sur `actif = 1`** (pas sur un champ `statut`) — une alerte sans seuil critique ne génère pas d'alerte critique même si le stock est à zéro.
+
+---
+
+## 13. Prises d'inventaire (sessions de comptage)
+
+Sessions de comptage par-dessus les scans : écarts avec le dernier inventaire validé, mouvements connus depuis, corrections, validation qui forme l'inventaire officiel. Voir [FLOW-PRISE-INVENTAIRE.md](./FLOW-PRISE-INVENTAIRE.md).
