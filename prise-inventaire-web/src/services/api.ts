@@ -104,9 +104,10 @@ export async function deleteEmploye(id: number): Promise<void> {
 }
 
 // === PRODUITS ===
-export async function getProduits(): Promise<Produit[]> {
+/** Produits actifs, ou désactivés / tous (écran Produits, pour les réactiver). */
+export async function getProduits(statut: 'actifs' | 'inactifs' | 'tous' = 'actifs'): Promise<Produit[]> {
   if (MOCK_MODE) return mockProduits;
-  return fetchApi<Produit[]>('/produits');
+  return fetchApi<Produit[]>(statut === 'actifs' ? '/produits' : `/produits?statut=${statut}`);
 }
 
 export async function createProduit(produit: Omit<Produit, 'id'>): Promise<Produit> {
@@ -276,9 +277,10 @@ export const modifierRemarqueRapide = (id: number, remarque: Omit<RemarqueRapide
 export const supprimerRemarqueRapide = (id: number) => modifierRemarques<void>(`/remarques-rapides/${id}`, { method: 'DELETE' });
 
 // === SECTEURS ===
-export async function getSecteurs(): Promise<Secteur[]> {
+/** Secteurs actifs, ou désactivés / tous (écran Secteurs, pour les réactiver). */
+export async function getSecteurs(statut: 'actifs' | 'inactifs' | 'tous' = 'actifs'): Promise<Secteur[]> {
   if (MOCK_MODE) return mockSecteurs;
-  return fetchApi<Secteur[]>('/secteurs');
+  return fetchApi<Secteur[]>(statut === 'actifs' ? '/secteurs' : `/secteurs?statut=${statut}`);
 }
 
 export async function createSecteur(secteur: Omit<Secteur, 'id'>): Promise<Secteur> {
