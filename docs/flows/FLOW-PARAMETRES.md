@@ -344,12 +344,14 @@ L'application supporte plusieurs taux de TVA ou taxes différentes.
 | Champ | Description |
 |-------|-------------|
 | `nom` | Nom de la taxe (ex: "TVA 20%") |
-| `taux` | Taux en % (ex: 20) |
+| `taux` | Taux en %, jusqu'à 4 décimales (ex: 20, 9.975) |
 | `defaut` | Si true, appliqué par défaut sur les lignes |
 
 **Endpoints :** `GET/POST/PUT/DELETE /taxes`
 
 **Exemple :** Une entreprise au Canada peut avoir TVA + TPS + TVQ comme trois taxes distinctes.
+
+Une taxe utilisée dans un groupe de taxes (§9.4) ne peut pas être supprimée.
 
 ### 9.3 Comment les taxes s'appliquent
 
@@ -359,6 +361,22 @@ montant_ht = quantite × prix_unitaire_ht × (1 - remise_ligne/100)
 montant_tva = montant_ht × (taux_tva/100)
 montant_ttc = montant_ht + montant_tva
 ```
+
+### 9.4 Groupes de taxes
+
+Un groupe combine, dans un ordre de calcul, des taxes déclarées au §9.2. Chaque taxe du groupe dit à quoi s'applique son taux :
+
+| `applique_sur` | Base de calcul | Exemple |
+|---|---|---|
+| `base` | Le montant HT | TPS 5 % + TVQ 9,975 % (Québec) |
+| `base_et_taxes_precedentes` | Le HT + les taxes déjà calculées (taxe composée) | Ancienne TVQ, calculée sur HT + TPS |
+| `taxe_precedente` | Le montant de la taxe précédente (taxe sur la taxe) | CAC 10 % de la TVA (Cameroun) |
+
+Chaque taxe est arrondie au centime. Le **taux effectif** du groupe est le taux global équivalent : TVA 17,5 % + CAC 10 % de la TVA = **19,25 %**. Un groupe sans taxe sert aux ventes exonérées. Un seul groupe peut être « par défaut ».
+
+**Endpoints :** `GET/POST /groupes-taxes`, `PUT/DELETE /groupes-taxes/{id}`, `POST /groupes-taxes/{id}/calculer` (`montant_ht` → détail des taxes, total TTC).
+
+L'écran se trouve dans **Configuration → Devise & TVA**, sous les taxes, avec un simulateur sur un montant. Les documents (commandes, factures…) gardent pour l'instant leur calcul du §9.3 : l'application des groupes aux documents est la prochaine étape du plan de parité.
 
 ---
 

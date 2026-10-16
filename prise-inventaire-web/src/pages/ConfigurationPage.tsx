@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Settings, Save, RefreshCw, Hash, Eye, Building2, DollarSign, Clock, Plus, Trash2 } from 'lucide-react';
 import { getConfigurations, updateConfiguration, getParametres, updateParametres, getTaxes, createTaxe, updateTaxe, deleteTaxe, type ConfigurationFormat, type TenantParametres, type TenantTaxe } from '@/services/api';
+import { ApiError } from '@/services/http';
+import GroupesTaxes from '@/components/GroupesTaxes';
 
 interface FormatConfig {
   entite: string;
@@ -186,7 +188,7 @@ export default function ConfigurationPage() {
       await deleteTaxe(id);
       setTaxes(prev => prev.filter(t => t.id !== id));
       showSuccess('Taxe supprimée !');
-    } catch { alert('Erreur lors de la suppression'); }
+    } catch (e) { alert(e instanceof ApiError ? e.message : 'Erreur lors de la suppression'); }
   };
 
   const activeConfig = configs.find(c => c.entite === activeEntity)!;
@@ -399,7 +401,7 @@ export default function ConfigurationPage() {
                   <div key={taxe.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex-1">
                       <span className="font-medium text-gray-900 dark:text-white">{taxe.nom}</span>
-                      <span className="ml-2 text-gray-500 dark:text-gray-400">{Number(taxe.taux).toFixed(2)}%</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400">{Number(taxe.taux).toLocaleString('fr-FR', { maximumFractionDigits: 4 })} %</span>
                     </div>
                     {taxe.par_defaut ? (
                       <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">Par défaut</span>
@@ -426,7 +428,7 @@ export default function ConfigurationPage() {
                 </div>
                 <div className="w-28">
                   <label className="block text-xs text-gray-500 mb-1">Taux (%)</label>
-                  <input type="number" value={newTaxe.taux} onChange={(e) => setNewTaxe(p => ({ ...p, taux: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm" min={0} max={100} step={0.01} />
+                  <input type="number" value={newTaxe.taux} onChange={(e) => setNewTaxe(p => ({ ...p, taux: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm" min={0} max={100} step={0.001} />
                 </div>
                 <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 pb-2 cursor-pointer whitespace-nowrap">
                   <input type="checkbox" checked={newTaxe.par_defaut} onChange={(e) => setNewTaxe(p => ({ ...p, par_defaut: e.target.checked }))} className="rounded" />
@@ -438,6 +440,9 @@ export default function ConfigurationPage() {
               </div>
             </div>
           </div>
+
+          {/* Groupes de taxes */}
+          <GroupesTaxes taxes={taxes} />
         </div>
       )}
 

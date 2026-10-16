@@ -19,7 +19,7 @@ class TenantTaxe extends Model
     ];
 
     protected $casts = [
-        'taux' => 'decimal:2',
+        'taux' => 'decimal:4',
         'par_defaut' => 'boolean',
     ];
 }
