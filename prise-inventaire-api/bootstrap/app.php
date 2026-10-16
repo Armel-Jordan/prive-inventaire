@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'role' => \App\Http\Middleware\RequireRole::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            // Droits par module du rôle sur les écritures de l'API (App\Support\Droits).
+            'droits' => \App\Http\Middleware\VerifierDroits::class,
         ]);
 
         // Les routes tenant utilisent le route-model binding ({devis}, {commande}…).

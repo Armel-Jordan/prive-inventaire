@@ -144,7 +144,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, tenant, logout } = useAuth();
   const { t } = useLanguage();
-  const { canView, loading: permissionsLoading } = usePermissions();
+  const { canView, loading: permissionsLoading, permissions } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['inventaire']);
   const allCategories = getNavCategories(t);
@@ -181,10 +181,17 @@ export default function Layout() {
     }))
     .filter(cat => cat.items.length > 0);
 
-  // Fallback si le filtrage par rôle vide tout : on garde au moins le gating module.
-  const displayCategories = categories.length > 0
+  // Droits introuvables (échec de /permissions/me) : on garde au moins le gating module. Des droits chargés
+  // qui ne donnent accès à aucune catégorie ne réaffichent plus tout le menu.
+  const displayCategories = permissionsLoading || permissions
     ? categories
     : allCategories.filter(cat => moduleAllowed(cat.id));
+
+  // Page du menu ouverte par son adresse sans le droit de la consulter : « Accès refusé » au lieu de la page
+  // (l'API refuse de toute façon les écritures que le rôle ne permet pas).
+  const pageCourante = allCategories.flatMap(cat => cat.items)
+    .find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
+  const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !canView(pageCourante.module);
 
   const handleLogout = () => {
     logout();
@@ -341,7 +348,16 @@ export default function Layout() {
           </Link>
         </div>
         <div className="p-6 lg:p-8">
-          <Outlet />
+          {accesRefuse ? (
+            <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
+              <ShieldCheck size={48} className="text-gray-300 dark:text-gray-600 mb-4" aria-hidden />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{t.accessDenied.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-lg">{t.accessDenied.message}</p>
+              <Link to="/" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t.accessDenied.back}</Link>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </div>
       </main>
     </div>
