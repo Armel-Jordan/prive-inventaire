@@ -20,6 +20,8 @@
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
 | [FLOW-PIECES-JOINTES.md](./FLOW-PIECES-JOINTES.md) | Transverse | Pièces jointes des fiches et documents, stockage, sécurité |
 
+Prix et remises : [FLOW-PRIX.md](./FLOW-PRIX.md) — prix de base, listes de prix, règles (prix client, paliers, promotions), calcul du prix d'un client.
+
 ---
 
 ## Le flow global de l'application

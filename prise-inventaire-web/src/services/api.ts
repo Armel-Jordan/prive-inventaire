@@ -1459,6 +1459,118 @@ export async function getMouvementsProduit(produitId: number): Promise<unknown[]
   return fetchApi(`/produits/${produitId}/mouvements`);
 }
 
+// === PRIX ET REMISES ===
+export interface ListePrix {
+  id: number;
+  nom: string;
+  description: string | null;
+  ajustement_pourcentage: number;
+  precision: number;
+  actif: boolean;
+  prix_produits_count?: number;
+  clients_count?: number;
+}
+
+export interface LigneGrillePrix {
+  id: number;
+  numero: string;
+  description: string;
+  categorie: string | null;
+  actif: boolean;
+  prix_base: number | null;
+  prix: Record<string, { prix: number | null; saisi: boolean; formule: number | null }>;
+}
+
+export interface GrillePrix {
+  data: LigneGrillePrix[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  listes: ListePrix[];
+  categories: string[];
+}
+
+export type TypeReglePrix = 'prix_fixe' | 'remise_pourcentage' | 'remise_montant';
+
+export interface ReglePrix {
+  id: number;
+  libelle: string;
+  client_id: number | null;
+  liste_prix_id: number | null;
+  produit_id: number | null;
+  categorie_produit: string | null;
+  quantite_min: number;
+  date_debut: string | null;
+  date_fin: string | null;
+  type: TypeReglePrix;
+  valeur: number;
+  actif: boolean;
+  client?: { id: number; code: string; raison_sociale: string } | null;
+  produit?: { id: number; numero: string; description: string } | null;
+  liste_prix?: { id: number; nom: string } | null;
+}
+
+export interface PrixCalcule {
+  produit_id: number;
+  quantite: number;
+  prix_base: number | null;
+  liste: { id: number; nom: string } | null;
+  prix_liste: number | null;
+  prix: number | null;
+  remise_pourcentage: number;
+  origine: 'base' | 'liste' | 'remise_client' | 'regle';
+  regle: { id: number; libelle: string } | null;
+  candidats: { origine: PrixCalcule['origine']; libelle: string | null; prix: number | null; regle_id?: number }[];
+}
+
+export async function getListesPrix(): Promise<ListePrix[]> {
+  return fetchApi('/listes-prix');
+}
+
+export async function enregistrerListePrix(donnees: Partial<ListePrix>, id?: number): Promise<ListePrix> {
+  return fetchApi(id ? `/listes-prix/${id}` : '/listes-prix', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerListePrix(id: number): Promise<void> {
+  await fetchApi(`/listes-prix/${id}`, { method: 'DELETE' });
+}
+
+export async function getClientsListePrix(id: number): Promise<{ id: number; code: string; raison_sociale: string; ville: string }[]> {
+  return fetchApi(`/listes-prix/${id}/clients`);
+}
+
+export async function rattacherClientListePrix(clientId: number, listePrixId: number | null): Promise<void> {
+  await fetchApi(`/clients/${clientId}/liste-prix`, { method: 'PUT', body: JSON.stringify({ liste_prix_id: listePrixId }) });
+}
+
+export async function getGrillePrix(params: { recherche?: string; categorie?: string; page?: number }): Promise<GrillePrix> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/grille-prix?${query.toString()}`);
+}
+
+export async function enregistrerGrillePrix(modifications: { produit_id: number; liste_prix_id: number | null; prix: number | null }[]): Promise<{ message: string }> {
+  return fetchApi('/grille-prix', { method: 'PUT', body: JSON.stringify({ modifications }) });
+}
+
+export async function getReglesPrix(params: { statut?: string; recherche?: string }): Promise<{ data: ReglePrix[]; total: number }> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/regles-prix?${query.toString()}`);
+}
+
+export async function enregistrerReglePrix(donnees: Partial<ReglePrix>, id?: number): Promise<ReglePrix> {
+  return fetchApi(id ? `/regles-prix/${id}` : '/regles-prix', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerReglePrix(id: number): Promise<void> {
+  await fetchApi(`/regles-prix/${id}`, { method: 'DELETE' });
+}
+
+export async function calculerPrix(donnees: { client_id?: number; date?: string; lignes: { produit_id: number; quantite?: number }[] }): Promise<PrixCalcule[]> {
+  return fetchApi('/prix/calculer', { method: 'POST', body: JSON.stringify(donnees) });
+}
+
 // === CONFIGURATIONS ===
 export interface ConfigurationFormat {
   id?: number;
