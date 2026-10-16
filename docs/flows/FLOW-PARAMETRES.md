@@ -189,9 +189,13 @@ Un **Employé** est une personne qui utilise l'application. Chaque employé :
 
 | Rôle | Droits |
 |------|--------|
-| `user` | Scans, lecture, opérations basiques |
-| `manager` | + Validation, approbations, rapports |
+| `readonly` | Lecture seule : tableau de bord, inventaires, statistiques, rapports, achats et ventes en consultation |
+| `user` | Scans, relocalisation, réceptions, commandes client et bons de livraison ; le reste en lecture |
+| `manager` | Crée et modifie partout, sans supprimer ; ni configuration, ni rôles, ni fiches employés |
 | `admin` | Tout — gestion complète |
+
+Le détail par module est celui de la matrice de l'écran Rôles (§6). Un **rôle personnalisé** peut remplacer ces
+droits pour un compte donné.
 
 ### 4.4 Flow de création d'un employé
 
@@ -207,9 +211,14 @@ Un **Employé** est une personne qui utilise l'application. Chaque employé :
 
 ### 4.5 Désactivation vs Suppression
 
-- La suppression via l'API **désactive** l'employé (soft delete ou `actif = false`)
-- Un employé désactivé ne peut plus se connecter
-- Son historique (scans, logs) est conservé
+- « Désactiver » (`DELETE /employes/{id}`, ou `PUT` avec `actif: false`) désactive l'employé **et son compte
+  d'accès** : il ne peut plus se connecter et ses sessions ouvertes sont fermées. Seul l'employé était marqué
+  inactif auparavant ; son accès restait entier.
+- La liste affiche le statut. Les employés désactivés sont masqués par défaut ; le filtre « Désactivés » les
+  retrouve, avec un bouton « Réactiver » qui rend aussi l'accès.
+- Les listes de choix (nouveau scan) ne proposent que les employés actifs (`GET /employes?actif=1`).
+- Le dernier administrateur actif ne se désactive pas (422).
+- Son historique (scans, logs) est conservé.
 
 ### 4.6 Import / Export
 
@@ -233,10 +242,26 @@ Section complémentaire aux Employés, dédiée aux informations RH détaillées
 
 ### 6.1 Système de rôles
 
-Chaque compte a un **rôle de base** : `admin`, `manager` ou `user`.
-- Ce rôle fixe ce que l'API autorise : par exemple, seule une route `role:admin` est accessible à un admin.
-- Le menu suit les **permissions par module** (voir, créer, modifier, supprimer) du rôle système du même nom, servies par `GET /permissions/me`.
-- Un administrateur voit tout.
+Chaque compte a un **rôle de base** : `admin`, `manager`, `user` ou `readonly`, et peut recevoir en plus un
+**rôle personnalisé** de son entreprise.
+- Le rôle de base ouvre les fonctions réservées par rôle : par exemple, seule une route `role:admin` est
+  accessible à un admin (utilisateurs, rôles, tâches planifiées).
+- Les **permissions par module** (voir, créer, modifier, supprimer) sont celles du rôle personnalisé s'il y en a
+  un, sinon celles du rôle système du même nom. Elles sont servies par `GET /permissions/me`.
+- Le **menu** n'affiche que les modules consultables. Une page ouverte par son adresse sans le droit de la
+  consulter affiche « Accès refusé ».
+- **L'API applique la matrice aux écritures** (middleware `droits`, `App\Support\Droits`) :
+  - `POST` sur une liste vaut « créer » ;
+  - `PUT`, `PATCH` et un `POST` d'action sur un élément (valider, annuler…) valent « modifier » ;
+  - `DELETE` vaut « supprimer ».
+  - Un refus répond **403** avec le message « Droit insuffisant : votre rôle ne permet pas de créer dans
+    « Produits » ».
+  - Paramètres, taxes, groupes de taxes, numérotation, champs personnalisés, balises, modèles de courriel et
+    réglages des approbations relèvent du module `configuration`.
+  - Les lectures, les calculs (prix, taxes), les aperçus, les envois de courriels, les favoris, la catégorie
+    d'un client et les remarques des fiches restent ouverts.
+- Un compte désactivé est refusé (401) même s'il présente encore un jeton.
+- Un administrateur a tous les droits, même avec un rôle personnalisé.
 
 ### 6.2 Rôles système et rôles personnalisés
 
@@ -255,13 +280,23 @@ L'écran « Rôles » (`GET/POST/PUT/DELETE /roles-custom/{id}`, réservé aux a
 
 ### 6.3 Accès à l'application (fiche employé)
 
-L'accès se règle dans **Employés → Accès à l'application** : rôle de base et mot de passe.
+L'accès se règle dans **Employés → Accès à l'application** : rôle de base, rôle personnalisé et mot de passe.
+- Le **courriel**, identifiant de connexion, est obligatoire pour donner l'accès (422 sur `email`, au lieu
+  d'une erreur 500).
+- Le **rôle personnalisé** (administrateurs seulement) remplace les droits par module du rôle choisi ; il ne
+  s'applique pas à un administrateur.
 - La création, la modification et la suppression d'employés sont réservées aux rôles admin et manager. Tous les comptes peuvent lire la liste, qui alimente des listes de choix.
 - Un **administrateur** attribue tous les rôles.
-- Un **manager** n'attribue que le rôle `user`. Il ne touche pas aux comptes administrateur ou manager : ni leur rôle, ni leur mot de passe, ni leur adresse, qui sert à réinitialiser le mot de passe.
+- Un **manager** n'attribue que les rôles `user` et `readonly`, sans rôle personnalisé. Il ne touche pas aux comptes administrateur ou manager : ni leur rôle, ni leur mot de passe, ni leur adresse, qui sert à réinitialiser le mot de passe.
 - Le **dernier administrateur actif** de l'entreprise ne peut être ni rétrogradé, ni désactivé, ni privé d'accès (422), y compris via `PUT /users/{id}`.
 
-`POST /users/{userId}/assign-role` vise l'ancienne table `users` : un rôle personnalisé ne s'attribue pas encore à un compte.
+`POST /users/{userId}/assign-role` rattache un compte de l'entreprise (`admin_users`) à l'un de ses rôles
+personnalisés (`role_id` null pour revenir au rôle de base). Un rôle encore attribué ne se supprime pas (400).
+
+> **Changement de comportement :** les écritures suivent désormais la matrice. Un manager ne modifie plus les
+> paramètres, les taxes ni la numérotation (module `configuration`) ; un compte `user` ne crée plus de produits
+> ni de secteurs. Pour ouvrir un droit, créer un rôle personnalisé (par exemple en dupliquant `manager`) et
+> l'attribuer au compte depuis la fiche employé.
 
 ---
 

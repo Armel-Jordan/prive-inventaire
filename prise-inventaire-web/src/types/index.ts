@@ -9,6 +9,8 @@ export interface Employe {
   admin_user?: {
     id: number;
     role: string;
+    /** Rôle personnalisé de l'entreprise, dont les droits remplacent ceux du rôle. */
+    role_custom_id?: number | null;
     actif: boolean;
   };
 }

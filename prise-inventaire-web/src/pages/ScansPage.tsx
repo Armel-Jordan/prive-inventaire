@@ -561,7 +561,8 @@ export default function ScansPage() {
                     required
                   >
                     <option value="">Sélectionner</option>
-                    {employes.map(e => (
+                    {/* Employés actifs seulement : un employé désactivé restait proposé pour un nouveau scan. */}
+                    {employes.filter(e => e.actif !== false).map(e => (
                       <option key={e.id} value={e.numero}>{e.nom}</option>
                     ))}
                   </select>

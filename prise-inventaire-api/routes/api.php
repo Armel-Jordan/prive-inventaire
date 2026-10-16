@@ -178,7 +178,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'role:admin'])->p
 // ============================================
 // Routes Tenant (avec middleware tenant)
 // ============================================
-Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function () {
+// « droits » : écritures soumises à la matrice du rôle (créer, modifier, supprimer par module).
+Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group(function () {
     // Employés CRUD : lecture pour tous (listes de choix) ; écriture réservée aux administrateurs et
     // managers, l'accès à l'application (rôle, mot de passe) étant contrôlé dans le contrôleur.
     Route::get('/employes', [EmployeTenantController::class, 'index']);

@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -29,6 +30,8 @@ export default function SecteursPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
+  // Boutons selon les droits du rôle sur les secteurs (l'API refuse de toute façon les autres écritures).
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   async function loadData() {
     try {
@@ -176,15 +179,19 @@ export default function SecteursPage() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
           </button>
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-            <Upload size={18} />
-            {importing ? 'Import...' : 'Importer'}
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
-          </label>
-          <button onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-            <Plus size={20} /> Ajouter
-          </button>
+          {canCreate('secteurs') && (
+            <>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                <Upload size={18} />
+                {importing ? 'Import...' : 'Importer'}
+                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
+              </label>
+              <button onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <Plus size={20} /> Ajouter
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -221,14 +228,18 @@ export default function SecteursPage() {
                           className="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded" title="QR Code">
                           <QrCode size={16} />
                         </button>
-                        <button onClick={() => openEdit(secteur)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded" title="Modifier">
-                          <Pencil size={16} />
-                        </button>
-                        <button onClick={() => setConfirmId(secteur.id!)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit('secteurs') && (
+                          <button onClick={() => openEdit(secteur)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded" title="Modifier">
+                            <Pencil size={16} />
+                          </button>
+                        )}
+                        {canDelete('secteurs') && (
+                          <button onClick={() => setConfirmId(secteur.id!)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

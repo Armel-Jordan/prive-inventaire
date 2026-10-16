@@ -8,6 +8,7 @@ import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface ProduitForm {
   numero: string;
@@ -45,6 +46,8 @@ export default function ProduitsPage() {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
+  // Boutons selon les droits du rôle sur les produits (l'API refuse de toute façon les autres écritures).
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   async function loadData() {
     try {
@@ -194,15 +197,19 @@ export default function ProduitsPage() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
           </button>
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-            <Upload size={18} />
-            {importing ? 'Import...' : 'Importer'}
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
-          </label>
-          <button onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-            <Plus size={20} /> Ajouter
-          </button>
+          {canCreate('produits') && (
+            <>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                <Upload size={18} />
+                {importing ? 'Import...' : 'Importer'}
+                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
+              </label>
+              <button onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <Plus size={20} /> Ajouter
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -290,12 +297,16 @@ export default function ProduitsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
-                      <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
-                        <Trash2 size={16} />
-                      </button>
+                      {canEdit('produits') && (
+                        <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {canDelete('produits') && (
+                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                       <BoutonChampsPersonnalises entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="ml-2" />
                     </td>
                   </tr>
