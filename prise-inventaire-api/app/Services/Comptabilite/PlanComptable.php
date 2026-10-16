@@ -3,6 +3,7 @@
 namespace App\Services\Comptabilite;
 
 use App\Models\CompteComptable;
+use App\Models\EcritureComptableLigne;
 use App\Support\PlansComptables;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -42,6 +43,9 @@ class PlanComptable
         if ($compte && ! $actif && $compte->enfants()->where('actif', true)->exists()) {
             return ['actif' => 'Ce compte a des sous-comptes actifs : désactivez-les d\'abord.'];
         }
+        if ($compte && ($donnees['type'] ?? null) === CompteComptable::EN_TETE && $compte->type !== CompteComptable::EN_TETE && $this->aDesEcritures($compte)) {
+            return ['type' => 'Ce compte a des écritures : il ne peut pas devenir un en-tête.'];
+        }
         if (($donnees['type'] ?? null) === CompteComptable::RESULTAT) {
             if ($donnees['nature'] !== 'capitaux_propres') {
                 return ['nature' => 'Le compte qui reçoit le résultat de l\'exercice doit être un compte de capitaux propres.'];
@@ -62,8 +66,16 @@ class PlanComptable
         if ($compte->enfants()->exists()) {
             return 'Ce compte a des sous-comptes : supprimez-les ou rattachez-les à un autre compte d\'abord.';
         }
+        if ($this->aDesEcritures($compte)) {
+            return 'Ce compte a des écritures : désactivez-le plutôt.';
+        }
 
         return null;
+    }
+
+    public function aDesEcritures(CompteComptable $compte): bool
+    {
+        return EcritureComptableLigne::where('compte_id', $compte->id)->exists();
     }
 
     /**

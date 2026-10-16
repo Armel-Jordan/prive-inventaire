@@ -38,7 +38,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useState } from 'react';
-import { BookOpen, CalendarRange } from 'lucide-react';
+import { BookOpen, BookText, CalendarRange, Scale, ScrollText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -115,6 +115,9 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
       { path: '/plan-comptable', label: t.accounting.chartNav, icon: BookOpen, module: 'comptabilite' },
       { path: '/exercices-comptables', label: t.accounting.yearsNav, icon: CalendarRange, module: 'comptabilite' },
+      { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
+      { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite' },
+      { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
       { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
     ],
