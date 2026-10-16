@@ -57,6 +57,7 @@ class EmployeTenantController extends Controller
             $existing = $request->filled('email')
                 ? AdminUser::where('email', $request->email)->where('tenant_id', $tenantId)->first()
                 : null;
+            $this->autoriserAcces($request, $existing, $request->role);
 
             if ($existing) {
                 // Lier au compte existant
@@ -122,11 +123,19 @@ class EmployeTenantController extends Controller
             if ($request->role === 'remove') {
                 // Supprimer l'accès
                 if ($employe->adminUser) {
+                    $this->autoriserAcces($request, $employe->adminUser, 'remove');
                     $employe->adminUser->delete();
                     $employe->admin_user_id = null;
                 }
             } elseif ($request->filled('role')) {
                 if ($employe->adminUser) {
+                    // Le formulaire renvoie toujours le rôle : seuls un changement de rôle, de mot de passe ou
+                    // d'adresse (qui sert à réinitialiser le mot de passe) touchent à l'accès.
+                    $compte = $employe->adminUser;
+                    if ($request->role !== $compte->role || $request->filled('password')
+                        || ($request->filled('email') && $request->email !== $compte->email)) {
+                        $this->autoriserAcces($request, $compte, $request->role);
+                    }
                     // Mettre à jour le rôle existant
                     $employe->adminUser->update([
                         'role' => $request->role,
@@ -142,6 +151,7 @@ class EmployeTenantController extends Controller
                     $existing = $email
                         ? AdminUser::where('email', $email)->where('tenant_id', $employe->tenant_id)->first()
                         : null;
+                    $this->autoriserAcces($request, $existing, $request->role);
 
                     if ($existing) {
                         $existing->update(['role' => $request->role]);
@@ -168,6 +178,21 @@ class EmployeTenantController extends Controller
             'message' => 'Employé modifié avec succès',
             'employe' => $employe->load('adminUser:id,role,actif'),
         ]);
+    }
+
+    /**
+     * Accès à l'application : un administrateur attribue tous les rôles ; un manager n'attribue que le
+     * rôle « user » et ne touche pas aux comptes administrateur ou manager (ni rôle, ni mot de passe).
+     * Le dernier administrateur actif de l'entreprise ne peut être ni rétrogradé ni privé d'accès.
+     */
+    private function autoriserAcces(Request $request, ?AdminUser $compte, string $role): void
+    {
+        if ($request->user()->role !== 'admin') {
+            abort_unless(in_array($role, ['user', 'remove'], true), 403, 'Seul un administrateur peut attribuer ce rôle.');
+            abort_if($compte && $compte->role !== 'user', 403, "Seul un administrateur peut modifier l'accès d'un administrateur ou d'un manager.");
+        }
+
+        abort_if($role !== 'admin' && $compte?->estDernierAdministrateur(), 422, "L'entreprise doit garder au moins un administrateur actif.");
     }
 
     public function destroy($id): JsonResponse

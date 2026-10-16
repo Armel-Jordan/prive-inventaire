@@ -30,22 +30,23 @@ class TenantIsolationDemoSeeder extends Seeder
             ['nom' => 'Super Admin', 'password' => 'password', 'actif' => true]
         );
 
-        // Rôles système partagés (tenant_id NULL) — normalement créés par la migration
-        // create_role_permissions_table, mais son createDefaultRoles est court-circuité
-        // (deux migrations role_permissions concurrentes, cf. chantier C7). On les seede ici
-        // pour que l'UI reconnaisse les admins pendant les tests.
+        // Rôles système partagés (tenant_id NULL) : créés, avec leurs permissions par module, par la
+        // migration isoler_roles_par_entreprise. Filet de sécurité pour une base plus ancienne ; le nom
+        // n'étant unique que par entreprise, on vérifie l'existence (un NULL n'entre pas en collision).
         foreach ([
             ['nom' => 'admin', 'description' => 'Administrateur - Accès complet'],
             ['nom' => 'manager', 'description' => 'Manager - Accès étendu'],
             ['nom' => 'user', 'description' => 'Utilisateur - Accès limité'],
             ['nom' => 'readonly', 'description' => 'Lecture seule'],
         ] as $role) {
-            DB::table('roles_custom')->insertOrIgnore(array_merge($role, [
-                'tenant_id' => null,
-                'is_system' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            if (! DB::table('roles_custom')->whereNull('tenant_id')->where('nom', $role['nom'])->exists()) {
+                DB::table('roles_custom')->insert(array_merge($role, [
+                    'tenant_id' => null,
+                    'is_system' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
 
         foreach ([

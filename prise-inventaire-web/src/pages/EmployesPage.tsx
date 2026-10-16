@@ -8,6 +8,16 @@ import type { Employe } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { ApiError } from '@/services/http';
+
+function messageErreur(e: unknown, defaut: string): string {
+  if (e instanceof ApiError) {
+    const data = e.data as { message?: string } | null;
+    return data?.message || defaut;
+  }
+  return defaut;
+}
 
 interface EmployeForm {
   numero: string;
@@ -48,6 +58,11 @@ export default function EmployesPage() {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
+  // Seul un administrateur attribue les rôles admin et manager et modifie l'accès de ces comptes.
+  const { user } = useAuth();
+  const estAdmin = user?.role === 'admin';
+  const [roleInitial, setRoleInitial] = useState('');
+  const accesVerrouille = !estAdmin && (roleInitial === 'admin' || roleInitial === 'manager');
 
   async function loadData() {
     try {
@@ -78,6 +93,7 @@ export default function EmployesPage() {
 
   function openCreate() {
     setForm(emptyForm);
+    setRoleInitial('');
     setEditingId(null);
     setShowModal(true);
   }
@@ -91,6 +107,7 @@ export default function EmployesPage() {
       role: employe.admin_user?.role || '',
       password: '',
     });
+    setRoleInitial(employe.admin_user?.role || '');
     setEditingId(employe.id);
     setShowModal(true);
   }
@@ -107,8 +124,8 @@ export default function EmployesPage() {
       }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     }
   }
 
@@ -318,7 +335,8 @@ export default function EmployesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
+                  disabled={accesVerrouille}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60" />
               </div>
 
               <div className="border-t dark:border-gray-700 pt-4">
@@ -330,15 +348,21 @@ export default function EmployesPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rôle</label>
                     <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value, password: '' })}
-                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                      disabled={accesVerrouille}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60">
                       <option value="">Aucun accès</option>
                       <option value="user">Utilisateur</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
+                      {(estAdmin || accesVerrouille) && <option value="manager">Manager</option>}
+                      {(estAdmin || accesVerrouille) && <option value="admin">Admin</option>}
                       {editingId && form.role && <option value="remove">Supprimer l'accès</option>}
                     </select>
+                    {accesVerrouille && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Seul un administrateur peut modifier l'accès de ce compte.
+                      </p>
+                    )}
                   </div>
-                  {form.role && form.role !== 'remove' && (
+                  {form.role && form.role !== 'remove' && !accesVerrouille && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Mot de passe {!editingId ? '*' : '(laisser vide pour ne pas changer)'}

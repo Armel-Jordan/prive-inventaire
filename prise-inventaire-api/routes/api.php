@@ -179,13 +179,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'role:admin'])->p
 // Routes Tenant (avec middleware tenant)
 // ============================================
 Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function () {
-    // Employés CRUD
+    // Employés CRUD : lecture pour tous (listes de choix) ; écriture réservée aux administrateurs et
+    // managers, l'accès à l'application (rôle, mot de passe) étant contrôlé dans le contrôleur.
     Route::get('/employes', [EmployeTenantController::class, 'index']);
-    Route::post('/employes', [EmployeTenantController::class, 'store']);
     Route::get('/employes/{id}', [EmployeTenantController::class, 'show']);
-    Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
-    Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
-    Route::post('/employes/{id}/photo', [EmployeTenantController::class, 'uploadPhoto']);
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::post('/employes', [EmployeTenantController::class, 'store']);
+        Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
+        Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
+        Route::post('/employes/{id}/photo', [EmployeTenantController::class, 'uploadPhoto']);
+    });
 
     // Produits CRUD
     Route::get('/produits', [ProduitTenantController::class, 'index']);
