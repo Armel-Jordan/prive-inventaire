@@ -230,6 +230,12 @@ export const translations = {
       scheduled7d: 'Planifiés (7j)',
       approvals: 'Approbations',
     },
+    // Page ouverte par son adresse sans le droit de la consulter
+    accessDenied: {
+      title: 'Accès refusé',
+      message: 'Votre rôle ne permet pas de consulter cette page. Demandez à un administrateur de vous en donner le droit (écran Rôles).',
+      back: 'Retour au tableau de bord',
+    },
     // Sécurité des comptes
     security: {
       title: 'Sécurité du compte',
@@ -1632,6 +1638,12 @@ export const translations = {
       notifications: 'Notifications',
       scheduled7d: 'Scheduled (7d)',
       approvals: 'Approvals',
+    },
+    // Page opened by its address without the right to view it
+    accessDenied: {
+      title: 'Access denied',
+      message: 'Your role does not allow you to view this page. Ask an administrator to grant you the right (Roles screen).',
+      back: 'Back to the dashboard',
     },
     // Account security
     security: {

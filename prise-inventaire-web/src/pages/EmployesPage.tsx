@@ -1,7 +1,7 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff, Filter } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff, Filter, RotateCcw } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getEmployes, createEmploye, updateEmploye, deleteEmploye, getConfiguration } from '@/services/api';
 import type { Employe } from '@/types';
@@ -9,14 +9,23 @@ import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { ApiError } from '@/services/http';
+import { ApiError, apiFetch } from '@/services/http';
 
 function messageErreur(e: unknown, defaut: string): string {
   if (e instanceof ApiError) {
-    const data = e.data as { message?: string } | null;
-    return data?.message || defaut;
+    // Erreur de validation (courriel manquant…) d'abord, sinon le message de l'API.
+    const data = e.data as { message?: string; errors?: Record<string, string[]> } | null;
+    const premiereErreur = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+    return premiereErreur || data?.message || defaut;
   }
   return defaut;
+}
+
+/** Rôle personnalisé de l'entreprise, attribuable par un administrateur. */
+interface RolePersonnalise {
+  id: number;
+  nom: string;
+  is_system: boolean;
 }
 
 interface EmployeForm {
@@ -25,15 +34,17 @@ interface EmployeForm {
   prenom: string;
   email: string;
   role: string;
+  role_custom_id: string;
   password: string;
 }
 
-const emptyForm: EmployeForm = { numero: '', nom: '', prenom: '', email: '', role: '', password: '' };
+const emptyForm: EmployeForm = { numero: '', nom: '', prenom: '', email: '', role: '', role_custom_id: '', password: '' };
 
 const roleLabels: Record<string, { label: string; color: string }> = {
   admin:   { label: 'Admin',       color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
   manager: { label: 'Manager',     color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
   user:    { label: 'Utilisateur', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  readonly: { label: 'Lecture seule', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
 };
 
 interface ConfigNumero {
@@ -50,6 +61,9 @@ export default function EmployesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('');
+  // Employés désactivés masqués par défaut ; un filtre les retrouve pour les réactiver.
+  const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
+  const [rolesPersonnalises, setRolesPersonnalises] = useState<RolePersonnalise[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EmployeForm>(emptyForm);
@@ -78,6 +92,13 @@ export default function EmployesPage() {
   useEffect(() => {
     loadData();
     getConfiguration('employe').then(setConfigNumero).catch(() => {});
+    // Rôles personnalisés : réservés aux administrateurs (la liste leur est réservée par l'API).
+    if (estAdmin) {
+      apiFetch<RolePersonnalise[]>('/roles-custom')
+        .then(roles => setRolesPersonnalises(roles.filter(r => !r.is_system)))
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = employes.filter(e => {
@@ -88,7 +109,9 @@ export default function EmployesPage() {
       : filterRole === 'none'
         ? !e.admin_user
         : e.admin_user?.role === filterRole;
-    return matchSearch && matchRole;
+    const actif = e.actif !== false;
+    const matchStatut = filterStatut === 'tous' || (filterStatut === 'actifs' ? actif : !actif);
+    return matchSearch && matchRole && matchStatut;
   });
 
   function openCreate() {
@@ -105,6 +128,7 @@ export default function EmployesPage() {
       prenom: employe.prenom || '',
       email: employe.email || '',
       role: employe.admin_user?.role || '',
+      role_custom_id: employe.admin_user?.role_custom_id ? String(employe.admin_user.role_custom_id) : '',
       password: '',
     });
     setRoleInitial(employe.admin_user?.role || '');
@@ -114,12 +138,17 @@ export default function EmployesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Rôle personnalisé : seulement pour un compte non administrateur ; vide = droits du rôle choisi.
+    const donnees = {
+      ...form,
+      role_custom_id: form.role && form.role !== 'admin' && form.role !== 'remove' && form.role_custom_id ? Number(form.role_custom_id) : null,
+    };
     try {
       if (editingId) {
-        await updateEmploye(editingId, form);
+        await updateEmploye(editingId, donnees);
         toast('Employé modifié avec succès');
       } else {
-        await createEmploye(form);
+        await createEmploye(donnees);
         toast('Employé créé avec succès');
       }
       setShowModal(false);
@@ -134,10 +163,20 @@ export default function EmployesPage() {
       await deleteEmploye(id);
       toast('Employé désactivé');
       loadData();
-    } catch {
-      toast('Erreur lors de la suppression', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la désactivation'), 'error');
     } finally {
       setConfirmId(null);
+    }
+  }
+
+  async function handleReactiver(id: number) {
+    try {
+      await updateEmploye(id, { actif: true });
+      toast('Employé réactivé');
+      loadData();
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la réactivation'), 'error');
     }
   }
 
@@ -231,9 +270,17 @@ export default function EmployesPage() {
               <option value="admin">Admin</option>
               <option value="manager">Manager</option>
               <option value="user">Utilisateur</option>
+              <option value="readonly">Lecture seule</option>
               <option value="none">Sans accès</option>
             </select>
           </div>
+          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
+            aria-label="Statut"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+            <option value="actifs">Actifs</option>
+            <option value="inactifs">Désactivés</option>
+            <option value="tous">Tous</option>
+          </select>
           {filterRole && (
             <button onClick={() => setFilterRole('')}
               className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
@@ -259,6 +306,7 @@ export default function EmployesPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Prénom</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Email</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Accès app</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Statut</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
@@ -276,6 +324,9 @@ export default function EmployesPage() {
                       {employe.admin_user ? (
                         <span className={`px-2 py-1 rounded text-xs font-medium ${roleLabels[employe.admin_user.role]?.color || 'bg-gray-100 text-gray-600'}`}>
                           {roleLabels[employe.admin_user.role]?.label || employe.admin_user.role}
+                          {employe.admin_user.role_custom_id
+                            ? ` · ${rolesPersonnalises.find(r => r.id === employe.admin_user?.role_custom_id)?.nom ?? 'rôle personnalisé'}`
+                            : ''}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -283,14 +334,27 @@ export default function EmployesPage() {
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      {employe.actif === false ? (
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
+                      ) : (
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Actif</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="employe" entiteId={employe.id} titre={employe.nom} taille={16} className="mr-2" />
                       <button onClick={() => openEdit(employe)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => setConfirmId(employe.id)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver">
-                        <Trash2 size={16} />
-                      </button>
+                      {employe.actif === false ? (
+                        <button onClick={() => handleReactiver(employe.id)} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                          <RotateCcw size={16} />
+                        </button>
+                      ) : (
+                        <button onClick={() => setConfirmId(employe.id)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                       <BoutonChampsPersonnalises entite="employe" entiteId={employe.id} titre={employe.nom} taille={16} className="ml-2" />
                     </td>
                   </tr>
@@ -333,7 +397,9 @@ export default function EmployesPage() {
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email{form.role && form.role !== 'remove' ? ' * (identifiant de connexion)' : ''}
+                </label>
                 <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
                   disabled={accesVerrouille}
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60" />
@@ -351,6 +417,7 @@ export default function EmployesPage() {
                       disabled={accesVerrouille}
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60">
                       <option value="">Aucun accès</option>
+                      <option value="readonly">Lecture seule</option>
                       <option value="user">Utilisateur</option>
                       {(estAdmin || accesVerrouille) && <option value="manager">Manager</option>}
                       {(estAdmin || accesVerrouille) && <option value="admin">Admin</option>}
@@ -362,6 +429,19 @@ export default function EmployesPage() {
                       </p>
                     )}
                   </div>
+                  {estAdmin && form.role && form.role !== 'remove' && form.role !== 'admin' && rolesPersonnalises.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rôle personnalisé</label>
+                      <select value={form.role_custom_id} onChange={e => setForm({ ...form, role_custom_id: e.target.value })}
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        <option value="">Aucun (droits du rôle choisi)</option>
+                        {rolesPersonnalises.map(r => <option key={r.id} value={r.id}>{r.nom}</option>)}
+                      </select>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Ses droits par module (écran Rôles) remplacent ceux du rôle choisi.
+                      </p>
+                    </div>
+                  )}
                   {form.role && form.role !== 'remove' && !accesVerrouille && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -390,7 +470,7 @@ export default function EmployesPage() {
       <ConfirmModal
         open={confirmId !== null}
         title="Désactiver l'employé"
-        message="L'employé sera désactivé. Son accès à l'application sera conservé mais il n'apparaîtra plus dans les listes."
+        message="L'employé sera désactivé : il ne pourra plus se connecter (ses sessions ouvertes sont fermées) et n'apparaîtra plus dans les listes de choix. Vous pourrez le réactiver avec le filtre « Désactivés »."
         confirmLabel="Désactiver"
         onConfirm={() => confirmId !== null && handleDelete(confirmId)}
         onCancel={() => setConfirmId(null)}

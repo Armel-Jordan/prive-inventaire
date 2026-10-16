@@ -21,6 +21,8 @@ class AdminUser extends Authenticatable
         'email',
         'password',
         'role',
+        // Rôle personnalisé de l'entreprise : ses droits par module remplacent ceux du rôle système.
+        'role_custom_id',
         'actif',
     ];
 

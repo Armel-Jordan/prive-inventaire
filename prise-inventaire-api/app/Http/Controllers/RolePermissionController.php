@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminUser;
+use App\Support\Droits;
 use App\Support\TenantContext;
 use App\Support\TenantRule;
 use Closure;
@@ -10,7 +12,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -42,11 +43,6 @@ class RolePermissionController extends Controller
         return DB::table('roles_custom')->where(fn ($q) => $q
             ->where(fn ($systeme) => $systeme->whereNull('tenant_id')->where('is_system', true))
             ->orWhere('tenant_id', $tenantId));
-    }
-
-    private function roleSysteme(string $nom): ?object
-    {
-        return DB::table('roles_custom')->whereNull('tenant_id')->where('is_system', true)->where('nom', $nom)->first();
     }
 
     /** Rôle personnalisé de l'entreprise courante ; 403 pour un rôle système, 404 sinon. */
@@ -192,10 +188,9 @@ class RolePermissionController extends Controller
     {
         $this->roleModifiable($id);
 
-        // Utilisateurs encore rattachés à ce rôle (colonne absente des bases récentes).
-        $usersCount = Schema::hasColumn('users', 'role_custom_id')
-            ? DB::table('users')->where('role_custom_id', $id)->count()
-            : 0;
+        // Comptes de l'entreprise encore rattachés à ce rôle.
+        $usersCount = AdminUser::where('tenant_id', app(TenantContext::class)->getTenantId())
+            ->where('role_custom_id', $id)->count();
         if ($usersCount > 0) {
             return response()->json([
                 'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent",
@@ -253,15 +248,11 @@ class RolePermissionController extends Controller
         return response()->json($moduleLabels);
     }
 
-    public function userPermissions(Request $request): JsonResponse
+    public function userPermissions(Request $request, Droits $droits): JsonResponse
     {
-        $user = $request->user();
-
-        // Rôle personnalisé rattaché, s'il appartient bien à l'entreprise ; sinon le rôle système du
-        // même nom que le rôle de l'utilisateur (admin, manager, user), et « user » par défaut.
-        $role = ! empty($user->role_custom_id) ? $this->rolesVisibles()->find($user->role_custom_id) : null;
-        $role ??= $this->roleSysteme($user->role ?: 'user');
-        $role ??= $this->roleSysteme('user');
+        // Même rôle que celui qu'applique l'API (middleware « droits ») : rôle personnalisé de l'entreprise,
+        // sinon rôle système du même nom ; un administrateur garde tous les droits.
+        $role = $droits->role($request->user());
 
         $permissions = $role ? $this->permissionsDuRole($role->id) : collect();
 
@@ -272,25 +263,24 @@ class RolePermissionController extends Controller
         ]);
     }
 
+    /**
+     * Rattache un compte de l'entreprise à l'un de ses rôles personnalisés (role_id null : retour au rôle système
+     * du compte). L'attribution écrivait dans l'ancienne table « users » et répondait 500.
+     */
     public function assignRole(Request $request, int $userId): JsonResponse
     {
         $tenantId = app(TenantContext::class)->getTenantId();
         $request->validate([
-            'role_id' => ['required', Rule::exists('roles_custom', 'id')
-                ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $tenantId))],
+            'role_id' => ['present', 'nullable', Rule::exists('roles_custom', 'id')
+                ->where(fn ($q) => $q->where('tenant_id', $tenantId)->where('is_system', false))],
         ]);
 
-        // Table héritée « users » : la colonne n'existe pas sur les bases récentes.
-        abort_unless(Schema::hasColumn('users', 'role_custom_id'), 422, 'Attribution de rôle personnalisé indisponible.');
-
-        DB::table('users')->where('id', $userId)->update([
-            'role_custom_id' => $request->role_id,
-            'updated_at' => now(),
-        ]);
+        $compte = AdminUser::where('tenant_id', $tenantId)->findOrFail($userId);
+        $compte->update(['role_custom_id' => $request->role_id]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Rôle assigné avec succès',
+            'message' => $request->role_id ? 'Rôle assigné avec succès' : 'Rôle personnalisé retiré',
         ]);
     }
 }
