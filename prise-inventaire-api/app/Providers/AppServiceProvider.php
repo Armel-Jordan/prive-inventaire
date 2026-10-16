@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Planificateur;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +27,18 @@ class AppServiceProvider extends ServiceProvider
         // production (MySQL) et tests ne sont pas affectés.
         if ($this->app->environment('local') && config('database.default') === 'sqlite') {
             config(['database.connections.mysql' => config('database.connections.sqlite')]);
+        }
+
+        // Tâches planifiées des entreprises : échéances vérifiées chaque minute par le planificateur
+        // (cron « schedule:run »)…
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $schedule->command('taches:executer')->everyMinute()->withoutOverlapping();
+        });
+
+        // … et, sans planificateur, après la réponse d'une requête web (le client n'attend pas),
+        // au plus une fois par minute. Désactivable : TACHES_DECLENCHEMENT_REQUETES.
+        if (config('taches.declenchement_requetes') && ! $this->app->runningInConsole()) {
+            $this->app->terminating(fn () => $this->app->make(Planificateur::class)->auPassage());
         }
     }
 }

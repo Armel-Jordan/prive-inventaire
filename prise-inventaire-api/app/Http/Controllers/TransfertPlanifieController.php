@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MouvementTenant;
 use App\Models\TransfertPlanifie;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -131,24 +130,7 @@ class TransfertPlanifieController extends Controller
             ], 422);
         }
 
-        MouvementTenant::create([
-            'tenant_id' => $tenantId,
-            'type' => $transfert->type,
-            'produit_numero' => $transfert->produit_numero,
-            'produit_nom' => $transfert->produit_nom,
-            'secteur_source' => $transfert->secteur_source,
-            'secteur_destination' => $transfert->secteur_destination,
-            'quantite' => $transfert->quantite,
-            'unite_mesure' => $transfert->unite_mesure,
-            'motif' => $transfert->motif,
-            'employe' => $transfert->employe,
-        ]);
-
-        $transfert->update([
-            'statut' => 'execute',
-            'execute_le' => now(),
-            'execute_par' => $request->user()->name ?? 'Admin',
-        ]);
+        $transfert->executer($request->user()->name ?? 'Admin');
 
         return response()->json([
             'success' => true,

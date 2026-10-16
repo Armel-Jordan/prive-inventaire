@@ -14,6 +14,7 @@
 | [FLOW-BALISES-REMARQUES.md](./FLOW-BALISES-REMARQUES.md) | Transverse | Balises de classement des fiches et documents, remarques rapides |
 | [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
 | [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
+| [FLOW-TACHES-PLANIFIEES.md](./FLOW-TACHES-PLANIFIEES.md) | Transverse | Traitements automatiques, planificateur, historique des exécutions |
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
 | [FLOW-PIECES-JOINTES.md](./FLOW-PIECES-JOINTES.md) | Transverse | Pièces jointes des fiches et documents, stockage, sécurité |
 
