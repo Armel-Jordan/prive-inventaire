@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15
+> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi et modèles
 
 ---
 
@@ -18,7 +18,8 @@
 9. [Configuration — Devise & TVA](#9-configuration--devise--tva)
 10. [Configuration — Délais & Alertes](#10-configuration--délais--alertes)
 11. [Référentiels](#11-référentiels)
-12. [Ordre recommandé de configuration initiale](#12-ordre-recommandé-de-configuration-initiale)
+12. [Configuration — Courriels](#12-configuration--courriels)
+13. [Ordre recommandé de configuration initiale](#13-ordre-recommandé-de-configuration-initiale)
 
 ---
 
@@ -466,7 +467,56 @@ Module de permission `referentiels` : l'admin a tous les droits, le manager peut
 
 ---
 
-## 12. Ordre recommandé de configuration initiale
+## 12. Configuration — Courriels
+
+Onglet **Courriels** de la page Paramètres (plan de parité fripv2, phase 0.6a). Il prépare l'envoi des documents par courriel.
+
+### 12.1 Serveur d'envoi
+
+| Mode | Expéditeur | Usage |
+|---|---|---|
+| Serveur de la plateforme (par défaut) | Adresse de la plateforme (`MAIL_FROM_ADDRESS`), au nom de l'entreprise | Rien à configurer ; les réponses vont à l'adresse de réponse |
+| SMTP de l'entreprise | Adresse d'expédition saisie | Envoyer depuis sa propre messagerie (hébergeur, Gmail, Outlook…) |
+
+- SMTP : serveur, port (587 par défaut, 465 en SSL/TLS), chiffrement (STARTTLS exigé, SSL/TLS ou aucun), utilisateur, mot de passe.
+- Le mot de passe est chiffré en base avec la clé de l'application et n'est jamais renvoyé par l'API. Laissé vide à l'enregistrement, il est conservé.
+- Communs aux deux modes : nom de l'expéditeur (par défaut, le nom de l'entreprise), adresse de réponse (par défaut, le courriel de l'entreprise), copie cachée systématique pour l'archivage, signature ajoutée sous chaque courriel.
+- **Tester l'envoi** : envoie un courriel de test avec les paramètres enregistrés. En cas d'échec, le message d'erreur du serveur est affiché.
+- Modifier ou tester le serveur est réservé aux administrateurs ; le test est limité à 5 par minute.
+
+### 12.2 Modèles de courriel
+
+Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personnalisé, un modèle par défaut neutre s'applique.
+
+| Type | Document | Pièce jointe par défaut |
+|---|---|---|
+| `devis` | Devis | `devis-{numero}.pdf` |
+| `commande_client` | Commande client | `commande-{numero}.pdf` |
+| `facture` | Facture | `facture-{numero}.pdf` |
+| `bon_livraison` | Bon de livraison | `bon-livraison-{numero}.pdf` |
+| `commande_fournisseur` | Commande fournisseur | `bon-commande-{numero}.pdf` |
+| `general` | Courriel libre | — |
+
+- Champs : objet, contenu, nom du PDF joint (facultatif, variables admises), adresse de réponse propre au modèle, accusé de lecture.
+- **Variables** `{nom}` : celles du type (`{numero}`, `{client_nom}`, `{montant_ttc}`, `{date_echeance}`…) et celles de l'entreprise (`{entreprise_nom}`, `{entreprise_adresse}`…), insérées d'un clic. Montants écrits selon la langue, avec des espaces insécables, dans la devise de l'entreprise (ou celle du fournisseur pour une commande fournisseur).
+- **Mise en forme** légère : `**gras**`, `*italique*`, listes. Le HTML saisi n'est jamais interprété et les valeurs insérées sont échappées.
+- **Aperçu** : rendu avec le document le plus récent du type, ou des valeurs d'exemple ; les variables inconnues sont signalées et surlignées.
+- Le type et la langue d'un modèle ne changent plus après sa création. « Revenir au modèle par défaut » supprime le modèle personnalisé.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/catalogue` | Types, variables de chaque type, modèles par défaut |
+| `GET` / `PUT /courriels/parametres` | Paramètres d'envoi (modification : administrateur) |
+| `POST /courriels/parametres/test` | Courriel de test (administrateur) |
+| `GET` / `POST /courriels/modeles` | Liste, création |
+| `PUT` / `DELETE /courriels/modeles/{id}` | Modification, suppression |
+| `POST /courriels/modeles/apercu` | Aperçu d'un modèle, même non enregistré |
+
+Code : catalogue `App\Support\Courriels`, rendu `App\Services\Courriels\RenduCourriel` (vue `emails.courriel`), serveur `App\Services\Courriels\MailerTenant`.
+
+---
+
+## 13. Ordre recommandé de configuration initiale
 
 Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'ordre optimal :
 
@@ -474,7 +524,7 @@ Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'
 Étape 1 → Configuration Entreprise (nom, adresse, SIRET...)
 Étape 2 → Configuration Devise & TVA (quelle monnaie, quels taux)
 Étape 3 → Configuration Numérotation (format des numéros de documents)
-Étape 4 → Configuration Délais & Alertes
+Étape 4 → Configuration Délais & Alertes, puis Courriels (facultatif : serveur d'envoi et modèles)
 Étape 5 → Référentiels (unités, catégories, devises, modes et conditions de paiement…)
 Étape 6 → Créer les Secteurs de l'entrepôt
 Étape 7 → Créer les Produits du catalogue
