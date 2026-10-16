@@ -79,19 +79,22 @@ class DocumentsVentePdf
 
     public function facture(Facture $facture): array
     {
-        $facture->loadMissing(['client', 'lignes.produit']);
+        $facture->loadMissing(['client', 'lignes.produit', 'conditionPaiement']);
 
         return $this->document('FACTURE', $facture, [
             'Date de facture' => $this->date($facture->date_facture),
             'Échéance' => $this->date($facture->date_echeance),
+            'Conditions de paiement' => $facture->conditionPaiement?->libelle,
         ], [
             'destinataire' => $this->client($facture->client),
             'lignes' => $facture->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
             'totaux' => $this->totaux('facture', $facture, $facture->lignes),
-            'reglement' => [
+            'reglement' => array_values(array_filter([
                 ['Payé', (float) $facture->montant_paye],
+                (float) $facture->montant_escompte > 0 ? ['Escompte', (float) $facture->montant_escompte] : null,
+                (float) $facture->montant_credite > 0 ? ['Crédité', (float) $facture->montant_credite] : null,
                 ['Reste à payer', (float) $facture->reste_a_payer],
-            ],
+            ])),
             'notes' => $facture->notes,
         ]);
     }

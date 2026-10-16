@@ -57,7 +57,7 @@ export interface ReleveClient {
   du: string;
   au: string;
   solde_ouverture: number;
-  lignes: { date: string; type: 'facture' | 'avoir' | 'acompte' | 'paiement' | 'remboursement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
+  lignes: { date: string; type: 'facture' | 'avoir' | 'acompte' | 'paiement' | 'escompte' | 'remboursement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
   total_debit: number;
   total_credit: number;
   solde_final: number;

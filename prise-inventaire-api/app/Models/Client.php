@@ -17,6 +17,7 @@ class Client extends Model
         'tenant_id',
         'code',
         'raison_sociale',
+        'condition_paiement_id',
         'adresse_facturation',
         'adresse_livraison',
         'ville',
@@ -45,6 +46,12 @@ class Client extends Model
         $number = $last ? intval(substr($last->code, 4)) + 1 : 1;
 
         return 'CLI-'.str_pad($number, 4, '0', STR_PAD_LEFT);
+    }
+
+    /** Condition de paiement du client (référentiel) : reprise par ses factures. */
+    public function conditionPaiement(): BelongsTo
+    {
+        return $this->belongsTo(ConditionPaiement::class)->withTrashed();
     }
 
     public function conditionsPaiement(): HasMany

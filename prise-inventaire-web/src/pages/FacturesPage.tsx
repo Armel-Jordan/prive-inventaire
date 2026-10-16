@@ -17,8 +17,10 @@ import {
   createFacture,
   getClientsActifs,
   getProduits,
+  getReferentiel,
+  getEscompteFacture,
 } from '../services/api';
-import type { Facture, Client } from '../services/api';
+import type { Facture, Client, FicheReferentiel, PropositionEscompte } from '../services/api';
 import type { Produit } from '../types';
 import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 import BoutonPdf from '@/components/BoutonPdf';
@@ -66,13 +68,27 @@ export default function FacturesPage() {
     date_facture: aujourdhui(),
     date_echeance: '',
     notes: '',
+    condition_paiement_id: '',
   });
+  // Conditions de paiement du référentiel ; escompte possible pour le paiement en cours.
+  const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
+  const [escompte, setEscompte] = useState<PropositionEscompte | null>(null);
+  const [avecEscompte, setAvecEscompte] = useState(false);
   const [createLignes, setCreateLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
 
   const loadMeta = async () => {
-    const [c, p] = await Promise.all([getClientsActifs(), getProduits()]);
+    const [c, p, conds] = await Promise.all([getClientsActifs(), getProduits(), getReferentiel('conditions_paiement', true).catch(() => [])]);
     setClients(c || []);
     setProduits(p || []);
+    setConditions(conds || []);
+  };
+
+  // Escompte pour paiement rapide proposé pour la date du paiement (condition de paiement de la facture).
+  const proposerEscompte = (facture: Facture, date: string) => {
+    setEscompte(null);
+    setAvecEscompte(false);
+    if (!facture.condition_paiement_id) return;
+    getEscompteFacture(facture.id, date).then(setEscompte, () => {});
   };
 
   const loadFactures = useCallback(async () => {
@@ -144,11 +160,12 @@ export default function FacturesPage() {
         client_id: parseInt(createForm.client_id),
         date_facture: createForm.date_facture,
         date_echeance: createForm.date_echeance || undefined,
+        condition_paiement_id: createForm.condition_paiement_id ? Number(createForm.condition_paiement_id) : undefined,
         notes: createForm.notes || undefined,
         lignes: createLignes,
       });
       setShowCreateModal(false);
-      setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '' });
+      setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '' });
       setCreateLignes([]);
       loadFactures();
     } catch (error) {
@@ -160,6 +177,7 @@ export default function FacturesPage() {
     setSelectedFacture(facture);
     setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') });
     setShowPaiementModal(true);
+    proposerEscompte(facture, paiementData.date_paiement);
     setAcomptesClient([]);
     if (peut('acomptes', 'appliquer')) {
       // Un acompte réservé à une autre commande n'est pas proposé (il appartient à cette commande).
@@ -190,6 +208,7 @@ export default function FacturesPage() {
         date_paiement: paiementData.date_paiement,
         mode_paiement: paiementData.mode_paiement,
         reference: paiementData.reference || undefined,
+        escompte: avecEscompte || undefined,
       });
       setShowPaiementModal(false);
       setPaiementData({
@@ -400,6 +419,12 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Date échéance:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_echeance)}</p>
                 </div>
+                {selectedFacture.condition_paiement && (
+                  <div>
+                    <span className="text-sm text-gray-500">Condition de paiement:</span>
+                    <p className="dark:text-white">{selectedFacture.condition_paiement.libelle}</p>
+                  </div>
+                )}
               </div>
 
               {selectedFacture.lignes && selectedFacture.lignes.length > 0 && (
@@ -450,6 +475,12 @@ export default function FacturesPage() {
                   <span className="text-gray-500">Payé:</span>
                   <span className="text-green-600">{montant(Number(selectedFacture.montant_paye ?? 0))}</span>
                 </div>
+                {Number(selectedFacture.montant_escompte ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Escompte:</span>
+                    <span className="text-green-600">{montant(Number(selectedFacture.montant_escompte))}</span>
+                  </div>
+                )}
                 {Number(selectedFacture.montant_credite ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Crédité:</span>
@@ -543,6 +574,16 @@ export default function FacturesPage() {
                   <input type="date" value={createForm.date_echeance}
                     onChange={(e) => setCreateForm({ ...createForm, date_echeance: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  <span className="text-xs text-gray-500">Vide : selon la condition de paiement.</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Condition de paiement</label>
+                  <select value={createForm.condition_paiement_id}
+                    onChange={(e) => setCreateForm({ ...createForm, condition_paiement_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Celle du client (ou par défaut)</option>
+                    {conditions.map(c => <option key={c.id} value={c.id}>{String(c.libelle)}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1 dark:text-gray-300">Notes</label>
@@ -669,10 +710,30 @@ export default function FacturesPage() {
                   type="date"
                   required
                   value={paiementData.date_paiement}
-                  onChange={(e) => setPaiementData({ ...paiementData, date_paiement: e.target.value })}
+                  onChange={(e) => { setPaiementData({ ...paiementData, date_paiement: e.target.value }); proposerEscompte(selectedFacture, e.target.value); }}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
+              {escompte?.condition && (
+                <label className={`flex items-start gap-2 text-sm rounded-lg p-2 ${escompte.applicable ? 'bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-200' : 'bg-gray-50 text-gray-500 dark:bg-gray-700/40'}`}>
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    disabled={!escompte.applicable}
+                    checked={avecEscompte}
+                    onChange={(e) => {
+                      setAvecEscompte(e.target.checked);
+                      setPaiementData({ ...paiementData, montant: String(e.target.checked ? escompte.a_payer : selectedFacture.reste_a_payer) });
+                    }}
+                  />
+                  <span>
+                    Escompte {escompte.condition} : {escompte.pourcentage} %, soit {montant(escompte.escompte)} ; à payer {montant(escompte.a_payer)}
+                    <span className="block text-xs">
+                      {escompte.applicable ? `Paiement au plus tard le ${formatDateDocument(escompte.date_limite)}, réglant tout le reste.` : `Délai dépassé (jusqu'au ${formatDateDocument(escompte.date_limite)}).`}
+                    </span>
+                  </span>
+                </label>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Mode de paiement *</label>
                 <select
