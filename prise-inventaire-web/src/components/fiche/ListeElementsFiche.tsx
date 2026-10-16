@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Plus, Pencil, Trash2, Star } from 'lucide-react';
-import { enregistrerElementFicheClient, getListeFicheClient, supprimerElementFicheClient } from '@/services/api';
+import { enregistrerElementFiche, getListeFiche, supprimerElementFiche } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 
@@ -16,8 +16,8 @@ export interface ChampElement {
 type Valeurs = Record<string, string | boolean>;
 
 interface Props<T> {
-  clientId: number;
-  liste: 'contacts' | 'adresses';
+  /** Route de la liste, ex. `/clients/12/contacts` ou `/fournisseurs/5/comptes-bancaires`. */
+  chemin: string;
   champs: ChampElement[];
   colonnePrincipale: string;
   titre: (element: T) => string;
@@ -25,11 +25,13 @@ interface Props<T> {
   libelles: { add: string; empty: string; main: string };
   /** Données déjà présentes sur la fiche, rappelées en tête (lecture seule). */
   entete?: ReactNode;
+  /** Consultation seule : ni ajout, ni modification, ni suppression. */
+  lectureSeule?: boolean;
   onCompte: (nombre: number) => void;
 }
 
-/** Liste rattachée à la fiche (contacts, adresses) : cartes, formulaire en place, un seul élément principal. */
-export default function ListeElementsFiche<T extends { id: number }>({ clientId, liste, champs, colonnePrincipale, titre, details, libelles, entete, onCompte }: Props<T>) {
+/** Liste rattachée à une fiche (contacts, adresses, comptes…) : cartes, formulaire en place, un seul élément principal. */
+export default function ListeElementsFiche<T extends { id: number }>({ chemin, champs, colonnePrincipale, titre, details, libelles, entete, lectureSeule = false, onCompte }: Props<T>) {
   const { t } = useLanguage();
   const tf = t.clientFile;
   const id = useId();
@@ -42,18 +44,18 @@ export default function ListeElementsFiche<T extends { id: number }>({ clientId,
   useEffect(() => { rappelCompte.current = onCompte; });
 
   const charger = useCallback(async () => {
-    const trouves = await getListeFicheClient<T>(clientId, liste);
+    const trouves = await getListeFiche<T>(chemin);
     setElements(trouves);
     rappelCompte.current(trouves.length);
-  }, [clientId, liste]);
+  }, [chemin]);
 
   useEffect(() => {
     let actif = true;
-    getListeFicheClient<T>(clientId, liste)
+    getListeFiche<T>(chemin)
       .then(trouves => { if (actif) { setElements(trouves); rappelCompte.current(trouves.length); } })
       .catch(e => { if (actif) setErreur(e instanceof ApiError ? e.message : tf.error); });
     return () => { actif = false; };
-  }, [clientId, liste, tf.error]);
+  }, [chemin, tf.error]);
 
   const valeursDe = (element?: T): Valeurs => Object.fromEntries(champs.map(c => {
     const valeur = element ? (element as Record<string, unknown>)[c.cle] : undefined;
@@ -67,7 +69,7 @@ export default function ListeElementsFiche<T extends { id: number }>({ clientId,
     const donnees = Object.fromEntries(Object.entries(edition.valeurs).map(([cle, v]) => [cle, typeof v === 'string' ? (v.trim() || null) : v]));
     setOccupe(true);
     try {
-      await enregistrerElementFicheClient<T>(clientId, liste, donnees as Partial<T>, edition.id);
+      await enregistrerElementFiche<T>(chemin, donnees as Partial<T>, edition.id);
       setEdition(null);
       setErreur('');
       await charger();
@@ -81,7 +83,7 @@ export default function ListeElementsFiche<T extends { id: number }>({ clientId,
   async function supprimer(element: T) {
     if (!confirm(tf.confirmDelete.replace('{nom}', titre(element)))) return;
     try {
-      await supprimerElementFicheClient(clientId, liste, element.id);
+      await supprimerElementFiche(chemin, element.id);
       await charger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : tf.error);
@@ -111,12 +113,14 @@ export default function ListeElementsFiche<T extends { id: number }>({ clientId,
                     </span>
                   )}
                 </p>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => setEdition({ id: element.id, valeurs: valeursDe(element) })} aria-label={`${tf.edit} — ${titre(element)}`}
-                    className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 rounded"><Pencil size={16} /></button>
-                  <button onClick={() => supprimer(element)} aria-label={`${tf.delete} — ${titre(element)}`}
-                    className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded"><Trash2 size={16} /></button>
-                </div>
+                {!lectureSeule && (
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => setEdition({ id: element.id, valeurs: valeursDe(element) })} aria-label={`${tf.edit} — ${titre(element)}`}
+                      className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 rounded"><Pencil size={16} /></button>
+                    <button onClick={() => supprimer(element)} aria-label={`${tf.delete} — ${titre(element)}`}
+                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded"><Trash2 size={16} /></button>
+                  </div>
+                )}
               </div>
               <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 space-y-0.5">{details(element)}</div>
             </li>
@@ -154,7 +158,7 @@ export default function ListeElementsFiche<T extends { id: number }>({ clientId,
             <button type="submit" disabled={occupe} className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">{tf.save}</button>
           </div>
         </form>
-      ) : (
+      ) : !lectureSeule && (
         <button onClick={() => setEdition({ valeurs: valeursDe() })} className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30">
           <Plus size={16} /> {libelles.add}
         </button>

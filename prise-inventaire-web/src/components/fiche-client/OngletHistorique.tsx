@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { getHistoriqueAchatsClient, type HistoriqueAchats } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
-import { formatDate, formatMontant } from './format';
+import { formatDate, formatMontant } from '@/components/fiche/format';
 
 /** Historique d'achats : lignes des factures du client, filtrées par période et par produit. */
 export default function OngletHistorique({ clientId, devise }: { clientId: number; devise: string }) {

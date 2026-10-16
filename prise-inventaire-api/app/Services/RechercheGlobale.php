@@ -103,7 +103,8 @@ final class RechercheGlobale
                     'titre' => "{$c->code} — {$c->raison_sociale}",
                     'sous_titre' => $c->ville,
                     'details' => ['ville' => $c->ville, 'telephone' => $c->telephone, 'email' => $c->email, 'contact' => $c->contact_nom, 'encours' => (float) $c->encours_actuel, 'actif' => (bool) $c->actif],
-                    'lien' => $lien('/clients', $c->code),
+                    // Les clients et les fournisseurs ont leur fiche : le résultat l'ouvre directement.
+                    'lien' => "/clients/{$c->id}",
                 ],
             ],
             'fournisseurs' => [
@@ -115,7 +116,7 @@ final class RechercheGlobale
                     'titre' => "{$f->code} — {$f->raison_sociale}",
                     'sous_titre' => $f->contact_nom,
                     'details' => ['telephone' => $f->telephone, 'email' => $f->email, 'contact' => $f->contact_nom, 'devise' => $f->devise, 'actif' => (bool) $f->actif],
-                    'lien' => $lien('/fournisseurs', $f->code),
+                    'lien' => "/fournisseurs/{$f->id}",
                 ],
             ],
             'devis' => [

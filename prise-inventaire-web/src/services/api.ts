@@ -602,6 +602,143 @@ export async function deleteFournisseur(id: number): Promise<void> {
   await fetchApi(`/fournisseurs/${id}`, { method: 'DELETE' });
 }
 
+// Fiche fournisseur : synthèse des achats, historique, produits fournis, contacts, adresses, comptes, remarques
+export interface FicheFournisseur extends Fournisseur {
+  contacts_count: number;
+  adresses_count: number;
+  comptes_bancaires_count: number;
+  remarques_count: number;
+  produits_count: number;
+}
+
+export interface SyntheseFournisseur {
+  achats: { total: number; annee_courante: number; annee_precedente: number };
+  commandes: {
+    nombre: number;
+    montant_moyen: number;
+    brouillons: number;
+    premiere: string | null;
+    /** Montant dans la devise de la commande. */
+    derniere: { id: number; numero: string; date: string; montant: number; devise: string | null; statut: string } | null;
+  };
+  a_recevoir: { commandes: number; quantite: number; montant: number };
+  livraisons: { commandes_livrees: number; delai_moyen_jours: number | null; a_temps: number | null; taux_reception: number | null };
+  achats_mensuels: { mois: string; montant: number }[];
+  produits_les_plus_achetes: { produit_id: number; numero: string | null; description: string | null; quantite: number; montant: number; commandes: number; dernier_achat: string | null }[];
+}
+
+export interface LigneHistoriqueFournisseur {
+  id: number;
+  date: string;
+  commande_id: number;
+  commande_numero: string;
+  statut: string;
+  produit_id: number;
+  produit_numero: string | null;
+  produit_description: string | null;
+  quantite_commandee: number;
+  quantite_recue: number;
+  /** Prix et montant dans la devise de la commande. */
+  prix_unitaire: number;
+  montant: number;
+  devise: string | null;
+}
+
+export interface HistoriqueFournisseur {
+  data: LigneHistoriqueFournisseur[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  totaux: { quantite_commandee: number; quantite_recue: number; montant: number };
+}
+
+export interface ProduitFourni {
+  produit_id: number;
+  numero: string;
+  description: string;
+  reference_fournisseur: string | null;
+  prix_achat: number | null;
+  delai_livraison: number | null;
+  fournisseur_principal: boolean;
+  dernier_prix: number | null;
+  dernier_prix_devise: string | null;
+  derniere_commande: string | null;
+}
+
+export interface ContactFournisseur {
+  id: number;
+  nom: string;
+  fonction: string | null;
+  telephone: string | null;
+  telephone_secondaire: string | null;
+  email: string | null;
+  principal: boolean;
+  recoit_commandes: boolean;
+  notes: string | null;
+  actif: boolean;
+}
+
+export interface AdresseFournisseur {
+  id: number;
+  libelle: string;
+  adresse: string;
+  ville: string | null;
+  code_postal: string | null;
+  region: string | null;
+  pays: string | null;
+  enlevement: boolean;
+  principale: boolean;
+  instructions: string | null;
+  actif: boolean;
+}
+
+export interface CompteBancaireFournisseur {
+  id: number;
+  banque: string;
+  agence: string | null;
+  titulaire: string | null;
+  numero_compte: string | null;
+  iban: string | null;
+  bic: string | null;
+  devise: string | null;
+  principal: boolean;
+  notes: string | null;
+  actif: boolean;
+  updated_at: string;
+  auteur_modification: { id: number; nom: string } | null;
+}
+
+export async function getFicheFournisseur(id: number): Promise<FicheFournisseur> {
+  return fetchApi(`/fournisseurs/${id}/fiche`);
+}
+
+export async function getSyntheseFournisseur(id: number): Promise<SyntheseFournisseur> {
+  return fetchApi(`/fournisseurs/${id}/synthese`);
+}
+
+export async function getHistoriqueFournisseur(id: number, params: { du?: string; au?: string; recherche?: string; page?: number }): Promise<HistoriqueFournisseur> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/fournisseurs/${id}/historique-achats?${query.toString()}`);
+}
+
+export async function getProduitsFournis(id: number): Promise<ProduitFourni[]> {
+  return fetchApi(`/fournisseurs/${id}/produits`);
+}
+
+export type SaisieProduitFourni = Pick<ProduitFourni, 'reference_fournisseur' | 'prix_achat' | 'delai_livraison' | 'fournisseur_principal'>;
+
+export async function enregistrerProduitFourni(fournisseurId: number, produitId: number, donnees: SaisieProduitFourni, nouveau: boolean): Promise<void> {
+  await fetchApi(nouveau ? `/fournisseurs/${fournisseurId}/produits` : `/fournisseurs/${fournisseurId}/produits/${produitId}`, {
+    method: nouveau ? 'POST' : 'PUT',
+    body: JSON.stringify(nouveau ? { ...donnees, produit_id: produitId } : donnees),
+  });
+}
+
+export async function retirerProduitFourni(fournisseurId: number, produitId: number): Promise<void> {
+  await fetchApi(`/fournisseurs/${fournisseurId}/produits/${produitId}`, { method: 'DELETE' });
+}
+
 // === COMMANDES FOURNISSEUR ===
 export interface ComFourLigne {
   id?: number;
@@ -1149,7 +1286,8 @@ export interface AdresseClient {
   actif: boolean;
 }
 
-export interface RemarqueClient {
+/** Remarque datée d'une fiche (client, fournisseur…). */
+export interface RemarqueFiche {
   id: number;
   texte: string;
   epinglee: boolean;
@@ -1157,6 +1295,8 @@ export interface RemarqueClient {
   auteur: { id: number; nom: string } | null;
   created_at: string;
 }
+
+export type RemarqueClient = RemarqueFiche;
 
 export interface CategorieClient {
   id: number;
@@ -1188,22 +1328,23 @@ export async function basculerFavoriClient(id: number, favori: boolean): Promise
   return fetchApi(`/clients/${id}/favori`, { method: favori ? 'POST' : 'DELETE' });
 }
 
-/** Contacts, adresses et remarques d'un client partagent les mêmes routes. */
-export type ListeFicheClient = 'contacts' | 'adresses' | 'remarques';
-
-export async function getListeFicheClient<T>(clientId: number, liste: ListeFicheClient): Promise<T[]> {
-  return fetchApi(`/clients/${clientId}/${liste}`);
+/**
+ * Listes rattachées à une fiche (contacts, adresses, remarques, comptes…), toutes sur le même modèle de
+ * routes : `chemin` vaut par exemple `/clients/12/contacts` ou `/fournisseurs/5/comptes-bancaires`.
+ */
+export async function getListeFiche<T>(chemin: string): Promise<T[]> {
+  return fetchApi(chemin);
 }
 
-export async function enregistrerElementFicheClient<T>(clientId: number, liste: ListeFicheClient, donnees: Partial<T>, id?: number): Promise<T> {
-  return fetchApi(id ? `/clients/${clientId}/${liste}/${id}` : `/clients/${clientId}/${liste}`, {
+export async function enregistrerElementFiche<T>(chemin: string, donnees: Partial<T>, id?: number): Promise<T> {
+  return fetchApi(id ? `${chemin}/${id}` : chemin, {
     method: id ? 'PUT' : 'POST',
     body: JSON.stringify(donnees),
   });
 }
 
-export async function supprimerElementFicheClient(clientId: number, liste: ListeFicheClient, id: number): Promise<void> {
-  await fetchApi(`/clients/${clientId}/${liste}/${id}`, { method: 'DELETE' });
+export async function supprimerElementFiche(chemin: string, id: number): Promise<void> {
+  await fetchApi(`${chemin}/${id}`, { method: 'DELETE' });
 }
 
 export async function getCategoriesClients(): Promise<CategorieClient[]> {
