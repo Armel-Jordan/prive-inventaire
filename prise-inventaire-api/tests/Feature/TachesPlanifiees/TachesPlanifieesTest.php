@@ -75,13 +75,16 @@ class TachesPlanifieesTest extends TestCase
         TachePlanifiee::withoutTenantScope()->whereKey($id)->update(['actif' => true, 'prochaine_execution' => now()->subMinute()]);
     }
 
-    public function test_quatre_taches_inactives_par_defaut_reservees_aux_administrateurs(): void
+    public function test_les_taches_sont_inactives_par_defaut_et_reservees_aux_administrateurs(): void
     {
         $taches = $this->getJson('/api/taches-planifiees')->assertOk()->json('taches');
 
-        $this->assertSame(['transferts_planifies', 'transferts_imminents', 'alertes_stock', 'nettoyage_notifications'], array_column($taches, 'code'));
-        $this->assertSame([false, false, false, false], array_column($taches, 'actif'));
-        $this->assertSame([null, null, null, null], array_column($taches, 'prochaine_execution'));
+        $this->assertSame([
+            'transferts_planifies', 'transferts_imminents', 'alertes_stock', 'nettoyage_notifications',
+            'factures_impayees', 'commandes_fournisseur_en_retard', 'livraisons_en_retard', 'controles_techniques',
+        ], array_column($taches, 'code'));
+        $this->assertSame(array_fill(0, 8, false), array_column($taches, 'actif'));
+        $this->assertSame(array_fill(0, 8, null), array_column($taches, 'prochaine_execution'));
 
         $this->connecter($this->tenant, 'user');
         $this->getJson('/api/taches-planifiees')->assertForbidden();

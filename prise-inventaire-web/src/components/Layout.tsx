@@ -113,7 +113,6 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
       { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
-      { path: '/alertes-config', label: 'Alertes', icon: Bell, module: 'alertes_config' },
     ],
   },
   {
@@ -127,6 +126,8 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
       { path: '/taches-planifiees', label: t.scheduledTasks.title, icon: Timer, module: 'configuration' },
+      // Paramètres (module toujours actif) : les alertes portent aussi sur le stock, les achats et les ventes.
+      { path: '/alertes-config', label: t.alertsConfig.nav, icon: Bell, module: 'alertes_config' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },

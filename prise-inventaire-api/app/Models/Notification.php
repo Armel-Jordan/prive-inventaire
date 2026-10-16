@@ -32,6 +32,19 @@ class Notification extends Model
         ];
     }
 
+    /**
+     * Notification d'alerte sur un objet (facture, commande, bon, camion), sauf si une notification non lue du même
+     * type existe déjà pour lui : une alerte n'est pas répétée tant qu'elle n'a pas été lue.
+     *
+     * @param  array<string, mixed>  $data  doit contenir la clé $cle qui identifie l'objet
+     */
+    public static function alerterUneFois(string $type, string $cle, string $titre, string $message, string $lien, array $data): ?self
+    {
+        $dejaSignale = self::where('type', $type)->where('lu', false)->where("data->{$cle}", $data[$cle])->exists();
+
+        return $dejaSignale ? null : self::create(['type' => $type, 'titre' => $titre, 'message' => $message, 'lien' => $lien, 'data' => $data]);
+    }
+
     public static function create_transfert_complete(
         string $produit,
         string $secteurDest,
