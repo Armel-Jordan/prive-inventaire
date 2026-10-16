@@ -502,7 +502,16 @@ export interface ConditionPaiement {
   ordre: number;
 }
 
+/** Détail d'un document par taxe (groupes de taxes) ; vide pour le calcul au taux unique. */
+export interface RecapitulatifTaxe {
+  nom: string;
+  taux: number;
+  base: number;
+  montant: number;
+}
+
 export interface ComClientEntete {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   client_id: number;
@@ -532,6 +541,7 @@ export interface ComClientLigne {
 }
 
 export interface Facture {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   commande_id?: number;

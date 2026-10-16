@@ -376,7 +376,23 @@ Chaque taxe est arrondie au centime. Le **taux effectif** du groupe est le taux 
 
 **Endpoints :** `GET/POST /groupes-taxes`, `PUT/DELETE /groupes-taxes/{id}`, `POST /groupes-taxes/{id}/calculer` (`montant_ht` → détail des taxes, total TTC).
 
-L'écran se trouve dans **Configuration → Devise & TVA**, sous les taxes, avec un simulateur sur un montant. Les documents (commandes, factures…) gardent pour l'instant leur calcul du §9.3 : l'application des groupes aux documents est la prochaine étape du plan de parité.
+L'écran se trouve dans **Configuration → Devise & TVA**, sous les taxes, avec un simulateur sur un montant.
+
+### 9.5 Groupes de taxes dans les documents
+
+Les lignes de **commande client** et de **facture** utilisent un groupe de taxes :
+
+| Cas | Calcul |
+|---|---|
+| La ligne reçoit un `groupe_taxe_id` | Taxes du groupe |
+| Pas de groupe ni de taux saisi, et un groupe **par défaut** existe | Taxes du groupe par défaut |
+| Un `taux_tva` est saisi, ou aucun groupe par défaut n'existe | Calcul du §9.3, inchangé |
+
+Avec un groupe, la ligne garde son `taux_tva` (taux effectif, pour information) et son total TTC = HT + somme des taxes, chacune arrondie au centime. Le détail de chaque taxe est enregistré dans `document_taxes`, en instantané (nom, taux, base, montant) : un document ne change pas si une taxe est modifiée ensuite. Une facture créée depuis une commande reprend ce détail.
+
+Les fiches commande et facture (`GET /commandes-client/{id}`, `GET /factures/{id}`) renvoient `recapitulatif_taxes` : base et montant cumulés par taxe, affichés sous les totaux. La liste est vide pour le calcul au taux unique.
+
+> Les écrans de saisie n'envoient pas de taux : définir un groupe **par défaut** suffit pour que toutes les nouvelles commandes et factures l'utilisent.
 
 ---
 
