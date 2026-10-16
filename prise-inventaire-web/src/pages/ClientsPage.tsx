@@ -2,6 +2,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
 import {
   getClients,
   createClient,
@@ -197,6 +198,7 @@ export default function ClientsPage() {
                       <Building2 size={16} className="text-gray-400" />
                       <span className="text-sm text-gray-900 dark:text-white">{client.raison_sociale}</span>
                     </div>
+                    <BalisesFiche entite="client" entiteId={client.id} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

@@ -23,6 +23,7 @@ Route::get('/health', function () {
 
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AlerteStockController;
+use App\Http\Controllers\Api\BaliseController;
 use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
@@ -44,6 +45,7 @@ use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
+use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -300,6 +302,28 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/activite-employe', [RapportController::class, 'activiteParEmploye']);
         Route::get('/evolution-annuelle', [RapportController::class, 'evolutionAnnuelle']);
         Route::get('/top-produits', [RapportController::class, 'topProduits']);
+    });
+
+    // Balises de classement des fiches et documents.
+    Route::prefix('balises')->group(function () {
+        Route::get('/', [BaliseController::class, 'index']);
+        Route::post('/', [BaliseController::class, 'store']);
+        Route::get('/affectations', [BaliseController::class, 'affectations']);
+        Route::put('/affectations', [BaliseController::class, 'enregistrerAffectations']);
+        Route::get('/recherche', [BaliseController::class, 'recherche']);
+        Route::put('/items/{itemId}', [BaliseController::class, 'modifierItem'])->whereNumber('itemId');
+        Route::delete('/items/{itemId}', [BaliseController::class, 'supprimerItem'])->whereNumber('itemId');
+        Route::put('/{id}', [BaliseController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [BaliseController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/items', [BaliseController::class, 'ajouterItem'])->whereNumber('id');
+    });
+
+    // Remarques rapides : textes réutilisables pour les notes.
+    Route::prefix('remarques-rapides')->group(function () {
+        Route::get('/', [RemarqueRapideController::class, 'index']);
+        Route::post('/', [RemarqueRapideController::class, 'store']);
+        Route::put('/{id}', [RemarqueRapideController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [RemarqueRapideController::class, 'destroy'])->whereNumber('id');
     });
 
     // Inventaire tournant

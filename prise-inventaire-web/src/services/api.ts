@@ -125,6 +125,134 @@ export async function deleteProduit(id: number): Promise<void> {
   await fetchApi(`/produits/${id}`, { method: 'DELETE' });
 }
 
+// === BALISES ET REMARQUES RAPIDES ===
+export type EntiteBalise =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+export type CouleurBalise = 'gris' | 'bleu' | 'vert' | 'jaune' | 'orange' | 'rouge' | 'violet' | 'rose';
+
+export interface BaliseItem {
+  id: number;
+  balise_id: number;
+  libelle: string;
+  couleur: CouleurBalise;
+  ordre: number;
+  actif: boolean;
+}
+
+export interface Balise {
+  id: number;
+  nom: string;
+  /** choix : un seul item par fiche ; options : plusieurs. */
+  type: 'choix' | 'options';
+  entites: EntiteBalise[];
+  ordre: number;
+  actif: boolean;
+  items: BaliseItem[];
+}
+
+export interface RemarqueRapide {
+  id: number;
+  categorie: string | null;
+  texte: string;
+}
+
+const cleEntreprise = () => getAuthHeaders()['X-Tenant-Slug'] ?? '';
+
+// Balises actives d'un type de fiche, demandées une fois pour toutes les lignes d'une liste.
+const cacheBalisesActives = new Map<string, Promise<Balise[]>>();
+
+export function balisesActives(entite: EntiteBalise): Promise<Balise[]> {
+  const cle = `${cleEntreprise()}:${entite}`;
+  if (!cacheBalisesActives.has(cle)) {
+    const requete = fetchApi<Balise[]>(`/balises?entite=${entite}&actifs=1`);
+    requete.catch(() => cacheBalisesActives.delete(cle));
+    cacheBalisesActives.set(cle, requete);
+  }
+  return cacheBalisesActives.get(cle)!;
+}
+
+// Items posés : les demandes des lignes d'une liste partent ensemble, par lots de 200.
+const lotsPoses = new Map<string, { ids: Set<number>; resultat: Promise<Record<string, number[]>> }>();
+
+export function posesBalises(entite: EntiteBalise, entiteId: number): Promise<number[]> {
+  const cle = `${cleEntreprise()}:${entite}`;
+  let lot = lotsPoses.get(cle);
+  if (!lot) {
+    const ids = new Set<number>();
+    const resultat = new Promise(attendre => setTimeout(attendre, 20)).then(async () => {
+      lotsPoses.delete(cle);
+      const tous = [...ids];
+      const morceaux: Record<string, number[]>[] = [];
+      for (let i = 0; i < tous.length; i += 200) {
+        morceaux.push(await fetchApi<Record<string, number[]>>(`/balises/affectations?entite=${entite}&ids=${tous.slice(i, i + 200).join(',')}`));
+      }
+      return Object.assign({}, ...morceaux) as Record<string, number[]>;
+    });
+    lot = { ids, resultat };
+    lotsPoses.set(cle, lot);
+  }
+  lot.ids.add(entiteId);
+  return lot.resultat.then(poses => poses[String(entiteId)] ?? []);
+}
+
+export async function enregistrerPosesBalises(entite: EntiteBalise, entiteId: number, items: number[]): Promise<number[]> {
+  const reponse = await fetchApi<{ items: number[] }>('/balises/affectations', { method: 'PUT', body: JSON.stringify({ entite, entite_id: entiteId, items }) });
+  return reponse.items;
+}
+
+export async function getBalises(): Promise<Balise[]> {
+  return fetchApi('/balises');
+}
+
+async function modifierBalises<T>(chemin: string, options: ApiOptions): Promise<T> {
+  const resultat = await fetchApi<T>(chemin, options);
+  cacheBalisesActives.clear();
+  return resultat;
+}
+
+export const creerBalise = (balise: Pick<Balise, 'nom' | 'type' | 'entites' | 'actif'>) =>
+  modifierBalises<Balise>('/balises', { method: 'POST', body: JSON.stringify(balise) });
+export const modifierBalise = (id: number, balise: Pick<Balise, 'nom' | 'type' | 'entites' | 'actif'>) =>
+  modifierBalises<Balise>(`/balises/${id}`, { method: 'PUT', body: JSON.stringify(balise) });
+export const supprimerBalise = (id: number) => modifierBalises<void>(`/balises/${id}`, { method: 'DELETE' });
+export const ajouterItemBalise = (baliseId: number, item: Pick<BaliseItem, 'libelle' | 'couleur'>) =>
+  modifierBalises<BaliseItem>(`/balises/${baliseId}/items`, { method: 'POST', body: JSON.stringify(item) });
+export const modifierItemBalise = (id: number, item: Pick<BaliseItem, 'libelle' | 'couleur' | 'actif'>) =>
+  modifierBalises<BaliseItem>(`/balises/items/${id}`, { method: 'PUT', body: JSON.stringify(item) });
+export const supprimerItemBalise = (id: number) => modifierBalises<void>(`/balises/items/${id}`, { method: 'DELETE' });
+
+export async function rechercherParBalises(entite: EntiteBalise, items: number[], mode: 'un' | 'tous'): Promise<{ entite_id: number; libelle_entite: string | null }[]> {
+  const parametres = new URLSearchParams({ entite, mode });
+  items.forEach(id => parametres.append('items[]', String(id)));
+  return fetchApi(`/balises/recherche?${parametres}`);
+}
+
+// Remarques rapides, chargées une fois par entreprise pour tous les champs de notes.
+const cacheRemarques = new Map<string, Promise<RemarqueRapide[]>>();
+
+export function remarquesRapides(): Promise<RemarqueRapide[]> {
+  const cle = cleEntreprise();
+  if (!cacheRemarques.has(cle)) {
+    const requete = fetchApi<RemarqueRapide[]>('/remarques-rapides');
+    requete.catch(() => cacheRemarques.delete(cle));
+    cacheRemarques.set(cle, requete);
+  }
+  return cacheRemarques.get(cle)!;
+}
+
+async function modifierRemarques<T>(chemin: string, options: ApiOptions): Promise<T> {
+  const resultat = await fetchApi<T>(chemin, options);
+  cacheRemarques.clear();
+  return resultat;
+}
+
+export const creerRemarqueRapide = (remarque: Omit<RemarqueRapide, 'id'>) =>
+  modifierRemarques<RemarqueRapide>('/remarques-rapides', { method: 'POST', body: JSON.stringify(remarque) });
+export const modifierRemarqueRapide = (id: number, remarque: Omit<RemarqueRapide, 'id'>) =>
+  modifierRemarques<RemarqueRapide>(`/remarques-rapides/${id}`, { method: 'PUT', body: JSON.stringify(remarque) });
+export const supprimerRemarqueRapide = (id: number) => modifierRemarques<void>(`/remarques-rapides/${id}`, { method: 'DELETE' });
+
 // === SECTEURS ===
 export async function getSecteurs(): Promise<Secteur[]> {
   if (MOCK_MODE) return mockSecteurs;

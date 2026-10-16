@@ -2,6 +2,9 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getBonsLivraison,
   getBonLivraison,
@@ -209,7 +212,10 @@ export default function BonsLivraisonPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {bons.map((bon) => (
                 <tr key={bon.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{bon.numero}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
+                    {bon.numero}
+                    <BalisesFiche entite="bon_livraison" entiteId={bon.id} />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{bon.facture?.numero}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {bon.mode_livraison === 'entreprise' ? 'Livraison' : 'Retrait client'}
@@ -450,6 +456,7 @@ export default function BonsLivraisonPage() {
                   rows={2}
                   placeholder="Remarques, problèmes..."
                 />
+                <BoutonRemarquesRapides onInserer={texte => setNotesLivraison(n => ajouterRemarque(n, texte))} />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

@@ -2,6 +2,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff, Filter } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
 import { getEmployes, createEmploye, updateEmploye, deleteEmploye, getConfiguration } from '@/services/api';
 import type { Employe } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -248,7 +249,10 @@ export default function EmployesPage() {
                 {filtered.map((employe) => (
                   <tr key={employe.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{employe.numero}</td>
-                    <td className="px-4 py-3 text-sm dark:text-gray-200">{employe.nom}</td>
+                    <td className="px-4 py-3 text-sm dark:text-gray-200">
+                      {employe.nom}
+                      <BalisesFiche entite="employe" entiteId={employe.id} />
+                    </td>
                     <td className="px-4 py-3 text-sm dark:text-gray-300">{employe.prenom || '-'}</td>
                     <td className="px-4 py-3 text-sm dark:text-gray-300">{employe.email || '-'}</td>
                     <td className="px-4 py-3">

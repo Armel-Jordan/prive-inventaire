@@ -2,6 +2,9 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getDevis, createDevis, updateDevis, deleteDevis,
   envoyerDevis, accepterDevis, refuserDevis, convertirDevisEnCommande,
@@ -227,7 +230,10 @@ export default function DevisPage() {
             <tbody className="divide-y">
               {devisList.map((devis) => (
                 <tr key={devis.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-sm">{devis.numero}</td>
+                  <td className="px-4 py-3 font-mono text-sm">
+                    {devis.numero}
+                    <BalisesFiche entite="devis" entiteId={devis.id} />
+                  </td>
                   <td className="px-4 py-3 text-sm">{devis.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_devis)}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_validite)}</td>
@@ -298,6 +304,7 @@ export default function DevisPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Notes</label>
                   <input type="text" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="Optionnel" />
+                  <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
               </div>
 
