@@ -401,7 +401,7 @@ L'application supporte plusieurs taux de TVA ou taxes différentes.
 |-------|-------------|
 | `nom` | Nom de la taxe (ex: "TVA 20%") |
 | `taux` | Taux en %, jusqu'à 4 décimales (ex: 20, 9.975) |
-| `defaut` | Si true, appliqué par défaut sur les lignes |
+| `par_defaut` | Taxe par défaut : son taux devient le taux par défaut de l'entreprise (§9.3) |
 
 **Endpoints :** `GET/POST/PUT/DELETE /taxes`
 
@@ -417,6 +417,15 @@ montant_ht = quantite × prix_unitaire_ht × (1 - remise_ligne/100)
 montant_tva = montant_ht × (taux_tva/100)
 montant_ttc = montant_ht + montant_tva
 ```
+
+**Taux d'une ligne**, dans l'ordre :
+1. le groupe de taxes de la ligne, ou le groupe par défaut (§9.4) ;
+2. sinon le taux saisi sur la ligne ;
+3. sinon le **taux par défaut de l'entreprise** : `tva_taux` des paramètres (Configuration › Devise & TVA).
+   Marquer une taxe « par défaut » (§9.2) met ce taux à jour. Sans réglage, il vaut 20 %.
+
+Ce taux par défaut s'applique aux commandes, aux factures et aux commandes issues d'un devis. Les documents
+prenaient auparavant 20 % en dur, même pour une entreprise à 19,25 % (Cameroun) ou 18 % (Sénégal).
 
 ### 9.4 Groupes de taxes
 

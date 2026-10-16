@@ -9,6 +9,7 @@ use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\DevisLigne;
 use App\Services\TaxesDocument;
+use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -241,7 +242,7 @@ class DevisController extends Controller
                     'produit_id' => $ligne->produit_id,
                     'quantite' => $ligne->quantite,
                     'prix_unitaire_ht' => $ligne->prix_unitaire,
-                    'taux_tva' => ComClientLigne::TAUX_TVA_DEFAUT,
+                    'taux_tva' => TauxTaxe::parDefaut(),
                     'remise_ligne' => 0,
                 ]);
                 $ligneCommande->calculerMontants();
