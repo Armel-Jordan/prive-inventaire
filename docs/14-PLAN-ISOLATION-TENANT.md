@@ -66,7 +66,7 @@ Remplace le compromis « slug non authentifié ». On implémente une **authenti
 | C2 | **`update()` de lignes enfants scopé au parent** (FAILLE 1/8) | DevisController:136, CommandeFournisseurController:152, ReceptionController:55/116 | `$parent->lignes()->where('id',$x)->update(...)` |
 | C3 | **`ReceptionController::index` + `LocalisationController::mouvements`** (FAILLE 3/8) | ReceptionController:17, LocalisationController:89-119 | scoper via parent (`whereHas`) ou ajouter `tenant_id` |
 | C4 | **`DB::table` Dashboard** (§4.3) | DashboardController:13-62 | `->where('tenant_id',$ctx)` manuel |
-| C5 | **Règles `unique:` scopées** (FAILLE R5) | Secteur:25, ProduitTenant:26, EmployeTenant:28, Fournisseur, Camion, ZonePreparation | `Rule::unique(...)->where('tenant_id',$ctx)` |
+| C5 | **Règles `unique:` scopées** (FAILLE R5) | Secteur:25, ProduitTenant:26, EmployeTenant:28, Fournisseur, Camion, ZonePreparation | `Rule::unique(...)->where('tenant_id',$ctx)` ; index en base `(tenant_id, colonne)` : migrations `scope_unique_indexes_to_tenant` puis, le 2026-10-16, `numeros_uniques_par_entreprise` (codes clients, numéros de devis, commandes, factures, BL, tournées, alertes de stock) |
 | C6 | **Garde de rôle SuperAdmin** (FAILLE 7/F2) | routes/api.php:105 | middleware `ability:super-admin` ou `abort_unless(instanceof SuperAdmin)` |
 | C7 | **`RolePermissionController` + `CheckPermission`** (FAILLE 5) | RolePermissionController:106-244, CheckPermission:31 | scoper par tenant + vérifier appartenance `userId`/`role_id` (dépend de l'arbitrage roles_custom) |
 
