@@ -6,6 +6,8 @@
 
 ## Documents disponibles
 
+Sécurité des comptes (mot de passe oublié, changement de mot de passe, double authentification) : [FLOW-SECURITE-COMPTES.md](./FLOW-SECURITE-COMPTES.md).
+
 | Document | Module | Contenu |
 |----------|--------|---------|
 | [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
