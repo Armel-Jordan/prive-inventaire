@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,7 +35,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\ResolveTenantContext::class,
         );
+
+        // API sans page de connexion côté serveur : un appel non authentifié ne doit pas chercher la route
+        // « login » (inexistante), ce qui donnait une erreur 500 au lieu d'un 401.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Erreurs de l'API en JSON, même sans en-tête « Accept: application/json » (navigateur, lien direct).
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
     })->create();

@@ -207,7 +207,8 @@ export default function ProfilPage() {
           <div>
             <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Numéro employé</label>
             <p className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-800 dark:text-white font-mono">
-              {profile.numero}
+              {/* Pas encore de numéro : la fiche employé est créée au premier enregistrement du profil. */}
+              {profile.numero || '—'}
             </p>
           </div>
           <div>

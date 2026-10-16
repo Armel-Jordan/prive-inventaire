@@ -2,26 +2,12 @@ import { useEffect, useState } from 'react';
 import { Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/http';
-
-interface Notification {
-  id: number;
-  type: string;
-  titre: string;
-  message: string;
-  lu: boolean;
-  lien: string | null;
-  created_at: string;
-}
-
-const typeColors: Record<string, string> = {
-  transfert_complete: 'bg-green-500',
-  approbation_requise: 'bg-orange-500',
-  alerte_stock: 'bg-red-500',
-  planification_imminente: 'bg-blue-500',
-};
+import { useLanguage } from '@/i18n/useLanguage';
+import { couleursTypeNotification as typeColors, type NotificationApp as Notification } from '@/lib/notifications';
 
 export default function NotificationBell() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -119,6 +105,8 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={toggleDropdown}
+        aria-label={t.notifications.bell.replace('{n}', String(unreadCount))}
+        title={t.notifications.title}
         className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
       >
         <Bell size={20} />
@@ -208,7 +196,7 @@ export default function NotificationBell() {
                   }}
                   className="w-full text-center text-sm text-blue-600 hover:text-blue-700 py-1"
                 >
-                  Voir toutes les notifications
+                  {t.notifications.seeAll}
                 </button>
               </div>
             )}

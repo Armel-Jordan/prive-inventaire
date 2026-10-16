@@ -2,58 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminUser;
+use App\Models\Configuration;
 use App\Models\EmployeTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user();
+        // Simple consultation : la fiche n'est plus créée à l'ouverture de « Mon profil » (une fiche
+        // employé apparaissait à chaque visite d'un administrateur). Elle l'est au premier enregistrement.
+        return response()->json([
+            'employe' => $this->ficheExistante($request->user()) ?? $this->nouvelleFiche($request->user()),
+        ]);
+    }
 
-        // Trouver l'employé associé à l'utilisateur
-        $employe = EmployeTenant::where('email', $user->email)->first();
+    /** Fiche employé de l'utilisateur, rattachée par son courriel. */
+    private function ficheExistante(AdminUser $user): ?EmployeTenant
+    {
+        return EmployeTenant::where('email', $user->email)->first();
+    }
 
-        // Si pas d'employé, en créer un automatiquement
-        if (! $employe) {
-            // Générer un numéro unique
-            $lastEmploye = EmployeTenant::orderByDesc('id')->first();
-            $nextNum = $lastEmploye ? ((int) filter_var($lastEmploye->numero, FILTER_SANITIZE_NUMBER_INT) + 1) : 1;
-            $numero = 'EMP'.str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+    /** Fiche pré-remplie depuis le compte, non enregistrée. */
+    private function nouvelleFiche(AdminUser $user): EmployeTenant
+    {
+        $parties = explode(' ', trim($user->nom ?: 'Utilisateur'));
+        $prenom = $parties[0];
+        $nom = count($parties) > 1 ? implode(' ', array_slice($parties, 1)) : $prenom;
 
-            // Extraire nom/prénom de l'utilisateur
-            $nameParts = explode(' ', $user->nom ?? $user->name ?? 'Utilisateur');
-            $prenom = $nameParts[0] ?? '';
-            $nom = isset($nameParts[1]) ? implode(' ', array_slice($nameParts, 1)) : $prenom;
+        return new EmployeTenant(['nom' => $nom, 'prenom' => $prenom, 'email' => $user->email, 'actif' => true]);
+    }
 
-            $employe = EmployeTenant::create([
-                'numero' => $numero,
-                'nom' => $nom ?: 'Utilisateur',
-                'prenom' => $prenom,
-                'email' => $user->email,
-                'actif' => true,
-            ]);
+    /** Fiche existante, ou créée au premier enregistrement du profil (numéro de la numérotation des employés). */
+    private function ficheOuCreation(AdminUser $user): EmployeTenant
+    {
+        return $this->ficheExistante($user) ?? DB::transaction(function () use ($user) {
+            $fiche = $this->nouvelleFiche($user);
+            $fiche->numero = $this->numeroEmploye((int) $user->tenant_id);
+            $fiche->save();
+
+            return $fiche;
+        });
+    }
+
+    private function numeroEmploye(int $tenantId): string
+    {
+        $config = Configuration::pourEntite('employe', $tenantId);
+        if ($config && $config->auto_increment) {
+            return Configuration::consommerNumero('employe', $tenantId);
         }
 
-        return response()->json([
-            'employe' => $employe,
-        ]);
+        // Sans numérotation automatique : suite EMP001, EMP002… comme auparavant.
+        $dernier = EmployeTenant::orderByDesc('id')->first();
+        $suivant = $dernier ? ((int) filter_var($dernier->numero, FILTER_SANITIZE_NUMBER_INT) + 1) : 1;
+
+        return 'EMP'.str_pad((string) $suivant, 3, '0', STR_PAD_LEFT);
     }
 
     public function update(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $employe = EmployeTenant::where('email', $user->email)->first();
-
-        if (! $employe) {
-            return response()->json([
-                'message' => 'Profil employé non trouvé',
-            ], 404);
-        }
-
         $request->validate([
             'telephone' => 'nullable|string|max:20',
             'adresse' => 'nullable|string|max:255',
@@ -66,6 +77,7 @@ class ProfileController extends Controller
             'departement' => 'nullable|string|max:100',
         ]);
 
+        $employe = $this->ficheOuCreation($request->user());
         $employe->fill($request->only([
             'telephone', 'adresse', 'ville', 'code_postal', 'pays',
             'sexe', 'date_naissance', 'poste', 'departement',
@@ -81,19 +93,11 @@ class ProfileController extends Controller
 
     public function uploadPhoto(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $employe = EmployeTenant::where('email', $user->email)->first();
-
-        if (! $employe) {
-            return response()->json([
-                'message' => 'Profil employé non trouvé',
-            ], 404);
-        }
-
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $employe = $this->ficheOuCreation($request->user());
 
         // Supprimer l'ancienne photo si elle existe
         if ($employe->photo && Storage::disk('public')->exists($employe->photo)) {

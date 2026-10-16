@@ -984,6 +984,28 @@ export const translations = {
       tenant: 'Entreprise',
       loginButton: 'Se connecter',
       invalidCredentials: 'Identifiants invalides',
+      sessionExpired: 'Votre session a expiré ou a été fermée : reconnectez-vous pour continuer.',
+    },
+    // Page introuvable
+    notFound: {
+      title: 'Page introuvable',
+      message: 'L\'adresse « {path} » ne correspond à aucune page de l\'application.',
+      back: 'Retour au tableau de bord',
+    },
+    // Page des notifications
+    notifications: {
+      title: 'Notifications',
+      subtitle: 'Les 100 dernières notifications de l\'entreprise.',
+      unreadOnly: 'Non lues seulement',
+      markAllRead: 'Tout marquer lu',
+      markRead: 'Marquer comme lue',
+      open: 'Ouvrir',
+      delete: 'Supprimer',
+      empty: 'Aucune notification',
+      loading: 'Chargement…',
+      error: 'Impossible de charger les notifications.',
+      seeAll: 'Voir toutes les notifications',
+      bell: 'Notifications ({n} non lues)',
     },
     // Configuration à compléter
     setup: {
@@ -2365,6 +2387,28 @@ export const translations = {
       tenant: 'Company',
       loginButton: 'Sign in',
       invalidCredentials: 'Invalid credentials',
+      sessionExpired: 'Your session has expired or was closed: sign in again to continue.',
+    },
+    // Page not found
+    notFound: {
+      title: 'Page not found',
+      message: 'The address “{path}” does not match any page of the application.',
+      back: 'Back to the dashboard',
+    },
+    // Notifications page
+    notifications: {
+      title: 'Notifications',
+      subtitle: 'The company\'s 100 latest notifications.',
+      unreadOnly: 'Unread only',
+      markAllRead: 'Mark all as read',
+      markRead: 'Mark as read',
+      open: 'Open',
+      delete: 'Delete',
+      empty: 'No notifications',
+      loading: 'Loading…',
+      error: 'Unable to load notifications.',
+      seeAll: 'See all notifications',
+      bell: 'Notifications ({n} unread)',
     },
     // Setup checklist
     setup: {

@@ -4,11 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\MouvementTenant;
 use App\Models\ScanTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RapportController extends Controller
 {
+    /**
+     * Numéro du mois d'une colonne date, en SQL MySQL ou SQLite : MONTH() n'existe pas sous SQLite (base
+     * locale et tests), où l'évolution annuelle répondait 500. La colonne est un nom fixe du code.
+     */
+    private function moisSql(Builder $requete, string $colonne): string
+    {
+        return $requete->getConnection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%m', {$colonne}) AS INTEGER)"
+            : "MONTH({$colonne})";
+    }
+
     /**
      * Rapport mensuel des mouvements par secteur — isolé par tenant.
      */
@@ -127,20 +139,22 @@ class RapportController extends Controller
         $tenantId = auth()->user()->tenant_id;
         $annee = $request->get('annee', now()->year);
 
-        $mouvements = MouvementTenant::where('tenant_id', $tenantId)
-            ->whereYear('created_at', $annee)
-            ->selectRaw('MONTH(created_at) as mois')
+        $requeteMouvements = MouvementTenant::where('tenant_id', $tenantId)->whereYear('created_at', $annee);
+        $moisMouvement = $this->moisSql($requeteMouvements, 'created_at');
+        $mouvements = $requeteMouvements
+            ->selectRaw("{$moisMouvement} as mois")
             ->selectRaw('COUNT(*) as nombre')
             ->selectRaw('SUM(quantite) as quantite')
-            ->groupByRaw('MONTH(created_at)')
+            ->groupByRaw($moisMouvement)
             ->get()->keyBy('mois');
 
-        $scans = ScanTenant::where('tenant_id', $tenantId)
-            ->whereYear('date_saisie', $annee)
-            ->selectRaw('MONTH(date_saisie) as mois')
+        $requeteScans = ScanTenant::where('tenant_id', $tenantId)->whereYear('date_saisie', $annee);
+        $moisScan = $this->moisSql($requeteScans, 'date_saisie');
+        $scans = $requeteScans
+            ->selectRaw("{$moisScan} as mois")
             ->selectRaw('COUNT(*) as nombre')
             ->selectRaw('SUM(quantite) as quantite')
-            ->groupByRaw('MONTH(date_saisie)')
+            ->groupByRaw($moisScan)
             ->get()->keyBy('mois');
 
         $moisNoms = [

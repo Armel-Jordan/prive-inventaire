@@ -311,7 +311,8 @@ Chaque secteur reçoit un **score de priorité** basé sur :
 
 **Onglet Suggestions :**
 - Liste des secteurs à compter en priorité, triés par score
-- Indique quand le secteur a été compté pour la dernière fois
+- Indique quand le secteur a été compté pour la dernière fois, et depuis combien de jours (toujours positif ;
+  absent pour un secteur jamais scanné, qui compte pour 365 jours dans le score)
 - Affiche `"Tous les secteurs sont à jour !"` si tout a été compté récemment
 
 **Onglet Planning :**
@@ -346,11 +347,14 @@ Le module **Rapports** produit des analyses agrégées sur les mouvements de sto
 
 **Évolution annuelle (12 mois)**
 - Mois par mois sur une année : nombre de mouvements et de scans
-- `GET /rapports/evolution-annuelle?annee=2026`
+- `GET /rapports/evolution-annuelle?annee=2026` (MySQL et SQLite)
 
 **Top produits du mois**
 - Les produits les plus manipulés dans la période
 - `GET /rapports/top-produits?mois=4&annee=2026&limit=10`
+
+**Export CSV** : un fichier par onglet, Évolution comprise. Fichier UTF-8 avec BOM, pour qu'Excel affiche
+les accents. Une erreur de chargement d'un rapport est signalée au lieu de laisser un tableau vide.
 
 ### 8.3 Source des données
 
