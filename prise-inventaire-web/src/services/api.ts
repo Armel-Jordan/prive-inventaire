@@ -1184,15 +1184,19 @@ export interface Facture {
   facture_mere_id?: number;
   date_facture: string;
   date_echeance?: string;
-  statut: 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'annulee';
+  statut: 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'creditee' | 'annulee';
   montant_ht: number;
   montant_tva: number;
   montant_ttc: number;
   montant_paye: number;
+  /** Crédits des notes de crédit imputés sur la facture. */
+  montant_credite?: number | string;
   reste_a_payer: number;
   lignes?: FactureLigne[];
   echeances?: FactureEcheance[];
   bon_livraison?: BonLivraison;
+  /** Notes de crédit établies sur la facture (détail). */
+  avoirs?: { id: number; numero: string | null; statut: string; date_avoir: string; montant_ttc: string }[];
 }
 
 /** Produit d'une ligne de document, tel que renvoyé par le détail (même s'il a été retiré du catalogue). */
@@ -1526,9 +1530,11 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; client_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
+export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.statuts) queryParams.append('statuts', params.statuts);
+  if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
   if (params?.date_debut) queryParams.append('date_debut', params.date_debut);
   if (params?.date_fin) queryParams.append('date_fin', params.date_fin);
@@ -2025,7 +2031,7 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
 }
 
 // === COURRIELS (paramètres d'envoi et modèles) ===
-export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'bon_livraison' | 'commande_fournisseur' | 'general';
 export type LangueCourriel = 'fr' | 'en';
 
 export interface ContenuModeleCourriel {

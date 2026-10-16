@@ -187,6 +187,7 @@ class EnvoiCourriel
             'devis' => $this->documents->devis($document),
             'commande_client' => $this->documents->commande($document),
             'facture' => $this->documents->facture($document),
+            'avoir' => $this->documents->avoir($document),
             'bon_livraison' => $this->documents->bonLivraison($document),
         };
 

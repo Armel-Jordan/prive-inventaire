@@ -105,6 +105,14 @@ class Permissions
             'encaisser' => ['base' => 'modifier', 'fr' => 'Enregistrer un paiement', 'en' => 'Record a payment',
                 'aide_fr' => 'Enregistrer un paiement reçu sur une facture.', 'aide_en' => 'Record a payment received on an invoice.'],
         ]],
+        'avoirs' => ['onglet' => 'ventes', 'fr' => 'Notes de crédit', 'en' => 'Credit notes', 'actions' => [
+            'emettre' => ['base' => 'modifier', 'fr' => 'Émettre une note de crédit', 'en' => 'Issue a credit note',
+                'aide_fr' => 'Émettre une note de crédit brouillon : elle reçoit son numéro et réduit ce qui reste dû de sa facture.',
+                'aide_en' => 'Issue a draft credit note: it gets its number and reduces the amount still due on its invoice.'],
+            'regler' => ['base' => 'modifier', 'fr' => 'Rembourser ou imputer un crédit', 'en' => 'Refund or apply a credit',
+                'aide_fr' => "Rembourser au client le crédit disponible d'une note, ou l'imputer sur une autre de ses factures.",
+                'aide_en' => "Refund a credit note's available credit to the customer, or apply it to another of their invoices."],
+        ]],
         'comptes_clients' => ['onglet' => 'ventes', 'fr' => 'Comptes clients', 'en' => 'Receivables', 'crud' => ['voir']],
         'bons_livraison' => ['onglet' => 'ventes', 'fr' => 'Bons de livraison', 'en' => 'Delivery notes', 'actions' => [
             'preparer' => ['base' => 'modifier', 'fr' => 'Préparer un bon de livraison', 'en' => 'Prepare a delivery note',

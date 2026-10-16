@@ -24,6 +24,7 @@ Route::get('/health', function () {
 use App\Http\Controllers\AccesCompteController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AlerteStockController;
+use App\Http\Controllers\Api\AvoirController;
 use App\Http\Controllers\Api\BaliseController;
 use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
@@ -581,7 +582,22 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
         Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
+        Route::get('/{id}/avoir', [AvoirController::class, 'proposition']);
         Route::delete('/{id}', [FactureController::class, 'destroy']);
+    });
+
+    // Notes de crédit (avoirs) : créditer une facture émise, imputer ou rembourser le crédit disponible.
+    Route::prefix('avoirs')->middleware('module:ventes')->group(function () {
+        Route::get('/', [AvoirController::class, 'index']);
+        Route::get('/{id}', [AvoirController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'avoir'])->whereNumber('id');
+        Route::get('/{id}/factures-imputables', [AvoirController::class, 'facturesImputables'])->whereNumber('id');
+        Route::post('/', [AvoirController::class, 'store']);
+        Route::put('/{id}', [AvoirController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/emettre', [AvoirController::class, 'emettre'])->whereNumber('id');
+        Route::post('/{id}/imputer', [AvoirController::class, 'imputer'])->whereNumber('id');
+        Route::post('/{id}/rembourser', [AvoirController::class, 'rembourser'])->whereNumber('id');
+        Route::delete('/{id}', [AvoirController::class, 'destroy'])->whereNumber('id');
     });
 
     // Comptes clients : analyse chronologique des sommes dues, relevé de compte d'un client.

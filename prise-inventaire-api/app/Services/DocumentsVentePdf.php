@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
 use App\Models\Devis;
@@ -13,7 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Prépare les documents de vente (devis, commande, facture, bon de livraison) dans un format
+ * Prépare les documents de vente (devis, commande, facture, note de crédit, bon de livraison) dans un format
  * commun, rendu par la vue pdf.document-vente : en-tête de l'entreprise (ses paramètres),
  * destinataire, lignes, totaux avec le détail des taxes quand il existe.
  */
@@ -23,6 +24,7 @@ class DocumentsVentePdf
         'brouillon' => 'Brouillon', 'envoye' => 'Envoyé', 'accepte' => 'Accepté', 'refuse' => 'Refusé', 'expire' => 'Expiré',
         'soumise' => 'Soumise', 'acceptee' => 'Acceptée', 'refusee' => 'Refusée', 'facturee' => 'Facturée',
         'emise' => 'Émise', 'partiellement_payee' => 'Partiellement payée', 'payee' => 'Payée', 'annulee' => 'Annulée',
+        'creditee' => 'Créditée', 'emis' => 'Émise', 'solde' => 'Soldée',
         'cree' => 'Créé', 'en_preparation' => 'En préparation', 'pret' => 'Prêt', 'livre' => 'Livré', 'annule' => 'Annulé',
     ];
 
@@ -93,6 +95,28 @@ class DocumentsVentePdf
         ]);
     }
 
+    public function avoir(Avoir $avoir): array
+    {
+        $avoir->loadMissing(['client', 'facture:id,numero,date_facture', 'lignes.produit']);
+
+        return $this->document('NOTE DE CRÉDIT', $avoir, [
+            'Date' => $this->date($avoir->date_avoir),
+            'Facture créditée' => $avoir->facture ? trim($avoir->facture->numero.' du '.$this->date($avoir->facture->date_facture)) : null,
+            'Motif' => $avoir->motif,
+        ], [
+            'destinataire' => $this->client($avoir->client),
+            'lignes' => $avoir->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
+            'totaux' => $this->totaux('avoir', $avoir, $avoir->lignes),
+            'reglement' => $avoir->statut === Avoir::BROUILLON ? [] : array_values(array_filter([
+                ['Imputé sur des factures', (float) $avoir->montant_impute],
+                (float) $avoir->montant_rembourse > 0 ? ['Remboursé', (float) $avoir->montant_rembourse] : null,
+                ['Crédit disponible', $avoir->credit_disponible],
+            ])),
+            'mention' => 'Montants crédités au client.',
+            'notes' => $avoir->notes,
+        ]);
+    }
+
     public function bonLivraison(BonLivraison $bon): array
     {
         $bon->loadMissing(['facture.client', 'lignes.produit']);
@@ -123,7 +147,8 @@ class DocumentsVentePdf
 
         return $contenu + [
             'titre' => $titre,
-            'numero' => $document->numero,
+            // Une note de crédit brouillon n'a pas encore de numéro.
+            'numero' => $document->numero ?? '-',
             'statut' => self::STATUTS[$document->statut] ?? ucfirst(str_replace('_', ' ', (string) $document->statut)),
             'infos' => array_filter($infos),
             'devise' => $entete['devise'],

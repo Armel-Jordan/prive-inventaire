@@ -10,6 +10,10 @@ export interface CompteClient extends Record<Tranche, number> {
   code: string;
   raison_sociale: string;
   total: number;
+  /** Crédits des notes de crédit, ni imputés ni remboursés : dus au client. */
+  credits: number;
+  /** Total dû moins les crédits. */
+  solde: number;
   nb_factures: number;
   retard_max: number;
 }
@@ -17,7 +21,15 @@ export interface CompteClient extends Record<Tranche, number> {
 export interface AnalyseComptesClients {
   date: string;
   clients: CompteClient[];
-  totaux: Record<Tranche | 'total', number>;
+  totaux: Record<Tranche | 'total' | 'credits' | 'solde', number>;
+}
+
+export interface CreditDisponible {
+  avoir_id: number;
+  numero: string;
+  date_avoir: string;
+  montant: number;
+  disponible: number;
 }
 
 export interface FactureDue {
@@ -36,11 +48,12 @@ export interface ReleveClient {
   du: string;
   au: string;
   solde_ouverture: number;
-  lignes: { date: string; type: 'facture' | 'paiement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
+  lignes: { date: string; type: 'facture' | 'avoir' | 'paiement' | 'remboursement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
   total_debit: number;
   total_credit: number;
   solde_final: number;
   factures_dues: FactureDue[];
+  credits_disponibles: CreditDisponible[];
 }
 
 function requete(parametres: Record<string, string | undefined>): string {

@@ -25,12 +25,14 @@ class CompteClientController extends Controller
         }
 
         $lignes = array_map(fn (array $c) => [$c['code'], $c['raison_sociale'], $c['nb_factures'], $c['retard_max'], (float) $c['total'],
-            (float) $c['non_echu'], (float) $c['jours_1_30'], (float) $c['jours_31_60'], (float) $c['jours_61_90'], (float) $c['plus_90']], $analyse['clients']);
+            (float) $c['non_echu'], (float) $c['jours_1_30'], (float) $c['jours_31_60'], (float) $c['jours_61_90'], (float) $c['plus_90'],
+            (float) $c['credits'], (float) $c['solde']], $analyse['clients']);
         $t = $analyse['totaux'];
-        $lignes[] = ['', 'Totaux', '', '', (float) $t['total'], (float) $t['non_echu'], (float) $t['jours_1_30'], (float) $t['jours_31_60'], (float) $t['jours_61_90'], (float) $t['plus_90']];
+        $lignes[] = ['', 'Totaux', '', '', (float) $t['total'], (float) $t['non_echu'], (float) $t['jours_1_30'], (float) $t['jours_31_60'], (float) $t['jours_61_90'], (float) $t['plus_90'],
+            (float) $t['credits'], (float) $t['solde']];
 
         return FichierCsv::reponse("comptes-clients-{$date}.csv",
-            ['code', 'client', 'factures', 'retard_max_jours', 'total', 'non_echu', '1_30_jours', '31_60_jours', '61_90_jours', 'plus_90_jours'], $lignes);
+            ['code', 'client', 'factures', 'retard_max_jours', 'total', 'non_echu', '1_30_jours', '31_60_jours', '61_90_jours', 'plus_90_jours', 'credits', 'solde'], $lignes);
     }
 
     public function releve(Request $request, int $client): JsonResponse|Response

@@ -69,7 +69,7 @@ class ComptesClientsTest extends TestCase
         $this->assertEquals(['C-B' => [1200, 0, 0, 0, 0, 1200], 'C-A' => [1000, 500, 0, 0, 0, 500]], $this->tranches($aujourdhui));
         $this->assertSame(['C-B', 'C-A'], array_column($aujourdhui['clients'], 'code'));
         $this->assertEquals([2, 107], [$aujourdhui['clients'][1]['nb_factures'], $aujourdhui['clients'][1]['retard_max']]);
-        $this->assertEquals(['total' => 2200, 'non_echu' => 500, 'jours_1_30' => 0, 'jours_31_60' => 0, 'jours_61_90' => 0, 'plus_90' => 1700], $aujourdhui['totaux']);
+        $this->assertEquals(['total' => 2200, 'non_echu' => 500, 'jours_1_30' => 0, 'jours_31_60' => 0, 'jours_61_90' => 0, 'plus_90' => 1700, 'credits' => 0, 'solde' => 2200], $aujourdhui['totaux']);
 
         // Au 10 août : F-3 n'était pas payée, F-2 pas encore émise, F-1 n'avait reçu que 300.
         $aout = $this->getJson('/api/comptes-clients?date=2026-08-10')->assertOk()->json();

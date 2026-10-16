@@ -62,6 +62,8 @@ export default function ComptesClientsPage() {
     return (analyse?.clients ?? []).filter(c => !terme || c.code.toLowerCase().includes(terme) || c.raison_sociale.toLowerCase().includes(terme));
   }, [analyse, recherche]);
   const enRetard = analyse ? analyse.totaux.total - analyse.totaux.non_echu : 0;
+  // Colonnes des crédits (notes de crédit non utilisées) seulement quand il y en a.
+  const avecCredits = (analyse?.totaux.credits ?? 0) > 0;
   const ouvrirReleve = (client: CompteClient) => setReleve({ client, du: `${date.slice(0, 4)}-01-01`, au: date, donnees: null });
 
   return (
@@ -115,11 +117,17 @@ export default function ComptesClientsPage() {
                 <th className="px-3 py-2 font-medium">{tr.client}</th>
                 <th className="px-3 py-2 font-medium text-right">{tr.total}</th>
                 {TRANCHES.map(tranche => <th key={tranche} className="px-3 py-2 font-medium text-right whitespace-nowrap">{tr.buckets[tranche]}</th>)}
+                {avecCredits && (
+                  <>
+                    <th className="px-3 py-2 font-medium text-right" title={tr.creditsHelp}>{tr.credits}</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">{tr.netBalance}</th>
+                  </>
+                )}
                 <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {clients.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-500">{analyse.clients.length ? tr.noResult : tr.empty}</td></tr>}
+              {clients.length === 0 && <tr><td colSpan={avecCredits ? 10 : 8} className="px-4 py-6 text-center text-gray-500">{analyse.clients.length ? tr.noResult : tr.empty}</td></tr>}
               {clients.map(client => (
                 <tr key={client.client_id} className="border-t dark:border-gray-700">
                   <td className="px-3 py-2">
@@ -132,6 +140,12 @@ export default function ComptesClientsPage() {
                   {TRANCHES.map(tranche => (
                     <td key={tranche} className={`px-3 py-2 text-right whitespace-nowrap ${client[tranche] ? COULEURS[tranche] : 'text-gray-400'}`}>{montant(client[tranche])}</td>
                   ))}
+                  {avecCredits && (
+                    <>
+                      <td className="px-3 py-2 text-right whitespace-nowrap text-indigo-700 dark:text-indigo-300">{montant(client.credits)}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap font-semibold text-gray-900 dark:text-white">{solde(client.solde)}</td>
+                    </>
+                  )}
                   <td className="px-3 py-2 text-right">
                     <button onClick={() => ouvrirReleve(client)} aria-label={`${tr.statement} — ${client.raison_sociale}`} title={tr.statement}
                       className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded"><FileText size={16} /></button>
@@ -145,6 +159,12 @@ export default function ComptesClientsPage() {
                   <td className="px-3 py-2">{tr.totals}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">{montant(analyse.totaux.total)}</td>
                   {TRANCHES.map(tranche => <td key={tranche} className="px-3 py-2 text-right whitespace-nowrap">{montant(analyse.totaux[tranche])}</td>)}
+                  {avecCredits && (
+                    <>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{montant(analyse.totaux.credits)}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{solde(analyse.totaux.solde)}</td>
+                    </>
+                  )}
                   <td />
                 </tr>
               </tfoot>
@@ -195,7 +215,7 @@ export default function ComptesClientsPage() {
                       {releve.donnees.lignes.map((ligne, index) => (
                         <tr key={index} className="border-t dark:border-gray-700">
                           <td className="py-1.5 pr-3 whitespace-nowrap text-gray-700 dark:text-gray-300">{jour(ligne.date)}</td>
-                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{ligne.type === 'paiement' && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
+                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{(ligne.type === 'paiement' || ligne.type === 'remboursement') && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-gray-900 dark:text-white">{montant(ligne.debit)}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-green-700">{montant(ligne.credit)}</td>
                           <td className="py-1.5 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">{solde(ligne.solde)}</td>
@@ -228,6 +248,20 @@ export default function ComptesClientsPage() {
                     </ul>
                   )}
                 </div>
+                {releve.donnees.credits_disponibles.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{tr.availableCredits.replace('{date}', jour(releve.donnees.au))}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{tr.creditsHelp}</p>
+                    <ul className="text-sm divide-y dark:divide-gray-700">
+                      {releve.donnees.credits_disponibles.map(c => (
+                        <li key={c.avoir_id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                          <Link to={`/notes-credit?recherche=${encodeURIComponent(c.numero)}`} className="text-indigo-700 dark:text-indigo-300 hover:underline">{tr.creditNote} {c.numero} · {jour(c.date_avoir)}</Link>
+                          <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{montant(c.disponible)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </>
             )}
           </div>

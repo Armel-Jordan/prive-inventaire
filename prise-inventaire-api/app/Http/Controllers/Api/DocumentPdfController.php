@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
 use App\Models\Devis;
@@ -35,6 +36,15 @@ class DocumentPdfController extends Controller
         $facture = Facture::findOrFail($id);
 
         return $this->documents->pdf($this->documents->facture($facture))->stream("facture-{$facture->numero}.pdf");
+    }
+
+    public function avoir(int $id): Response
+    {
+        $avoir = Avoir::findOrFail($id);
+        // Un brouillon n'a pas encore de numéro.
+        $nom = $avoir->numero ?? 'brouillon-'.$avoir->id;
+
+        return $this->documents->pdf($this->documents->avoir($avoir))->stream("note-credit-{$nom}.pdf");
     }
 
     public function bonLivraison(int $id): Response

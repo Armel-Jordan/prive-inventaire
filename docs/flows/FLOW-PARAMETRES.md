@@ -274,7 +274,7 @@ Le catalogue (`App\Support\Permissions`, servi par `GET /permissions/catalogue`)
 | Sorte | Exemples | Ce qu'elle ouvre |
 |---|---|---|
 | **Droits de base** | Consulter, Créer, Modifier, Supprimer | L'écran et les écritures de ses données |
-| **Actions nommées** | Émettre une facture, Enregistrer un paiement, Accepter ou refuser une commande, Envoyer / accepter / convertir un devis, Préparer / livrer / annuler un bon de livraison, Valider / clôturer / annuler une commande fournisseur, Approuver ou rejeter, Exécuter un transfert planifié, Piloter une tournée, Gérer les prises d'inventaire, Gérer les coordonnées bancaires des fournisseurs, Gérer les catégories de clients, Voir les états comptables, Saisir des écritures, Modifier le plan comptable et les exercices, Clôturer ou rouvrir un exercice | Une opération précise |
+| **Actions nommées** | Émettre une facture, Enregistrer un paiement, Émettre une note de crédit, Rembourser ou imputer un crédit, Accepter ou refuser une commande, Envoyer / accepter / convertir un devis, Préparer / livrer / annuler un bon de livraison, Valider / clôturer / annuler une commande fournisseur, Approuver ou rejeter, Exécuter un transfert planifié, Piloter une tournée, Gérer les prises d'inventaire, Gérer les coordonnées bancaires des fournisseurs, Gérer les catégories de clients, Voir les états comptables, Saisir des écritures, Modifier le plan comptable et les exercices, Clôturer ou rouvrir un exercice | Une opération précise |
 
 Une **action nommée** qu'un groupe ne règle pas suit un droit de base du même écran (indiqué dans le catalogue). Par exemple, « Émettre une facture » suit « Modifier » des factures. Les groupes enregistrés depuis l'écran des rôles règlent toutes leurs actions explicitement.
 
@@ -425,6 +425,7 @@ La numérotation automatique génère les numéros de documents dans tout le sys
 | `commande` (commandes clients) | CMD-00001 |
 | `commande_fournisseur` | BC-00001 |
 | `facture` | FAC-00001 |
+| `avoir` (notes de crédit) | AV-00001 |
 | `bon_livraison` | BL-00001 |
 | `tournee` | T0001 |
 
@@ -665,6 +666,7 @@ Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personn
 | `devis` | Devis | `devis-{numero}.pdf` |
 | `commande_client` | Commande client | `commande-{numero}.pdf` |
 | `facture` | Facture | `facture-{numero}.pdf` |
+| `avoir` | Note de crédit | `note-credit-{numero}.pdf` |
 | `bon_livraison` | Bon de livraison | `bon-livraison-{numero}.pdf` |
 | `commande_fournisseur` | Commande fournisseur | `bon-commande-{numero}.pdf` |
 | `general` | Courriel libre | — |

@@ -2,7 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, CreditCard, FileText, ReceiptText, Send, Trash2, Plus, X } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -25,6 +26,10 @@ import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
+import { useLanguage } from '@/i18n/useLanguage';
 
 
 export default function FacturesPage() {
@@ -32,6 +37,10 @@ export default function FacturesPage() {
   const { peut, canCreate } = usePermissions();
   const devise = useDevise();
   const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
+  const { t } = useLanguage();
+  const { toasts, toast, dismiss } = useToast();
+  // Facture en cours de crédit (note de crédit).
+  const [aCrediter, setACrediter] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -173,6 +182,7 @@ export default function FacturesPage() {
       emise: 'bg-blue-100 text-blue-800',
       partiellement_payee: 'bg-yellow-100 text-yellow-800',
       payee: 'bg-green-100 text-green-800',
+      creditee: 'bg-purple-100 text-purple-800',
       annulee: 'bg-red-100 text-red-800',
     };
     const labels: Record<string, string> = {
@@ -180,6 +190,7 @@ export default function FacturesPage() {
       emise: 'Émise',
       partiellement_payee: 'Partiel',
       payee: 'Payée',
+      creditee: 'Créditée',
       annulee: 'Annulée',
     };
     return (
@@ -215,6 +226,7 @@ export default function FacturesPage() {
             <option value="emise">Émise</option>
             <option value="partiellement_payee">Partiellement payée</option>
             <option value="payee">Payée</option>
+            <option value="creditee">Créditée</option>
           </select>
         </div>
       </div>
@@ -295,6 +307,19 @@ export default function FacturesPage() {
                             title="Enregistrer paiement"
                           >
                             <CreditCard size={18} />
+                          </button>
+                        )}</>
+                      )}
+                      {/* Note de crédit : retour, erreur ou geste commercial sur une facture émise, payée ou non. */}
+                      {['emise', 'partiellement_payee', 'payee'].includes(facture.statut) && (
+                        <>{peut('avoirs', 'creer') && (
+                          <button
+                            onClick={() => setACrediter(facture.id)}
+                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                            title={t.creditNotes.credit}
+                            aria-label={`${t.creditNotes.credit} — ${facture.numero}`}
+                          >
+                            <ReceiptText size={18} />
                           </button>
                         )}</>
                       )}
@@ -396,6 +421,12 @@ export default function FacturesPage() {
                   <span className="text-gray-500">Payé:</span>
                   <span className="text-green-600">{montant(Number(selectedFacture.montant_paye ?? 0))}</span>
                 </div>
+                {Number(selectedFacture.montant_credite ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Crédité:</span>
+                    <span className="text-indigo-600">{montant(Number(selectedFacture.montant_credite))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-medium">
                   <span className="text-gray-500">Reste à payer:</span>
                   <span className={Number(selectedFacture.reste_a_payer) > 0 ? 'text-red-600' : 'text-green-600'}>
@@ -403,6 +434,23 @@ export default function FacturesPage() {
                   </span>
                 </div>
               </div>
+
+              {selectedFacture.avoirs && selectedFacture.avoirs.length > 0 && (
+                <div className="border-t pt-4 dark:border-gray-700">
+                  <h3 className="font-medium mb-2 dark:text-white">{t.creditNotes.creditedOn}</h3>
+                  <ul className="space-y-1 text-sm">
+                    {selectedFacture.avoirs.map(avoir => (
+                      <li key={avoir.id} className="flex justify-between gap-2">
+                        <Link to={`/notes-credit?recherche=${encodeURIComponent(avoir.numero ?? '')}`} className="font-mono text-indigo-600 hover:underline">
+                          {avoir.numero ?? t.creditNotes.draft}
+                        </Link>
+                        <span className="text-gray-500">{formatDateDocument(avoir.date_avoir)} · {t.creditNotes.statuses[avoir.statut] ?? avoir.statut}</span>
+                        <span className="dark:text-white">{montant(avoir.montant_ttc)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {selectedFacture.echeances && selectedFacture.echeances.length > 0 && (
                 <div className="border-t pt-4 dark:border-gray-700">
@@ -534,6 +582,19 @@ export default function FacturesPage() {
           </div>
         </div>
       )}
+
+      {aCrediter !== null && (
+        <EditeurNoteCredit
+          factureId={aCrediter}
+          onClose={() => setACrediter(null)}
+          onEnregistre={(avoir, emis) => {
+            setACrediter(null);
+            toast(emis ? t.creditNotes.issued.replace('{numero}', avoir.numero ?? '') : t.creditNotes.saved);
+            loadFactures();
+          }}
+        />
+      )}
+      <Toasts toasts={toasts} onDismiss={dismiss} />
 
       {/* Modal paiement */}
       {showPaiementModal && selectedFacture && (

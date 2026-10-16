@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\AdminUser;
 use App\Models\AuditLog;
+use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\Client;
 use App\Models\ComClientEntete;
@@ -47,6 +48,7 @@ class JournalModifications
         ComClientEntete::class => ['Commande client', ['create', 'update', 'delete']],
         ComFourEntete::class => ['Commande fournisseur', ['create', 'update', 'delete']],
         Facture::class => ['Facture', ['create', 'update', 'delete']],
+        Avoir::class => ['Note de crédit', ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],
         TenantTaxe::class => ['Taxe', ['create', 'update', 'delete']],
