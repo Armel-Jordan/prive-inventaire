@@ -343,3 +343,52 @@ export async function cloturerExercice(id: number): Promise<ExerciceComptable> {
 export async function rouvrirExercice(id: number): Promise<ExerciceComptable> {
   return apiFetch(`/comptabilite/exercices/${id}/rouvrir`, { method: 'POST' });
 }
+
+// === États financiers ===
+
+export interface GroupeEtat {
+  numero: string | null;
+  libelle: string;
+  montant: number;
+  comptes: { id: number; numero: string; libelle: string; montant: number }[];
+}
+
+export interface SectionEtat {
+  groupes: GroupeEtat[];
+  total: number;
+}
+
+export interface Bilan {
+  date: string;
+  actif: SectionEtat;
+  capitaux_propres: SectionEtat;
+  passif: SectionEtat;
+  resultat_non_cloture: number;
+  total_actif: number;
+  total_passif: number;
+  equilibre: boolean;
+}
+
+export interface CompteResultat {
+  du: string;
+  au: string;
+  produits: SectionEtat;
+  charges: SectionEtat;
+  resultat: number;
+}
+
+export async function getBilan(date?: string): Promise<Bilan> {
+  return apiFetch(`/comptabilite/etats/bilan?${requete({ date })}`);
+}
+
+export async function exporterBilan(date: string): Promise<void> {
+  return telecharger(`/comptabilite/etats/bilan?${requete({ date, format: 'csv' })}`, `bilan-${date}.csv`);
+}
+
+export async function getCompteResultat(du?: string, au?: string): Promise<CompteResultat> {
+  return apiFetch(`/comptabilite/etats/resultat?${requete({ du, au })}`);
+}
+
+export async function exporterCompteResultat(du: string, au: string): Promise<void> {
+  return telecharger(`/comptabilite/etats/resultat?${requete({ du, au, format: 'csv' })}`, `compte-de-resultat-${du}-${au}.csv`);
+}
