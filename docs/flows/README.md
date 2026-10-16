@@ -26,6 +26,8 @@ Prix et remises : [FLOW-PRIX.md](./FLOW-PRIX.md) — prix de base, listes de pri
 
 ---
 
+Recherche globale (en-tête, Ctrl+K) : [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md).
+
 ## Le flow global de l'application
 
 ```

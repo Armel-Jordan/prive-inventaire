@@ -74,6 +74,7 @@ use App\Http\Controllers\Prix\RegleController as PrixRegleController;
 use App\Http\Controllers\ProduitTenantController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportController;
+use App\Http\Controllers\RechercheController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\ScanTenantController;
@@ -407,6 +408,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::put('/users/{id}', [AdminUserController::class, 'update']);
         Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
     });
+
+    // Recherche globale (en-tête) : fiches et documents de l'entreprise.
+    Route::get('/recherche', RechercheController::class)->middleware('throttle:60,1,recherche-globale');
 
     // Rôles et permissions
     Route::prefix('roles')->group(function () {

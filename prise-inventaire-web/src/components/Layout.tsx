@@ -43,6 +43,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
+import RechercheGlobale from './RechercheGlobale';
 import { useLanguage } from '@/i18n/useLanguage';
 import { ClipboardCheck } from 'lucide-react';
 
@@ -318,6 +319,7 @@ export default function Layout() {
       <main className="lg:ml-64 min-h-screen bg-gray-100 dark:bg-gray-900">
         {/* Top bar with notifications */}
         <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-3 flex items-center justify-end gap-4">
+          <RechercheGlobale />
           <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
