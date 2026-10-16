@@ -233,20 +233,35 @@ Section complémentaire aux Employés, dédiée aux informations RH détaillées
 
 ### 6.1 Système de rôles
 
-L'application a **3 rôles de base** (user, manager, admin) plus la possibilité de créer des **rôles personnalisés**.
+Chaque compte a un **rôle de base** : `admin`, `manager` ou `user`.
+- Ce rôle fixe ce que l'API autorise : par exemple, seule une route `role:admin` est accessible à un admin.
+- Le menu suit les **permissions par module** (voir, créer, modifier, supprimer) du rôle système du même nom, servies par `GET /permissions/me`.
+- Un administrateur voit tout.
 
-### 6.2 Rôles personnalisés
+### 6.2 Rôles système et rôles personnalisés
 
-Via `GET/POST/PUT/DELETE /roles-custom/{id}`, on peut créer des rôles sur mesure et leur assigner des permissions granulaires par module.
+L'écran « Rôles » (`GET/POST/PUT/DELETE /roles-custom/{id}`, réservé aux administrateurs) distingue deux sortes de rôles.
 
-**Exemple :** Créer un rôle "Préparateur BL" qui peut seulement :
-- Voir les bons de livraison
-- Démarrer la préparation
-- Marquer un BL comme prêt
+**Rôles système** (`admin`, `manager`, `user`, `readonly`) :
+- Ils sont communs à toutes les entreprises.
+- On peut consulter leurs permissions, mais pas les modifier : `PUT`/`DELETE` répond 403.
+- Le bouton « Dupliquer » crée une copie modifiable.
 
-### 6.3 Assignation
+**Rôles personnalisés** :
+- Ils appartiennent à l'entreprise qui les crée et restent invisibles des autres (404).
+- Leur nom est unique dans l'entreprise. Les noms des rôles système sont réservés, sans tenir compte des majuscules.
 
-`POST /users/{userId}/assign-role` pour changer le rôle d'un utilisateur.
+**Exemple :** dupliquer `user` en « Préparateur BL », puis ne garder que la consultation des bons de livraison.
+
+### 6.3 Accès à l'application (fiche employé)
+
+L'accès se règle dans **Employés → Accès à l'application** : rôle de base et mot de passe.
+- La création, la modification et la suppression d'employés sont réservées aux rôles admin et manager. Tous les comptes peuvent lire la liste, qui alimente des listes de choix.
+- Un **administrateur** attribue tous les rôles.
+- Un **manager** n'attribue que le rôle `user`. Il ne touche pas aux comptes administrateur ou manager : ni leur rôle, ni leur mot de passe, ni leur adresse, qui sert à réinitialiser le mot de passe.
+- Le **dernier administrateur actif** de l'entreprise ne peut être ni rétrogradé, ni désactivé, ni privé d'accès (422), y compris via `PUT /users/{id}`.
+
+`POST /users/{userId}/assign-role` vise l'ancienne table `users` : un rôle personnalisé ne s'attribue pas encore à un compte.
 
 ---
 

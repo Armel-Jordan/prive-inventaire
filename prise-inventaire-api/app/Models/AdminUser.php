@@ -61,4 +61,11 @@ class AdminUser extends Authenticatable
     {
         return in_array($this->role, ['admin', 'manager']);
     }
+
+    /** Dernier administrateur actif de son entreprise : il ne peut être ni rétrogradé, ni désactivé, ni privé d'accès. */
+    public function estDernierAdministrateur(): bool
+    {
+        return $this->role === 'admin' && $this->actif
+            && ! static::where('tenant_id', $this->tenant_id)->where('role', 'admin')->where('actif', true)->whereKeyNot($this->id)->exists();
+    }
 }

@@ -2,10 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\TenantContext;
+use App\Support\TenantRule;
+use Closure;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
+/**
+ * Rôles et permissions par module. Les rôles système (tenant_id NULL : admin, manager, user, readonly)
+ * sont communs à toutes les entreprises et ne se modifient pas ici ; chaque entreprise crée, modifie et
+ * supprime ses propres rôles personnalisés, invisibles des autres.
+ */
 class RolePermissionController extends Controller
 {
     private array $allModules = [
@@ -19,67 +31,129 @@ class RolePermissionController extends Controller
         'fiches_employes', 'referentiels',
     ];
 
+    /**
+     * Rôles visibles par l'entreprise courante : les rôles système et les siens. Les rôles personnalisés
+     * créés avant l'isolation n'ont pas d'entreprise : ils restent masqués à toutes.
+     */
+    private function rolesVisibles(): Builder
+    {
+        $tenantId = app(TenantContext::class)->getTenantId();
+
+        return DB::table('roles_custom')->where(fn ($q) => $q
+            ->where(fn ($systeme) => $systeme->whereNull('tenant_id')->where('is_system', true))
+            ->orWhere('tenant_id', $tenantId));
+    }
+
+    private function roleSysteme(string $nom): ?object
+    {
+        return DB::table('roles_custom')->whereNull('tenant_id')->where('is_system', true)->where('nom', $nom)->first();
+    }
+
+    /** Rôle personnalisé de l'entreprise courante ; 403 pour un rôle système, 404 sinon. */
+    private function roleModifiable(int $id): object
+    {
+        $role = $this->rolesVisibles()->find($id);
+        abort_if(! $role, 404, 'Rôle non trouvé');
+        abort_if($role->is_system || $role->tenant_id === null, 403,
+            'Les rôles système sont communs à toutes les entreprises : créez un rôle personnalisé pour adapter les droits.');
+
+        return $role;
+    }
+
+    /** Règles du nom : unique dans l'entreprise, et différent des rôles système (casse ignorée). */
+    private function reglesNom(string $presence, ?int $ignorer = null): array
+    {
+        return [$presence, 'string', 'max:50', TenantRule::unique('roles_custom', 'nom', $ignorer),
+            function (string $attribut, mixed $valeur, Closure $echec) {
+                $reserve = DB::table('roles_custom')->whereNull('tenant_id')->where('is_system', true)
+                    ->whereRaw('LOWER(nom) = ?', [mb_strtolower(trim((string) $valeur))])->exists();
+                if ($reserve) {
+                    $echec('Ce nom est réservé à un rôle système.');
+                }
+            },
+        ];
+    }
+
+    /** Permissions d'un rôle par module, en vrais booléens (la base renvoie 0/1). */
+    private function permissionsDuRole(int $roleId): Collection
+    {
+        return DB::table('role_permissions')->where('role_id', $roleId)->get()
+            ->map(function (object $permission) {
+                foreach (['can_view', 'can_create', 'can_edit', 'can_delete'] as $droit) {
+                    $permission->{$droit} = (bool) $permission->{$droit};
+                }
+
+                return $permission;
+            })
+            ->keyBy('module');
+    }
+
+    private function presenterRole(object $role): object
+    {
+        $role->is_system = (bool) $role->is_system;
+        $role->permissions = $this->permissionsDuRole($role->id);
+
+        return $role;
+    }
+
+    private function enregistrerPermissions(int $roleId, array $permissions): void
+    {
+        foreach ($this->allModules as $module) {
+            $perm = $permissions[$module] ?? [];
+            DB::table('role_permissions')->updateOrInsert(
+                ['role_id' => $roleId, 'module' => $module],
+                [
+                    'can_view' => (bool) ($perm['can_view'] ?? false),
+                    'can_create' => (bool) ($perm['can_create'] ?? false),
+                    'can_edit' => (bool) ($perm['can_edit'] ?? false),
+                    'can_delete' => (bool) ($perm['can_delete'] ?? false),
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
+    }
+
     public function index(): JsonResponse
     {
-        $roles = DB::table('roles_custom')
+        $roles = $this->rolesVisibles()
             ->orderBy('is_system', 'desc')
             ->orderBy('nom')
-            ->get();
-
-        foreach ($roles as $role) {
-            $role->permissions = DB::table('role_permissions')
-                ->where('role_id', $role->id)
-                ->get()
-                ->keyBy('module');
-        }
+            ->get()
+            ->map(fn (object $role) => $this->presenterRole($role));
 
         return response()->json($roles);
     }
 
     public function show(int $id): JsonResponse
     {
-        $role = DB::table('roles_custom')->find($id);
+        $role = $this->rolesVisibles()->find($id);
 
         if (! $role) {
             return response()->json(['message' => 'Rôle non trouvé'], 404);
         }
 
-        $role->permissions = DB::table('role_permissions')
-            ->where('role_id', $id)
-            ->get();
-
-        return response()->json($role);
+        return response()->json($this->presenterRole($role));
     }
 
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'nom' => 'required|string|max:50|unique:roles_custom,nom',
+            'nom' => $this->reglesNom('required'),
             'description' => 'nullable|string|max:255',
-            'permissions' => 'required|array',
+            'permissions' => 'present|array',
         ]);
 
         $roleId = DB::table('roles_custom')->insertGetId([
-            'nom' => $request->nom,
+            'tenant_id' => app(TenantContext::class)->getTenantId(),
+            'nom' => trim($request->nom),
             'description' => $request->description,
             'is_system' => false,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        foreach ($this->allModules as $module) {
-            $perm = $request->permissions[$module] ?? [];
-            DB::table('role_permissions')->insert([
-                'role_id' => $roleId,
-                'module' => $module,
-                'can_view' => $perm['can_view'] ?? false,
-                'can_create' => $perm['can_create'] ?? false,
-                'can_edit' => $perm['can_edit'] ?? false,
-                'can_delete' => $perm['can_delete'] ?? false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        $this->enregistrerPermissions($roleId, $request->permissions);
 
         return response()->json([
             'success' => true,
@@ -90,41 +164,22 @@ class RolePermissionController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
-        $role = DB::table('roles_custom')->find($id);
-
-        if (! $role) {
-            return response()->json(['message' => 'Rôle non trouvé'], 404);
-        }
+        $role = $this->roleModifiable($id);
 
         $request->validate([
-            'nom' => 'sometimes|string|max:50|unique:roles_custom,nom,'.$id,
+            'nom' => $this->reglesNom('sometimes', $id),
             'description' => 'nullable|string|max:255',
             'permissions' => 'sometimes|array',
         ]);
 
-        // Mettre à jour le rôle
         DB::table('roles_custom')->where('id', $id)->update([
-            'nom' => $request->nom ?? $role->nom,
+            'nom' => $request->filled('nom') ? trim($request->nom) : $role->nom,
             'description' => $request->description ?? $role->description,
             'updated_at' => now(),
         ]);
 
-        // Mettre à jour les permissions si fournies
         if ($request->has('permissions')) {
-            foreach ($this->allModules as $module) {
-                $perm = $request->permissions[$module] ?? [];
-                DB::table('role_permissions')->updateOrInsert(
-                    ['role_id' => $id, 'module' => $module],
-                    [
-                        'can_view' => $perm['can_view'] ?? false,
-                        'can_create' => $perm['can_create'] ?? false,
-                        'can_edit' => $perm['can_edit'] ?? false,
-                        'can_delete' => $perm['can_delete'] ?? false,
-                        'updated_at' => now(),
-                        'created_at' => now(),
-                    ]
-                );
-            }
+            $this->enregistrerPermissions($id, $request->permissions);
         }
 
         return response()->json([
@@ -135,24 +190,19 @@ class RolePermissionController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $role = DB::table('roles_custom')->find($id);
+        $this->roleModifiable($id);
 
-        if (! $role) {
-            return response()->json(['message' => 'Rôle non trouvé'], 404);
-        }
-
-        if ($role->is_system) {
-            return response()->json(['message' => 'Impossible de supprimer un rôle système'], 403);
-        }
-
-        // Vérifier si des utilisateurs utilisent ce rôle
-        $usersCount = DB::table('users')->where('role_custom_id', $id)->count();
+        // Utilisateurs encore rattachés à ce rôle (colonne absente des bases récentes).
+        $usersCount = Schema::hasColumn('users', 'role_custom_id')
+            ? DB::table('users')->where('role_custom_id', $id)->count()
+            : 0;
         if ($usersCount > 0) {
             return response()->json([
                 'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent",
             ], 400);
         }
 
+        DB::table('role_permissions')->where('role_id', $id)->delete();
         DB::table('roles_custom')->where('id', $id)->delete();
 
         return response()->json([
@@ -207,40 +257,31 @@ class RolePermissionController extends Controller
     {
         $user = $request->user();
 
-        // Récupérer le rôle de l'utilisateur
-        $roleId = $user->role_custom_id;
+        // Rôle personnalisé rattaché, s'il appartient bien à l'entreprise ; sinon le rôle système du
+        // même nom que le rôle de l'utilisateur (admin, manager, user), et « user » par défaut.
+        $role = ! empty($user->role_custom_id) ? $this->rolesVisibles()->find($user->role_custom_id) : null;
+        $role ??= $this->roleSysteme($user->role ?: 'user');
+        $role ??= $this->roleSysteme('user');
 
-        // Si pas de rôle assigné, chercher par le nom du rôle
-        if (! $roleId && $user->role) {
-            $role = DB::table('roles_custom')->where('nom', $user->role)->first();
-            $roleId = $role?->id;
-        }
-
-        // Par défaut, utiliser le rôle "user"
-        if (! $roleId) {
-            $role = DB::table('roles_custom')->where('nom', 'user')->first();
-            $roleId = $role?->id;
-        }
-
-        $permissions = DB::table('role_permissions')
-            ->where('role_id', $roleId)
-            ->get()
-            ->keyBy('module');
-
-        $role = DB::table('roles_custom')->find($roleId);
+        $permissions = $role ? $this->permissionsDuRole($role->id) : collect();
 
         return response()->json([
             'role' => $role?->nom ?? 'user',
-            'role_id' => $roleId,
+            'role_id' => $role?->id,
             'permissions' => $permissions,
         ]);
     }
 
     public function assignRole(Request $request, int $userId): JsonResponse
     {
+        $tenantId = app(TenantContext::class)->getTenantId();
         $request->validate([
-            'role_id' => 'required|exists:roles_custom,id',
+            'role_id' => ['required', Rule::exists('roles_custom', 'id')
+                ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $tenantId))],
         ]);
+
+        // Table héritée « users » : la colonne n'existe pas sur les bases récentes.
+        abort_unless(Schema::hasColumn('users', 'role_custom_id'), 422, 'Attribution de rôle personnalisé indisponible.');
 
         DB::table('users')->where('id', $userId)->update([
             'role_custom_id' => $request->role_id,
