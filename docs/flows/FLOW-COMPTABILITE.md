@@ -1,11 +1,12 @@
 # COMPTABILITÉ GÉNÉRALE — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — clôture et réouverture d'exercice
+> Dernière mise à jour : 2026-10-16 — bilan et compte de résultat (phase 4.8)
 >
 > Historique (2026-10-16) :
 > - plan comptable, exercices et périodes (phase 4.1) ;
-> - journal général, soldes d'ouverture, balance et grand livre (phase 4.2).
+> - journal général, soldes d'ouverture, balance et grand livre (phase 4.2) ;
+> - clôture et réouverture d'exercice.
 
 ---
 
@@ -16,7 +17,7 @@ Une comptabilité en partie double, dans le module **Finance** :
 - **Plan comptable** (**Finance → Plan comptable**) : les comptes de l'entreprise et leur hiérarchie.
 - **Exercices comptables** (**Finance → Exercices comptables**) : les années financières et leurs périodes ; de là, les **soldes d'ouverture**.
 - **Journal comptable** (**Finance → Journal comptable**) : les écritures, classées par journal.
-- **Grand livre** et **Balance** (**Finance**) : les états tirés des écritures.
+- **Grand livre**, **Balance** et **États financiers** (bilan, compte de résultat) (**Finance**) : les états tirés des écritures.
 
 Ce socle est générique. Une entreprise part d'un plan type (OHADA, France, Canada), d'un fichier, ou de rien, puis adapte son plan librement. Rien ne change pour les entreprises qui n'ont pas le module Finance.
 
@@ -26,7 +27,7 @@ Prochaines étapes du plan de parité :
 |---|---|
 | 4.2c | Écritures récurrentes, générées par une tâche planifiée |
 | 4.3 | Écritures générées automatiquement à partir des ventes, des achats et des paiements |
-| 4.8 | États financiers : bilan, compte de résultat |
+| 4.8b | États aux formats réglementaires (SYSCOHADA, liasse française), en PDF |
 
 ---
 
@@ -200,6 +201,23 @@ Les deux états se calculent à partir des lignes d'écritures, sur une période
   - recherche dans les libellés, numéros et références ;
   - affichage limité à 5 000 lignes, export CSV complet.
 
+### États financiers (Finance → États financiers)
+
+Les comptes sont regroupés sous leur en-tête le plus proche (60 Achats, 62 Services extérieurs…), dans l'ordre du plan. Les groupes se déplient pour montrer leurs comptes. Chaque état s'exporte en CSV.
+
+**Bilan à une date** (aujourd'hui par défaut) : chaque compte de bilan à son solde cumulé.
+- **Actif** : comptes de nature actif, au débit. Un compte au solde contraire, comme les amortissements, vient en déduction.
+- **Capitaux propres** :
+  - comptes de capitaux propres, au crédit ;
+  - **résultat non encore clôturé** (produits moins charges des exercices pas encore clôturés), qui équilibre le bilan en cours d'exercice ; après la clôture, il est sur le compte de résultat.
+- **Dettes** : comptes de nature passif, au crédit.
+- **Totaux** : actif, et passif (capitaux propres et dettes), avec l'indicateur « Bilan équilibré ».
+
+**Compte de résultat d'une période** (l'exercice en cours par défaut) :
+- produits et charges de la période, par groupe ;
+- bénéfice ou perte ;
+- les écritures de clôture sont exclues : un exercice clôturé garde donc son compte de résultat.
+
 ---
 
 ## 7. Droits
@@ -237,11 +255,13 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
 | `GET` et `PUT /comptabilite/soldes-ouverture` | Soldes d'ouverture du premier exercice, `{lignes: [{compte_id, debit, credit}]}` |
+| `GET /comptabilite/etats/bilan?date=[&format=csv]` | Bilan |
+| `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
 - **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`.
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures}`.
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers}`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage` ; service `src/services/comptabilite.ts`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
 - **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`.

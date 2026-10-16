@@ -623,6 +623,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/ecritures/{id}', [EcritureComptableController::class, 'show'])->whereNumber('id');
         Route::get('/balance', [EtatComptableController::class, 'balance']);
         Route::get('/grand-livre', [EtatComptableController::class, 'grandLivre']);
+        Route::get('/etats/bilan', [EtatComptableController::class, 'bilan']);
+        Route::get('/etats/resultat', [EtatComptableController::class, 'compteResultat']);
         Route::get('/soldes-ouverture', [EtatComptableController::class, 'soldesOuverture']);
 
         Route::middleware('role:admin,manager')->group(function () {
