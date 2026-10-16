@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarRange, ChevronDown, ChevronRight, Landmark, Lock, LockOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, CalendarRange, ChevronDown, ChevronRight, Landmark, Lock, LockOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import {
   getExercices, creerExercice, modifierExercice, supprimerExercice, fermerPeriode, rouvrirPeriode,
-  DECOUPAGES, type ExerciceComptable, type PeriodeComptable, type SaisieExercice, type Decoupage,
+  getApercuCloture, cloturerExercice, rouvrirExercice, montant,
+  DECOUPAGES, type ApercuCloture, type ExerciceComptable, type PeriodeComptable, type SaisieExercice, type Decoupage,
 } from '@/services/comptabilite';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -47,6 +48,8 @@ export default function ExercicesComptablesPage() {
   const [deplies, setDeplies] = useState<Set<number> | null>(null);
   const [edition, setEdition] = useState<{ exercice: ExerciceComptable | null; saisie: SaisieExercice } | null>(null);
   const [erreurEdition, setErreurEdition] = useState('');
+  const [cloture, setCloture] = useState<{ exercice: ExerciceComptable; apercu: ApercuCloture } | null>(null);
+  const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
     let actif = true;
@@ -101,8 +104,43 @@ export default function ExercicesComptablesPage() {
     }
   }
 
+  async function ouvrirCloture(exercice: ExerciceComptable) {
+    try {
+      setCloture({ exercice, apercu: await getApercuCloture(exercice.id) });
+    } catch (e) {
+      echec(e);
+    }
+  }
+
+  async function cloturer() {
+    if (!cloture) return;
+    setEnCours(true);
+    try {
+      await cloturerExercice(cloture.exercice.id);
+      recharger(ty.yearClosedMsg.replace('{libelle}', cloture.exercice.libelle));
+      setCloture(null);
+    } catch (e) {
+      setCloture(null);
+      echec(e);
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function rouvrir(exercice: ExerciceComptable) {
+    if (!confirm(ty.confirmReopenYear.replace('{libelle}', exercice.libelle))) return;
+    try {
+      await rouvrirExercice(exercice.id);
+      recharger(ty.yearReopenedMsg.replace('{libelle}', exercice.libelle));
+    } catch (e) {
+      echec(e);
+    }
+  }
+
   const modifierSaisie = (valeurs: Partial<SaisieExercice>) => setEdition(ed => (ed ? { ...ed, saisie: { ...ed.saisie, ...valeurs } } : ed));
   const verrouille = !!edition?.exercice?.periodes.some(p => p.fermee);
+  // Seul le dernier exercice clôturé peut être rouvert.
+  const dernierCloture = exercices?.filter(e => e.statut === 'cloture').sort((a, b) => b.date_debut.localeCompare(a.date_debut))[0]?.id;
 
   return (
     <div className="p-6">
@@ -143,6 +181,11 @@ export default function ExercicesComptablesPage() {
                     <span className="block text-sm text-gray-500 dark:text-gray-400">
                       {date(exercice.date_debut)} – {date(exercice.date_fin)} · {ty.splittings[exercice.decoupage]} · {ty.closedCount.replace('{fermees}', String(fermees)).replace('{total}', String(exercice.periodes.length))}
                     </span>
+                    {exercice.statut === 'cloture' && exercice.cloture_le && (
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">
+                        {ty.closedOn.replace('{date}', new Date(exercice.cloture_le).toLocaleDateString(locale)).replace('{nom}', exercice.cloture_par ?? '—')}
+                      </span>
+                    )}
                   </span>
                 </button>
                 <div className="flex items-center gap-2">
@@ -157,6 +200,16 @@ export default function ExercicesComptablesPage() {
                         <button onClick={() => supprimer(exercice)} title={ty.delete} aria-label={`${ty.delete} — ${exercice.libelle}`} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={16} /></button>
                       )}
                     </>
+                  )}
+                  {estAdmin && exercice.statut === 'ouvert' && (
+                    <button onClick={() => ouvrirCloture(exercice)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      <Archive size={14} /> {ty.closeYear}
+                    </button>
+                  )}
+                  {estAdmin && exercice.id === dernierCloture && (
+                    <button onClick={() => rouvrir(exercice)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      <ArchiveRestore size={14} /> {ty.reopenYear}
+                    </button>
                   )}
                 </div>
               </div>
@@ -244,6 +297,36 @@ export default function ExercicesComptablesPage() {
               <button type="submit" className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">{ty.save}</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {cloture && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div role="dialog" aria-labelledby="cloture-titre" className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <h2 id="cloture-titre" className="text-lg font-bold dark:text-white">{ty.closeTitle.replace('{libelle}', cloture.exercice.libelle)}</h2>
+              <button type="button" onClick={() => setCloture(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label={ty.closeDialog}><X size={18} /></button>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dt className="text-gray-500 dark:text-gray-400">{ty.revenue}</dt>
+              <dd className="text-right text-gray-900 dark:text-white">{montant(cloture.apercu.produits, locale)}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">{ty.expenses}</dt>
+              <dd className="text-right text-gray-900 dark:text-white">{montant(cloture.apercu.charges, locale)}</dd>
+              <dt className="font-semibold text-gray-800 dark:text-gray-200">{cloture.apercu.resultat >= 0 ? ty.profit : ty.loss}</dt>
+              <dd className={`text-right font-semibold ${cloture.apercu.resultat >= 0 ? 'text-green-700' : 'text-red-700'}`}>{montant(Math.abs(cloture.apercu.resultat), locale)}</dd>
+            </dl>
+            {cloture.apercu.compte && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">{ty.resultAccount.replace('{compte}', `${cloture.apercu.compte.numero} — ${cloture.apercu.compte.libelle}`)}</p>
+            )}
+            <ul className="text-sm text-gray-600 dark:text-gray-300 list-disc pl-5 space-y-0.5">
+              {ty.closeSteps.map(etape => <li key={etape}>{etape}</li>)}
+            </ul>
+            {cloture.apercu.bloquant && <p className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{cloture.apercu.bloquant}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setCloture(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">{ty.cancel}</button>
+              <button type="button" disabled={enCours || !!cloture.apercu.bloquant} onClick={cloturer} className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">{ty.closeConfirm}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
