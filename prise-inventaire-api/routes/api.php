@@ -60,6 +60,8 @@ use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Comptabilite\CompteComptableController;
+use App\Http\Controllers\Comptabilite\ExerciceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
@@ -601,6 +603,28 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
             Route::put('/regles-prix/{id}', [PrixRegleController::class, 'update'])->whereNumber('id');
             Route::delete('/regles-prix/{id}', [PrixRegleController::class, 'destroy'])->whereNumber('id');
         });
+    });
+
+    // Comptabilité générale (module Finance) : plan comptable, exercices et périodes. Lecture pour le module ;
+    // modifications par les administrateurs et responsables, réouverture d'une période par les administrateurs.
+    Route::prefix('comptabilite')->middleware('module:finance')->group(function () {
+        Route::get('/comptes', [CompteComptableController::class, 'index']);
+        Route::get('/comptes/export', [CompteComptableController::class, 'exporter']);
+        Route::get('/plans-types', [CompteComptableController::class, 'plans']);
+        Route::get('/exercices', [ExerciceComptableController::class, 'index']);
+
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::post('/comptes', [CompteComptableController::class, 'store']);
+            Route::put('/comptes/{id}', [CompteComptableController::class, 'update'])->whereNumber('id');
+            Route::delete('/comptes/{id}', [CompteComptableController::class, 'destroy'])->whereNumber('id');
+            Route::post('/comptes/importer-plan', [CompteComptableController::class, 'importerPlan']);
+            Route::post('/comptes/importer-fichier', [CompteComptableController::class, 'importerFichier']);
+            Route::post('/exercices', [ExerciceComptableController::class, 'store']);
+            Route::put('/exercices/{id}', [ExerciceComptableController::class, 'update'])->whereNumber('id');
+            Route::delete('/exercices/{id}', [ExerciceComptableController::class, 'destroy'])->whereNumber('id');
+            Route::post('/periodes/{id}/fermer', [ExerciceComptableController::class, 'fermerPeriode'])->whereNumber('id');
+        });
+        Route::post('/periodes/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrirPeriode'])->whereNumber('id')->middleware('role:admin');
     });
 
     // Mouvements d'inventaire et Localisations
