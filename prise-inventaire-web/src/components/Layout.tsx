@@ -191,6 +191,10 @@ export default function Layout() {
   const pageCourante = allCategories.flatMap(cat => cat.items)
     .find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
   const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !canView(pageCourante.module);
+  // Page d'un module que l'entreprise n'a pas souscrit (Achats, Ventes, Finance) : message au lieu d'une page
+  // vide, voire d'une erreur (les appels de l'API sont refusés).
+  const categorieCourante = allCategories.find(cat => cat.items.some(item => item === pageCourante));
+  const moduleInactif = categorieCourante !== undefined && !moduleAllowed(categorieCourante.id);
 
   const handleLogout = () => {
     logout();
@@ -347,7 +351,16 @@ export default function Layout() {
           </Link>
         </div>
         <div className="p-6 lg:p-8">
-          {accesRefuse ? (
+          {moduleInactif ? (
+            <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
+              <ShieldCheck size={48} className="text-gray-300 dark:text-gray-600 mb-4" aria-hidden />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{t.moduleDisabled.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-lg">
+                {t.moduleDisabled.message.replace('{module}', categorieCourante?.label ?? '')}
+              </p>
+              <Link to="/" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t.moduleDisabled.back}</Link>
+            </div>
+          ) : accesRefuse ? (
             <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
               <ShieldCheck size={48} className="text-gray-300 dark:text-gray-600 mb-4" aria-hidden />
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{t.accessDenied.title}</h1>
