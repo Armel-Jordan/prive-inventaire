@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Services\DeuxFacteurs;
 use App\Support\Totp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -28,6 +29,8 @@ class SecuriteComptesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // La CI utilise un cache fichier qui persiste d'un test à l'autre (limites par IP, défis, échecs).
+        Cache::flush();
 
         $this->tenant = Tenant::factory()->create(['slug' => 'alpha', 'actif' => true]);
         $this->paul = AdminUser::factory()->for($this->tenant)->create([

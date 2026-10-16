@@ -71,9 +71,10 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
 
 // Sécurité des comptes : mot de passe oublié et seconde étape de connexion (double authentification).
-Route::post('/auth/mot-de-passe-oublie', [MotDePasseController::class, 'oublie'])->middleware('throttle:5,1');
-Route::post('/auth/reinitialiser-mot-de-passe', [MotDePasseController::class, 'reinitialiser'])->middleware('throttle:10,1');
-Route::post('/auth/login/deux-facteurs', [AuthController::class, 'connexionDeuxFacteurs'])->middleware('throttle:10,1');
+// Chaque limite a son préfixe : sans lui, toutes les routes limitées partagent un même compteur par IP.
+Route::post('/auth/mot-de-passe-oublie', [MotDePasseController::class, 'oublie'])->middleware('throttle:5,1,mot-de-passe-oublie');
+Route::post('/auth/reinitialiser-mot-de-passe', [MotDePasseController::class, 'reinitialiser'])->middleware('throttle:10,1,reinitialisation-mot-de-passe');
+Route::post('/auth/login/deux-facteurs', [AuthController::class, 'connexionDeuxFacteurs'])->middleware('throttle:10,1,connexion-deux-facteurs');
 
 // PDF routes — auth via ?token= query param
 Route::get('/commandes-fournisseur/{id}/pdf', [BonCommandePdfController::class, 'generate']);
@@ -134,8 +135,8 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::post('/auth/photo', [AuthController::class, 'uploadPhoto']);
 
     // Sécurité du compte connecté : mot de passe et double authentification.
-    Route::put('/auth/mot-de-passe', [MotDePasseController::class, 'changer'])->middleware('throttle:10,1');
-    Route::prefix('auth/deux-facteurs')->middleware('throttle:20,1')->group(function () {
+    Route::put('/auth/mot-de-passe', [MotDePasseController::class, 'changer'])->middleware('throttle:10,1,changement-mot-de-passe');
+    Route::prefix('auth/deux-facteurs')->middleware('throttle:20,1,gestion-deux-facteurs')->group(function () {
         Route::get('/', [DeuxFacteursController::class, 'etat']);
         Route::post('/preparer', [DeuxFacteursController::class, 'preparer']);
         Route::post('/activer', [DeuxFacteursController::class, 'activer']);
