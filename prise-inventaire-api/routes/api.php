@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
 use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
@@ -497,6 +498,13 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/modeles/apercu', [CourrielModeleController::class, 'apercu']);
         Route::put('/modeles/{id}', [CourrielModeleController::class, 'update'])->whereNumber('id');
         Route::delete('/modeles/{id}', [CourrielModeleController::class, 'destroy'])->whereNumber('id');
+
+        // Envoi des documents, file d'envoi et historique.
+        Route::get('/preparer', [CourrielEnvoiController::class, 'preparer']);
+        Route::get('/envois', [CourrielEnvoiController::class, 'index']);
+        Route::post('/envois', [CourrielEnvoiController::class, 'store'])->middleware('throttle:30,1');
+        Route::get('/envois/{id}', [CourrielEnvoiController::class, 'show'])->whereNumber('id');
+        Route::post('/envois/{id}/reessayer', [CourrielEnvoiController::class, 'reessayer'])->whereNumber('id')->middleware('throttle:30,1');
     });
 
     // Configuration des numéros

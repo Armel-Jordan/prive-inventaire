@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi et modèles
+> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi, modèles, envoi des documents et historique
 
 ---
 
@@ -469,7 +469,7 @@ Module de permission `referentiels` : l'admin a tous les droits, le manager peut
 
 ## 12. Configuration — Courriels
 
-Onglet **Courriels** de la page Paramètres (plan de parité fripv2, phase 0.6a). Il prépare l'envoi des documents par courriel.
+Onglet **Courriels** de la page Paramètres, envoi des documents par courriel et historique (plan de parité fripv2, phase 0.6).
 
 ### 12.1 Serveur d'envoi
 
@@ -513,6 +513,37 @@ Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personn
 | `POST /courriels/modeles/apercu` | Aperçu d'un modèle, même non enregistré |
 
 Code : catalogue `App\Support\Courriels`, rendu `App\Services\Courriels\RenduCourriel` (vue `emails.courriel`), serveur `App\Services\Courriels\MailerTenant`.
+
+### 12.3 Envoi des documents, file d'envoi et historique
+
+Les listes des devis, commandes client, factures, bons de livraison et commandes fournisseur ont un bouton **Envoyer par courriel** :
+
+1. La fenêtre se pré-remplit avec le modèle de l'entreprise (ou le modèle par défaut) dans la langue choisie : destinataire (courriel du client, ou du fournisseur pour une commande fournisseur), objet et texte complétés. Tout reste modifiable ; Cc et Cci sont facultatifs.
+2. Le PDF du document est joint sous le nom défini par le modèle (case à décocher pour ne pas le joindre).
+3. **Envoyer** : le courriel est enregistré dans la file (`courriel_envois`) tel qu'il partira, signature et coordonnées comprises, avec la copie cachée systématique des paramètres. Il est ensuite envoyé par le job `EnvoyerCourriel` : tout de suite avec `QUEUE_CONNECTION=sync` (cas actuel), en arrière-plan avec une vraie file.
+
+| Statut | Signification |
+|---|---|
+| `en_attente` | Enregistré, pas encore envoyé |
+| `en_cours` | Envoi en cours ; la prise en charge est atomique, un même courriel ne part jamais deux fois |
+| `envoye` | Remis au serveur d'envoi |
+| `echec` | Refusé ou serveur injoignable ; l'erreur est conservée |
+
+- **Relance manuelle** : bouton **Réessayer**, dans la fenêtre d'envoi et dans l'historique.
+- **Relance automatique** : commande `courriels:relancer`, planifiée toutes les 5 minutes. Elle envoie les courriels en attente depuis plus de 5 minutes, relance les échecs (3 tentatives automatiques au plus, espacées de 15 minutes) et libère les envois interrompus. Elle ne tourne que si le planificateur est lancé (`php artisan schedule:work`, ou `schedule:run` chaque minute par cron).
+- Le PDF est régénéré à chaque tentative, depuis l'état actuel du document.
+- **Historique** : page **Paramètres → Courriels envoyés** (filtres par statut et par type, détail du courriel tel qu'il est parti), et envois précédents listés dans la fenêtre d'envoi de chaque document.
+- Le module du document (ventes, achats) doit être actif ; un document d'une autre entreprise est introuvable. Envois et relances sont limités à 30 par minute.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/preparer?type=&document_id=&langue=` | Pré-remplissage de la fenêtre d'envoi |
+| `POST /courriels/envois` | Mise en file et envoi |
+| `GET /courriels/envois` | Historique paginé (filtres `type`, `document_id`, `statut`) |
+| `GET /courriels/envois/{id}` | Détail, corps du courriel compris |
+| `POST /courriels/envois/{id}/reessayer` | Relance d'un courriel en échec |
+
+Code : `App\Services\Courriels\EnvoiCourriel`, `App\Jobs\EnvoyerCourriel`, `App\Console\Commands\RelancerCourriels`.
 
 ---
 

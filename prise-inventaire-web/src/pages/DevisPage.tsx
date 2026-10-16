@@ -8,6 +8,7 @@ import {
 import type { DevisRecord, Client } from '../services/api';
 import type { Produit } from '../types';
 import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function DevisPage() {
   const [devisList, setDevisList] = useState<DevisRecord[]>([]);
@@ -234,6 +235,7 @@ export default function DevisPage() {
                     <div className="flex justify-center gap-1">
                       <button onClick={() => { setSelectedDevis(devis); setShowDetailModal(true); }} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Voir"><Eye size={16} /></button>
                       <BoutonPdf chemin={`/devis/${devis.id}/pdf`} nomFichier={`devis-${devis.numero}.pdf`} taille={16} />
+                      <BoutonCourriel type="devis" documentId={devis.id} taille={16} />
                       {devis.statut === 'brouillon' && (
                         <>
                           <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>

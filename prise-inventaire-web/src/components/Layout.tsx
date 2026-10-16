@@ -29,7 +29,8 @@ import {
   Warehouse,
   HandCoins,
   Settings,
-  Library
+  Library,
+  Mail
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -119,6 +120,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
       { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
+      { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
     ],
   },
 ];
