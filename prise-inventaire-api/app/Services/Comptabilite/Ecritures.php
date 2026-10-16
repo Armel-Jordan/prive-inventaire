@@ -26,18 +26,19 @@ class Ecritures
     /**
      * Crée ou remplace une écriture. $donnees : journal_id, date, libelle, reference, lignes (compte_id, libelle,
      * debit, credit). La saisie manuelle des comptes n'est exigée que pour une écriture manuelle ou récurrente.
+     * Une écriture système (clôture) peut tomber dans une période fermée et solder un compte désactivé.
      *
      * @throws ValidationException
      */
-    public function enregistrer(array $donnees, string $source, ?EcritureComptable $ecriture = null, ?int $auteur = null, ?int $contrepassationDe = null): EcritureComptable
+    public function enregistrer(array $donnees, string $source, ?EcritureComptable $ecriture = null, ?int $auteur = null, ?int $contrepassationDe = null, bool $systeme = false): EcritureComptable
     {
         $date = Carbon::parse($donnees['date'])->startOfDay();
-        $periode = $this->periodeOuverte($date);
+        $periode = $this->periodeOuverte($date, $systeme);
         $journal = JournalComptable::findOrFail($donnees['journal_id']);
         if (! $journal->actif) {
             throw ValidationException::withMessages(['journal_id' => "Le journal {$journal->code} est désactivé."]);
         }
-        $lignes = $this->controlerLignes($donnees['lignes'], in_array($source, self::MODIFIABLES, true) && ! $contrepassationDe);
+        $lignes = $this->controlerLignes($donnees['lignes'], in_array($source, self::MODIFIABLES, true) && ! $contrepassationDe, $systeme);
         $total = array_sum(array_column($lignes, 'debit'));
 
         return DB::transaction(function () use ($donnees, $source, $ecriture, $auteur, $contrepassationDe, $date, $periode, $journal, $lignes, $total) {
@@ -77,9 +78,11 @@ class Ecritures
     public function refusModification(EcritureComptable $ecriture): ?string
     {
         if (! in_array($ecriture->source, self::MODIFIABLES, true)) {
-            return $ecriture->source === EcritureComptable::OUVERTURE
-                ? 'Les soldes d\'ouverture se modifient depuis leur écran.'
-                : 'Cette écriture est générée par l\'application : contre-passez-la si elle doit être corrigée.';
+            return match ($ecriture->source) {
+                EcritureComptable::OUVERTURE => 'Les soldes d\'ouverture se modifient depuis leur écran.',
+                EcritureComptable::CLOTURE => 'Une écriture de clôture s\'annule en rouvrant son exercice.',
+                default => 'Cette écriture est générée par l\'application : contre-passez-la si elle doit être corrigée.',
+            };
         }
         $ecriture->loadMissing('periode.exercice');
         if ($ecriture->periode->exercice->estCloture() || $ecriture->periode->fermee) {
@@ -92,6 +95,9 @@ class Ecritures
     /** Écriture inverse (débits et crédits échangés), datée dans une période ouverte, qui annule l'originale. */
     public function contrePasser(EcritureComptable $ecriture, Carbon $date, ?int $auteur): EcritureComptable
     {
+        if ($ecriture->source === EcritureComptable::CLOTURE) {
+            throw ValidationException::withMessages(['date' => 'Une écriture de clôture s\'annule en rouvrant son exercice.']);
+        }
         $deja = EcritureComptable::where('contrepassation_de', $ecriture->id)->value('numero');
         if ($deja) {
             throw ValidationException::withMessages(['date' => "Cette écriture a déjà été contre-passée par {$deja}."]);
@@ -164,7 +170,7 @@ class Ecritures
      *
      * @throws ValidationException
      */
-    private function controlerLignes(array $lignes, bool $saisieManuelle): array
+    private function controlerLignes(array $lignes, bool $saisieManuelle, bool $systeme = false): array
     {
         $comptes = CompteComptable::whereIn('id', array_column($lignes, 'compte_id'))->get()->keyBy('id');
         $erreurs = [];
@@ -176,7 +182,7 @@ class Ecritures
             $compte = $comptes[$ligne['compte_id']] ?? null;
             $erreur = match (true) {
                 ! $compte => 'compte introuvable',
-                ! $compte->actif => "le compte {$compte->numero} est inactif",
+                ! $compte->actif && ! $systeme => "le compte {$compte->numero} est inactif",
                 ! $compte->estImputable() => "le compte {$compte->numero} est un en-tête : choisissez l'un de ses sous-comptes",
                 $saisieManuelle && ! $compte->saisie_manuelle => "le compte {$compte->numero} n'accepte pas la saisie manuelle",
                 $debit < 0 || $credit < 0 => 'montant négatif',
@@ -210,7 +216,7 @@ class Ecritures
     }
 
     /** Période ouverte d'un exercice ouvert qui contient la date. */
-    private function periodeOuverte(Carbon $date): PeriodeComptable
+    private function periodeOuverte(Carbon $date, bool $systeme = false): PeriodeComptable
     {
         $periode = $this->exercices->periodeDu($date)?->load('exercice');
         if (! $periode) {
@@ -219,7 +225,7 @@ class Ecritures
         if ($periode->exercice->estCloture()) {
             throw ValidationException::withMessages(['date' => "L'exercice {$periode->exercice->libelle} est clôturé."]);
         }
-        if ($periode->fermee) {
+        if ($periode->fermee && ! $systeme) {
             throw ValidationException::withMessages(['date' => "La période du {$periode->date_debut->format('d/m/Y')} au {$periode->date_fin->format('d/m/Y')} est fermée."]);
         }
 

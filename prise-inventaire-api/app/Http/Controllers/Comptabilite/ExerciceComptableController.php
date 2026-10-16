@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EcritureComptable;
 use App\Models\ExerciceComptable;
 use App\Models\PeriodeComptable;
+use App\Services\Comptabilite\Clotures;
 use App\Services\Comptabilite\Exercices;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,6 +110,26 @@ class ExerciceComptableController extends Controller
         });
 
         return response()->json(['message' => 'Exercice supprimé.']);
+    }
+
+    /** Ce que donnerait la clôture : produits, charges, résultat, compte qui le reçoit, et ce qui l'empêche. */
+    public function apercuCloture(int $id, Clotures $clotures): JsonResponse
+    {
+        return response()->json($clotures->apercu(ExerciceComptable::findOrFail($id)));
+    }
+
+    public function cloturer(Request $request, int $id, Clotures $clotures): JsonResponse
+    {
+        $exercice = $clotures->cloturer(ExerciceComptable::findOrFail($id), $request->user()?->id);
+
+        return response()->json($this->presenter($exercice->load('periodes.fermeePar:id,nom', 'cloturePar:id,nom'), $this->exercices->periodeDu()));
+    }
+
+    public function rouvrir(int $id, Clotures $clotures): JsonResponse
+    {
+        $exercice = $clotures->rouvrir(ExerciceComptable::findOrFail($id));
+
+        return response()->json($this->presenter($exercice->load('periodes.fermeePar:id,nom'), $this->exercices->periodeDu()));
     }
 
     /** Une période fermée n'accepte plus d'écriture. */
