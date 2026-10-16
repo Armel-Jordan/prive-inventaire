@@ -270,6 +270,8 @@ Chaque compte a un **rôle de base** : `admin`, `manager`, `user` ou `readonly`,
   - Les lectures, les calculs (prix, taxes), les aperçus, les envois de courriels, les favoris, la catégorie
     d'un client et les remarques des fiches restent ouverts.
 - Un compte désactivé est refusé (401) même s'il présente encore un jeton.
+- **Module non souscrit** (Achats, Ventes, Finance) : ses pages, ouvertes par leur adresse, affichent « Module
+  non activé » au lieu d'une page vide ou d'une erreur, et le tableau de bord n'en montre pas la section.
 - Un administrateur a tous les droits, même avec un rôle personnalisé.
 
 ### 6.2 Rôles système et rôles personnalisés
