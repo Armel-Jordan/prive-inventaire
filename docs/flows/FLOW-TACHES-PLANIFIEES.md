@@ -1,7 +1,9 @@
 # TÂCHES PLANIFIÉES — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — création (plan de parité fripv2, phase 0.10)
+> Dernière mise à jour : 2026-10-16 — alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
+>
+> Historique : 2026-10-15 — création (plan de parité fripv2, phase 0.10)
 
 ---
 
@@ -15,8 +17,21 @@ Des traitements automatiques prédéfinis par l'application. Chaque entreprise l
 | `transferts_imminents` | Chaque jour à 07:00 | Notifie les transferts prévus dans les 24 heures (une notification par transfert) |
 | `alertes_stock` | Chaque jour à 07:00 | Notifie les produits sous leur seuil d'alerte (même calcul que l'écran Alertes stock) ; pas de nouvelle notification tant que la précédente n'est pas lue |
 | `nettoyage_notifications` | Chaque jour à 02:00 | Supprime les notifications lues depuis plus de 30 jours |
+| `factures_impayees` | Chaque jour à 07:00 | Notifie les factures émises ou partiellement payées dont il reste à payer, plus de **N jours** (30) après l'échéance (ou la date de facture, sans échéance) |
+| `commandes_fournisseur_en_retard` | Chaque jour à 07:00 | Notifie les commandes fournisseur envoyées ou partiellement reçues dont la livraison prévue est dépassée de plus de **N jours** (0 : dès le lendemain) |
+| `livraisons_en_retard` | Chaque jour à 07:00 | Notifie les bons de livraison pas encore livrés (créés, en préparation, prêts, en livraison) plus de **N jours** (3) après leur création |
+| `controles_techniques` | Chaque jour à 07:00 | Prévient **N jours** (30) avant l'expiration du contrôle technique d'un camion actif, et une fois la date dépassée |
 
-Ajouter une tâche : une classe dans `app/Taches` (interface `App\Taches\Tache`) et une ligne dans `App\Support\TachesPlanifiees::TACHES`.
+Ajouter une tâche : une classe dans `app/Taches` (interface `App\Taches\Tache`) et une ligne dans `App\Support\TachesPlanifiees::TACHES` ; ses paramètres réglables dans `PARAMETRES`, le module qu'elle suppose dans `MODULES`.
+
+### Alertes réglables
+
+Les tâches qui notifient (stock, transferts imminents, factures, commandes, livraisons, contrôles techniques) se règlent aussi dans **Paramètres → Réglage des alertes**, un écran plus simple : activer, régler le délai en jours, **Vérifier maintenant**, voir la fréquence et la dernière vérification. La fréquence, l'heure et l'historique restent dans les tâches planifiées. L'écran remplace une page factice (valeurs codées en dur, sauvegarde simulée), auparavant rangée sous Finance et donc invisible sans ce module.
+
+- **Délai (N jours)** : paramètre `jours` de la tâche, entre 0 et 365. Seuls les paramètres prévus par le catalogue sont enregistrés ; les autres sont ignorés.
+- **Modules** : une alerte n'est proposée que si l'entreprise a le module correspondant (Ventes pour les factures, les livraisons et les camions ; Achats pour les commandes fournisseur).
+- **Pas de doublon** : une alerte n'est pas renvoyée tant que la notification précédente sur le même document n'est pas lue (`Notification::alerterUneFois`). Pour un contrôle technique, une nouvelle date donne lieu à une nouvelle alerte.
+- Chaque notification mène à l'écran concerné (factures, commandes fournisseur, bons de livraison, camions).
 
 ---
 
@@ -69,8 +84,10 @@ L'exécution d'un transfert planifié (bouton « Exécuter » et tâche automati
 | Route | Rôle |
 |---|---|
 | `GET /taches-planifiees` | Tâches de l'entreprise (créées inactives au premier accès), dernière vérification, fuseau |
-| `PUT /taches-planifiees/{id}` | `actif`, `recurrence`, `heure`, `jours_semaine`, `jour_du_mois`, `prochaine_execution` (une seule fois) |
+| `PUT /taches-planifiees/{id}` | `actif`, `recurrence`, `heure`, `jours_semaine`, `jour_du_mois`, `prochaine_execution` (une seule fois), `parametres` (ex. `{"jours": 15}`) |
 | `POST /taches-planifiees/{id}/executer` | Exécution immédiate (409 si déjà en cours) |
 | `GET /taches-planifiees/historique?tache_id=&resultat=` | Historique paginé |
 
-Code : `App\Services\Planificateur`, `App\Support\TachesPlanifiees`, `app/Taches/*`, `App\Console\Commands\ExecuterTachesPlanifiees`, `config/taches.php`.
+Chaque tâche renvoyée porte aussi `parametres` (valeurs par défaut comprises) et `module` (module requis, `null` si aucun).
+
+Code : `App\Services\Planificateur`, `App\Support\TachesPlanifiees`, `app/Taches/*`, `App\Console\Commands\ExecuterTachesPlanifiees`, `config/taches.php`. Écrans : `TachesPlanifieesPage`, `NotificationsConfigPage` (réglage des alertes), aides communes dans `src/lib/taches.ts`.

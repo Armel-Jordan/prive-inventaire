@@ -332,6 +332,8 @@ export interface ReglageTache {
   jour_du_mois: number | null;
   /** Exécution unique : AAAA-MM-JJTHH:MM dans le fuseau des tâches. */
   prochaine_execution?: string | null;
+  /** Paramètres prévus par la tâche (ex. « jours » : délai d'une alerte) ; les autres sont ignorés. */
+  parametres?: Record<string, number>;
 }
 
 export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'> {
@@ -341,6 +343,10 @@ export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'
   statut: 'en_attente' | 'en_cours';
   prochaine_execution: string | null;
   derniere_execution: string | null;
+  /** Paramètres réglables, valeurs par défaut comprises (vide si la tâche n'en a pas). */
+  parametres: Record<string, number>;
+  /** Module de l'entreprise requis par la tâche (ventes, achats…), null si aucun. */
+  module: string | null;
 }
 
 export interface ExecutionTache {
