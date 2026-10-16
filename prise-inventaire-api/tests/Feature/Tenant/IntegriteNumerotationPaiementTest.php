@@ -4,9 +4,11 @@ namespace Tests\Feature\Tenant;
 
 use App\Models\AdminUser;
 use App\Models\Client;
+use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Models\ProduitTenant;
 use App\Models\Tenant;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +21,7 @@ use Tests\TestCase;
  *  #1 numérotation atomique (pas de trou de séquence, pas de doublon)
  *  #2 enregistrerPaiement recalcule soldes/statut/encours (pas de double encaissement)
  *  #3 conversion devis→commande utilise la séquence « commande » configurée
+ *  #4 conversion devis→commande applique la TVA par défaut (et non 0 %)
  */
 class IntegriteNumerotationPaiementTest extends TestCase
 {
@@ -193,5 +196,56 @@ class IntegriteNumerotationPaiementTest extends TestCase
             ->assertJsonPath('commande.numero', 'CMD-0001');
 
         $this->assertSame(2, Configuration::pourEntite('commande', $tenant->id)->prochain_numero);
+    }
+
+    // ===== Fix #4 : conversion devis→commande applique la TVA par défaut =====
+
+    public function test_conversion_devis_applique_la_tva_par_defaut(): void
+    {
+        $tenant = Tenant::factory()->create(['modules' => ['ventes']]);
+        $admin = AdminUser::factory()->for($tenant)->create();
+
+        $devis = app(TenantContext::class)->runAsTenant($tenant->id, function () {
+            $this->config('commande', 'CMD');
+            $client = $this->client();
+            $produit = ProduitTenant::create([
+                'numero' => 'PRD-0001',
+                'description' => 'Produit test',
+                'prix_unitaire' => 50,
+            ]);
+
+            $devis = Devis::create([
+                'numero' => 'DEV-0001',
+                'client_id' => $client->id,
+                'date_devis' => '2026-07-01',
+                'date_validite' => '2026-07-31',
+                'statut' => Devis::STATUT_ACCEPTE,
+            ]);
+            $devis->lignes()->create([
+                'produit_id' => $produit->id,
+                'quantite' => 2,
+                'prix_unitaire' => 50,
+                'montant_ligne' => 100,
+            ]);
+
+            return $devis;
+        });
+
+        Sanctum::actingAs($admin, ['*']);
+
+        $commande = $this->withHeader('X-Tenant-Slug', $tenant->slug)
+            ->postJson("/api/devis/{$devis->id}/convertir")
+            ->assertOk()
+            ->json('commande');
+
+        // Le devis (100 HT) donne une commande taxée au taux par défaut, pas à 0 %.
+        $ligne = $commande['lignes'][0];
+        $this->assertEquals(ComClientLigne::TAUX_TVA_DEFAUT, (float) $ligne['taux_tva']);
+        $this->assertEquals(100, (float) $ligne['montant_ht']);
+        $this->assertEquals(120, (float) $ligne['montant_ttc']);
+
+        $this->assertEquals(100, (float) $commande['montant_ht']);
+        $this->assertEquals(20, (float) $commande['montant_tva']);
+        $this->assertEquals(120, (float) $commande['montant_ttc']);
     }
 }

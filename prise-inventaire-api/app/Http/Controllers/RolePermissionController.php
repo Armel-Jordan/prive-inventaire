@@ -16,7 +16,7 @@ class RolePermissionController extends Controller
         'receptions', 'clients', 'commandes_client', 'factures', 'bons_livraison',
         'camions', 'tournees', 'zones_preparation', 'devis', 'comptabilite',
         'previsions_stock', 'gestion_prix', 'alertes_config', 'configuration',
-        'fiches_employes',
+        'fiches_employes', 'referentiels',
     ];
 
     public function index(): JsonResponse
@@ -197,6 +197,7 @@ class RolePermissionController extends Controller
             'alertes_config' => 'Configuration Alertes',
             'configuration' => 'Configuration Système',
             'fiches_employes' => 'Fiches Employés',
+            'referentiels' => 'Référentiels',
         ];
 
         return response()->json($moduleLabels);
