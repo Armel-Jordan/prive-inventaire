@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Observers\JournalModifications;
 use App\Services\Planificateur;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         // production (MySQL) et tests ne sont pas affectés.
         if ($this->app->environment('local') && config('database.default') === 'sqlite') {
             config(['database.connections.mysql' => config('database.connections.sqlite')]);
+        }
+
+        // Journal des modifications (écran Historique) des fiches et documents.
+        foreach (array_keys(JournalModifications::MODELES) as $modele) {
+            $modele::observe(JournalModifications::class);
         }
 
         // Tâches planifiées des entreprises : échéances vérifiées chaque minute par le planificateur
