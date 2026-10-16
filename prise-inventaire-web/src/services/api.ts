@@ -979,6 +979,55 @@ export async function deleteTaxe(id: number): Promise<void> {
   await fetchApi(`/taxes/${id}`, { method: 'DELETE' });
 }
 
+// ── Référentiels génériques (unités, catégories, devises…) ──────────────────
+export type TypeReferentiel =
+  | 'unites'
+  | 'unite_conversions'
+  | 'categories'
+  | 'fabricants'
+  | 'modes_paiement'
+  | 'conditions_paiement'
+  | 'comptes_bancaires'
+  | 'devises'
+  | 'entrepots'
+  | 'territoires'
+  | 'itineraires'
+  | 'representants'
+  | 'transporteurs'
+  | 'raisons'
+  | 'statuts_personnalises';
+
+export interface FicheReferentiel {
+  id: number;
+  [champ: string]: unknown;
+}
+
+export interface TauxDevise {
+  id: number;
+  taux: string;
+  date_effet: string;
+}
+
+export async function getReferentiel(type: TypeReferentiel, actifsSeulement = false): Promise<FicheReferentiel[]> {
+  return fetchApi(`/referentiels/${type}${actifsSeulement ? '?actif=1' : ''}`);
+}
+
+export async function createReferentiel(type: TypeReferentiel, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateReferentiel(type: TypeReferentiel, id: number, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteReferentiel(type: TypeReferentiel, id: number): Promise<void> {
+  await fetchApi(`/referentiels/${type}/${id}`, { method: 'DELETE' });
+}
+
+export async function getHistoriqueDevise(id: number): Promise<TauxDevise[]> {
+  return fetchApi(`/referentiels/devises/${id}/historique`);
+}
+
 // ── Groupes de taxes (TPS + TVQ, TVA + CAC…) ────────────────────────────────
 export type AppliqueSur = 'base' | 'base_et_taxes_precedentes' | 'taxe_precedente';
 

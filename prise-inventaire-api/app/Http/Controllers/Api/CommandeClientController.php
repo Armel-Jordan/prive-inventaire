@@ -92,7 +92,7 @@ class CommandeClientController extends Controller
                     'produit_id' => $ligneData['produit_id'],
                     'quantite' => $ligneData['quantite'],
                     'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                    'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                    'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
                     'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                 ]);
                 $ligne->calculerMontants();
@@ -146,7 +146,7 @@ class CommandeClientController extends Controller
                         'produit_id' => $ligneData['produit_id'],
                         'quantite' => $ligneData['quantite'],
                         'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                        'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                        'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
                         'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                     ]);
                     $ligne->calculerMontants();

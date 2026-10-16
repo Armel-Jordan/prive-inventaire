@@ -53,9 +53,8 @@ class ReceptionArrivagesLigne extends Model
             $ligneCommande->quantite_recue += $reception->quantite_recue;
             $ligneCommande->save();
 
-            $produit = $ligneCommande->produit;
-            $produit->quantite_stock += $reception->quantite_recue;
-            $produit->save();
+            // Les produits n'ont pas de colonne de stock (le stock de PI vient des comptages) : la mise à
+            // jour de « quantite_stock » qui figurait ici faisait échouer toute réception (colonne inexistante).
 
             $ligneCommande->commande->updateStatut();
         });

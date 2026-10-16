@@ -52,6 +52,7 @@ const MODULE_LABELS: Record<string, string> = {
   alertes_config: 'Configuration Alertes',
   configuration: 'Configuration Système',
   fiches_employes: 'Fiches Employés',
+  referentiels: 'Référentiels',
 };
 
 const MODULES = Object.keys(MODULE_LABELS);

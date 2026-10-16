@@ -26,6 +26,9 @@ class ComClientLigne extends Model
         'montant_ttc' => 'decimal:2',
     ];
 
+    // Taux appliqué quand la ligne n'en précise pas (saisie directe ou conversion d'un devis).
+    const TAUX_TVA_DEFAUT = 20;
+
     public function commande(): BelongsTo
     {
         return $this->belongsTo(ComClientEntete::class, 'com_entete_id');
