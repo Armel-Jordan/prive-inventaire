@@ -41,6 +41,8 @@ import FacturesPage from '@/pages/FacturesPage';
 import BonsLivraisonPage from '@/pages/BonsLivraisonPage';
 import TourneesPage from '@/pages/TourneesPage';
 import ComptabilitePage from '@/pages/ComptabilitePage';
+import PlanComptablePage from '@/pages/PlanComptablePage';
+import ExercicesComptablesPage from '@/pages/ExercicesComptablesPage';
 import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
 import PiecesJointesPage from '@/pages/PiecesJointesPage';
@@ -133,6 +135,8 @@ function AppRoutes() {
         <Route path="bons-livraison" element={<BonsLivraisonPage />} />
         <Route path="tournees" element={<TourneesPage />} />
         <Route path="comptabilite" element={<ComptabilitePage />} />
+        <Route path="plan-comptable" element={<PlanComptablePage />} />
+        <Route path="exercices-comptables" element={<ExercicesComptablesPage />} />
         <Route path="previsions-stock" element={<PrevisionsStockPage />} />
         <Route path="devis" element={<DevisPage />} />
         <Route path="pieces-jointes" element={<PiecesJointesPage />} />
