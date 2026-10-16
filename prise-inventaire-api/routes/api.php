@@ -274,7 +274,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('pieces-jointes')->group(function () {
         Route::get('/', [PieceJointeController::class, 'index']);
         Route::get('/categories', [PieceJointeController::class, 'categories']);
-        Route::post('/', [PieceJointeController::class, 'store'])->middleware('throttle:60,1');
+        Route::post('/', [PieceJointeController::class, 'store'])->middleware('throttle:60,1,pieces-jointes-ajout');
         Route::get('/{id}/fichier', [PieceJointeController::class, 'fichier'])->whereNumber('id');
         Route::put('/{id}', [PieceJointeController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [PieceJointeController::class, 'destroy'])->whereNumber('id');
@@ -655,7 +655,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/catalogue', [CourrielModeleController::class, 'catalogue']);
         Route::get('/parametres', [CourrielParametresController::class, 'show']);
         Route::put('/parametres', [CourrielParametresController::class, 'update'])->middleware('role:admin');
-        Route::post('/parametres/test', [CourrielParametresController::class, 'tester'])->middleware(['role:admin', 'throttle:5,1']);
+        Route::post('/parametres/test', [CourrielParametresController::class, 'tester'])->middleware(['role:admin', 'throttle:5,1,courriel-test']);
         Route::get('/modeles', [CourrielModeleController::class, 'index']);
         Route::post('/modeles', [CourrielModeleController::class, 'store']);
         Route::post('/modeles/apercu', [CourrielModeleController::class, 'apercu']);
@@ -665,9 +665,10 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         // Envoi des documents, file d'envoi et historique.
         Route::get('/preparer', [CourrielEnvoiController::class, 'preparer']);
         Route::get('/envois', [CourrielEnvoiController::class, 'index']);
-        Route::post('/envois', [CourrielEnvoiController::class, 'store'])->middleware('throttle:30,1');
+        // Envois et relances partagent la même limite (30 courriels par minute), distincte des autres routes.
+        Route::post('/envois', [CourrielEnvoiController::class, 'store'])->middleware('throttle:30,1,courriel-envoi');
         Route::get('/envois/{id}', [CourrielEnvoiController::class, 'show'])->whereNumber('id');
-        Route::post('/envois/{id}/reessayer', [CourrielEnvoiController::class, 'reessayer'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::post('/envois/{id}/reessayer', [CourrielEnvoiController::class, 'reessayer'])->whereNumber('id')->middleware('throttle:30,1,courriel-envoi');
     });
 
     // Configuration des numéros
