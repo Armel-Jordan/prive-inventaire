@@ -1,17 +1,27 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogIn, Building2, AlertCircle, ShieldCheck } from 'lucide-react';
-import { useAuth, type ResultatConnexion } from '@/contexts/AuthContext';
+import { MARQUE_SESSION_EXPIREE, useAuth, type ResultatConnexion } from '@/contexts/AuthContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { NOM_APPLICATION } from '@/config/application';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, validerDeuxFacteurs } = useAuth();
   const { t } = useLanguage();
   const ts = t.security;
+  // Page demandée avant le retour à la connexion, reprise ensuite (sauf la connexion elle-même).
+  const depuis = (location.state as { depuis?: string } | null)?.depuis;
+  const destination = depuis && !depuis.startsWith('/login') ? depuis : '/';
   const [form, setForm] = useState({ email: '', password: '', tenant_slug: '' });
   const [error, setError] = useState('');
+  // Session fermée par l'API (jeton périmé ou révoqué) : expliqué une fois, à l'arrivée sur la page.
+  const [sessionExpiree] = useState(() => {
+    const marque = sessionStorage.getItem(MARQUE_SESSION_EXPIREE) === '1';
+    sessionStorage.removeItem(MARQUE_SESSION_EXPIREE);
+    return marque;
+  });
   const [loading, setLoading] = useState(false);
   // Double authentification : défi remis après le mot de passe, puis code de l'application ou de secours.
   const [defi, setDefi] = useState<string | null>(null);
@@ -22,7 +32,7 @@ export default function LoginPage() {
     if (result.needsProfile) {
       navigate('/complete-profile');
     } else {
-      navigate('/');
+      navigate(destination, { replace: true });
     }
   }
 
@@ -134,8 +144,15 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-1">Connectez-vous à votre espace</p>
         </div>
 
+        {sessionExpiree && !error && (
+          <div role="status" className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800">
+            <AlertCircle size={20} />
+            <span className="text-sm">{t.auth.sessionExpired}</span>
+          </div>
+        )}
+
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+          <div role="alert" className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
             <AlertCircle size={20} />
             <span className="text-sm">{error}</span>
           </div>

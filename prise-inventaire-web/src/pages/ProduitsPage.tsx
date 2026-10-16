@@ -6,6 +6,7 @@ import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -112,8 +113,9 @@ export default function ProduitsPage() {
       }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      // Raison donnée par l'API (numéro déjà pris, champ invalide) plutôt qu'un message générique.
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     }
   }
 
@@ -122,8 +124,8 @@ export default function ProduitsPage() {
       await deleteProduit(id);
       toast('Produit supprimé');
       loadData();
-    } catch {
-      toast('Erreur lors de la suppression', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la suppression'), 'error');
     } finally {
       setConfirmId(null);
     }
@@ -154,6 +156,8 @@ export default function ProduitsPage() {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
       let imported = 0, errors = 0;
+      // Lignes refusées, avec leur numéro et la raison donnée par l'API (seul un total était affiché).
+      const refus: string[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';').map(v => v.trim());
         const row: Record<string, string> = {};
@@ -163,10 +167,14 @@ export default function ProduitsPage() {
             const secteur = secteurs.find(s => s.code === row.secteur_code);
             await createProduit({ numero: row.numero, description: row.description, mesure: row.mesure || 'UN', type: row.type || '', secteur_id: secteur?.id });
             imported++;
-          } catch { errors++; }
+          } catch (e) {
+            errors++;
+            refus.push(`ligne ${i + 1} (${row.numero}) : ${messageErreur(e, 'refusée')}`);
+          }
         }
       }
-      toast(`${imported} produits importés${errors ? `, ${errors} erreurs` : ''}`, errors ? 'info' : 'success');
+      const detail = refus.length ? ` — ${refus.slice(0, 3).join(' ; ')}${refus.length > 3 ? ' ; …' : ''}` : '';
+      toast(`${imported} produits importés${errors ? `, ${errors} erreurs${detail}` : ''}`, errors ? 'info' : 'success');
       loadData();
     } catch {
       toast('Erreur lors de l\'import', 'error');

@@ -16,6 +16,16 @@
 
 Rien ne change pour un compte qui n'active pas la double authentification : la connexion reste celle d'aujourd'hui.
 
+### Fin de session
+
+- **Déconnexion** : le jeton de connexion est révoqué par l'API (`POST /auth/logout`). Il restait auparavant
+  valable après la déconnexion.
+- **Session expirée ou fermée** (jeton révoqué, changement de mot de passe sur un autre poste…) : au premier
+  refus de l'API (401), l'application revient à l'écran de connexion avec le message « Votre session a expiré
+  ou a été fermée ». Après la connexion, elle rouvre la page qui était demandée.
+- Un appel à l'API sans jeton reçoit toujours un **401 JSON**, même sans en-tête `Accept: application/json`
+  (il renvoyait une erreur 500).
+
 ---
 
 ## 2. Mot de passe oublié

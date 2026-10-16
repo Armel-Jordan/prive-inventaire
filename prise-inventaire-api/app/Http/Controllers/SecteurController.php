@@ -69,7 +69,9 @@ class SecteurController extends Controller
         $secteur = Secteur::findOrFail($id);
 
         $request->validate([
-            'code' => ['sometimes', 'string', 'max:10', TenantRule::unique('secteurs', 'code', $id), 'regex:/^[A-Za-z]\d{1,2}$/'],
+            // Mêmes règles qu'à la création : un code « ST1 » ou « SEC-001 » (numérotation automatique) était
+            // accepté à la création puis refusé à chaque modification du secteur.
+            'code' => ['sometimes', 'string', 'max:10', TenantRule::unique('secteurs', 'code', $id)],
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',

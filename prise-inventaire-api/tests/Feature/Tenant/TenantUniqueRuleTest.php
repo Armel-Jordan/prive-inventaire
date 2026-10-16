@@ -54,4 +54,24 @@ class TenantUniqueRuleTest extends TestCase
             ->postJson('/api/fournisseurs', ['code' => 'DUP', 'raison_sociale' => 'Fourn B'])
             ->assertSuccessful();
     }
+
+    public function test_update_checks_uniqueness_within_the_tenant_only(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create(['modules' => ['achats']]);
+        $this->seedFournisseur($tenantA->id, 'DUP');
+        $this->seedFournisseur($tenantB->id, 'PRIS');
+        $fournisseurB = app(TenantContext::class)->runAsTenant(
+            $tenantB->id,
+            fn () => Fournisseur::create(['code' => 'B-1', 'raison_sociale' => 'Fourn B', 'actif' => true])
+        );
+
+        $this->actAs($tenantB);
+        $modifier = fn (string $code) => $this->withHeader('X-Tenant-Slug', $tenantB->slug)
+            ->putJson("/api/fournisseurs/{$fournisseurB->id}", ['code' => $code, 'raison_sociale' => 'Fourn B']);
+
+        $modifier('B-1')->assertSuccessful();
+        $modifier('DUP')->assertSuccessful();
+        $modifier('PRIS')->assertStatus(422)->assertJsonValidationErrors(['code']);
+    }
 }

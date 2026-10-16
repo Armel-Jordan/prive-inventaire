@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -59,9 +59,12 @@ import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import SuperAdminTenantPage from '@/pages/SuperAdminTenantPage';
 import SuperAdminNewTenantPage from '@/pages/SuperAdminNewTenantPage';
+import NotificationsPage from '@/pages/NotificationsPage';
+import PageIntrouvable from '@/pages/PageIntrouvable';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -72,7 +75,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // La page demandée est reprise après la connexion (elle ramenait toujours au tableau de bord).
+    return <Navigate to="/login" replace state={{ depuis: `${location.pathname}${location.search}` }} />;
   }
 
   return <>{children}</>;
@@ -138,6 +142,9 @@ function AppRoutes() {
         <Route path="courriels" element={<CourrielsPage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        {/* Adresse inconnue : page introuvable dans le cadre de l'application (page blanche auparavant). */}
+        <Route path="*" element={<PageIntrouvable />} />
       </Route>
       
       {/* Routes Super Admin */}
