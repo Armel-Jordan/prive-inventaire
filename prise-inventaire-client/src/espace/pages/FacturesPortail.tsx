@@ -56,9 +56,9 @@ export default function FacturesPortail() {
                   </div>
                   <BadgeFacture statut={facture.statut} enRetard={enRetard} />
                   <div className="text-right text-sm sm:w-40">
-                    <p className="font-medium whitespace-nowrap">{montant(facture.montant_ttc, language, devise)}</p>
+                    <p className="font-medium whitespace-nowrap">{montant(facture.montant_ttc, language, facture.devise ?? devise)}</p>
                     {facture.statut !== 'payee' && reste > 0 && (
-                      <p className={`text-xs whitespace-nowrap ${enRetard ? 'text-red-600' : 'text-gray-500'}`}>{tp.remaining} : {montant(reste, language, devise)}</p>
+                      <p className={`text-xs whitespace-nowrap ${enRetard ? 'text-red-600' : 'text-gray-500'}`}>{tp.remaining} : {montant(reste, language, facture.devise ?? devise)}</p>
                     )}
                   </div>
                   <button type="button" onClick={() => { void pdf(facture); }} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title={tp.downloadPdf} aria-label={`${tp.downloadPdf} ${facture.numero}`}>

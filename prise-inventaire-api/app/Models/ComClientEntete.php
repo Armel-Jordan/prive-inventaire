@@ -18,7 +18,7 @@ class ComClientEntete extends Model
     protected $fillable = [
         'tenant_id', 'numero', 'client_id', 'date_commande', 'date_livraison_souhaitee',
         'statut', 'remise_globale', 'montant_ht', 'montant_tva', 'montant_ttc',
-        'notes', 'motif_refus', 'validee_par', 'created_by',
+        'notes', 'motif_refus', 'validee_par', 'created_by', 'devise', 'taux_change',
     ];
 
     protected $casts = [

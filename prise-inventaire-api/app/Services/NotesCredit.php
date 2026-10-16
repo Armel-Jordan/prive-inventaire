@@ -53,7 +53,7 @@ class NotesCredit
         $emis = $this->totauxEmis($facture);
 
         return [
-            'facture' => $facture->only(['id', 'numero', 'statut', 'client_id', 'montant_ht', 'montant_tva', 'montant_ttc', 'montant_paye', 'montant_credite', 'reste_a_payer'])
+            'facture' => $facture->only(['id', 'numero', 'statut', 'client_id', 'montant_ht', 'montant_tva', 'montant_ttc', 'montant_paye', 'montant_credite', 'reste_a_payer', 'devise'])
                 + ['date_facture' => $facture->date_facture?->toDateString(), 'client' => $facture->client?->only(['id', 'code', 'raison_sociale'])],
             'creditable' => in_array($facture->statut, self::FACTURES_CREDITABLES, true),
             'deja_credite' => $emis,
@@ -122,6 +122,9 @@ class NotesCredit
                 $avoir = Avoir::create($entete + [
                     'facture_id' => $facture->id,
                     'client_id' => $facture->client_id,
+                    // Dans la devise de la facture, à son taux.
+                    'devise' => $facture->devise,
+                    'taux_change' => $facture->taux_change ?? 1,
                     'statut' => Avoir::BROUILLON,
                     'cree_par' => $auteur,
                 ]);
@@ -192,6 +195,9 @@ class NotesCredit
             $this->verifierDisponible($avoir, $montant, $date, 'date');
             if (! $facture || $facture->client_id !== $avoir->client_id) {
                 throw ValidationException::withMessages(['facture_id' => 'Choisissez une facture du même client.']);
+            }
+            if (! DevisesVente::memeDevise($avoir->devise, $facture->devise)) {
+                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} n'est pas dans la devise de la note de crédit."]);
             }
             if (! in_array($facture->statut, self::FACTURES_DUES, true)) {
                 throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} ne reste pas due."]);

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Client extends Model
 {
@@ -18,6 +19,8 @@ class Client extends Model
         'code',
         'raison_sociale',
         'condition_paiement_id',
+        // Devise du client (null : celle de l'entreprise), reprise par ses documents de vente.
+        'devise',
         'adresse_facturation',
         'adresse_livraison',
         'ville',
@@ -71,9 +74,10 @@ class Client extends Model
 
     public function updateEncours(): void
     {
+        // Dans la devise de l'entreprise : chaque reste au taux de sa facture.
         $this->encours_actuel = $this->factures()
             ->whereIn('statut', ['emise', 'partiellement_payee'])
-            ->sum('reste_a_payer');
+            ->sum(DB::raw('reste_a_payer * taux_change'));
         $this->save();
     }
 

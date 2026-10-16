@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\Configuration;
 use App\Models\DemandeAcompte;
@@ -31,7 +32,10 @@ class DemandesAcompte
             throw new DomainException("Numéro requis : activez la numérotation automatique des demandes d'acompte (Configuration → Numérotation).");
         }
 
-        return DB::transaction(fn () => DemandeAcompte::create($this->champs($donnees) + [
+        // Devise de la demande : celle demandée, sinon celle du client.
+        $devise = app(DevisesVente::class)->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, Client::find((int) $donnees['client_id']));
+
+        return DB::transaction(fn () => DemandeAcompte::create($devise + $this->champs($donnees) + [
             'client_id' => $donnees['client_id'],
             'numero' => Configuration::consommerNumero('demande_acompte', $tenantId),
             'statut' => DemandeAcompte::BROUILLON,
@@ -95,6 +99,9 @@ class DemandesAcompte
                 'montant' => $demande->montant,
                 'commande_id' => $commande && ! in_array($commande->statut, ['refusee', 'annulee'], true) ? $commande->id : null,
                 'demande_id' => $demande->id,
+                // Dans la devise de la demande, à son taux.
+                'devise' => $demande->devise,
+                'taux_change' => (float) ($demande->taux_change ?: 1),
                 'notes' => "Demande d'acompte {$demande->numero}",
             ], $auteur);
             $demande->update(['statut' => DemandeAcompte::PAYEE, 'payee_le' => now(), 'acompte_id' => $acompte->id]);

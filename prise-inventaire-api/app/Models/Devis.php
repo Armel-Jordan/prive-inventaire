@@ -24,6 +24,8 @@ class Devis extends Model
         'notes',
         'created_by',
         'commande_id',
+        'devise',
+        'taux_change',
     ];
 
     protected $casts = [

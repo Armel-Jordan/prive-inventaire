@@ -45,7 +45,7 @@ class PortailCommandeController extends Controller
             ->where('statut', '!=', 'brouillon')
             ->withCount('lignes')
             ->orderByDesc('date_commande')->orderByDesc('id')
-            ->paginate(20, ['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'montant_ht', 'montant_ttc', 'portail_compte_id']);
+            ->paginate(20, ['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'montant_ht', 'montant_ttc', 'portail_compte_id', 'devise']);
 
         return response()->json($page);
     }
@@ -56,7 +56,7 @@ class PortailCommandeController extends Controller
         $facture = Facture::where('commande_id', $commande->id)->whereNotIn('statut', ['brouillon', 'annulee'])->first(['id', 'numero', 'statut']);
 
         return response()->json([
-            'commande' => $commande->only(['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'motif_refus', 'notes', 'montant_ht', 'montant_tva', 'montant_ttc', 'portail_compte_id']) + [
+            'commande' => $commande->only(['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'motif_refus', 'notes', 'montant_ht', 'montant_tva', 'montant_ttc', 'portail_compte_id', 'devise']) + [
                 'lignes' => $commande->lignes->map(fn ($l) => [
                     // produit_id : pour « commander à nouveau ».
                     'produit_id' => $l->produit_id,
@@ -108,7 +108,7 @@ class PortailCommandeController extends Controller
         $page = Facture::where('client_id', $this->client($request)->id)
             ->whereNotIn('statut', ['brouillon', 'annulee'])
             ->orderByDesc('date_facture')->orderByDesc('id')
-            ->paginate(20, ['id', 'numero', 'date_facture', 'date_echeance', 'statut', 'montant_ttc', 'reste_a_payer', 'commande_id']);
+            ->paginate(20, ['id', 'numero', 'date_facture', 'date_echeance', 'statut', 'montant_ttc', 'reste_a_payer', 'commande_id', 'devise']);
 
         return response()->json($page);
     }

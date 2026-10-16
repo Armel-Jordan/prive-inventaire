@@ -104,6 +104,8 @@ export interface CommandeResume {
   montant_ttc: string;
   portail_compte_id: number | null;
   lignes_count: number;
+  /** Devise de la commande (null : celle de l'entreprise). */
+  devise?: string | null;
 }
 
 export interface DetailCommande {
@@ -135,6 +137,8 @@ export interface FacturePortail {
   montant_ttc: string;
   reste_a_payer: string;
   commande_id: number | null;
+  /** Devise de la facture (null : celle de l'entreprise). */
+  devise?: string | null;
 }
 
 // --- Session, dernière entreprise et panier, gardés dans le navigateur -----------------------------------

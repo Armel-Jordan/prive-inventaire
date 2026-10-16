@@ -28,7 +28,7 @@ class Avoir extends Model
     protected $fillable = [
         'tenant_id', 'numero', 'facture_id', 'client_id', 'date_avoir', 'statut', 'motif', 'notes',
         'montant_ht', 'montant_tva', 'montant_ttc', 'montant_impute', 'montant_rembourse',
-        'emis_le', 'emis_par', 'cree_par',
+        'emis_le', 'emis_par', 'cree_par', 'devise', 'taux_change',
     ];
 
     protected $casts = [

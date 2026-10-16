@@ -17,12 +17,15 @@ import type { Produit } from '../types';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import ChampDevise from '@/components/ChampDevise';
+import { useLanguage } from '@/i18n/useLanguage';
 
 export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut } = usePermissions();
-  const devise = useDevise();
+  const deviseEntreprise = useCodeDevise();
+  const { t } = useLanguage();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [devisList, setDevisList] = useState<DevisRecord[]>([]);
@@ -41,6 +44,9 @@ export default function DevisPage() {
     date_devis: aujourdhui(),
     date_validite: '',
     notes: '',
+    // Devise du devis (vide : celle de l'entreprise) et son taux ; par défaut, celle du client.
+    devise: '',
+    taux: '1',
   });
   const [lignes, setLignes] = useState<{ id?: number; produit_id: number; quantite: number; prix_unitaire: number }[]>([]);
 
@@ -80,6 +86,9 @@ export default function DevisPage() {
         date_devis: formData.date_devis,
         date_validite: formData.date_validite,
         notes: formData.notes || undefined,
+        // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
+        devise: formData.devise || deviseEntreprise,
+        taux_change: formData.devise ? Number(formData.taux) : undefined,
         lignes,
       };
       if (editingId) {
@@ -149,6 +158,8 @@ export default function DevisPage() {
       date_devis: dateSaisie(devis.date_devis),
       date_validite: dateSaisie(devis.date_validite),
       notes: devis.notes || '',
+      devise: devis.devise ?? '',
+      taux: String(devis.taux_change ?? 1),
     });
     setLignes(devis.lignes.map(l => ({
       id: l.id,
@@ -168,7 +179,10 @@ export default function DevisPage() {
       // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
       const produit = produits.find(p => p.id === value);
       if (produit && newLignes[index].prix_unitaire === 0) {
-        newLignes[index].prix_unitaire = Number(produit.prix_unitaire) || 0;
+        // Converti pour un devis en devise étrangère.
+        const taux = Number(formData.taux);
+        const prix = Number(produit.prix_unitaire) || 0;
+        newLignes[index].prix_unitaire = formData.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
       }
     }
     setLignes(newLignes);
@@ -178,7 +192,7 @@ export default function DevisPage() {
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '' });
+    setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
     setLignes([]);
   };
 
@@ -197,7 +211,9 @@ export default function DevisPage() {
   };
 
   const fmtDate = (d: string) => formatDateDocument(d);
-  const montant = (v: number | string) => formatMontant(v, devise);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const totalLignes = lignes.reduce((sum, l) => sum + l.quantite * l.prix_unitaire, 0);
 
   return (
@@ -257,7 +273,7 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-sm">{devis.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_devis)}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_validite)}</td>
-                  <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total)}</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total, devis.devise)}</td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(devis.statut)}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
@@ -320,7 +336,12 @@ export default function DevisPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Client *</label>
-                  <select required value={formData.client_id} onChange={(e) => setFormData({ ...formData, client_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                  <select required value={formData.client_id} onChange={(e) => {
+                      // Devise du client proposée, avec son taux.
+                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
+                      setFormData({ ...formData, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
+                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
+                    }} className="w-full px-3 py-2 border rounded-lg">
                     <option value="">Sélectionner...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
                   </select>
@@ -339,6 +360,9 @@ export default function DevisPage() {
                   <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
               </div>
+              {editingId ? (formData.devise && <p className="text-sm text-gray-500">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
+                <ChampDevise valeur={{ devise: formData.devise, taux: formData.taux }} onChange={v => setFormData(f => ({ ...f, devise: v.devise, taux: v.taux }))} />
+              )}
 
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -357,11 +381,11 @@ export default function DevisPage() {
                         </select>
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
                         <input type="number" step="0.01" value={ligne.prix_unitaire} onChange={(e) => updateLigne(idx, 'prix_unitaire', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 border rounded text-sm" placeholder="Prix" />
-                        <span className="text-sm text-gray-600 w-28 text-right whitespace-nowrap">{montant(ligne.quantite * ligne.prix_unitaire)}</span>
+                        <span className="text-sm text-gray-600 w-28 text-right whitespace-nowrap">{montant(ligne.quantite * ligne.prix_unitaire, formData.devise || null)}</span>
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500" aria-label="Retirer la ligne" title="Retirer la ligne"><X size={16} /></button>
                       </div>
                     ))}
-                    <div className="text-right font-medium">Total HT : {montant(totalLignes)}</div>
+                    <div className="text-right font-medium">Total HT : {montant(totalLignes, formData.devise || null)}</div>
                   </div>
                 )}
               </div>
@@ -397,7 +421,7 @@ export default function DevisPage() {
                     {selectedDevis.lignes.map((l, i) => (
                       <div key={i} className="flex justify-between text-sm">
                         <span>{l.produit?.description || `Produit #${l.produit_id}`} × {l.quantite}</span>
-                        <span className="whitespace-nowrap">{montant(l.montant_ligne)}</span>
+                        <span className="whitespace-nowrap">{montant(l.montant_ligne, selectedDevis?.devise)}</span>
                       </div>
                     ))}
                   </div>
@@ -405,7 +429,7 @@ export default function DevisPage() {
               )}
               <div className="border-t pt-3 flex justify-between font-bold">
                 <span>Total HT :</span>
-                <span>{montant(selectedDevis.montant_total)}</span>
+                <span>{montant(selectedDevis.montant_total, selectedDevis.devise)}</span>
               </div>
               {selectedDevis.notes && <p className="text-sm text-gray-500">Notes: {selectedDevis.notes}</p>}
             </div>

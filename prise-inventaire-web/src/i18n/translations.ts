@@ -792,6 +792,14 @@ export const translations = {
       deposit: 'Acompte',
       availableDeposits: 'Acomptes disponibles au {date}',
     },
+    // Devise d'un document de vente
+    currency: {
+      label: 'Devise',
+      company: '{code} (devise de l\'entreprise)',
+      rate: 'Taux : 1 {devise} = ? {reference}',
+      rateMissing: 'Taux à saisir',
+      customer: 'Devise du client',
+    },
     // Relances de paiement
     reminders: {
       nav: 'Relances',
@@ -3004,6 +3012,14 @@ export const translations = {
       creditNote: 'Credit note',
       deposit: 'Deposit',
       availableDeposits: 'Available deposits as of {date}',
+    },
+    // Currency of a sales document
+    currency: {
+      label: 'Currency',
+      company: '{code} (company currency)',
+      rate: 'Rate: 1 {devise} = ? {reference}',
+      rateMissing: 'Rate to enter',
+      customer: 'Customer currency',
     },
     // Payment reminders
     reminders: {

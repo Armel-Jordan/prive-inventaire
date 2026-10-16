@@ -30,7 +30,8 @@ import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
-import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import ChampDevise from '@/components/ChampDevise';
 
 
 export default function CommandesClientPage() {
@@ -40,8 +41,10 @@ export default function CommandesClientPage() {
   const { toasts, toast, dismiss } = useToast();
   // Commande pour laquelle saisir un acompte (réservé à elle, appliqué à sa facture à l'émission).
   const [acomptePour, setAcomptePour] = useState<ComClientEntete | null>(null);
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
+  const deviseEntreprise = useCodeDevise();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
@@ -62,6 +65,9 @@ export default function CommandesClientPage() {
     date_livraison_souhaitee: '',
     remise_globale: '0',
     notes: '',
+    // Devise de la commande (vide : celle de l'entreprise) et son taux ; par défaut, celle du client.
+    devise: '',
+    taux: '1',
   });
   const [lignes, setLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
 
@@ -100,6 +106,9 @@ export default function CommandesClientPage() {
       date_livraison_souhaitee: formData.date_livraison_souhaitee || undefined,
       remise_globale: parseFloat(formData.remise_globale) || 0,
       notes: formData.notes || undefined,
+      // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
+      devise: formData.devise || deviseEntreprise,
+      taux_change: formData.devise ? Number(formData.taux) : undefined,
       lignes: lignes.map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
@@ -130,6 +139,8 @@ export default function CommandesClientPage() {
       date_livraison_souhaitee: dateSaisie(cmd.date_livraison_souhaitee),
       remise_globale: String(cmd.remise_globale ?? '0'),
       notes: cmd.notes || '',
+      devise: cmd.devise ?? '',
+      taux: String(cmd.taux_change ?? 1),
     });
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -204,7 +215,10 @@ export default function CommandesClientPage() {
     // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
     if (field === 'produit_id' && newLignes[index].prix_unitaire_ht === 0) {
       const produit = produits.find(p => p.id === value);
-      if (produit) newLignes[index].prix_unitaire_ht = Number(produit.prix_unitaire) || 0;
+      // Converti pour une commande en devise étrangère.
+      const taux = Number(formData.taux);
+      const prix = Number(produit?.prix_unitaire) || 0;
+      if (produit) newLignes[index].prix_unitaire_ht = formData.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
     }
     setLignes(newLignes);
   };
@@ -221,6 +235,8 @@ export default function CommandesClientPage() {
       date_livraison_souhaitee: '',
       remise_globale: '0',
       notes: '',
+      devise: '',
+      taux: '1',
     });
     setLignes([]);
   };
@@ -309,7 +325,7 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.client?.raison_sociale}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(cmd.date_commande)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {montant(Number(cmd.montant_ttc ?? 0))}
+                    {montant(Number(cmd.montant_ttc ?? 0), cmd.devise)}
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
                   <td className="px-4 py-3">
@@ -426,7 +442,12 @@ export default function CommandesClientPage() {
                   <select
                     required
                     value={formData.client_id}
-                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+onChange={(e) => {
+                      // Devise du client proposée, avec son taux.
+                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
+                      setFormData({ ...formData, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
+                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
+                    }}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="">Sélectionner...</option>
@@ -467,6 +488,9 @@ export default function CommandesClientPage() {
                   />
                 </div>
               </div>
+              {editingId ? (formData.devise && <p className="text-sm text-gray-500 dark:text-gray-400">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
+                <ChampDevise valeur={{ devise: formData.devise, taux: formData.taux }} onChange={v => setFormData(f => ({ ...f, devise: v.devise, taux: v.taux }))} />
+              )}
 
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Notes</label>
@@ -519,7 +543,7 @@ export default function CommandesClientPage() {
                           placeholder="Prix HT"
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
-                          {montant((ligne.quantite * ligne.prix_unitaire_ht))}
+                          {montant((ligne.quantite * ligne.prix_unitaire_ht), formData.devise || null)}
                         </span>
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500 hover:text-red-700">
                           <X size={16} />
@@ -527,7 +551,7 @@ export default function CommandesClientPage() {
                       </div>
                     ))}
                     <div className="text-right font-medium text-gray-900 dark:text-white">
-                      Total HT: {montant(totalLignes)}
+                      Total HT: {montant(totalLignes, formData.devise || null)}
                     </div>
                   </div>
                 )}
@@ -579,16 +603,16 @@ export default function CommandesClientPage() {
               <div className="border-t pt-3 dark:border-gray-700">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Montant HT:</span>
-                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ht ?? 0))}</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ht ?? 0), selectedCommande.devise)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">TVA:</span>
-                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_tva ?? 0))}</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_tva ?? 0), selectedCommande.devise)}</span>
                 </div>
-                <RecapitulatifTaxes recapitulatif={selectedCommande.recapitulatif_taxes} />
+                <RecapitulatifTaxes recapitulatif={selectedCommande.recapitulatif_taxes} devise={selectedCommande.devise} />
                 <div className="flex justify-between font-bold">
                   <span className="dark:text-white">Total TTC:</span>
-                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ttc ?? 0))}</span>
+                  <span className="dark:text-white">{montant(Number(selectedCommande.montant_ttc ?? 0), selectedCommande.devise)}</span>
                 </div>
               </div>
               {selectedCommande.motif_refus && (

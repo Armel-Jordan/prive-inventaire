@@ -24,6 +24,9 @@ export interface Acompte {
   montant_rembourse: string;
   disponible: number;
   etat: EtatAcompte;
+  /** Devise de l'acompte (null : celle de l'entreprise). */
+  devise?: string | null;
+  taux_change?: string;
   client?: { id: number; code: string; raison_sociale: string };
   commande?: { id: number; numero: string; statut?: string } | null;
   demande?: { id: number; numero: string } | null;
@@ -44,6 +47,8 @@ export interface SaisieAcompte {
   montant: number;
   commande_id?: number | null;
   notes?: string | null;
+  devise?: string;
+  taux_change?: number;
 }
 
 export type StatutDemande = 'brouillon' | 'envoyee' | 'payee';
@@ -59,6 +64,8 @@ export interface DemandeAcompte {
   montant: string;
   statut: StatutDemande;
   etat: EtatDemande;
+  devise?: string | null;
+  taux_change?: string;
   devis_id: number | null;
   commande_id: number | null;
   acompte_id: number | null;
@@ -77,6 +84,8 @@ export interface SaisieDemande {
   montant: number;
   devis_id?: number | null;
   commande_id?: number | null;
+  devise?: string;
+  taux_change?: number;
 }
 
 const requete = (parametres: Record<string, string | number | undefined>) => {

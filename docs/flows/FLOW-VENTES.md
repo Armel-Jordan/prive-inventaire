@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — relances de paiement (§7 ter)
+> Dernière mise à jour : 2026-10-16 — ventes en devises étrangères (§5.11)
 
 ---
 
@@ -787,6 +787,57 @@ Plan de parité fripv2, phase 1.5 : les conditions de paiement de fripv2 (« Net
 - `facture_paiements.escompte`.
 
 Le code est dans le service `App\Services\ConditionsPaiement` et la migration `2026_10_16_100032_conditions_paiement_et_escompte`.
+
+### 5.11 Ventes en devises étrangères
+
+Plan de parité fripv2, phase 1.5 : un client étranger achète et paie dans sa devise, comme dans fripv2 où la devise est choisie sur la fiche du client et reprise par ses transactions.
+
+**Devise d'un client :**
+- choisie sur sa fiche (liste des clients → Modifier → « Devise du client ») ;
+- parmi les devises du référentiel (Référentiels → Devises) ;
+- sans choix, c'est la devise de l'entreprise.
+
+**Devise d'un document de vente :**
+- **Devis, commande, facture** : à la création, la devise du client est proposée avec son **taux de change** (valeur d'une unité dans la devise de l'entreprise). Le taux vient du référentiel, sinon du cours du jour (même service que les commandes fournisseur), et se corrige.
+- **Prix** : ils se saisissent dans la devise du document ; le prix d'un produit proposé est converti au taux.
+- **Devise de l'entreprise pour un client étranger** : on peut la choisir ; elle l'emporte alors sur celle du client.
+- **Sans taux connu** (ni saisi, ni au référentiel), la création est refusée : 422 « Indiquez le taux de change GBP → XAF ». Rien n'est pris au taux 1 en silence.
+- **Une fois créé**, le document garde sa devise et son taux.
+- **Conversions** : le devis passe sa devise et son taux à la commande, la commande à la facture, la facture à ses notes de crédit.
+- **Acomptes et demandes d'acompte** : dans la devise du client (ou de la commande réservée).
+- **Même devise exigée** : un acompte ne paie qu'une facture de sa devise, une note de crédit ne s'impute que sur une facture de la sienne (422 sinon). La fenêtre de paiement ne propose que les acomptes de la devise de la facture.
+- **Paiements, escomptes et remboursements** : dans la devise de leur document.
+
+**Affichage :**
+- **Montants des documents** dans leur devise (« 119,25 $US ») : listes, détails, détail par taxe, fenêtres de paiement, notes de crédit, acomptes, demandes, relances, espace client.
+- **PDF** : montants dans la devise du document, avec la ligne « Devise : USD (1 USD = 600 XAF) ».
+- **Courriels** : variables de montant dans la devise du document.
+- **Recherche globale** : montants dans la devise du document.
+
+**Cumuls dans la devise de l'entreprise**, chaque montant au taux de son document :
+- **encours du client** et contrôle de l'encours maximal à l'acceptation d'une commande ;
+- **comptes clients** :
+  - le relevé indique le montant d'origine d'une facture en devise, par exemple « Facture FAC-00001 (120,00 USD) » ;
+  - une facture due donne son reste dans les deux devises (`reste`, `reste_devise`) ;
+- **fiche client** : chiffre d'affaires et encours ;
+- **tableaux de bord** : commandes, factures impayées, chiffre d'affaires, encaissements ;
+- **dépenses d'achat** : converties au taux des commandes fournisseur (elles ne l'étaient pas) ;
+- **totaux** des relances et de la liste des acomptes.
+
+**Sans devise étrangère, rien ne change** : les documents existants sont dans la devise de l'entreprise, au taux 1.
+
+| Route | Champs |
+|---|---|
+| `POST /devis`, `POST /commandes-client`, `POST /factures`, `POST /acomptes`, `POST /demandes-acompte` | `devise` (code ISO ; celui de l'entreprise pour forcer sa devise), `taux_change` |
+| `POST`, `PUT /clients/{id}` | `devise` |
+
+**Données :**
+- `clients.devise` ;
+- `devise` et `taux_change` sur `devis`, `com_client_entete`, `factures`, `avoirs`, `acomptes` et `demandes_acompte`.
+
+Code :
+- API : service `App\Services\DevisesVente`, migration `2026_10_16_100034_ventes_multi_devises` ;
+- web : composant `ChampDevise`, fonctions `useMontantDocument` et `tauxPropose` (`src/lib/documents.ts`).
 
 ---
 

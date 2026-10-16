@@ -14,6 +14,7 @@ use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
 use App\Services\Acomptes;
 use App\Services\ConditionsPaiement;
+use App\Services\DevisesVente;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -86,6 +87,7 @@ class FactureController extends Controller
             'date_echeance' => 'nullable|date',
             // Condition de paiement (référentiel) ; par défaut, celle du client, sinon celle de l'entreprise.
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
+            ...DevisesVente::regles(),
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             // Produit de l'entreprise : un id quelconque (0, ou celui d'une autre entreprise) était accepté.
@@ -102,8 +104,11 @@ class FactureController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $condition = $this->conditions->pourFacture($validated['condition_paiement_id'] ?? null, Client::find($validated['client_id']));
-        $facture = DB::transaction(function () use ($validated, $tenantId, $condition) {
+        $client = Client::find($validated['client_id']);
+        $condition = $this->conditions->pourFacture($validated['condition_paiement_id'] ?? null, $client);
+        // Devise de la facture : celle demandée, sinon celle du client ; prix saisis dans cette devise.
+        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client);
+        $facture = DB::transaction(function () use ($validated, $tenantId, $condition, $devise) {
             $numero = Configuration::consommerNumero('facture', $tenantId);
 
             $montantHt = 0;
@@ -129,7 +134,7 @@ class FactureController extends Controller
                 return compact('ht', 'tvaM', 'ttc', 'tva', 'remise', 'detail', 'groupeId') + $l;
             }, $validated['lignes']);
 
-            $facture = Facture::create([
+            $facture = Facture::create($devise + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
@@ -193,6 +198,9 @@ class FactureController extends Controller
                 'numero' => $numeroFacture,
                 'commande_id' => $commande->id,
                 'client_id' => $commande->client_id,
+                // La facture reste dans la devise de la commande, à son taux.
+                'devise' => $commande->devise,
+                'taux_change' => $commande->taux_change ?? 1,
                 'date_facture' => now(),
                 'condition_paiement_id' => $condition?->id,
                 'statut' => 'brouillon',

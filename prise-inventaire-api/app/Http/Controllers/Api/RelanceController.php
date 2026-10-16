@@ -43,7 +43,8 @@ class RelanceController extends Controller
             'totaux' => [
                 'factures' => $factures->count(),
                 'clients' => $factures->pluck('client.id')->unique()->count(),
-                'reste_a_payer' => round($factures->sum('reste_a_payer'), 2),
+                // Dans la devise de l'entreprise.
+                'reste_a_payer' => round($factures->sum('reste_reference'), 2),
                 'jamais_relancees' => $factures->where('nb_relances', 0)->count(),
             ],
         ]);

@@ -17,6 +17,9 @@ export interface FactureEnRetard {
   date_echeance: string | null;
   montant_ttc: number;
   reste_a_payer: number;
+  /** Devise de la facture (null : celle de l'entreprise) ; reste dans la devise de l'entreprise. */
+  devise?: string | null;
+  reste_reference?: number;
   retard: number;
   nb_relances: number;
   derniere_relance: { date: string; mode: ModeRelance; niveau: number; automatique: boolean } | null;

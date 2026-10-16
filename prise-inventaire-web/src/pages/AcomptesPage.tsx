@@ -4,7 +4,7 @@ import { Banknote, Eye, Pencil, Plus, Trash2, Undo2, Wallet, X } from 'lucide-re
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
-import { formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { getAcompte, getAcomptes, supprimerAcompte, type Acompte, type ListeAcomptes } from '@/services/acomptes';
 import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
 import UtiliserAcompte from '@/components/acomptes/UtiliserAcompte';
@@ -27,8 +27,9 @@ const COULEURS: Record<string, string> = {
 export default function AcomptesPage() {
   const { t, language } = useLanguage();
   const td = t.deposits;
-  const devise = useDevise();
-  const montant = (v: number | string | null | undefined) => formatMontant(v, devise, language);
+  // Montants dans la devise de chaque document (celle de l'entreprise, ou celle d'un client étranger).
+  const montantDoc = useMontantDocument();
+  const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   const [parametres] = useSearchParams();
@@ -150,8 +151,8 @@ export default function AcomptesPage() {
                   {td.modes[acompte.mode] ?? acompte.mode}
                   {acompte.reference && <span className="block text-xs font-mono text-gray-500">{acompte.reference}</span>}
                 </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(acompte.montant)}</td>
-                <td className={`px-3 py-2 text-right whitespace-nowrap ${acompte.disponible > 0 ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-400'}`}>{montant(acompte.disponible)}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap font-medium text-gray-900 dark:text-white">{montant(acompte.montant, acompte.devise)}</td>
+                <td className={`px-3 py-2 text-right whitespace-nowrap ${acompte.disponible > 0 ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-400'}`}>{montant(acompte.disponible, acompte.devise)}</td>
                 <td className="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">{acompte.commande?.numero ?? '—'}</td>
                 <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${COULEURS[acompte.etat]}`}>{td.states[acompte.etat]}</span></td>
                 <td className="px-3 py-2">
@@ -190,10 +191,10 @@ export default function AcomptesPage() {
               </div>
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <dt className="text-gray-500">{td.amount}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant)}</dd>
-              <dt className="text-gray-500">{td.applied}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant_applique)}</dd>
-              <dt className="text-gray-500">{td.refunded}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant_rembourse)}</dd>
-              <dt className="text-gray-500 font-medium">{td.available}</dt><dd className="text-right font-semibold text-gray-900 dark:text-white">{montant(detail.disponible)}</dd>
+              <dt className="text-gray-500">{td.amount}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant, detail.devise)}</dd>
+              <dt className="text-gray-500">{td.applied}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant_applique, detail.devise)}</dd>
+              <dt className="text-gray-500">{td.refunded}</dt><dd className="text-right text-gray-900 dark:text-white">{montant(detail.montant_rembourse, detail.devise)}</dd>
+              <dt className="text-gray-500 font-medium">{td.available}</dt><dd className="text-right font-semibold text-gray-900 dark:text-white">{montant(detail.disponible, detail.devise)}</dd>
               {detail.commande && <><dt className="text-gray-500">{td.reservedFor}</dt><dd className="text-right font-mono text-gray-900 dark:text-white">{detail.commande.numero}</dd></>}
               {detail.demande && <><dt className="text-gray-500">{td.origin}</dt><dd className="text-right font-mono text-gray-900 dark:text-white">{detail.demande.numero}</dd></>}
             </dl>
@@ -204,7 +205,7 @@ export default function AcomptesPage() {
                   {detail.applications!.map(a => (
                     <li key={a.id} className="flex justify-between gap-2 py-1">
                       <span className="text-gray-700 dark:text-gray-300">{formatDateDocument(a.date_paiement, language)} · <span className="font-mono">{a.facture?.numero}</span></span>
-                      <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(a.montant)}</span>
+                      <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(a.montant, detail.devise)}</span>
                     </li>
                   ))}
                 </ul>
@@ -217,7 +218,7 @@ export default function AcomptesPage() {
                   {detail.remboursements!.map(r => (
                     <li key={r.id} className="flex justify-between gap-2 py-1">
                       <span className="text-gray-700 dark:text-gray-300">{formatDateDocument(r.date_remboursement, language)} · {td.modes[r.mode ?? ''] ?? r.mode}{r.reference && ` · ${r.reference}`}</span>
-                      <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(r.montant)}</span>
+                      <span className="text-gray-900 dark:text-white whitespace-nowrap">{montant(r.montant, detail.devise)}</span>
                     </li>
                   ))}
                 </ul>

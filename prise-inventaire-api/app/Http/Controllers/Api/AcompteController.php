@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Acompte;
 use App\Services\Acomptes;
+use App\Services\DevisesVente;
 use App\Support\TenantRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +46,8 @@ class AcompteController extends Controller
                     ->when(is_numeric(str_replace(',', '.', $recherche)), fn ($m) => $m->orWhere('montant', (float) str_replace(',', '.', $recherche))));
             });
         // Requête de base (portée de l'entreprise comprise) : sur un modèle, l'accesseur « disponible » masquerait la somme.
-        $totaux = (clone $requete)->toBase()->selectRaw('COALESCE(SUM(montant), 0) AS montant, COALESCE(SUM('.self::DISPONIBLE.'), 0) AS disponible')->first();
+        // Totaux dans la devise de l'entreprise, chaque acompte à son taux.
+        $totaux = (clone $requete)->toBase()->selectRaw('COALESCE(SUM(montant * taux_change), 0) AS montant, COALESCE(SUM('.self::DISPONIBLE.' * taux_change), 0) AS disponible')->first();
         $page = $requete->with(['client:id,code,raison_sociale', 'commande:id,numero', 'demande:id,numero'])
             ->orderByDesc('date_acompte')->orderByDesc('id')
             ->paginate(min(100, max(1, (int) $request->get('per_page', 20))));
@@ -74,6 +76,7 @@ class AcompteController extends Controller
             'montant' => 'required|numeric|min:0.01|max:9999999999',
             'commande_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:2000',
+            ...DevisesVente::regles(),
         ]);
 
         return response()->json($this->acomptes->recevoir($donnees, $request->user()?->id)->load('client:id,code,raison_sociale', 'commande:id,numero'), 201);

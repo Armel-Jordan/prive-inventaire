@@ -172,6 +172,11 @@ class DocumentsVentePdf
     private function document(string $titre, Model $document, array $infos, array $contenu): array
     {
         $entete = EntreprisePdf::entete();
+        // Document en devise étrangère : ses montants dans sa devise, avec son taux parmi les informations.
+        if (! empty($document->devise)) {
+            $entete['devise'] = app(DevisesVente::class)->symbole($document->devise);
+            $infos['Devise'] = $document->devise.' (1 '.$document->devise.' = '.rtrim(rtrim(number_format((float) $document->taux_change, 6, ',', ' '), '0'), ',').' '.app(DevisesVente::class)->reference().')';
+        }
 
         return $contenu + [
             'titre' => $titre,

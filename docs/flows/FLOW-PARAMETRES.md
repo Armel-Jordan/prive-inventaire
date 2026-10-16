@@ -606,7 +606,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
 | Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé ; choisies sur les clients et les factures (échéance, escompte : FLOW-VENTES §5.10) | Une seule condition « par défaut » |
 | Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
-| Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
+| Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé. Proposées comme devise d'un client et de ses documents de vente, le taux par défaut (FLOW-VENTES §5.11) |
 | Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |
 | Transporteurs | Coordonnées, numéro de compte, lien de suivi des colis | Le lien peut contenir `{numero}`, remplacé par le numéro du colis ; il doit commencer par http:// ou https:// |
 | Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |

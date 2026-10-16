@@ -25,7 +25,7 @@ class DemandeAcompte extends Model
 
     protected $fillable = [
         'tenant_id', 'numero', 'client_id', 'date_demande', 'description', 'montant', 'statut',
-        'devis_id', 'commande_id', 'acompte_id', 'envoyee_le', 'payee_le', 'cree_par',
+        'devis_id', 'commande_id', 'acompte_id', 'envoyee_le', 'payee_le', 'cree_par', 'devise', 'taux_change',
     ];
 
     protected $casts = [

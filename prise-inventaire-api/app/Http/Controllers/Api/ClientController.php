@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Services\DevisesVente;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -75,7 +76,10 @@ class ClientController extends Controller
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
             // Condition de paiement du référentiel : reprise par les factures du client.
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
+            // Devise du client (code ISO) : reprise par ses documents de vente.
+            'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
         ]);
+        $validated['devise'] = $this->devise($validated['devise'] ?? null);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('client', $tenantId);
@@ -110,12 +114,24 @@ class ClientController extends Controller
             'encours_max' => 'nullable|numeric|min:0',
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
+            'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
             'actif' => 'sometimes|boolean',
         ]);
+        if (array_key_exists('devise', $validated)) {
+            $validated['devise'] = $this->devise($validated['devise']);
+        }
 
         $client->update($validated);
 
         return response()->json($client);
+    }
+
+    /** Devise d'un client : en majuscules ; celle de l'entreprise s'écrit null. */
+    private function devise(?string $devise): ?string
+    {
+        $code = strtoupper(trim((string) $devise));
+
+        return $code === '' || $code === app(DevisesVente::class)->reference() ? null : $code;
     }
 
     public function destroy(int $id): JsonResponse

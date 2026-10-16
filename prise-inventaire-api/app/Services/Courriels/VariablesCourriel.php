@@ -64,6 +64,10 @@ class VariablesCourriel
 
     private function duDocument(string $type, Model $d, string $langue, string $devise, ?string $codeDevise): array
     {
+        // Document de vente dans une devise étrangère : ses montants dans sa devise.
+        if ($type !== 'commande_fournisseur' && filled($d->getAttribute('devise')) && $d->getAttribute('devise') !== $codeDevise) {
+            $devise = (string) $d->getAttribute('devise');
+        }
         $montant = fn ($v) => $this->montant($v, $langue, $devise);
         $date = fn ($v) => $this->date($v, $langue);
 

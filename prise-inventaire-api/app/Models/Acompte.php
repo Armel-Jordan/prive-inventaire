@@ -17,7 +17,7 @@ class Acompte extends Model
 
     protected $fillable = [
         'tenant_id', 'client_id', 'date_acompte', 'mode', 'reference', 'montant', 'commande_id', 'demande_id',
-        'notes', 'montant_applique', 'montant_rembourse', 'enregistre_par',
+        'notes', 'montant_applique', 'montant_rembourse', 'enregistre_par', 'devise', 'taux_change',
     ];
 
     protected $casts = [

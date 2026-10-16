@@ -65,7 +65,7 @@ class VentesDashboardService
             'SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN statut IN (\'brouillon\', \'en_attente\', \'acceptee\') THEN 1 ELSE 0 END) AS en_cours,
-                COALESCE(SUM(montant_ttc), 0) AS montant_total
+                COALESCE(SUM(montant_ttc * taux_change), 0) AS montant_total
              FROM com_client_entete
              WHERE tenant_id = ?
                AND created_at BETWEEN ? AND ?',
@@ -92,7 +92,7 @@ class VentesDashboardService
                 SUM(CASE WHEN statut IN (\'emise\', \'partiellement_payee\')
                           AND date_echeance < CURDATE() THEN 1 ELSE 0 END) AS en_retard,
                 COALESCE(SUM(CASE WHEN statut IN (\'emise\', \'partiellement_payee\')
-                                  THEN reste_a_payer ELSE 0 END), 0) AS montant_impaye
+                                  THEN reste_a_payer * taux_change ELSE 0 END), 0) AS montant_impaye
              FROM factures
              WHERE tenant_id = ?
                AND created_at BETWEEN ? AND ?',

@@ -15,6 +15,7 @@ use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Fiche client (plan de parité fripv2, phase 1.1) : en-tête, synthèse des ventes, historique d'achats,
@@ -43,15 +44,16 @@ class ClientFicheController extends Controller
         $annee = (int) now()->year;
 
         $nombreFactures = $factures()->count();
-        $total = (float) $factures()->sum('montant_ht');
+        // Montants dans la devise de l'entreprise, chaque facture à son taux.
+        $total = (float) $factures()->sum(DB::raw('montant_ht * taux_change'));
         $derniere = $factures()->orderByDesc('date_facture')->orderByDesc('id')->first(['id', 'numero', 'date_facture', 'montant_ttc']);
         $premiere = $factures()->min('date_facture');
 
         // Ventes des 12 derniers mois (mois courant compris), regroupées ici pour rester indépendant du SGBD.
         $debut = now()->startOfMonth()->subMonths(11);
-        $parMois = $factures()->whereDate('date_facture', '>=', $debut->toDateString())->get(['date_facture', 'montant_ht'])
+        $parMois = $factures()->whereDate('date_facture', '>=', $debut->toDateString())->get(['date_facture', 'montant_ht', 'taux_change'])
             ->groupBy(fn ($f) => Carbon::parse($f->date_facture)->format('Y-m'))
-            ->map(fn ($groupe) => round((float) $groupe->sum('montant_ht'), 2));
+            ->map(fn ($groupe) => round((float) $groupe->sum(fn ($f) => (float) $f->montant_ht * (float) ($f->taux_change ?: 1)), 2));
         $mensuel = collect(range(0, 11))->map(function (int $decalage) use ($debut, $parMois) {
             $mois = $debut->copy()->addMonths($decalage)->format('Y-m');
 
@@ -61,8 +63,8 @@ class ClientFicheController extends Controller
         return response()->json([
             'chiffre_affaires' => [
                 'total' => round($total, 2),
-                'annee_courante' => round((float) $factures()->whereYear('date_facture', $annee)->sum('montant_ht'), 2),
-                'annee_precedente' => round((float) $factures()->whereYear('date_facture', $annee - 1)->sum('montant_ht'), 2),
+                'annee_courante' => round((float) $factures()->whereYear('date_facture', $annee)->sum(DB::raw('montant_ht * taux_change')), 2),
+                'annee_precedente' => round((float) $factures()->whereYear('date_facture', $annee - 1)->sum(DB::raw('montant_ht * taux_change')), 2),
             ],
             'factures' => [
                 'nombre' => $nombreFactures,
@@ -76,11 +78,11 @@ class ClientFicheController extends Controller
                 ] : null,
             ],
             'encours' => [
-                'montant' => round((float) $ouvertes()->sum('reste_a_payer'), 2),
+                'montant' => round((float) $ouvertes()->sum(DB::raw('reste_a_payer * taux_change')), 2),
                 'maximum' => $client->encours_max !== null ? (float) $client->encours_max : null,
                 'en_retard' => [
                     'nombre' => $ouvertes()->whereDate('date_echeance', '<', now()->toDateString())->count(),
-                    'montant' => round((float) $ouvertes()->whereDate('date_echeance', '<', now()->toDateString())->sum('reste_a_payer'), 2),
+                    'montant' => round((float) $ouvertes()->whereDate('date_echeance', '<', now()->toDateString())->sum(DB::raw('reste_a_payer * taux_change')), 2),
                 ],
             ],
             'commandes' => [
