@@ -36,6 +36,9 @@ class EcransVentesTest extends TestCase
     {
         parent::setUp();
         $this->travelTo('2026-10-16 10:00:00');
+        // Cache propre à chaque test : les taux (et les échecs) du jour sont mis en cache, et un cache sur
+        // fichier (CI) les transmettait d'un test à l'autre.
+        config(['cache.default' => 'array']);
 
         $this->tenant = Tenant::factory()->create(['modules' => ['ventes', 'achats']]);
         [$this->clientId, $this->produitId] = $this->chezLeTenant(fn () => [
