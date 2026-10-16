@@ -5,6 +5,8 @@ import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-r
 import BalisesFiche from '@/components/BalisesFiche';
 import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur, getConfiguration } from '@/services/api';
 import type { Fournisseur } from '@/services/api';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -42,6 +44,7 @@ const emptyForm: FournisseurForm = {
 };
 
 export default function FournisseursPage() {
+  const { t } = useLanguage();
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -179,7 +182,9 @@ export default function FournisseursPage() {
               <tbody className="divide-y">
                 {fournisseurs.map((fournisseur) => (
                   <tr key={fournisseur.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-mono font-medium">{fournisseur.code}</td>
+                    <td className="px-4 py-3 text-sm font-mono font-medium">
+                      <Link to={`/fournisseurs/${fournisseur.id}`} title={t.supplierFile.open} className="text-teal-700 dark:text-teal-300 hover:underline">{fournisseur.code}</Link>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building2 size={16} className="text-gray-400" />

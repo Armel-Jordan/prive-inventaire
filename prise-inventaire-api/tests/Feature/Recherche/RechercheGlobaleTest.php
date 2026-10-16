@@ -64,6 +64,9 @@ class RechercheGlobaleTest extends TestCase
         $this->assertSame('CIM-50 — Ciment 50 kg', $produit['titre']);
         $this->assertEquals(['categorie' => 'Liants', 'prix' => 100, 'mesure' => 'UN', 'secteur' => null, 'actif' => true], $produit['details']);
         $this->assertSame('/produits?recherche=CIM-50', $produit['lien']);
+        // Clients et fournisseurs : le résultat ouvre leur fiche.
+        $this->assertSame("/clients/{$groupes['clients']['resultats'][0]['id']}", $groupes['clients']['resultats'][0]['lien']);
+        $this->assertSame("/fournisseurs/{$groupes['fournisseurs']['resultats'][0]['id']}", $groupes['fournisseurs']['resultats'][0]['lien']);
         // Le devis est trouvé par le nom de son client.
         $this->assertEquals(['DEV-0001', 'Cimenterie du Port', 'envoye', 1500], [
             $groupes['devis']['resultats'][0]['titre'], $groupes['devis']['resultats'][0]['sous_titre'],

@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getSyntheseClient, type SyntheseClient } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
-import { formatDate, formatMontant } from './format';
+import { formatDate, formatMontant } from '@/components/fiche/format';
 
 function Carte({ titre, valeur, detail, alerte = false }: { titre: string; valeur: string; detail?: string; alerte?: boolean }) {
   return (

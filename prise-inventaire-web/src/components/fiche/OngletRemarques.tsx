@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Pin, PinOff, Pencil, Trash2 } from 'lucide-react';
-import { enregistrerElementFicheClient, getListeFicheClient, supprimerElementFicheClient, type RemarqueClient } from '@/services/api';
+import { enregistrerElementFiche, getListeFiche, supprimerElementFiche, type RemarqueFiche } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { formatDate } from './format';
 
-/** Remarques datées ; leur auteur et les administrateurs peuvent les modifier, épingler ou supprimer. */
-export default function OngletRemarques({ clientId, onCompte }: { clientId: number; onCompte: (nombre: number) => void }) {
+/**
+ * Remarques datées d'une fiche (route `chemin`, ex. `/clients/12/remarques`) ; leur auteur et les
+ * administrateurs peuvent les modifier, épingler ou supprimer.
+ */
+export default function OngletRemarques({ chemin, onCompte }: { chemin: string; onCompte: (nombre: number) => void }) {
   const { t, language } = useLanguage();
   const tf = t.clientFile;
   const tn = tf.notes;
@@ -16,7 +19,7 @@ export default function OngletRemarques({ clientId, onCompte }: { clientId: numb
   const { user } = useAuth();
   const { permissions } = usePermissions();
   const responsable = permissions?.role === 'admin' || permissions?.role === 'manager';
-  const [remarques, setRemarques] = useState<RemarqueClient[] | null>(null);
+  const [remarques, setRemarques] = useState<RemarqueFiche[] | null>(null);
   const [texte, setTexte] = useState('');
   const [edition, setEdition] = useState<{ id: number; texte: string } | null>(null);
   const [erreur, setErreur] = useState('');
@@ -24,18 +27,18 @@ export default function OngletRemarques({ clientId, onCompte }: { clientId: numb
   useEffect(() => { rappelCompte.current = onCompte; });
 
   const charger = useCallback(async () => {
-    const trouvees = await getListeFicheClient<RemarqueClient>(clientId, 'remarques');
+    const trouvees = await getListeFiche<RemarqueFiche>(chemin);
     setRemarques(trouvees);
     rappelCompte.current(trouvees.length);
-  }, [clientId]);
+  }, [chemin]);
 
   useEffect(() => {
     let actif = true;
-    getListeFicheClient<RemarqueClient>(clientId, 'remarques')
+    getListeFiche<RemarqueFiche>(chemin)
       .then(trouvees => { if (actif) { setRemarques(trouvees); rappelCompte.current(trouvees.length); } })
       .catch(e => { if (actif) setErreur(e instanceof ApiError ? e.message : tf.error); });
     return () => { actif = false; };
-  }, [clientId, tf.error]);
+  }, [chemin, tf.error]);
 
   async function executer(action: () => Promise<unknown>) {
     try {
@@ -47,13 +50,13 @@ export default function OngletRemarques({ clientId, onCompte }: { clientId: numb
     }
   }
 
-  const modifiable = (r: RemarqueClient) => responsable || (user !== null && r.auteur_id === user.id);
+  const modifiable = (r: RemarqueFiche) => responsable || (user !== null && r.auteur_id === user.id);
 
   return (
     <div className="space-y-4">
       <form className="space-y-2" onSubmit={e => {
         e.preventDefault();
-        executer(async () => { await enregistrerElementFicheClient<RemarqueClient>(clientId, 'remarques', { texte }); setTexte(''); });
+        executer(async () => { await enregistrerElementFiche<RemarqueFiche>(chemin, { texte }); setTexte(''); });
       }}>
         <label htmlFor={`${id}-texte`} className="sr-only">{tn.placeholder}</label>
         <textarea id={`${id}-texte`} value={texte} onChange={e => setTexte(e.target.value)} rows={2} required maxLength={5000} placeholder={tn.placeholder}
@@ -76,12 +79,12 @@ export default function OngletRemarques({ clientId, onCompte }: { clientId: numb
               </p>
               {modifiable(r) && (
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => executer(() => enregistrerElementFicheClient<RemarqueClient>(clientId, 'remarques', { epinglee: !r.epinglee }, r.id))}
+                  <button onClick={() => executer(() => enregistrerElementFiche<RemarqueFiche>(chemin, { epinglee: !r.epinglee }, r.id))}
                     aria-label={r.epinglee ? tn.unpin : tn.pin} title={r.epinglee ? tn.unpin : tn.pin} className="p-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-gray-700 rounded">
                     {r.epinglee ? <PinOff size={15} /> : <Pin size={15} />}
                   </button>
                   <button onClick={() => setEdition({ id: r.id, texte: r.texte })} aria-label={tf.edit} title={tf.edit} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 rounded"><Pencil size={15} /></button>
-                  <button onClick={() => { if (confirm(tf.confirmDelete.replace('{nom}', r.texte.slice(0, 40)))) executer(() => supprimerElementFicheClient(clientId, 'remarques', r.id)); }}
+                  <button onClick={() => { if (confirm(tf.confirmDelete.replace('{nom}', r.texte.slice(0, 40)))) executer(() => supprimerElementFiche(chemin, r.id)); }}
                     aria-label={tf.delete} title={tf.delete} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded"><Trash2 size={15} /></button>
                 </div>
               )}
@@ -89,7 +92,7 @@ export default function OngletRemarques({ clientId, onCompte }: { clientId: numb
             {edition?.id === r.id ? (
               <form className="mt-2 space-y-2" onSubmit={e => {
                 e.preventDefault();
-                executer(async () => { await enregistrerElementFicheClient<RemarqueClient>(clientId, 'remarques', { texte: edition.texte }, r.id); setEdition(null); });
+                executer(async () => { await enregistrerElementFiche<RemarqueFiche>(chemin, { texte: edition.texte }, r.id); setEdition(null); });
               }}>
                 <textarea aria-label={tf.edit} value={edition.texte} onChange={e => setEdition({ ...edition, texte: e.target.value })} rows={2} required maxLength={5000}
                   className="w-full px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" />

@@ -46,6 +46,11 @@ use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
+use App\Http\Controllers\Api\FournisseurFicheAdresseController;
+use App\Http\Controllers\Api\FournisseurFicheCompteController;
+use App\Http\Controllers\Api\FournisseurFicheContactController;
+use App\Http\Controllers\Api\FournisseurFicheController;
+use App\Http\Controllers\Api\FournisseurFicheRemarqueController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
@@ -431,6 +436,30 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/{fournisseur}', [FournisseurController::class, 'show']);
         Route::put('/{fournisseur}', [FournisseurController::class, 'update']);
         Route::delete('/{fournisseur}', [FournisseurController::class, 'destroy']);
+    });
+
+    // Fiche fournisseur complète : synthèse des achats, historique, produits fournis, contacts, adresses,
+    // coordonnées bancaires (saisie réservée aux administrateurs et managers), remarques.
+    Route::prefix('fournisseurs/{fournisseur}')->where(['fournisseur' => '[0-9]+'])->middleware('module:achats')->group(function () {
+        Route::get('/fiche', [FournisseurFicheController::class, 'show']);
+        Route::get('/synthese', [FournisseurFicheController::class, 'synthese']);
+        Route::get('/historique-achats', [FournisseurFicheController::class, 'historique']);
+        Route::get('/produits', [FournisseurFicheController::class, 'produits']);
+        Route::post('/produits', [FournisseurFicheController::class, 'ajouterProduit']);
+        Route::put('/produits/{produit}', [FournisseurFicheController::class, 'modifierProduit'])->whereNumber('produit');
+        Route::delete('/produits/{produit}', [FournisseurFicheController::class, 'retirerProduit'])->whereNumber('produit');
+        foreach (['contacts' => FournisseurFicheContactController::class, 'adresses' => FournisseurFicheAdresseController::class, 'remarques' => FournisseurFicheRemarqueController::class] as $liste => $controleur) {
+            Route::get("/{$liste}", [$controleur, 'index']);
+            Route::post("/{$liste}", [$controleur, 'store']);
+            Route::put("/{$liste}/{id}", [$controleur, 'update'])->whereNumber('id');
+            Route::delete("/{$liste}/{id}", [$controleur, 'destroy'])->whereNumber('id');
+        }
+        Route::get('/comptes-bancaires', [FournisseurFicheCompteController::class, 'index']);
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::post('/comptes-bancaires', [FournisseurFicheCompteController::class, 'store']);
+            Route::put('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'update'])->whereNumber('id');
+            Route::delete('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'destroy'])->whereNumber('id');
+        });
     });
 
     // ============================================
