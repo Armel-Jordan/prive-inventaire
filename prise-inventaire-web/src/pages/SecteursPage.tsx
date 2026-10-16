@@ -52,7 +52,9 @@ export default function SecteursPage() {
 
   async function openQr(secteur: Secteur) {
     setQrSecteur(secteur);
-    const qrData = JSON.stringify({ code: secteur.code, nom: secteur.nom, id: secteur.id });
+    // Le code du secteur seul : l'application mobile compare le contenu scanné au code (ou au nom) du secteur,
+    // et ne reconnaissait pas le JSON {"code","nom","id"} imprimé jusqu'ici.
+    const qrData = secteur.code;
     const url = await QRCode.toDataURL(qrData, { width: 280, margin: 2, color: { dark: '#1e293b', light: '#ffffff' } });
     setQrDataUrl(url);
   }
