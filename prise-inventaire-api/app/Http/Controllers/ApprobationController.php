@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Approbation;
 use App\Models\MouvementTenant;
+use App\Support\SeuilsApprobation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,18 +50,14 @@ class ApprobationController extends Controller
             'demandeur' => 'required|string|max:100',
         ]);
 
-        $seuil = $this->getSeuilApprobation($validated['type_mouvement'], $tenantId);
-
-        if ($seuil && $validated['quantite'] >= $seuil) {
-            $validated['statut'] = 'en_attente';
-            $validated['seuil_declenchement'] = $seuil;
-            $validated['tenant_id'] = $tenantId;
-            $approbation = Approbation::create($validated);
-
+        $approbation = SeuilsApprobation::soumettre(
+            ['type' => $validated['type_mouvement'], ...$validated], $tenantId, $validated['demandeur']
+        );
+        if ($approbation) {
             return response()->json([
                 'success' => true,
                 'requires_approval' => true,
-                'message' => "Quantité >= {$seuil}, approbation requise",
+                'message' => 'Quantité >= '.(float) $approbation->seuil_declenchement.', approbation requise',
                 'approbation' => $approbation,
             ], 201);
         }
@@ -104,8 +101,8 @@ class ApprobationController extends Controller
             ], 422);
         }
 
+        // L'approbateur est le compte connecté : le nom saisi par l'écran (« Admin Web ») était libre, donc usurpable.
         $validated = $request->validate([
-            'approbateur' => 'required|string|max:100',
             'commentaire' => 'nullable|string',
         ]);
 
@@ -126,7 +123,7 @@ class ApprobationController extends Controller
 
         $approbation->update([
             'statut' => 'approuve',
-            'approbateur' => $validated['approbateur'],
+            'approbateur' => $this->approbateur($request),
             'date_decision' => now(),
             'commentaire_approbateur' => $validated['commentaire'] ?? null,
         ]);
@@ -154,13 +151,12 @@ class ApprobationController extends Controller
         }
 
         $validated = $request->validate([
-            'approbateur' => 'required|string|max:100',
             'commentaire' => 'required|string',
         ]);
 
         $approbation->update([
             'statut' => 'rejete',
-            'approbateur' => $validated['approbateur'],
+            'approbateur' => $this->approbateur($request),
             'date_decision' => now(),
             'commentaire_approbateur' => $validated['commentaire'],
         ]);
@@ -197,10 +193,12 @@ class ApprobationController extends Controller
         $seuils = DB::table('parametres_approbation')->where('tenant_id', $tenantId)->get();
 
         if ($seuils->isEmpty()) {
+            // Seuils proposés, inactifs : ils s'appliquent désormais aux mouvements (Relocalisation, mobile),
+            // l'entreprise choisit de les activer (Approbations › Paramètres).
             $defaults = [
-                ['type_mouvement' => 'arrivage', 'seuil_quantite' => 100, 'actif' => true],
-                ['type_mouvement' => 'transfert', 'seuil_quantite' => 50, 'actif' => true],
-                ['type_mouvement' => 'sortie', 'seuil_quantite' => 50, 'actif' => true],
+                ['type_mouvement' => 'arrivage', 'seuil_quantite' => 100, 'actif' => false],
+                ['type_mouvement' => 'transfert', 'seuil_quantite' => 50, 'actif' => false],
+                ['type_mouvement' => 'sortie', 'seuil_quantite' => 50, 'actif' => false],
             ];
             foreach ($defaults as $default) {
                 DB::table('parametres_approbation')->insert([
@@ -245,14 +243,9 @@ class ApprobationController extends Controller
         return response()->json(['success' => true, 'message' => 'Seuils mis à jour']);
     }
 
-    private function getSeuilApprobation(string $type, int $tenantId): ?float
+    /** Nom de l'utilisateur connecté qui décide (son courriel s'il n'a pas de nom). */
+    private function approbateur(Request $request): string
     {
-        $param = DB::table('parametres_approbation')
-            ->where('tenant_id', $tenantId)
-            ->where('type_mouvement', $type)
-            ->where('actif', true)
-            ->first();
-
-        return $param ? (float) $param->seuil_quantite : null;
+        return $request->user()->nom ?: $request->user()->email;
     }
 }

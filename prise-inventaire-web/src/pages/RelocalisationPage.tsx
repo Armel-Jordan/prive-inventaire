@@ -8,6 +8,13 @@ import EmptyState from '@/components/EmptyState';
 import { apiFetch } from '@/services/http';
 import Pagination from '@/components/Pagination';
 import type { PageHistorique } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+
+/** Réponse d'un mouvement : mis en attente quand sa quantité atteint le seuil d'approbation de son type. */
+interface ReponseMouvement {
+  requires_approval?: boolean;
+  message?: string;
+}
 
 interface Mouvement {
   id: number;
@@ -46,6 +53,9 @@ interface BatchItem {
 
 export default function RelocalisationPage() {
   const { toasts, toast, dismiss } = useToast();
+  // Auteur des mouvements : l'utilisateur connecté (et non « Admin Web » pour tout le monde).
+  const { user } = useAuth();
+  const auteur = user?.nom || user?.email || 'Web';
   const [mouvements, setMouvements] = useState<Mouvement[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +160,7 @@ export default function RelocalisationPage() {
     try {
       // Envoyer chaque produit comme un mouvement séparé
       const promises = batchItems.map(item =>
-        apiFetch('/relocalisation', {
+        apiFetch<ReponseMouvement>('/relocalisation', {
           method: 'POST',
           body: JSON.stringify({
             type: batchType,
@@ -161,11 +171,15 @@ export default function RelocalisationPage() {
             quantite: parseFloat(item.quantite),
             unite_mesure: item.unite_mesure,
             motif: batchMotif,
-            employe: 'Admin Web',
+            employe: auteur,
           }),
         })
       );
-      await Promise.all(promises);
+      const reponses = await Promise.all(promises);
+      const enAttente = reponses.filter(r => r?.requires_approval).length;
+      if (enAttente > 0) {
+        toast(`${enAttente} mouvement(s) en attente d'approbation : quantité au-delà du seuil.`, 'info');
+      }
       setShowModal(false);
       loadData();
     } catch (e) {
@@ -178,14 +192,17 @@ export default function RelocalisationPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await apiFetch('/relocalisation', {
+      const reponse = await apiFetch<ReponseMouvement>('/relocalisation', {
         method: 'POST',
         body: JSON.stringify({
           ...form,
           quantite: parseFloat(form.quantite),
-          employe: 'Admin Web',
+          employe: auteur,
         }),
       });
+      if (reponse?.requires_approval) {
+        toast(reponse.message || 'Le mouvement attend une approbation.', 'info');
+      }
       setShowModal(false);
       loadData();
     } catch (e) {
