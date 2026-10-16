@@ -1,5 +1,5 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
-import { apiFetch, getAuthHeaders, type ApiOptions } from './http';
+import { apiFetch, getAuthHeaders, API_BASE_URL, type ApiOptions } from './http';
 
 // Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
 export { getAuthHeaders };
@@ -1077,6 +1077,34 @@ export async function updateGroupeTaxe(id: number, data: DonneesGroupeTaxe): Pro
 
 export async function deleteGroupeTaxe(id: number): Promise<void> {
   await fetchApi(`/groupes-taxes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre le PDF d'un document (ex. `/factures/12/pdf`) dans un nouvel onglet. Le jeton part dans
+ * l'en-tête, pas dans l'URL. L'onglet est ouvert pendant le clic (sinon le navigateur bloque la
+ * fenêtre) ; s'il est bloqué malgré tout, le PDF est téléchargé.
+ */
+export async function ouvrirPdf(chemin: string, nomFichier: string): Promise<void> {
+  const fenetre = window.open('', '_blank');
+  try {
+    const entetes = getAuthHeaders();
+    delete entetes['Content-Type'];
+    const reponse = await fetch(`${API_BASE_URL}${chemin}`, { headers: { ...entetes, Accept: 'application/pdf' } });
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+    const url = URL.createObjectURL(await reponse.blob());
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = nomFichier;
+      lien.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
+  }
 }
 
 export async function calculerGroupeTaxe(id: number, montantHt: number): Promise<DetailTaxes> {

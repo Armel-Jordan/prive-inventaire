@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10 — ajout modifier commande, facture manuelle, annuler BL, retirer BL tournée, supprimer tournée, isolation multi-tenant complète
+> Dernière mise à jour : 2026-10-15 — documents PDF (devis, commande, facture, bon de livraison)
 
 ---
 
@@ -19,6 +19,7 @@
 10. [Flow complet bout en bout](#10-flow-complet-bout-en-bout)
 11. [Tous les statuts et transitions](#11-tous-les-statuts-et-transitions)
 12. [Livraison partielle — cas particulier](#12-livraison-partielle--cas-particulier)
+13. [Documents PDF](#13-documents-pdf)
 
 ---
 
@@ -869,3 +870,24 @@ Quand un livreur arrive chez le client mais ne peut livrer qu'une partie des art
 |-------|------------------|
 | Préparation articles | `sortie_preparation` (secteur → zone préparation) |
 | Livraison au client | `livraison_client` (camion → client) |
+
+---
+
+## 13. Documents PDF
+
+Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dans la liste :
+
+| Document | Route | Contenu propre |
+|---|---|---|
+| Devis | `GET /devis/{id}/pdf` | Total HT, mention « Montants hors taxes », zone « Bon pour accord » |
+| Commande client | `GET /commandes-client/{id}/pdf` | Sous-total HT, taxes, total TTC |
+| Facture | `GET /factures/{id}/pdf` | Sous-total HT, taxes, total TTC, payé, reste à payer |
+| Bon de livraison | `GET /bons-livraison/{id}/pdf` | Adresse de livraison, quantités à livrer / préparées / livrées, signatures |
+
+**Communs à tous :**
+- En-tête et pied de page tirés des paramètres de l'entreprise (Configuration → Entreprise) : nom, adresse, téléphone, courriel, numéros d'entreprise et de taxe. Sans paramètres, le nom de l'entreprise (tenant) est utilisé.
+- Montants dans la devise de l'entreprise (`devise_symbole`).
+- Taxes : une ligne par taxe quand le document utilise des groupes de taxes (ex. TVA 17,5 % puis CAC 10 %), sinon une ligne « TVA » avec son taux s'il est unique.
+- Gabarit unique `resources/views/pdf/document-vente.blade.php`, alimenté par `App\Services\DocumentsVentePdf`. Police en sous-ensemble : environ 25 Ko par document.
+
+**Accès :** comme le reste de l'API (jeton dans l'en-tête `Authorization`, entreprise par `X-Tenant-Slug`), donc jamais de jeton dans l'URL. Un document d'une autre entreprise renvoie 404. Le PDF existant des bons de commande fournisseur n'est pas modifié.
