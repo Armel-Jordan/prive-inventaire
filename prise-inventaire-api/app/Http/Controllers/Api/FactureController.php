@@ -12,6 +12,7 @@ use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
 use App\Services\TaxesDocument;
+use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,13 +89,15 @@ class FactureController extends Controller
             $montantTva = 0;
             $montantTtc = 0;
 
-            $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc) {
+            // Taux par défaut de l'entreprise (paramètres) pour les lignes sans taux ni groupe de taxes.
+            $tauxDefaut = TauxTaxe::parDefaut();
+            $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc, $tauxDefaut) {
                 $remise = $l['remise_ligne'] ?? 0;
                 $ht = $l['quantite'] * $l['prix_unitaire_ht'] * (1 - $remise / 100);
                 // Groupe de taxes si la ligne en a un (ou groupe par défaut sans taux saisi), sinon taux unique.
                 $groupe = $this->taxes->groupePour($l);
                 $detail = $groupe ? $this->taxes->calculer($groupe, $ht) : null;
-                $tva = $detail ? $detail['taux_effectif'] : ($l['taux_tva'] ?? 20);
+                $tva = $detail ? $detail['taux_effectif'] : ($l['taux_tva'] ?? $tauxDefaut);
                 $tvaM = $detail ? $detail['total_taxes'] : $ht * ($tva / 100);
                 $ttc = $ht + $tvaM;
                 $montantHt += $ht;
