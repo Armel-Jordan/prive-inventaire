@@ -130,7 +130,7 @@ export default function RapportsPage() {
 
     if (csv) {
       // BOM : sans lui, Excel lit le fichier en ANSI et abîme les accents (« Employé », « Février »).
-      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = filename;
