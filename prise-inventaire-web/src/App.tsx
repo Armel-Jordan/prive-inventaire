@@ -49,6 +49,9 @@ import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import ReferentielsPage from '@/pages/ReferentielsPage';
 import LoginPage from '@/pages/LoginPage';
+import MotDePasseOubliePage from '@/pages/MotDePasseOubliePage';
+import ReinitialiserMotDePassePage from '@/pages/ReinitialiserMotDePassePage';
+import SecuriteComptePage from '@/pages/SecuriteComptePage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import SuperAdminTenantPage from '@/pages/SuperAdminTenantPage';
@@ -76,6 +79,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/mot-de-passe-oublie" element={<MotDePasseOubliePage />} />
+      <Route path="/reinitialiser-mot-de-passe" element={<ReinitialiserMotDePassePage />} />
       <Route path="/complete-profile" element={<CompleteProfilePage />} />
       <Route
         path="/"
@@ -86,6 +91,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="securite" element={<SecuriteComptePage />} />
         <Route path="scans" element={<ScansPage />} />
         <Route path="produits" element={<ProduitsPage />} />
         <Route path="secteurs" element={<SecteursPage />} />

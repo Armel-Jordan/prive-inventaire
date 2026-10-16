@@ -6,6 +6,8 @@
 
 ## Documents disponibles
 
+Sécurité des comptes (mot de passe oublié, changement de mot de passe, double authentification) : [FLOW-SECURITE-COMPTES.md](./FLOW-SECURITE-COMPTES.md).
+
 | Document | Module | Contenu |
 |----------|--------|---------|
 | [FLOW-FICHE-CLIENT.md](./FLOW-FICHE-CLIENT.md) | Ventes | Fiche client : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris |

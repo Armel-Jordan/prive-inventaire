@@ -77,6 +77,8 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\ScanTenantController;
 use App\Http\Controllers\SecteurController;
+use App\Http\Controllers\Securite\DeuxFacteursController;
+use App\Http\Controllers\Securite\MotDePasseController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TachePlanifieController;
 use App\Http\Controllers\TracabiliteController;
@@ -89,6 +91,12 @@ use Illuminate\Support\Facades\Route;
 // ============================================
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
+
+// Sécurité des comptes : mot de passe oublié et seconde étape de connexion (double authentification).
+// Chaque limite a son préfixe : sans lui, toutes les routes limitées partagent un même compteur par IP.
+Route::post('/auth/mot-de-passe-oublie', [MotDePasseController::class, 'oublie'])->middleware('throttle:5,1,mot-de-passe-oublie');
+Route::post('/auth/reinitialiser-mot-de-passe', [MotDePasseController::class, 'reinitialiser'])->middleware('throttle:10,1,reinitialisation-mot-de-passe');
+Route::post('/auth/login/deux-facteurs', [AuthController::class, 'connexionDeuxFacteurs'])->middleware('throttle:10,1,connexion-deux-facteurs');
 
 // PDF routes — auth via ?token= query param
 Route::get('/commandes-fournisseur/{id}/pdf', [BonCommandePdfController::class, 'generate']);
@@ -147,6 +155,22 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/complete-profile', [AuthController::class, 'completeProfile']);
     Route::post('/auth/photo', [AuthController::class, 'uploadPhoto']);
+
+    // Sécurité du compte connecté : mot de passe et double authentification.
+    Route::put('/auth/mot-de-passe', [MotDePasseController::class, 'changer'])->middleware('throttle:10,1,changement-mot-de-passe');
+    Route::prefix('auth/deux-facteurs')->middleware('throttle:20,1,gestion-deux-facteurs')->group(function () {
+        Route::get('/', [DeuxFacteursController::class, 'etat']);
+        Route::post('/preparer', [DeuxFacteursController::class, 'preparer']);
+        Route::post('/activer', [DeuxFacteursController::class, 'activer']);
+        Route::post('/desactiver', [DeuxFacteursController::class, 'desactiver']);
+        Route::post('/codes-secours', [DeuxFacteursController::class, 'regenererCodes']);
+    });
+});
+
+// Administrateurs : double authentification des utilisateurs de l'entreprise (téléphone perdu).
+Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'role:admin'])->prefix('securite')->group(function () {
+    Route::get('/utilisateurs', [DeuxFacteursController::class, 'utilisateurs']);
+    Route::delete('/utilisateurs/{id}/deux-facteurs', [DeuxFacteursController::class, 'reinitialiserUtilisateur'])->whereNumber('id');
 });
 
 // ============================================

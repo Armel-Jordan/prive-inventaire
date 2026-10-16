@@ -320,6 +320,14 @@ export default function Layout() {
           <LanguageSelector />
           <NotificationBell />
           <Link
+            to="/securite"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            title={t.security.link}
+            aria-label={t.security.link}
+          >
+            <Shield size={20} className="text-gray-600 dark:text-gray-300" />
+          </Link>
+          <Link
             to="/profil"
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
             title="Mon profil"

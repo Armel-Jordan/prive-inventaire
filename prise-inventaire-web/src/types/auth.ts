@@ -5,6 +5,7 @@ export interface User {
   role: 'super_admin' | 'admin' | 'manager' | 'user';
   profil_complete?: boolean;
   employe_id?: number | null;
+  deux_facteurs?: boolean;
 }
 
 export interface TenantInfo {

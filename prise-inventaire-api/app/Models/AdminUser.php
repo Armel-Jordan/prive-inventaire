@@ -27,6 +27,10 @@ class AdminUser extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        // Double authentification : jamais renvoyé par l'API.
+        'deux_facteurs_secret',
+        'deux_facteurs_codes_secours',
+        'deux_facteurs_dernier_pas',
     ];
 
     protected function casts(): array
@@ -35,7 +39,17 @@ class AdminUser extends Authenticatable
             'actif' => 'boolean',
             'derniere_connexion' => 'datetime',
             'password' => 'hashed',
+            'deux_facteurs_secret' => 'encrypted',
+            'deux_facteurs_codes_secours' => 'encrypted:array',
+            'deux_facteurs_active_le' => 'datetime',
+            'deux_facteurs_dernier_pas' => 'integer',
         ];
+    }
+
+    /** Double authentification active : un code est demandé à chaque connexion. */
+    public function deuxFacteursActive(): bool
+    {
+        return $this->deux_facteurs_active_le !== null && filled($this->deux_facteurs_secret);
     }
 
     public function tenant(): BelongsTo

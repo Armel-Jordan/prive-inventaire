@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminUser;
 use App\Models\EmployeTenant;
 use App\Models\Tenant;
+use App\Services\DeuxFacteurs;
 use App\Services\TenantService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
-    public function __construct(protected TenantService $tenantService) {}
+    public function __construct(protected TenantService $tenantService, protected DeuxFacteurs $deuxFacteurs) {}
 
     public function login(Request $request): JsonResponse
     {
@@ -54,6 +55,54 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Double authentification : le mot de passe ne suffit pas, un code est demandé avant de délivrer
+        // le jeton. Statut 403 avec un message lisible : l'application mobile, qui ne gère pas encore
+        // cette étape, l'affiche tel quel.
+        if ($user->deuxFacteursActive()) {
+            return response()->json([
+                'success' => false,
+                'deux_facteurs' => true,
+                'defi' => $this->deuxFacteurs->creerDefi($user),
+                'message' => 'Double authentification requise : saisissez le code de votre application depuis le site web (l\'application mobile ne la gère pas encore).',
+            ], 403);
+        }
+
+        return $this->connecter($user, $tenant);
+    }
+
+    /** Seconde étape de connexion : code de l'application d'authentification ou code de secours. */
+    public function connexionDeuxFacteurs(Request $request): JsonResponse
+    {
+        $donnees = $request->validate([
+            'defi' => ['required', 'string', 'size:64'],
+            'code' => ['required', 'string', 'max:20'],
+        ]);
+
+        $user = $this->deuxFacteurs->utilisateurDuDefi($donnees['defi']);
+        $tenant = $user?->tenant;
+        if (! $user || ! $tenant?->actif || $tenant->isExpired()) {
+            return response()->json(['success' => false, 'defi_expire' => true, 'message' => 'La connexion a expiré : saisissez de nouveau votre mot de passe.'], 422);
+        }
+
+        if ($this->deuxFacteurs->bloque($user)) {
+            return response()->json(['success' => false, 'message' => 'Trop de codes invalides : réessayez dans '.DeuxFacteurs::BLOCAGE_MINUTES.' minutes.'], 429);
+        }
+
+        if (! $this->deuxFacteurs->verifier($user, $donnees['code'])) {
+            $this->deuxFacteurs->echec($donnees['defi'], $user);
+
+            return response()->json(['success' => false, 'message' => 'Code invalide.'], 422);
+        }
+
+        $this->deuxFacteurs->oublierDefi($donnees['defi']);
+        $this->deuxFacteurs->reussite($user);
+
+        return $this->connecter($user, $tenant);
+    }
+
+    /** Ouvre la session (jeton Sanctum) et renvoie l'utilisateur et l'entreprise. */
+    private function connecter(AdminUser $user, Tenant $tenant): JsonResponse
+    {
         $user->derniere_connexion = now();
         $user->save();
 
@@ -79,6 +128,7 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'profil_complete' => $profilComplete,
                 'employe_id' => $employe?->id,
+                'deux_facteurs' => $user->deuxFacteursActive(),
             ],
             'tenant' => [
                 'id' => $tenant->id,
@@ -116,6 +166,7 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'profil_complete' => $profilComplete,
                 'employe_id' => $employe?->id,
+                'deux_facteurs' => $user->deuxFacteursActive(),
             ],
             'tenant' => [
                 'id' => $tenant->id,
