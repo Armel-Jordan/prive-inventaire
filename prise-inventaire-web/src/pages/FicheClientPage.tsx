@@ -7,11 +7,11 @@ import {
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
-import ListeElementsFiche from '@/components/fiche-client/ListeElementsFiche';
+import ListeElementsFiche from '@/components/fiche/ListeElementsFiche';
 import OngletSynthese from '@/components/fiche-client/OngletSynthese';
 import OngletHistorique from '@/components/fiche-client/OngletHistorique';
-import OngletRemarques from '@/components/fiche-client/OngletRemarques';
-import { formatMontant, useSymboleDevise } from '@/components/fiche-client/format';
+import OngletRemarques from '@/components/fiche/OngletRemarques';
+import { formatMontant, useSymboleDevise } from '@/components/fiche/format';
 
 type Onglet = 'synthese' | 'historique' | 'contacts' | 'adresses' | 'remarques';
 type Compteur = 'contacts_count' | 'adresses_count' | 'remarques_count';
@@ -148,8 +148,7 @@ export default function FicheClientPage() {
           {onglet === 'historique' && <OngletHistorique clientId={client.id} devise={devise} />}
           {onglet === 'contacts' && (
             <ListeElementsFiche<ContactClient>
-              clientId={client.id}
-              liste="contacts"
+              chemin={`/clients/${client.id}/contacts`}
               colonnePrincipale="principal"
               onCompte={compterContacts}
               libelles={{ add: tc.add, empty: tc.empty, main: tc.main }}
@@ -183,8 +182,7 @@ export default function FicheClientPage() {
           )}
           {onglet === 'adresses' && (
             <ListeElementsFiche<AdresseClient>
-              clientId={client.id}
-              liste="adresses"
+              chemin={`/clients/${client.id}/adresses`}
               colonnePrincipale="principale"
               onCompte={compterAdresses}
               libelles={{ add: ta.add, empty: ta.empty, main: ta.main }}
@@ -219,7 +217,7 @@ export default function FicheClientPage() {
               )}
             />
           )}
-          {onglet === 'remarques' && <OngletRemarques clientId={client.id} onCompte={compterRemarques} />}
+          {onglet === 'remarques' && <OngletRemarques chemin={`/clients/${client.id}/remarques`} onCompte={compterRemarques} />}
         </div>
       </div>
     </div>

@@ -24,7 +24,7 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 - **Ordre des résultats** : valeur exacte, puis commençant par le texte, puis le reste. On voit 5 résultats par type, avec le nombre des autres.
 - Seuls les types **que l'utilisateur peut consulter** sont cherchés : mêmes droits que le menu. Ceux d'un **module inactif** (Ventes, Achats) sont ignorés.
 - **Clavier** : ↑ et ↓ pour se déplacer, Entrée pour ouvrir, Échap pour fermer.
-- Un résultat ouvre un **aperçu** : statut, dates, montants dans la devise de l'entreprise, coordonnées. **Ouvrir la page** mène à la page du type, avec `?recherche=` dans l'adresse.
+- Un résultat ouvre un **aperçu** : statut, dates, montants dans la devise de l'entreprise, coordonnées. **Ouvrir la page** mène à la fiche du client ou du fournisseur (`/clients/{id}`, `/fournisseurs/{id}`), et pour les autres types à la page du type, avec `?recherche=` dans l'adresse.
 
 Lecture seule : rien n'est modifié. Les pages existantes ne lisent pas encore le paramètre `?recherche=` : elles s'ouvrent sur leur liste complète.
 

@@ -6,27 +6,24 @@
 
 ## Documents disponibles
 
-Sécurité des comptes (mot de passe oublié, changement de mot de passe, double authentification) : [FLOW-SECURITE-COMPTES.md](./FLOW-SECURITE-COMPTES.md).
-
 | Document | Module | Contenu |
 |----------|--------|---------|
-| [FLOW-FICHE-CLIENT.md](./FLOW-FICHE-CLIENT.md) | Ventes | Fiche client : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris |
-| [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
-| [FLOW-CHAMPS-PERSONNALISES.md](./FLOW-CHAMPS-PERSONNALISES.md) | Transverse | Champs ajoutés par l'entreprise aux fiches et documents, recherche par valeur |
-| [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
-| [FLOW-BALISES-REMARQUES.md](./FLOW-BALISES-REMARQUES.md) | Transverse | Balises de classement des fiches et documents, remarques rapides |
-| [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
-| [FLOW-CONFIGURATION-A-COMPLETER.md](./FLOW-CONFIGURATION-A-COMPLETER.md) | Transverse | Parcours de mise en route vérifié dans les données, qualité des données |
-| [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
-| [FLOW-TACHES-PLANIFIEES.md](./FLOW-TACHES-PLANIFIEES.md) | Transverse | Traitements automatiques, planificateur, historique des exécutions |
+| [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Rôles, Configuration, Numérotation, TVA, Devise, Référentiels, Courriels |
+| [FLOW-CONFIGURATION-A-COMPLETER.md](./FLOW-CONFIGURATION-A-COMPLETER.md) | Paramètres | Parcours de mise en route vérifié dans les données, qualité des données |
+| [FLOW-SECURITE-COMPTES.md](./FLOW-SECURITE-COMPTES.md) | Plateforme | Mot de passe oublié, changement de mot de passe, double authentification |
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
+| [FLOW-PRISE-INVENTAIRE.md](./FLOW-PRISE-INVENTAIRE.md) | Inventaire | Sessions de comptage, écarts, corrections, validation, inventaire officiel |
+| [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
+| [FLOW-FICHE-FOURNISSEUR.md](./FLOW-FICHE-FOURNISSEUR.md) | Achats | Fiche fournisseur : synthèse des achats et des livraisons, historique, produits fournis, contacts, adresses, coordonnées bancaires, remarques |
+| [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
+| [FLOW-FICHE-CLIENT.md](./FLOW-FICHE-CLIENT.md) | Ventes | Fiche client : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris |
+| [FLOW-PRIX.md](./FLOW-PRIX.md) | Ventes | Prix de base, listes de prix, règles (prix client, paliers, promotions), calcul du prix d'un client |
+| [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
+| [FLOW-CHAMPS-PERSONNALISES.md](./FLOW-CHAMPS-PERSONNALISES.md) | Transverse | Champs ajoutés par l'entreprise aux fiches et documents, recherche par valeur |
+| [FLOW-BALISES-REMARQUES.md](./FLOW-BALISES-REMARQUES.md) | Transverse | Balises de classement des fiches et documents, remarques rapides |
 | [FLOW-PIECES-JOINTES.md](./FLOW-PIECES-JOINTES.md) | Transverse | Pièces jointes des fiches et documents, stockage, sécurité |
-
-Prix et remises : [FLOW-PRIX.md](./FLOW-PRIX.md) — prix de base, listes de prix, règles (prix client, paliers, promotions), calcul du prix d'un client.
-
----
-
-Recherche globale (en-tête, Ctrl+K) : [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md).
+| [FLOW-TACHES-PLANIFIEES.md](./FLOW-TACHES-PLANIFIEES.md) | Transverse | Traitements automatiques, planificateur, historique des exécutions |
+| [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md) | Transverse | Recherche globale de l'en-tête (Ctrl+K) sur les fiches et documents |
 
 ## Le flow global de l'application
 

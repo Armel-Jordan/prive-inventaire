@@ -76,15 +76,19 @@ Un fournisseur peut fournir plusieurs produits. Pour chaque produit qu'il fourni
 | `delai_livraison` | Délai en jours |
 | `fournisseur_principal` | Est-ce le fournisseur principal pour ce produit ? |
 
-Cela permet de pré-remplir le prix quand on crée une commande.
+Ce catalogue se gère dans l'onglet **Produits fournis** de la fiche fournisseur (un seul fournisseur principal par produit). Le formulaire de commande ne s'en sert pas encore pour pré-remplir le prix.
 
-### 2.4 Statut actif / inactif
+### 2.4 Fiche fournisseur
+
+Un clic sur le code d'un fournisseur ouvre sa fiche : synthèse des achats et des livraisons, historique, produits fournis, contacts, adresses, coordonnées bancaires et remarques. Voir [FLOW-FICHE-FOURNISSEUR.md](./FLOW-FICHE-FOURNISSEUR.md).
+
+### 2.5 Statut actif / inactif
 
 - Un fournisseur **inactif** n'apparaît pas dans la liste de sélection lors de la création d'une commande.
 - Ses commandes et historique restent accessibles.
 - Utiliser l'inactivation plutôt que la suppression pour préserver l'historique.
 
-### 2.5 Endpoints
+### 2.6 Endpoints
 
 ```
 GET    /fournisseurs          → liste avec pagination et filtre
