@@ -46,6 +46,7 @@ import ThemeToggle from './ThemeToggle';
 import RechercheGlobale from './RechercheGlobale';
 import { useLanguage } from '@/i18n/useLanguage';
 import { ClipboardCheck } from 'lucide-react';
+import { NOM_APPLICATION } from '@/config/application';
 
 interface NavItem {
   path: string;
@@ -210,7 +211,7 @@ export default function Layout() {
         <div className="p-6 border-b dark:border-gray-700">
           <div className="flex items-center gap-3 mb-2">
             <Building2 className="text-blue-600" size={24} />
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">Prise Inventaire</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white">{NOM_APPLICATION}</h1>
           </div>
           {tenant && (
             <p className="text-sm text-blue-600 font-medium">{tenant.nom}</p>

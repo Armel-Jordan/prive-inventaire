@@ -6,9 +6,9 @@ use App\Mail\CourrielSimple;
 use App\Models\CourrielEnvoi;
 use App\Models\CourrielModele;
 use App\Models\CourrielParametres;
+use App\Services\BonCommandePdf;
 use App\Services\DocumentsVentePdf;
 use App\Support\Courriels;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +29,7 @@ class EnvoiCourriel
         private readonly RenduCourriel $rendu,
         private readonly MailerTenant $mailer,
         private readonly DocumentsVentePdf $documents,
+        private readonly BonCommandePdf $bonCommande,
     ) {}
 
     /** Document source d'un envoi, dans l'entreprise courante. */
@@ -179,12 +180,7 @@ class EnvoiCourriel
     private function pdf(string $type, Model $document): string
     {
         if ($type === 'commande_fournisseur') {
-            $document->loadMissing(['fournisseur', 'lignes.produit', 'createdBy']);
-
-            return Pdf::loadView('pdf.bon-commande', ['commande' => $document])
-                ->setPaper('A4', 'portrait')
-                ->setOption('isFontSubsettingEnabled', true)
-                ->output();
+            return $this->bonCommande->pdf($document)->output();
         }
 
         $donnees = match ($type) {
