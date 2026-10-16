@@ -4,27 +4,32 @@ namespace App\Support;
 
 use App\Models\AdminUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Droits d'un compte par module (voir, créer, modifier, supprimer), d'après la matrice de son rôle : son rôle
- * personnalisé s'il en a un dans son entreprise, sinon le rôle système de même nom (admin, manager, user,
- * readonly). Un administrateur a tous les droits.
+ * Droits d'un compte, sur le modèle de fripv2 :
+ * - ses groupes : son rôle (personnalisé dans son entreprise, sinon le rôle système de même nom : admin,
+ *   manager, user, readonly) et ses groupes supplémentaires actifs ; les droits des groupes s'additionnent ;
+ * - par groupe, les droits de base de chaque module (voir, créer, modifier, supprimer) et les actions nommées
+ *   (voir App\Support\Permissions) ; une action qu'un groupe ne règle pas suit le droit de base indiqué ;
+ * - les exceptions du compte : une permission accordée en plus, ou refusée (le refus l'emporte sur les groupes).
+ * Un administrateur a tous les droits.
  *
- * Sert au middleware « droits », qui contrôle les écritures de l'API : la matrice n'était appliquée qu'au menu,
- * et un compte « user » pouvait modifier les paramètres, les taxes ou les produits par l'API.
+ * Sert au middleware « droits », qui contrôle les écritures de l'API et les lectures des données sensibles
+ * (comptabilité, comptes clients, valorisation, espace client), et à /permissions/me pour les écrans.
  */
 class Droits
 {
-    /** Action => colonne de role_permissions. */
+    /** Action de base => colonne de role_permissions. */
     public const COLONNES = [
         'voir' => 'can_view', 'creer' => 'can_create', 'modifier' => 'can_edit', 'supprimer' => 'can_delete',
     ];
 
     /**
-     * Premier segment de l'adresse (après « api/ ») => module de la matrice. Les préfixes absents ne sont pas
-     * contrôlés par module : lectures, données personnelles (profil, notifications), routes déjà réservées par
-     * rôle (utilisateurs, rôles, tâches planifiées), pièces jointes et envois rattachés à une fiche.
+     * Premier segment de l'adresse (après « api/ ») => module de la matrice, pour les écritures. Les préfixes
+     * absents ne sont pas contrôlés par module : données personnelles (profil, notifications), routes réservées
+     * par rôle (utilisateurs, rôles, tâches planifiées), pièces jointes et envois rattachés à une fiche.
      */
     private const MODULES = [
         'produits' => 'produits',
@@ -42,7 +47,6 @@ class Droits
         'receptions' => 'receptions',
         'devis' => 'devis',
         'clients' => 'clients',
-        'categories-clients' => 'clients',
         'commandes-client' => 'commandes_client',
         'factures' => 'factures',
         'bons-livraison' => 'bons_livraison',
@@ -52,6 +56,7 @@ class Droits
         'listes-prix' => 'gestion_prix',
         'grille-prix' => 'gestion_prix',
         'regles-prix' => 'gestion_prix',
+        'portail-clients' => 'espace_client',
         'parametres' => 'configuration',
         'taxes' => 'configuration',
         'groupes-taxes' => 'configuration',
@@ -60,6 +65,23 @@ class Droits
         'balises' => 'configuration',
         'courriels' => 'configuration',
         'referentiels' => 'referentiels',
+    ];
+
+    /** Écritures de tout un préfixe rattachées à une action nommée. */
+    private const ECRITURES_ACTION = [
+        'categories-clients' => ['clients', 'categories'],
+    ];
+
+    /** Lectures contrôlées (données sensibles) : préfixe => module ; il faut le droit de le consulter. */
+    private const LECTURES = [
+        'comptabilite' => 'comptabilite',
+        'comptes-clients' => 'comptes_clients',
+        'portail-clients' => 'espace_client',
+    ];
+
+    /** États comptables : il faut le droit de voir les états. */
+    private const ETATS_COMPTABLES = [
+        'api/comptabilite/balance', 'api/comptabilite/grand-livre', 'api/comptabilite/etats/bilan', 'api/comptabilite/etats/resultat',
     ];
 
     /**
@@ -88,35 +110,59 @@ class Droits
         'DELETE api/clients/{client}/favori',
     ];
 
-    /** Écritures rattachées à un autre module que leur préfixe. */
+    /** Routes rattachées à une autre règle que celle de leur préfixe (dont les actions nommées). */
     private const PARTICULIERES = [
         'PUT api/approbations/settings' => ['configuration', 'modifier'],
         'PUT api/clients/{client}/liste-prix' => ['gestion_prix', 'modifier'],
         'POST api/factures/commande/{commandeId}' => ['factures', 'creer'],
-    ];
-
-    /** Libellés des modules dans les messages de refus. */
-    private const LIBELLES = [
-        'inventaires' => 'Inventaires', 'relocalisation' => 'Relocalisation', 'planification' => 'Planification',
-        'alertes' => 'Alertes de stock', 'approbations' => 'Approbations', 'produits' => 'Produits',
-        'secteurs' => 'Secteurs', 'employes' => 'Employés', 'fournisseurs' => 'Fournisseurs',
-        'commandes_fournisseur' => 'Commandes fournisseur', 'receptions' => 'Réceptions', 'clients' => 'Clients',
-        'commandes_client' => 'Commandes client', 'factures' => 'Factures', 'bons_livraison' => 'Bons de livraison',
-        'camions' => 'Camions', 'tournees' => 'Tournées', 'zones_preparation' => 'Zones de préparation',
-        'devis' => 'Devis', 'gestion_prix' => 'Gestion des prix', 'configuration' => 'Configuration',
-        'referentiels' => 'Référentiels',
+        'POST api/factures/{id}/creer-bl' => ['bons_livraison', 'creer'],
+        'POST api/factures/{id}/emettre' => ['factures', 'emettre'],
+        'POST api/factures/{id}/paiement' => ['factures', 'encaisser'],
+        'POST api/commandes-client/{id}/soumettre' => ['commandes_client', 'soumettre'],
+        'POST api/commandes-client/{id}/accepter' => ['commandes_client', 'decider'],
+        'POST api/commandes-client/{id}/refuser' => ['commandes_client', 'decider'],
+        'POST api/devis/{devis}/envoyer' => ['devis', 'envoyer'],
+        'POST api/devis/{devis}/accepter' => ['devis', 'decider'],
+        'POST api/devis/{devis}/refuser' => ['devis', 'decider'],
+        'POST api/devis/{devis}/convertir' => ['devis', 'convertir'],
+        'POST api/bons-livraison/{id}/preparer' => ['bons_livraison', 'preparer'],
+        'POST api/bons-livraison/{id}/pret' => ['bons_livraison', 'preparer'],
+        'POST api/bons-livraison/{id}/livrer' => ['bons_livraison', 'livrer'],
+        'POST api/bons-livraison/{id}/annuler' => ['bons_livraison', 'annuler'],
+        'POST api/commandes-fournisseur/{commande}/valider' => ['commandes_fournisseur', 'valider'],
+        'POST api/commandes-fournisseur/{commande}/cloturer' => ['commandes_fournisseur', 'cloturer'],
+        'POST api/commandes-fournisseur/{commande}/annuler' => ['commandes_fournisseur', 'annuler'],
+        'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
+        'POST api/approbations/{id}/reject' => ['approbations', 'decider'],
+        'POST api/transferts-planifies/{id}/execute' => ['planification', 'executer'],
+        'POST api/transferts-planifies/{id}/cancel' => ['planification', 'executer'],
+        'POST api/tournees/{id}/ajouter-bon' => ['tournees', 'piloter'],
+        'POST api/tournees/{id}/demarrer' => ['tournees', 'piloter'],
+        'POST api/tournees/{id}/terminer' => ['tournees', 'piloter'],
+        'PUT api/tournees/{id}/ordre' => ['tournees', 'piloter'],
+        'POST api/prises-inventaire' => ['inventaires', 'prises'],
+        'PUT api/prises-inventaire/{id}/corrections' => ['inventaires', 'prises'],
+        'POST api/prises-inventaire/{id}/valider' => ['inventaires', 'prises'],
+        'POST api/prises-inventaire/{id}/annuler' => ['inventaires', 'prises'],
+        'POST api/fournisseurs/{fournisseur}/comptes-bancaires' => ['fournisseurs', 'comptes_bancaires'],
+        'PUT api/fournisseurs/{fournisseur}/comptes-bancaires/{id}' => ['fournisseurs', 'comptes_bancaires'],
+        'DELETE api/fournisseurs/{fournisseur}/comptes-bancaires/{id}' => ['fournisseurs', 'comptes_bancaires'],
+        'GET api/prises-inventaire/valorisation' => ['valorisation', 'voir'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];
 
+    /** Permissions effectives déjà calculées pendant la requête : id du compte => code => accordée. */
+    private array $memo = [];
+
     /**
-     * Rôle effectif d'un compte : rôle personnalisé de son entreprise, sinon rôle système de même nom. Un
-     * administrateur garde le rôle système « admin » (tous les droits), même avec un rôle personnalisé.
+     * Rôle principal d'un compte : rôle personnalisé actif de son entreprise, sinon rôle système de même nom.
+     * Un administrateur garde le rôle système « admin » (tous les droits), même avec un rôle personnalisé.
      */
     public function role(AdminUser $compte): ?object
     {
         if ($compte->role !== 'admin' && ! empty($compte->role_custom_id)) {
-            $personnalise = DB::table('roles_custom')->where('id', $compte->role_custom_id)
+            $personnalise = DB::table('roles_custom')->where('id', $compte->role_custom_id)->where('actif', true)
                 ->where(fn ($q) => $q->where('tenant_id', $compte->tenant_id)
                     ->orWhere(fn ($systeme) => $systeme->whereNull('tenant_id')->where('is_system', true)))
                 ->first();
@@ -133,51 +179,124 @@ class Droits
         return DB::table('roles_custom')->whereNull('tenant_id')->where('is_system', true)->where('nom', $nom)->first();
     }
 
-    /** Le compte peut-il faire cette action (voir, creer, modifier, supprimer) dans ce module ? */
+    /** Groupes du compte : son rôle principal, puis ses groupes supplémentaires actifs de son entreprise. */
+    public function groupes(AdminUser $compte): Collection
+    {
+        $supplementaires = DB::table('admin_user_groupes')
+            ->join('roles_custom', 'roles_custom.id', '=', 'admin_user_groupes.role_id')
+            ->where('admin_user_groupes.admin_user_id', $compte->id)
+            ->where('roles_custom.tenant_id', $compte->tenant_id)->where('roles_custom.actif', true)
+            ->orderBy('roles_custom.nom')
+            ->get(['roles_custom.*']);
+
+        return collect([$this->role($compte)])->filter()->merge($supplementaires)->unique('id')->values();
+    }
+
+    /** Droits venant des seuls groupes (sans les exceptions du compte) : code => accordé. */
+    public function droitsDesGroupes(AdminUser $compte): array
+    {
+        $ids = $this->groupes($compte)->pluck('id')->all();
+        $droits = array_fill_keys(Permissions::codes(), false);
+        $lignes = DB::table('role_permissions')->whereIn('role_id', $ids)->get()->groupBy('role_id');
+        $reglees = DB::table('role_actions')->whereIn('role_id', $ids)->get()->groupBy('role_id');
+
+        foreach ($ids as $id) {
+            $parModule = ($lignes[$id] ?? collect())->keyBy('module');
+            $explicites = ($reglees[$id] ?? collect())->mapWithKeys(fn ($r) => [$r->permission => (bool) $r->accorde]);
+            foreach (Permissions::MODULES as $module => $definition) {
+                $ligne = $parModule[$module] ?? null;
+                foreach (self::COLONNES as $action => $colonne) {
+                    if ($ligne && $ligne->{$colonne}) {
+                        $droits["{$module}.{$action}"] = true;
+                    }
+                }
+                foreach ($definition['actions'] ?? [] as $action => $nommee) {
+                    $code = "{$module}.{$action}";
+                    $accorde = $explicites->has($code) ? $explicites[$code] : (bool) ($ligne?->{self::COLONNES[$nommee['base']]} ?? false);
+                    if ($accorde) {
+                        $droits[$code] = true;
+                    }
+                }
+            }
+        }
+
+        return $droits;
+    }
+
+    /** Exceptions du compte : code => accordée (true) ou refusée (false). */
+    public function exceptions(AdminUser $compte): array
+    {
+        return DB::table('admin_user_permissions')->where('admin_user_id', $compte->id)->get()
+            ->filter(fn ($e) => Permissions::existe($e->permission))
+            ->mapWithKeys(fn ($e) => [$e->permission => (bool) $e->accorde])->all();
+    }
+
+    /** Permissions effectives du compte : code => accordée. Un administrateur a tout. */
+    public function effectives(AdminUser $compte): array
+    {
+        if ($compte->role === 'admin') {
+            return array_fill_keys(Permissions::codes(), true);
+        }
+
+        return $this->memo[$compte->id] ??= array_merge($this->droitsDesGroupes($compte), $this->exceptions($compte));
+    }
+
+    /** Oublie les droits calculés pendant la requête (après une modification des accès). */
+    public function oublier(): void
+    {
+        $this->memo = [];
+    }
+
+    /** Le compte peut-il faire cette action (voir, creer, modifier, supprimer ou action nommée) dans ce module ? */
     public function permet(AdminUser $compte, string $module, string $action): bool
     {
-        // Un administrateur a tous les droits, quelle que soit la matrice.
-        if ($compte->role === 'admin') {
-            return true;
-        }
-
-        $role = $this->role($compte);
-        if (! $role) {
-            return false;
-        }
-
-        return (bool) DB::table('role_permissions')->where('role_id', $role->id)->where('module', $module)
-            ->value(self::COLONNES[$action]);
+        return $this->effectives($compte)["{$module}.{$action}"] ?? false;
     }
 
     /**
-     * Module et action contrôlés pour une écriture de l'API, ou null si elle n'est pas contrôlée par module.
+     * Module et action contrôlés pour une requête de l'API, ou null si elle n'est pas contrôlée par module :
+     * toute écriture d'un préfixe connu, et les lectures des données sensibles.
      *
      * @return array{string, string}|null
      */
     public function regle(Request $request): ?array
     {
         $methode = $request->method();
-        if (in_array($methode, ['GET', 'HEAD', 'OPTIONS'], true)) {
-            return null;
-        }
-
         $uri = $request->route()?->uri() ?? $request->path();
         $cle = "{$methode} {$uri}";
-        if (in_array($cle, self::LIBRES, true)) {
-            return null;
-        }
         if (isset(self::PARTICULIERES[$cle])) {
             return self::PARTICULIERES[$cle];
         }
-
         $segments = explode('/', $uri);
-        $module = self::MODULES[$segments[1] ?? ''] ?? null;
+        $prefixe = $segments[1] ?? '';
+
+        if (in_array($methode, ['GET', 'HEAD', 'OPTIONS'], true)) {
+            if ($methode === 'OPTIONS' || ! isset(self::LECTURES[$prefixe])) {
+                return null;
+            }
+            if (in_array($uri, self::ETATS_COMPTABLES, true)) {
+                return ['comptabilite', 'etats'];
+            }
+
+            return [self::LECTURES[$prefixe], 'voir'];
+        }
+
+        if (in_array($cle, self::LIBRES, true)) {
+            return null;
+        }
+        if (isset(self::ECRITURES_ACTION[$prefixe])) {
+            return self::ECRITURES_ACTION[$prefixe];
+        }
+        if ($prefixe === 'comptabilite') {
+            return ['comptabilite', $this->actionComptable($uri)];
+        }
+
+        $module = self::MODULES[$prefixe] ?? null;
         if ($module === null) {
             return null;
         }
 
-        // Supprimer, modifier (PUT, ou POST sur un élément existant : valider, annuler…), sinon créer.
+        // Supprimer, modifier (PUT, ou POST sur un élément existant), sinon créer.
         $action = match (true) {
             $methode === 'DELETE' => 'supprimer',
             $methode === 'PUT', $methode === 'PATCH', str_contains($uri, '{') => 'modifier',
@@ -187,9 +306,23 @@ class Droits
         return [$module, $action];
     }
 
+    /** Écriture comptable => action nommée : clôtures, plan et exercices, sinon écritures. */
+    private function actionComptable(string $uri): string
+    {
+        return match (true) {
+            str_ends_with($uri, '/cloturer'), str_ends_with($uri, '/rouvrir') => 'cloturer',
+            str_starts_with($uri, 'api/comptabilite/comptes'), str_starts_with($uri, 'api/comptabilite/exercices'), str_ends_with($uri, '/fermer') => 'plan',
+            default => 'ecrire',
+        };
+    }
+
     public function messageRefus(string $module, string $action): string
     {
-        $libelle = self::LIBELLES[$module] ?? $module;
+        $libelle = Permissions::libelle($module);
+        $nommee = Permissions::actions($module)[$action]['fr'] ?? null;
+        if ($nommee !== null) {
+            return "Droit insuffisant : votre rôle ne permet pas de faire « {$nommee} » ({$libelle}).";
+        }
 
         return "Droit insuffisant : votre rôle ne permet pas de {$this->verbe($action)} dans « {$libelle} ».";
     }

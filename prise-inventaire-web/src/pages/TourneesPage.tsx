@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle } from 'lucide-react';
 import {
@@ -24,6 +25,8 @@ const modesLivraison: Record<string, string> = { entreprise: 'Livraison', retrai
 const bonsAjoutables = () => getBonsLivraison({ statut: 'pret', sans_tournee: true, per_page: 100 });
 
 export default function TourneesPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [tournees, setTournees] = useState<Tournee[]>([]);
@@ -290,13 +293,15 @@ export default function TourneesPage() {
                           >
                             <PackagePlus size={18} />
                           </button>
-                          <button
-                            onClick={() => handleDemarrer(tournee.id)}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                            title="Démarrer"
-                          >
-                            <Play size={18} />
-                          </button>
+                          {peut('tournees', 'piloter') && (
+                            <button
+                              onClick={() => handleDemarrer(tournee.id)}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              title="Démarrer"
+                            >
+                              <Play size={18} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteTournee(tournee.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -307,13 +312,15 @@ export default function TourneesPage() {
                         </>
                       )}
                       {tournee.statut === 'en_cours' && (
-                        <button
-                          onClick={() => handleTerminer(tournee.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Terminer"
-                        >
-                          <Square size={18} />
-                        </button>
+                        <>{peut('tournees', 'piloter') && (
+                          <button
+                            onClick={() => handleTerminer(tournee.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Terminer"
+                          >
+                            <Square size={18} />
+                          </button>
+                        )}</>
                       )}
                     </div>
                   </td>

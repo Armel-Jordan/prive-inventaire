@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -19,6 +20,8 @@ import Pagination from '@/components/Pagination';
 import { aujourdhui, dateSaisie, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
 
 export default function DevisPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const devise = useDevise();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
@@ -268,18 +271,26 @@ export default function DevisPage() {
                       {devis.statut === 'brouillon' && (
                         <>
                           <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>
-                          <button onClick={() => handleEnvoyer(devis.id)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Envoyer"><Send size={16} /></button>
+                          {peut('devis', 'envoyer') && (
+                            <button onClick={() => handleEnvoyer(devis.id)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Envoyer"><Send size={16} /></button>
+                          )}
                           <button onClick={() => handleDelete(devis.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer"><Trash2 size={16} /></button>
                         </>
                       )}
                       {devis.statut === 'envoye' && (
                         <>
-                          <button onClick={() => handleAccepter(devis.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Accepter"><CheckCircle size={16} /></button>
-                          <button onClick={() => handleRefuser(devis.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Refuser"><XCircle size={16} /></button>
+                          {peut('devis', 'decider') && (
+                            <button onClick={() => handleAccepter(devis.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Accepter"><CheckCircle size={16} /></button>
+                          )}
+                          {peut('devis', 'decider') && (
+                            <button onClick={() => handleRefuser(devis.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Refuser"><XCircle size={16} /></button>
+                          )}
                         </>
                       )}
                       {devis.statut === 'accepte' && !devis.commande && (
-                        <button onClick={() => handleConvertir(devis)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Convertir en commande"><FileText size={16} /></button>
+                        <>{peut('devis', 'convertir') && (
+                          <button onClick={() => handleConvertir(devis)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Convertir en commande"><FileText size={16} /></button>
+                        )}</>
                       )}
                       <BoutonChampsPersonnalises entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
                     </div>

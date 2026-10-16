@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -27,6 +28,8 @@ import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/
 
 
 export default function FacturesPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut, canCreate } = usePermissions();
   const devise = useDevise();
   const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
   const [page, setPage] = useState(1);
@@ -266,13 +269,15 @@ export default function FacturesPage() {
                       <BoutonCourriel type="facture" documentId={facture.id} />
                       {facture.statut === 'brouillon' && (
                         <>
-                          <button
-                            onClick={() => handleEmettre(facture.id)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Émettre"
-                          >
-                            <Send size={18} />
-                          </button>
+                          {peut('factures', 'emettre') && (
+                            <button
+                              onClick={() => handleEmettre(facture.id)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                              title="Émettre"
+                            >
+                              <Send size={18} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(facture.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -283,23 +288,27 @@ export default function FacturesPage() {
                         </>
                       )}
                       {(facture.statut === 'emise' || facture.statut === 'partiellement_payee') && (
-                        <button
-                          onClick={() => { setSelectedFacture(facture); setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') }); setShowPaiementModal(true); }}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Enregistrer paiement"
-                        >
-                          <CreditCard size={18} />
-                        </button>
+                        <>{peut('factures', 'encaisser') && (
+                          <button
+                            onClick={() => { setSelectedFacture(facture); setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') }); setShowPaiementModal(true); }}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Enregistrer paiement"
+                          >
+                            <CreditCard size={18} />
+                          </button>
+                        )}</>
                       )}
                       {/* Une facture émise, même payée, se livre une fois : le bouton disparaît avec le bon en cours. */}
                       {['emise', 'partiellement_payee', 'payee'].includes(facture.statut) && !facture.bon_livraison && (
-                        <button
-                          onClick={() => handleCreerBL(facture.id)}
-                          className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                          title="Créer bon de livraison"
-                        >
-                          <FileText size={18} />
-                        </button>
+                        <>{canCreate('bons_livraison') && (
+                          <button
+                            onClick={() => handleCreerBL(facture.id)}
+                            className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                            title="Créer bon de livraison"
+                          >
+                            <FileText size={18} />
+                          </button>
+                        )}</>
                       )}
                       <BoutonChampsPersonnalises entite="facture" entiteId={facture.id} titre={facture.numero} />
                     </div>

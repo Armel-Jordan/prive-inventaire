@@ -117,6 +117,9 @@ class RolesEtAccesTest extends TestCase
         $migration = require database_path('migrations/2026_10_16_100019_isoler_roles_par_entreprise.php');
         $migration->up();
         $migration->up();
+        // Les modules et actions ajoutés ensuite (groupes et permissions fines) se rejouent aussi.
+        $permissionsFines = require database_path('migrations/2026_10_16_100029_creer_groupes_et_permissions_nommees.php');
+        $permissionsFines->up();
 
         $nouveau = $this->roleSysteme('manager');
         $this->assertNotSame($ancien, $nouveau);

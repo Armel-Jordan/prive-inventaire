@@ -54,6 +54,7 @@ import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
 import PiecesJointesPage from '@/pages/PiecesJointesPage';
 import PortailClientsPage from '@/pages/PortailClientsPage';
+import AccesComptePage from '@/pages/AccesComptePage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
@@ -130,6 +131,7 @@ function AppRoutes() {
         <Route path="inventaire-tournant" element={<InventaireTournantPage />} />
         <Route path="profil" element={<ProfilPage />} />
         <Route path="roles" element={<RolesPage />} />
+        <Route path="acces/:compteId" element={<AccesComptePage />} />
         <Route path="fournisseurs" element={<FournisseursPage />} />
         <Route path="fournisseurs/:id" element={<FicheFournisseurPage />} />
         <Route path="champs-personnalises" element={<ChampsPersonnalisesPage />} />

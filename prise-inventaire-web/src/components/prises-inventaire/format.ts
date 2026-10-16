@@ -38,4 +38,3 @@ export const couleursStatutLigne: Record<string, string> = {
 };
 
 /** Les administrateurs et responsables créent, corrigent, valident et annulent les prises. */
-export const peutGererPrises = (role?: string) => role === 'admin' || role === 'manager';

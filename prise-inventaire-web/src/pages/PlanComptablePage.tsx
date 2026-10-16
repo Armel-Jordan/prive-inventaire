@@ -5,7 +5,7 @@ import {
   NATURES, TYPES_COMPTE, type CompteComptable, type SaisieCompte, type PlanType, type NatureCompte,
 } from '@/services/comptabilite';
 import { ApiError } from '@/services/http';
-import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 
@@ -65,8 +65,9 @@ export default function PlanComptablePage() {
   const { t } = useLanguage();
   const ta = t.accounting;
   const tc = ta.chart;
-  const { user } = useAuth();
-  const peutModifier = user?.role === 'admin' || user?.role === 'manager';
+  // Permissions de la comptabilité (rôles et permissions).
+  const { peut } = usePermissions();
+  const peutModifier = peut('comptabilite', 'plan');
 
   const [comptes, setComptes] = useState<CompteComptable[] | null>(null);
   const [plans, setPlans] = useState<PlanType[]>([]);

@@ -1,469 +1,269 @@
-import { useEffect, useState } from 'react';
-import { Shield, Plus, Edit2, Trash2, Save, X, Check, Eye, Copy } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, Lock, Plus, Save, Shield, Trash2, Users } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
-import { apiFetch, ApiError } from '@/services/http';
+import { useLanguage } from '@/i18n/useLanguage';
+import { messageErreur } from '@/lib/erreurs';
+import {
+  creerGroupe, getCatalogue, getGroupes, modifierGroupe, permissionsDu, supprimerGroupe, valeurDuGroupe, versApi,
+  type Groupe, type OngletCatalogue, type PermissionCatalogue,
+} from '@/services/permissions';
+import MatricePermissions from '@/components/permissions/MatricePermissions';
+import ConfirmModal from '@/components/ConfirmModal';
+import Toasts from '@/components/Toasts';
+import { useToast } from '@/hooks/useToast';
 
-interface Permission {
-  can_view: boolean;
-  can_create: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
-}
+const classeChamp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
 
-interface Role {
-  id: number;
+interface Edition {
+  /** null : nouveau groupe. */
+  id: number | null;
   nom: string;
   description: string;
-  is_system: boolean;
-  permissions: Record<string, Permission>;
+  actif: boolean;
+  valeurs: Record<string, boolean>;
 }
 
-const MODULE_LABELS: Record<string, string> = {
-  dashboard: 'Tableau de bord',
-  inventaires: 'Inventaires',
-  statistiques: 'Statistiques',
-  comparaison: 'Comparaison',
-  alertes: 'Alertes Stock',
-  historique: 'Historique',
-  tracabilite: 'Traçabilité',
-  relocalisation: 'Relocalisation',
-  planification: 'Planification',
-  approbations: 'Approbations',
-  rapports: 'Rapports',
-  inventaire_tournant: 'Inventaire Tournant',
-  produits: 'Produits',
-  secteurs: 'Secteurs',
-  employes: 'Employés',
-  roles: 'Gestion des rôles',
-  fournisseurs: 'Fournisseurs',
-  commandes_fournisseur: 'Commandes Fournisseur',
-  receptions: 'Réceptions',
-  clients: 'Clients',
-  commandes_client: 'Commandes Client',
-  factures: 'Factures',
-  bons_livraison: 'Bons de Livraison',
-  camions: 'Camions',
-  tournees: 'Tournées',
-  zones_preparation: 'Zones Préparation',
-  devis: 'Devis',
-  comptabilite: 'Comptabilité',
-  previsions_stock: 'Prévisions Stock',
-  gestion_prix: 'Gestion des Prix',
-  alertes_config: 'Configuration Alertes',
-  configuration: 'Configuration Système',
-  fiches_employes: 'Fiches Employés',
-  referentiels: 'Référentiels',
-};
-
-const MODULES = Object.keys(MODULE_LABELS);
-
+/**
+ * Rôles et permissions, sur le modèle de fripv2 : les groupes (rôles système communs à toutes les entreprises,
+ * et groupes de l'entreprise) et leurs permissions par onglet et par écran, droits de base et actions nommées.
+ */
 export default function RolesPage() {
+  const { t, language } = useLanguage();
+  const tp = t.permissions;
+  const langue = language === 'en' ? 'en' : 'fr';
   const { isAdmin } = usePermissions();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRole, setNewRole] = useState({ nom: '', description: '' });
-  const [newPermissions, setNewPermissions] = useState<Record<string, Permission>>({});
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { toasts, toast, dismiss } = useToast();
+  const [catalogue, setCatalogue] = useState<OngletCatalogue[] | null>(null);
+  const [groupes, setGroupes] = useState<Groupe[] | null>(null);
+  const [version, setVersion] = useState(0);
+  const [selection, setSelection] = useState<number | null>(null);
+  const [edition, setEdition] = useState<Edition | null>(null);
+  const [erreur, setErreur] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const [aSupprimer, setASupprimer] = useState<Groupe | null>(null);
 
   useEffect(() => {
-    loadRoles();
-  }, []);
+    let actif = true;
+    getCatalogue().then(r => { if (actif) setCatalogue(r.onglets); }, e => { if (actif) setErreur(messageErreur(e, tp.error)); });
+    return () => { actif = false; };
+  }, [tp.error]);
 
-  async function loadRoles() {
-    setLoading(true);
-    try {
-      const data = await apiFetch<Role[]>('/roles-custom');
-      setRoles(data);
-    } catch (error) {
-      console.error('Erreur chargement rôles:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    let actif = true;
+    getGroupes().then(r => { if (actif) setGroupes(r); }, e => { if (actif) setErreur(messageErreur(e, tp.error)); });
+    return () => { actif = false; };
+  }, [version, tp.error]);
 
-  function initNewPermissions() {
-    const perms: Record<string, Permission> = {};
-    MODULES.forEach(m => {
-      perms[m] = { can_view: false, can_create: false, can_edit: false, can_delete: false };
+  const toutes = useMemo(() => (catalogue ? permissionsDu(catalogue) : []), [catalogue]);
+  const groupeChoisi = groupes?.find(g => g.id === selection) ?? null;
+
+  // Rôles système : libellé lisible plutôt que le nom technique (admin, manager…).
+  const nomDe = (groupe: Pick<Groupe, 'nom' | 'is_system'>) => (groupe.is_system ? tp.systemRoles[groupe.nom as keyof typeof tp.systemRoles] ?? groupe.nom : groupe.nom);
+
+  const valeursDe = (groupe: Groupe) => Object.fromEntries(toutes.map(p => [p.code, valeurDuGroupe(groupe, p)]));
+
+  const choisir = (groupe: Groupe) => {
+    setSelection(groupe.id);
+    setEdition(groupe.is_system ? null : { id: groupe.id, nom: groupe.nom, description: groupe.description ?? '', actif: groupe.actif, valeurs: valeursDe(groupe) });
+  };
+
+  const nouveau = (modele?: Groupe) => {
+    setSelection(null);
+    setEdition({
+      id: null,
+      nom: modele ? `${nomDe(modele)} ${tp.copySuffix}` : '',
+      description: modele?.description ?? '',
+      actif: true,
+      valeurs: modele ? valeursDe(modele) : Object.fromEntries(toutes.map(p => [p.code, false])),
     });
-    setNewPermissions(perms);
-  }
+  };
 
-  async function handleCreateRole() {
-    if (!newRole.nom.trim()) return;
-    setSaving(true);
+  const changer = (codes: string[], valeur: boolean) => {
+    setEdition(e => (e ? { ...e, valeurs: { ...e.valeurs, ...Object.fromEntries(codes.map(c => [c, valeur])) } } : e));
+  };
+
+  async function enregistrer() {
+    if (!edition || !catalogue) return;
+    setOccupe(true);
     try {
-      await apiFetch('/roles-custom', {
-        method: 'POST',
-        body: JSON.stringify({ ...newRole, permissions: newPermissions }),
-      });
-      setMessage({ type: 'success', text: 'Rôle créé avec succès' });
-      setShowCreateModal(false);
-      setNewRole({ nom: '', description: '' });
-      loadRoles();
-    } catch (e) {
-      if (e instanceof ApiError) {
-        const data = e.data as { message?: string } | null;
-        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la création' });
+      const donnees = { nom: edition.nom.trim(), description: edition.description.trim() || null, actif: edition.actif, ...versApi(catalogue, edition.valeurs) };
+      if (edition.id === null) {
+        const { role_id } = await creerGroupe(donnees);
+        setSelection(role_id);
+        setEdition({ ...edition, id: role_id });
+        toast(tp.created);
       } else {
-        setMessage({ type: 'error', text: 'Erreur de connexion' });
+        await modifierGroupe(edition.id, donnees);
+        toast(tp.saved);
       }
+      setVersion(v => v + 1);
+    } catch (e) {
+      toast(messageErreur(e, tp.error), 'error');
     } finally {
-      setSaving(false);
+      setOccupe(false);
     }
   }
 
-  async function handleUpdateRole() {
-    if (!editingRole) return;
-    setSaving(true);
+  async function supprimer() {
+    if (!aSupprimer) return;
+    const groupe = aSupprimer;
+    setASupprimer(null);
     try {
-      await apiFetch(`/roles-custom/${editingRole.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          nom: editingRole.nom,
-          description: editingRole.description,
-          permissions: editingRole.permissions,
-        }),
-      });
-      setMessage({ type: 'success', text: 'Rôle mis à jour avec succès' });
-      setEditingRole(null);
-      loadRoles();
+      await supprimerGroupe(groupe.id);
+      toast(tp.deleted);
+      setSelection(null);
+      setEdition(null);
+      setVersion(v => v + 1);
     } catch (e) {
-      if (e instanceof ApiError) {
-        const data = e.data as { message?: string } | null;
-        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la mise à jour' });
-      } else {
-        setMessage({ type: 'error', text: 'Erreur de connexion' });
-      }
-    } finally {
-      setSaving(false);
+      toast(messageErreur(e, tp.error), 'error');
     }
-  }
-
-  async function handleDeleteRole(roleId: number) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce rôle ?')) return;
-    try {
-      await apiFetch(`/roles-custom/${roleId}`, {
-        method: 'DELETE',
-        responseType: 'void',
-      });
-      setMessage({ type: 'success', text: 'Rôle supprimé avec succès' });
-      loadRoles();
-    } catch (e) {
-      if (e instanceof ApiError) {
-        const data = e.data as { message?: string } | null;
-        setMessage({ type: 'error', text: data?.message || 'Erreur lors de la suppression' });
-      } else {
-        setMessage({ type: 'error', text: 'Erreur de connexion' });
-      }
-    }
-  }
-
-  // Les rôles système sont communs à toutes les entreprises : on les adapte en créant une copie.
-  function dupliquerRole(role: Role) {
-    const perms: Record<string, Permission> = {};
-    MODULES.forEach(m => {
-      perms[m] = { ...(role.permissions[m] ?? { can_view: false, can_create: false, can_edit: false, can_delete: false }) };
-    });
-    setNewPermissions(perms);
-    setNewRole({ nom: `${role.nom} (copie)`, description: role.description || '' });
-    setEditingRole(null);
-    setShowCreateModal(true);
-  }
-
-  function togglePermission(
-    perms: Record<string, Permission>,
-    setPerms: (p: Record<string, Permission>) => void,
-    module: string,
-    type: keyof Permission
-  ) {
-    const current = perms[module] || { can_view: false, can_create: false, can_edit: false, can_delete: false };
-    setPerms({
-      ...perms,
-      [module]: { ...current, [type]: !current[type] },
-    });
   }
 
   if (!isAdmin()) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <Shield className="mx-auto text-red-500 mb-4" size={48} />
-        <h2 className="text-lg font-semibold text-red-800 mb-2">Accès refusé</h2>
-        <p className="text-red-600">Seuls les administrateurs peuvent gérer les rôles.</p>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-xl">
+          <Shield className="mx-auto text-red-500 mb-4" size={40} />
+          <p className="text-red-700">{tp.adminOnly}</p>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
-    return <div className="text-gray-500">Chargement des rôles...</div>;
-  }
+  const lecture = groupeChoisi?.is_system ? valeursDe(groupeChoisi) : null;
+  const caseDe = (permission: PermissionCatalogue) => {
+    const coche = lecture ? lecture[permission.code] : Boolean(edition?.valeurs[permission.code]);
+    return (
+      <input
+        type="checkbox"
+        className="h-4 w-4 accent-blue-600"
+        aria-label={permission[langue]}
+        checked={coche}
+        disabled={!edition}
+        onChange={e => changer([permission.code], e.target.checked)}
+      />
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Gestion des Rôles</h1>
-          <p className="text-gray-500 dark:text-gray-400">Créez et gérez les rôles et permissions</p>
-        </div>
-        <button
-          onClick={() => { initNewPermissions(); setShowCreateModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={18} />
-          Nouveau rôle
-        </button>
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><Shield className="text-blue-600" /> {tp.title}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-4xl">{tp.subtitle}</p>
       </div>
+      {erreur && <p role="alert" className="mb-4 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{erreur}</p>}
 
-      {message && (
-        <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Liste des rôles */}
-      <div className="grid gap-4">
-        {roles.map((role) => (
-          <div key={role.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-                  <Shield size={20} className="text-blue-600" />
-                  {role.nom}
-                  {!!role.is_system && (
-                    <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">Système</span>
+      <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-5 items-start">
+        <aside className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+          <div className="flex items-center justify-between gap-2 p-3 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="font-semibold text-gray-800 dark:text-white">{tp.groups}</h2>
+            <button type="button" onClick={() => nouveau()} disabled={!catalogue}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
+              <Plus size={14} /> {tp.newGroup}
+            </button>
+          </div>
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            {(groupes ?? []).map(groupe => (
+              <li key={groupe.id}>
+                <button type="button" onClick={() => choisir(groupe)}
+                  className={`w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${groupe.id === selection ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}>
+                  <span className="flex items-center gap-1.5 font-medium text-sm text-gray-800 dark:text-gray-100">
+                    {groupe.is_system && <Lock size={12} className="text-gray-400" />}
+                    {nomDe(groupe)}
+                    {groupe.is_system && <span className="ml-auto text-[10px] uppercase text-gray-400">{tp.system}</span>}
+                    {!groupe.is_system && !groupe.actif && <span className="ml-auto px-1.5 rounded bg-gray-200 text-gray-600 text-[10px]">{tp.inactive}</span>}
+                  </span>
+                  {groupe.nb_comptes !== null && (
+                    <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><Users size={11} /> {tp.accounts.replace('{n}', String(groupe.nb_comptes))}</span>
                   )}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{role.description}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingRole({ ...role })}
-                  title={role.is_system ? 'Voir les permissions' : 'Modifier'}
-                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
-                >
-                  {role.is_system ? <Eye size={18} /> : <Edit2 size={18} />}
                 </button>
-                <button
-                  onClick={() => dupliquerRole(role)}
-                  title="Dupliquer"
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                >
-                  <Copy size={18} />
-                </button>
-                {!role.is_system && (
-                  <button
-                    onClick={() => handleDeleteRole(role.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-            </div>
+              </li>
+            ))}
+          </ul>
+        </aside>
 
-            {/* Permissions résumées */}
-            <div className="flex flex-wrap gap-2">
-              {MODULES.filter(m => role.permissions[m]?.can_view).map(m => (
-                <span key={m} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                  {MODULE_LABELS[m]}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
+        <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 min-w-0">
+          {!catalogue || (!groupeChoisi && !edition) ? (
+            <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{tp.chooseGroup}</p>
+          ) : (
+            <>
+              {groupeChoisi?.is_system ? (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{nomDe(groupeChoisi)}</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{tp.systemNote}</p>
+                  </div>
+                  <button type="button" onClick={() => nouveau(groupeChoisi)} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                    <Copy size={15} /> {tp.duplicate}
+                  </button>
+                </div>
+              ) : edition && (
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <label className="text-sm text-gray-700 dark:text-gray-300">{tp.name}
+                    <input required maxLength={50} value={edition.nom} onChange={e => setEdition({ ...edition, nom: e.target.value })} className={`${classeChamp} mt-1`} />
+                  </label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">{tp.description}
+                    <input maxLength={255} value={edition.description} onChange={e => setEdition({ ...edition, description: e.target.value })} className={`${classeChamp} mt-1`} />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => { void enregistrer(); }} disabled={occupe || !edition.nom.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                      <Save size={15} /> {tp.save}
+                    </button>
+                    {edition.id !== null && groupeChoisi && (
+                      <>
+                        <button type="button" onClick={() => nouveau(groupeChoisi)} title={tp.duplicate} aria-label={tp.duplicate}
+                          className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"><Copy size={15} /></button>
+                        <button type="button" onClick={() => setASupprimer(groupeChoisi)} title={tp.delete} aria-label={tp.delete}
+                          className="p-2 border border-red-200 rounded-lg text-red-600 hover:bg-red-50 dark:border-red-900"><Trash2 size={15} /></button>
+                      </>
+                    )}
+                  </div>
+                  <label className="md:col-span-3 flex items-start gap-2 text-sm">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4" checked={edition.actif} onChange={e => setEdition({ ...edition, actif: e.target.checked })} />
+                    <span>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{tp.active}</span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">{tp.activeHelp}</span>
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              <MatricePermissions
+                catalogue={catalogue}
+                langue={langue}
+                textes={tp}
+                rendreCase={caseDe}
+                rendreEnTete={(module, visibles) => edition && (
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    {tp.all}
+                    <input type="checkbox" className="h-4 w-4 accent-blue-600"
+                      checked={visibles.every(p => edition.valeurs[p.code])}
+                      onChange={e => changer(visibles.map(p => p.code), e.target.checked)}
+                      aria-label={`${tp.all} — ${module[langue]}`} />
+                  </label>
+                )}
+                barreOutils={edition && (
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => changer(toutes.map(p => p.code), true)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.grantAll}</button>
+                    <button type="button" onClick={() => changer(toutes.map(p => p.code), false)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.removeAll}</button>
+                  </div>
+                )}
+              />
+            </>
+          )}
+        </section>
       </div>
 
-      {/* Modal de création */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold dark:text-white">Créer un nouveau rôle</h2>
-              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nom du rôle</label>
-                  <input
-                    type="text"
-                    value={newRole.nom}
-                    onChange={(e) => setNewRole({ ...newRole, nom: e.target.value })}
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
-                    placeholder="ex: superviseur"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={newRole.description}
-                    onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
-                    placeholder="Description du rôle"
-                  />
-                </div>
-              </div>
-
-              <h3 className="font-medium text-gray-800 dark:text-white mb-3">Permissions par module</h3>
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Module</th>
-                    <th className="px-3 py-2 text-center">Voir</th>
-                    <th className="px-3 py-2 text-center">Créer</th>
-                    <th className="px-3 py-2 text-center">Modifier</th>
-                    <th className="px-3 py-2 text-center">Supprimer</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y dark:divide-gray-700">
-                  {MODULES.map(module => (
-                    <tr key={module} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-3 py-2 font-medium dark:text-white">{MODULE_LABELS[module]}</td>
-                      {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map(perm => (
-                        <td key={perm} className="px-3 py-2 text-center">
-                          <button
-                            onClick={() => togglePermission(newPermissions, setNewPermissions, module, perm)}
-                            className={`w-6 h-6 rounded ${newPermissions[module]?.[perm] ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}
-                          >
-                            {newPermissions[module]?.[perm] && <Check size={14} className="mx-auto" />}
-                          </button>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
-                Annuler
-              </button>
-              <button
-                onClick={handleCreateRole}
-                disabled={saving || !newRole.nom.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Save size={18} />
-                {saving ? 'Création...' : 'Créer le rôle'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal d'édition */}
-      {editingRole && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold dark:text-white">
-                {editingRole.is_system ? `Rôle système : ${editingRole.nom}` : `Modifier le rôle : ${editingRole.nom}`}
-              </h2>
-              <button onClick={() => setEditingRole(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 overflow-y-auto max-h-[70vh]">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nom du rôle</label>
-                  <input
-                    type="text"
-                    value={editingRole.nom}
-                    onChange={(e) => setEditingRole({ ...editingRole, nom: e.target.value })}
-                    disabled={editingRole.is_system}
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={editingRole.description || ''}
-                    onChange={(e) => setEditingRole({ ...editingRole, description: e.target.value })}
-                    disabled={editingRole.is_system}
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <h3 className="font-medium text-gray-800 dark:text-white mb-3">Permissions par module</h3>
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Module</th>
-                    <th className="px-3 py-2 text-center">Voir</th>
-                    <th className="px-3 py-2 text-center">Créer</th>
-                    <th className="px-3 py-2 text-center">Modifier</th>
-                    <th className="px-3 py-2 text-center">Supprimer</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y dark:divide-gray-700">
-                  {MODULES.map(module => (
-                    <tr key={module} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-3 py-2 font-medium dark:text-white">{MODULE_LABELS[module]}</td>
-                      {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map(perm => (
-                        <td key={perm} className="px-3 py-2 text-center">
-                          <button
-                            disabled={editingRole.is_system}
-                            onClick={() => {
-                              const current = editingRole.permissions[module] || { can_view: false, can_create: false, can_edit: false, can_delete: false };
-                              setEditingRole({
-                                ...editingRole,
-                                permissions: {
-                                  ...editingRole.permissions,
-                                  [module]: { ...current, [perm]: !current[perm] },
-                                },
-                              });
-                            }}
-                            className={`w-6 h-6 rounded disabled:cursor-not-allowed ${editingRole.permissions[module]?.[perm] ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}
-                          >
-                            {editingRole.permissions[module]?.[perm] && <Check size={14} className="mx-auto" />}
-                          </button>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4 border-t dark:border-gray-700 flex flex-wrap items-center justify-end gap-2">
-              {editingRole.is_system && (
-                <p className="mr-auto text-sm text-gray-500 dark:text-gray-400">
-                  Rôle commun à toutes les entreprises : dupliquez-le pour adapter ses droits.
-                </p>
-              )}
-              <button onClick={() => setEditingRole(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
-                {editingRole.is_system ? 'Fermer' : 'Annuler'}
-              </button>
-              {editingRole.is_system ? (
-                <button
-                  onClick={() => dupliquerRole(editingRole)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Copy size={18} />
-                  Dupliquer
-                </button>
-              ) : (
-                <button
-                  onClick={handleUpdateRole}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Save size={18} />
-                  {saving ? 'Enregistrement...' : 'Enregistrer'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={aSupprimer !== null}
+        title={tp.deleteTitle}
+        message={aSupprimer ? tp.deleteMessage.replace('{nom}', nomDe(aSupprimer)) : ''}
+        confirmLabel={tp.delete}
+        onConfirm={() => { void supprimer(); }}
+        onCancel={() => setASupprimer(null)}
+      />
+      <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

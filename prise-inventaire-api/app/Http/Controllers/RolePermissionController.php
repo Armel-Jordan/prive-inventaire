@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
 use App\Support\Droits;
+use App\Support\Permissions;
 use App\Support\TenantContext;
 use App\Support\TenantRule;
 use Closure;
@@ -13,25 +14,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Rôles et permissions par module. Les rôles système (tenant_id NULL : admin, manager, user, readonly)
- * sont communs à toutes les entreprises et ne se modifient pas ici ; chaque entreprise crée, modifie et
- * supprime ses propres rôles personnalisés, invisibles des autres.
+ * Groupes (rôles) et leurs permissions : droits de base par module (voir, créer, modifier, supprimer) et
+ * actions nommées (voir App\Support\Permissions). Les rôles système (tenant_id NULL : admin, manager, user,
+ * readonly) sont communs à toutes les entreprises et ne se modifient pas ici ; chaque entreprise crée, modifie,
+ * désactive et supprime ses propres groupes, invisibles des autres.
  */
 class RolePermissionController extends Controller
 {
-    private array $allModules = [
-        'dashboard', 'inventaires', 'statistiques', 'comparaison', 'alertes',
-        'historique', 'tracabilite', 'relocalisation', 'planification',
-        'approbations', 'rapports', 'inventaire_tournant', 'produits',
-        'secteurs', 'employes', 'roles', 'fournisseurs', 'commandes_fournisseur',
-        'receptions', 'clients', 'commandes_client', 'factures', 'bons_livraison',
-        'camions', 'tournees', 'zones_preparation', 'devis', 'comptabilite',
-        'previsions_stock', 'gestion_prix', 'alertes_config', 'configuration',
-        'fiches_employes', 'referentiels',
-    ];
-
     /**
      * Rôles visibles par l'entreprise courante : les rôles système et les siens. Les rôles personnalisés
      * créés avant l'isolation n'ont pas d'entreprise : ils restent masqués à toutes.
@@ -84,17 +76,38 @@ class RolePermissionController extends Controller
             ->keyBy('module');
     }
 
+    /** Actions nommées réglées par le rôle : code => accordée (les autres suivent leur droit de base). */
+    private function actionsDuRole(int $roleId): array
+    {
+        return DB::table('role_actions')->where('role_id', $roleId)->get()
+            ->mapWithKeys(fn (object $action) => [$action->permission => (bool) $action->accorde])->all();
+    }
+
     private function presenterRole(object $role): object
     {
         $role->is_system = (bool) $role->is_system;
+        $role->actif = (bool) ($role->actif ?? true);
         $role->permissions = $this->permissionsDuRole($role->id);
+        $role->actions = (object) $this->actionsDuRole($role->id);
+        $role->nb_comptes = $role->tenant_id === null ? null : $this->comptesDuRole($role->id);
 
         return $role;
     }
 
+    /** Comptes de l'entreprise rattachés au rôle : rôle principal ou groupe supplémentaire. */
+    private function comptesDuRole(int $roleId): int
+    {
+        $tenantId = app(TenantContext::class)->getTenantId();
+        $principal = AdminUser::where('tenant_id', $tenantId)->where('role_custom_id', $roleId)->pluck('id');
+        $supplementaire = DB::table('admin_user_groupes')->join('admin_users', 'admin_users.id', '=', 'admin_user_groupes.admin_user_id')
+            ->where('admin_users.tenant_id', $tenantId)->where('admin_user_groupes.role_id', $roleId)->pluck('admin_users.id');
+
+        return $principal->merge($supplementaire)->unique()->count();
+    }
+
     private function enregistrerPermissions(int $roleId, array $permissions): void
     {
-        foreach ($this->allModules as $module) {
+        foreach (Permissions::modules() as $module) {
             $perm = $permissions[$module] ?? [];
             DB::table('role_permissions')->updateOrInsert(
                 ['role_id' => $roleId, 'module' => $module],
@@ -106,6 +119,30 @@ class RolePermissionController extends Controller
                     'updated_at' => now(),
                     'created_at' => now(),
                 ]
+            );
+        }
+    }
+
+    /**
+     * Actions nommées réglées : code => true (accordée), false (refusée) ou null (suit le droit de base).
+     *
+     * @throws ValidationException
+     */
+    private function enregistrerActions(int $roleId, array $actions): void
+    {
+        foreach ($actions as $code => $accorde) {
+            [$module, $action] = array_pad(explode('.', (string) $code, 2), 2, '');
+            if (! Permissions::existe((string) $code) || in_array($action, Permissions::CRUD, true) || ! ($accorde === null || is_bool($accorde))) {
+                throw ValidationException::withMessages(['actions' => "Permission inconnue : {$code}."]);
+            }
+            if ($accorde === null) {
+                DB::table('role_actions')->where('role_id', $roleId)->where('permission', $code)->delete();
+
+                continue;
+            }
+            DB::table('role_actions')->updateOrInsert(
+                ['role_id' => $roleId, 'permission' => $code],
+                ['accorde' => $accorde, 'updated_at' => now(), 'created_at' => now()],
             );
         }
     }
@@ -138,18 +175,25 @@ class RolePermissionController extends Controller
             'nom' => $this->reglesNom('required'),
             'description' => 'nullable|string|max:255',
             'permissions' => 'present|array',
+            'actions' => 'sometimes|array',
+            'actif' => 'sometimes|boolean',
         ]);
 
-        $roleId = DB::table('roles_custom')->insertGetId([
-            'tenant_id' => app(TenantContext::class)->getTenantId(),
-            'nom' => trim($request->nom),
-            'description' => $request->description,
-            'is_system' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $roleId = DB::transaction(function () use ($request) {
+            $roleId = DB::table('roles_custom')->insertGetId([
+                'tenant_id' => app(TenantContext::class)->getTenantId(),
+                'nom' => trim($request->nom),
+                'description' => $request->description,
+                'is_system' => false,
+                'actif' => $request->boolean('actif', true),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $this->enregistrerPermissions($roleId, $request->permissions);
+            $this->enregistrerActions($roleId, $request->input('actions', []));
 
-        $this->enregistrerPermissions($roleId, $request->permissions);
+            return $roleId;
+        });
 
         return response()->json([
             'success' => true,
@@ -166,17 +210,24 @@ class RolePermissionController extends Controller
             'nom' => $this->reglesNom('sometimes', $id),
             'description' => 'nullable|string|max:255',
             'permissions' => 'sometimes|array',
+            'actions' => 'sometimes|array',
+            'actif' => 'sometimes|boolean',
         ]);
 
-        DB::table('roles_custom')->where('id', $id)->update([
-            'nom' => $request->filled('nom') ? trim($request->nom) : $role->nom,
-            'description' => $request->description ?? $role->description,
-            'updated_at' => now(),
-        ]);
-
-        if ($request->has('permissions')) {
-            $this->enregistrerPermissions($id, $request->permissions);
-        }
+        DB::transaction(function () use ($request, $role, $id) {
+            DB::table('roles_custom')->where('id', $id)->update([
+                'nom' => $request->filled('nom') ? trim($request->nom) : $role->nom,
+                'description' => $request->description ?? $role->description,
+                'actif' => $request->has('actif') ? $request->boolean('actif') : (bool) ($role->actif ?? true),
+                'updated_at' => now(),
+            ]);
+            if ($request->has('permissions')) {
+                $this->enregistrerPermissions($id, $request->permissions);
+            }
+            if ($request->has('actions')) {
+                $this->enregistrerActions($id, $request->input('actions', []));
+            }
+        });
 
         return response()->json([
             'success' => true,
@@ -188,15 +239,15 @@ class RolePermissionController extends Controller
     {
         $this->roleModifiable($id);
 
-        // Comptes de l'entreprise encore rattachés à ce rôle.
-        $usersCount = AdminUser::where('tenant_id', app(TenantContext::class)->getTenantId())
-            ->where('role_custom_id', $id)->count();
+        // Comptes de l'entreprise encore rattachés à ce rôle (rôle principal ou groupe supplémentaire).
+        $usersCount = $this->comptesDuRole($id);
         if ($usersCount > 0) {
             return response()->json([
-                'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent",
+                'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent : désactivez-le plutôt.",
             ], 400);
         }
 
+        DB::table('role_actions')->where('role_id', $id)->delete();
         DB::table('role_permissions')->where('role_id', $id)->delete();
         DB::table('roles_custom')->where('id', $id)->delete();
 
@@ -206,60 +257,44 @@ class RolePermissionController extends Controller
         ]);
     }
 
+    /** Libellés des modules (écran des rôles, ancien format). */
     public function modules(): JsonResponse
     {
-        $moduleLabels = [
-            'dashboard' => 'Tableau de bord',
-            'inventaires' => 'Inventaires',
-            'statistiques' => 'Statistiques',
-            'comparaison' => 'Comparaison',
-            'alertes' => 'Alertes Stock',
-            'historique' => 'Historique',
-            'tracabilite' => 'Traçabilité',
-            'relocalisation' => 'Relocalisation',
-            'planification' => 'Planification',
-            'approbations' => 'Approbations',
-            'rapports' => 'Rapports',
-            'inventaire_tournant' => 'Inventaire Tournant',
-            'produits' => 'Produits',
-            'secteurs' => 'Secteurs',
-            'employes' => 'Employés',
-            'roles' => 'Gestion des rôles',
-            'fournisseurs' => 'Fournisseurs',
-            'commandes_fournisseur' => 'Commandes Fournisseur',
-            'receptions' => 'Réceptions',
-            'clients' => 'Clients',
-            'commandes_client' => 'Commandes Client',
-            'factures' => 'Factures',
-            'bons_livraison' => 'Bons de Livraison',
-            'camions' => 'Camions',
-            'tournees' => 'Tournées',
-            'zones_preparation' => 'Zones Préparation',
-            'devis' => 'Devis',
-            'comptabilite' => 'Comptabilité',
-            'previsions_stock' => 'Prévisions Stock',
-            'gestion_prix' => 'Gestion des Prix',
-            'alertes_config' => 'Configuration Alertes',
-            'configuration' => 'Configuration Système',
-            'fiches_employes' => 'Fiches Employés',
-            'referentiels' => 'Référentiels',
-        ];
-
-        return response()->json($moduleLabels);
+        return response()->json(collect(Permissions::modules())->mapWithKeys(fn (string $module) => [$module => Permissions::libelle($module)]));
     }
 
+    /** Catalogue des permissions : onglets, modules, droits de base et actions nommées, avec leur aide. */
+    public function catalogue(): JsonResponse
+    {
+        return response()->json(['onglets' => Permissions::catalogue()]);
+    }
+
+    /**
+     * Droits effectifs du compte connecté (groupes, actions nommées, exceptions) : par module pour les menus et
+     * les boutons, et code par code (« actions »).
+     */
     public function userPermissions(Request $request, Droits $droits): JsonResponse
     {
-        // Même rôle que celui qu'applique l'API (middleware « droits ») : rôle personnalisé de l'entreprise,
-        // sinon rôle système du même nom ; un administrateur garde tous les droits.
-        $role = $droits->role($request->user());
+        $compte = $request->user();
+        $role = $droits->role($compte);
+        $effectives = $droits->effectives($compte);
 
-        $permissions = $role ? $this->permissionsDuRole($role->id) : collect();
+        $parModule = [];
+        foreach (Permissions::modules() as $module) {
+            $parModule[$module] = [
+                'module' => $module,
+                'can_view' => $effectives["{$module}.voir"] ?? false,
+                'can_create' => $effectives["{$module}.creer"] ?? false,
+                'can_edit' => $effectives["{$module}.modifier"] ?? false,
+                'can_delete' => $effectives["{$module}.supprimer"] ?? false,
+            ];
+        }
 
         return response()->json([
             'role' => $role?->nom ?? 'user',
             'role_id' => $role?->id,
-            'permissions' => $permissions,
+            'permissions' => $parModule,
+            'actions' => $effectives,
         ]);
     }
 

@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -28,6 +29,8 @@ function nomProduit(ligne: BonLivraisonLigne): string {
 }
 
 export default function BonsLivraisonPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [bons, setBons] = useState<BonLivraison[]>([]);
@@ -250,13 +253,28 @@ export default function BonsLivraisonPage() {
                       <BoutonCourriel type="bon_livraison" documentId={bon.id} />
                       {bon.statut === 'cree' && (
                         <>
-                          <button
-                            onClick={() => handleDemarrerPreparation(bon.id)}
-                            className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
-                            title="Démarrer préparation"
-                          >
-                            <Package size={18} />
-                          </button>
+                          {peut('bons_livraison', 'preparer') && (
+                            <button
+                              onClick={() => handleDemarrerPreparation(bon.id)}
+                              className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
+                              title="Démarrer préparation"
+                            >
+                              <Package size={18} />
+                            </button>
+                          )}
+                          {peut('bons_livraison', 'annuler') && (
+                            <button
+                              onClick={() => handleAnnuler(bon.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              title="Annuler"
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {bon.statut === 'en_preparation' && (
+                        <>{peut('bons_livraison', 'annuler') && (
                           <button
                             onClick={() => handleAnnuler(bon.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -264,16 +282,7 @@ export default function BonsLivraisonPage() {
                           >
                             <XCircle size={18} />
                           </button>
-                        </>
-                      )}
-                      {bon.statut === 'en_preparation' && (
-                        <button
-                          onClick={() => handleAnnuler(bon.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Annuler"
-                        >
-                          <XCircle size={18} />
-                        </button>
+                        )}</>
                       )}
                       {bon.statut === 'en_preparation' && (
                         <>
@@ -284,23 +293,27 @@ export default function BonsLivraisonPage() {
                           >
                             <Package size={18} />
                           </button>
-                          <button
-                            onClick={() => handleMarquerPret(bon.id)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Marquer prêt"
-                          >
-                            <CheckCircle size={18} />
-                          </button>
+                          {peut('bons_livraison', 'preparer') && (
+                            <button
+                              onClick={() => handleMarquerPret(bon.id)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                              title="Marquer prêt"
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                          )}
                         </>
                       )}
                       {(bon.statut === 'pret' || bon.statut === 'en_livraison') && (
-                        <button
-                          onClick={() => handleOuvrirLivraison(bon.id)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Enregistrer livraison"
-                        >
-                          <Truck size={18} />
-                        </button>
+                        <>{peut('bons_livraison', 'livrer') && (
+                          <button
+                            onClick={() => handleOuvrirLivraison(bon.id)}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Enregistrer livraison"
+                          >
+                            <Truck size={18} />
+                          </button>
+                        )}</>
                       )}
                       <BoutonChampsPersonnalises entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                     </div>

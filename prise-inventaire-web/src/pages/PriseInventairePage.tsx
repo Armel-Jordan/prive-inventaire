@@ -9,7 +9,7 @@ import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import {
-  couleursStatutLigne, couleursStatutPrise, formatDateHeure, formatEcart, formatQuantite, peutGererPrises,
+  couleursStatutLigne, couleursStatutPrise, formatDateHeure, formatEcart, formatQuantite,
 } from '@/components/prises-inventaire/format';
 
 type Onglet = 'lignes' | 'avancement';
@@ -77,7 +77,7 @@ export default function PriseInventairePage() {
   const { t, language } = useLanguage();
   const ts = t.stocktake;
   const id = useId();
-  const { permissions } = usePermissions();
+  const { peut } = usePermissions();
   const [detail, setDetail] = useState<DetailPrise | null>(null);
   const [onglet, setOnglet] = useState<Onglet>('lignes');
   const [filtres, setFiltres] = useState<Filtres>({ statut: '', secteur: '', recherche: '' });
@@ -116,7 +116,7 @@ export default function PriseInventairePage() {
 
   const { prise, avancement, resume } = detail;
   const enCours = prise.statut === 'en_cours';
-  const gestion = peutGererPrises(permissions?.role) && enCours;
+  const gestion = peut('inventaires', 'prises') && enCours;
 
   async function executer(action: () => Promise<unknown>, succes?: string) {
     try {

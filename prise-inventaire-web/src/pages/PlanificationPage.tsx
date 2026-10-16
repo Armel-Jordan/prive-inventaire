@@ -1,3 +1,4 @@
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, Plus, Play, X, Trash2, Edit, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Toasts from '@/components/Toasts';
@@ -52,6 +53,8 @@ const statutLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function PlanificationPage() {
+  // Boutons d'action selon les permissions (rôles et permissions).
+  const { peut } = usePermissions();
   const { toasts, toast, dismiss } = useToast();
   const [transferts, setTransferts] = useState<TransfertPlanifie[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
@@ -366,13 +369,15 @@ export default function PlanificationPage() {
                         <div className="flex gap-1">
                           {t.statut === 'planifie' && (
                             <>
-                              <button
-                                onClick={() => executeTransfert(t.id)}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                                title="Exécuter"
-                              >
-                                <Play size={16} />
-                              </button>
+                              {peut('planification', 'executer') && (
+                                <button
+                                  onClick={() => executeTransfert(t.id)}
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                                  title="Exécuter"
+                                >
+                                  <Play size={16} />
+                                </button>
+                              )}
                               <button
                                 onClick={() => openModal(t)}
                                 className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
@@ -380,13 +385,15 @@ export default function PlanificationPage() {
                               >
                                 <Edit size={16} />
                               </button>
-                              <button
-                                onClick={() => cancelTransfert(t.id)}
-                                className="p-1.5 text-orange-600 hover:bg-orange-50 rounded"
-                                title="Annuler"
-                              >
-                                <X size={16} />
-                              </button>
+                              {peut('planification', 'executer') && (
+                                <button
+                                  onClick={() => cancelTransfert(t.id)}
+                                  className="p-1.5 text-orange-600 hover:bg-orange-50 rounded"
+                                  title="Annuler"
+                                >
+                                  <X size={16} />
+                                </button>
+                              )}
                             </>
                           )}
                           {t.statut !== 'execute' && (

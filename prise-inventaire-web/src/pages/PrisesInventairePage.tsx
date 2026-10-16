@@ -10,7 +10,7 @@ import {
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
-import { couleursStatutPrise, formatDateHeure, formatQuantite, peutGererPrises, versDateHeureLocale } from '@/components/prises-inventaire/format';
+import { couleursStatutPrise, formatDateHeure, formatQuantite, versDateHeureLocale } from '@/components/prises-inventaire/format';
 
 type Onglet = 'sessions' | 'officiel';
 
@@ -164,8 +164,8 @@ export default function PrisesInventairePage() {
   const { t, language } = useLanguage();
   const ts = t.stocktake;
   const id = useId();
-  const { permissions } = usePermissions();
-  const gestion = peutGererPrises(permissions?.role);
+  const { peut } = usePermissions();
+  const gestion = peut('inventaires', 'prises');
   const [onglet, setOnglet] = useState<Onglet>('sessions');
   const [prises, setPrises] = useState<PriseInventaire[] | null>(null);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);

@@ -21,6 +21,7 @@ Route::get('/health', function () {
     }
 });
 
+use App\Http\Controllers\AccesCompteController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AlerteStockController;
 use App\Http\Controllers\Api\BaliseController;
@@ -192,16 +193,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'role:admin'])->p
 // ============================================
 // « droits » : écritures soumises à la matrice du rôle (créer, modifier, supprimer par module).
 Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group(function () {
-    // Employés CRUD : lecture pour tous (listes de choix) ; écriture réservée aux administrateurs et
-    // managers, l'accès à l'application (rôle, mot de passe) étant contrôlé dans le contrôleur.
+    // Employés CRUD : lecture pour tous (listes de choix) ; écritures selon les droits du module Employés
+    // (middleware « droits ») ; l'accès à l'application (rôle, mot de passe) est contrôlé dans le contrôleur.
     Route::get('/employes', [EmployeTenantController::class, 'index']);
     Route::get('/employes/{id}', [EmployeTenantController::class, 'show']);
-    Route::middleware('role:admin,manager')->group(function () {
-        Route::post('/employes', [EmployeTenantController::class, 'store']);
-        Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
-        Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
-        Route::post('/employes/{id}/photo', [EmployeTenantController::class, 'uploadPhoto']);
-    });
+    Route::post('/employes', [EmployeTenantController::class, 'store']);
+    Route::put('/employes/{id}', [EmployeTenantController::class, 'update']);
+    Route::delete('/employes/{id}', [EmployeTenantController::class, 'destroy']);
+    Route::post('/employes/{id}/photo', [EmployeTenantController::class, 'uploadPhoto']);
 
     // Produits CRUD
     Route::get('/produits', [ProduitTenantController::class, 'index']);
@@ -224,6 +223,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     // Permissions utilisateur
     Route::get('/permissions/me', [RolePermissionController::class, 'userPermissions']);
     Route::get('/permissions/modules', [RolePermissionController::class, 'modules']);
+    Route::get('/permissions/catalogue', [RolePermissionController::class, 'catalogue']);
 
     // Gestion des rôles (admin uniquement) — enforcement backend
     Route::middleware('role:admin')->group(function () {
@@ -233,6 +233,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update']);
         Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy']);
         Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole']);
+        // Accès d'un compte : groupes supplémentaires et exceptions, permission par permission.
+        Route::get('/acces-comptes/{id}', [AccesCompteController::class, 'show'])->whereNumber('id');
+        Route::put('/acces-comptes/{id}', [AccesCompteController::class, 'update'])->whereNumber('id');
     });
 
     // Scans
@@ -413,14 +416,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}', [PriseInventaireController::class, 'show'])->whereNumber('id');
         Route::get('/{id}/lignes', [PriseInventaireController::class, 'lignes'])->whereNumber('id');
         Route::get('/{id}/export', [PriseInventaireController::class, 'exporter'])->whereNumber('id');
-        Route::middleware('role:admin,manager')->group(function () {
-            // Valorisation de l'inventaire officiel (coûts : administrateurs et responsables).
-            Route::get('/valorisation', ValorisationInventaireController::class);
-            Route::post('/', [PriseInventaireController::class, 'store']);
-            Route::put('/{id}/corrections', [PriseInventaireController::class, 'corriger'])->whereNumber('id');
-            Route::post('/{id}/valider', [PriseInventaireController::class, 'valider'])->whereNumber('id');
-            Route::post('/{id}/annuler', [PriseInventaireController::class, 'annuler'])->whereNumber('id');
-        });
+        // Valorisation de l'inventaire officiel (coûts) : droit « Valorisation » ; prises : « Gérer les prises d'inventaire ».
+        Route::get('/valorisation', ValorisationInventaireController::class);
+        Route::post('/', [PriseInventaireController::class, 'store']);
+        Route::put('/{id}/corrections', [PriseInventaireController::class, 'corriger'])->whereNumber('id');
+        Route::post('/{id}/valider', [PriseInventaireController::class, 'valider'])->whereNumber('id');
+        Route::post('/{id}/annuler', [PriseInventaireController::class, 'annuler'])->whereNumber('id');
     });
 
     // Utilisateurs admin CRUD (admin uniquement)
@@ -456,7 +457,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     });
 
     // Fiche fournisseur complète : synthèse des achats, historique, produits fournis, contacts, adresses,
-    // coordonnées bancaires (saisie réservée aux administrateurs et managers), remarques.
+    // coordonnées bancaires (saisie : permission « Gérer les coordonnées bancaires »), remarques.
     Route::prefix('fournisseurs/{fournisseur}')->where(['fournisseur' => '[0-9]+'])->middleware('module:achats')->group(function () {
         Route::get('/fiche', [FournisseurFicheController::class, 'show']);
         Route::get('/synthese', [FournisseurFicheController::class, 'synthese']);
@@ -472,11 +473,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
             Route::delete("/{$liste}/{id}", [$controleur, 'destroy'])->whereNumber('id');
         }
         Route::get('/comptes-bancaires', [FournisseurFicheCompteController::class, 'index']);
-        Route::middleware('role:admin,manager')->group(function () {
-            Route::post('/comptes-bancaires', [FournisseurFicheCompteController::class, 'store']);
-            Route::put('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'update'])->whereNumber('id');
-            Route::delete('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'destroy'])->whereNumber('id');
-        });
+        Route::post('/comptes-bancaires', [FournisseurFicheCompteController::class, 'store']);
+        Route::put('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'update'])->whereNumber('id');
+        Route::delete('/comptes-bancaires/{id}', [FournisseurFicheCompteController::class, 'destroy'])->whereNumber('id');
     });
 
     // ============================================
@@ -551,12 +550,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         }
     });
 
-    // Catégories de clients : lecture pour tous, gestion par les administrateurs.
+    // Catégories de clients : lecture pour tous, gestion avec la permission « Gérer les catégories de clients ».
     Route::prefix('categories-clients')->middleware('module:ventes')->group(function () {
         Route::get('/', [ClientFicheCategorieController::class, 'index']);
-        Route::post('/', [ClientFicheCategorieController::class, 'store'])->middleware('role:admin');
-        Route::put('/{id}', [ClientFicheCategorieController::class, 'update'])->whereNumber('id')->middleware('role:admin');
-        Route::delete('/{id}', [ClientFicheCategorieController::class, 'destroy'])->whereNumber('id')->middleware('role:admin');
+        Route::post('/', [ClientFicheCategorieController::class, 'store']);
+        Route::put('/{id}', [ClientFicheCategorieController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ClientFicheCategorieController::class, 'destroy'])->whereNumber('id');
     });
 
     // Commandes Clients
@@ -603,16 +602,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
     });
 
-    // Portail client, côté entreprise : réglages et accès des clients.
+    // Espace client, côté entreprise : réglages et accès des clients (droits du module Espace client).
     Route::prefix('portail-clients')->middleware('module:ventes')->group(function () {
         Route::get('/', [PortailClientController::class, 'index']);
-        Route::middleware('role:admin,manager')->group(function () {
-            Route::put('/parametres', [PortailClientController::class, 'parametres']);
-            Route::post('/comptes', [PortailClientController::class, 'store']);
-            Route::put('/comptes/{id}', [PortailClientController::class, 'update'])->whereNumber('id');
-            Route::post('/comptes/{id}/invitation', [PortailClientController::class, 'invitation'])->whereNumber('id');
-            Route::delete('/comptes/{id}', [PortailClientController::class, 'destroy'])->whereNumber('id');
-        });
+        Route::put('/parametres', [PortailClientController::class, 'parametres']);
+        Route::post('/comptes', [PortailClientController::class, 'store']);
+        Route::put('/comptes/{id}', [PortailClientController::class, 'update'])->whereNumber('id');
+        Route::post('/comptes/{id}/invitation', [PortailClientController::class, 'invitation'])->whereNumber('id');
+        Route::delete('/comptes/{id}', [PortailClientController::class, 'destroy'])->whereNumber('id');
     });
 
     // Camions
@@ -648,7 +645,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     });
 
     // Prix et remises : listes de prix, grille par produit, règles (prix client, quantités, promotions), calcul.
-    // Lecture pour le module Ventes ; modifications par les administrateurs et responsables.
+    // Lecture pour le module Ventes ; modifications selon les droits du module Tarifs et prix.
     Route::middleware('module:ventes')->group(function () {
         Route::post('/prix/calculer', PrixCalculController::class);
         Route::get('/listes-prix', [PrixListeController::class, 'index']);
@@ -656,16 +653,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/grille-prix', [PrixGrilleController::class, 'index']);
         Route::get('/regles-prix', [PrixRegleController::class, 'index']);
 
-        Route::middleware('role:admin,manager')->group(function () {
-            Route::post('/listes-prix', [PrixListeController::class, 'store']);
-            Route::put('/listes-prix/{id}', [PrixListeController::class, 'update'])->whereNumber('id');
-            Route::delete('/listes-prix/{id}', [PrixListeController::class, 'destroy'])->whereNumber('id');
-            Route::put('/clients/{client}/liste-prix', [PrixListeController::class, 'rattacherClient'])->whereNumber('client');
-            Route::put('/grille-prix', [PrixGrilleController::class, 'update']);
-            Route::post('/regles-prix', [PrixRegleController::class, 'store']);
-            Route::put('/regles-prix/{id}', [PrixRegleController::class, 'update'])->whereNumber('id');
-            Route::delete('/regles-prix/{id}', [PrixRegleController::class, 'destroy'])->whereNumber('id');
-        });
+        Route::post('/listes-prix', [PrixListeController::class, 'store']);
+        Route::put('/listes-prix/{id}', [PrixListeController::class, 'update'])->whereNumber('id');
+        Route::delete('/listes-prix/{id}', [PrixListeController::class, 'destroy'])->whereNumber('id');
+        Route::put('/clients/{client}/liste-prix', [PrixListeController::class, 'rattacherClient'])->whereNumber('client');
+        Route::put('/grille-prix', [PrixGrilleController::class, 'update']);
+        Route::post('/regles-prix', [PrixRegleController::class, 'store']);
+        Route::put('/regles-prix/{id}', [PrixRegleController::class, 'update'])->whereNumber('id');
+        Route::delete('/regles-prix/{id}', [PrixRegleController::class, 'destroy'])->whereNumber('id');
     });
 
     // Comptabilité générale (module Finance) : plan comptable, exercices et périodes, journal général et états.
@@ -687,28 +682,28 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/etats/resultat', [EtatComptableController::class, 'compteResultat']);
         Route::get('/soldes-ouverture', [EtatComptableController::class, 'soldesOuverture']);
 
-        Route::middleware('role:admin,manager')->group(function () {
-            Route::post('/journaux', [JournalComptableController::class, 'store']);
-            Route::put('/journaux/{id}', [JournalComptableController::class, 'update'])->whereNumber('id');
-            Route::delete('/journaux/{id}', [JournalComptableController::class, 'destroy'])->whereNumber('id');
-            Route::post('/ecritures', [EcritureComptableController::class, 'store']);
-            Route::put('/ecritures/{id}', [EcritureComptableController::class, 'update'])->whereNumber('id');
-            Route::delete('/ecritures/{id}', [EcritureComptableController::class, 'destroy'])->whereNumber('id');
-            Route::post('/ecritures/{id}/contre-passer', [EcritureComptableController::class, 'contrePasser'])->whereNumber('id');
-            Route::put('/soldes-ouverture', [EtatComptableController::class, 'enregistrerSoldesOuverture']);
-            Route::post('/comptes', [CompteComptableController::class, 'store']);
-            Route::put('/comptes/{id}', [CompteComptableController::class, 'update'])->whereNumber('id');
-            Route::delete('/comptes/{id}', [CompteComptableController::class, 'destroy'])->whereNumber('id');
-            Route::post('/comptes/importer-plan', [CompteComptableController::class, 'importerPlan']);
-            Route::post('/comptes/importer-fichier', [CompteComptableController::class, 'importerFichier']);
-            Route::post('/exercices', [ExerciceComptableController::class, 'store']);
-            Route::put('/exercices/{id}', [ExerciceComptableController::class, 'update'])->whereNumber('id');
-            Route::delete('/exercices/{id}', [ExerciceComptableController::class, 'destroy'])->whereNumber('id');
-            Route::post('/periodes/{id}/fermer', [ExerciceComptableController::class, 'fermerPeriode'])->whereNumber('id');
-        });
-        Route::post('/periodes/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrirPeriode'])->whereNumber('id')->middleware('role:admin');
-        Route::post('/exercices/{id}/cloturer', [ExerciceComptableController::class, 'cloturer'])->whereNumber('id')->middleware('role:admin');
-        Route::post('/exercices/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrir'])->whereNumber('id')->middleware('role:admin');
+        // Écritures : permissions de la comptabilité (saisir des écritures, plan et exercices, clôturer), voir
+        // App\Support\Droits. Lectures : droit de consulter la comptabilité, et de voir les états.
+        Route::post('/journaux', [JournalComptableController::class, 'store']);
+        Route::put('/journaux/{id}', [JournalComptableController::class, 'update'])->whereNumber('id');
+        Route::delete('/journaux/{id}', [JournalComptableController::class, 'destroy'])->whereNumber('id');
+        Route::post('/ecritures', [EcritureComptableController::class, 'store']);
+        Route::put('/ecritures/{id}', [EcritureComptableController::class, 'update'])->whereNumber('id');
+        Route::delete('/ecritures/{id}', [EcritureComptableController::class, 'destroy'])->whereNumber('id');
+        Route::post('/ecritures/{id}/contre-passer', [EcritureComptableController::class, 'contrePasser'])->whereNumber('id');
+        Route::put('/soldes-ouverture', [EtatComptableController::class, 'enregistrerSoldesOuverture']);
+        Route::post('/comptes', [CompteComptableController::class, 'store']);
+        Route::put('/comptes/{id}', [CompteComptableController::class, 'update'])->whereNumber('id');
+        Route::delete('/comptes/{id}', [CompteComptableController::class, 'destroy'])->whereNumber('id');
+        Route::post('/comptes/importer-plan', [CompteComptableController::class, 'importerPlan']);
+        Route::post('/comptes/importer-fichier', [CompteComptableController::class, 'importerFichier']);
+        Route::post('/exercices', [ExerciceComptableController::class, 'store']);
+        Route::put('/exercices/{id}', [ExerciceComptableController::class, 'update'])->whereNumber('id');
+        Route::delete('/exercices/{id}', [ExerciceComptableController::class, 'destroy'])->whereNumber('id');
+        Route::post('/periodes/{id}/fermer', [ExerciceComptableController::class, 'fermerPeriode'])->whereNumber('id');
+        Route::post('/periodes/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrirPeriode'])->whereNumber('id');
+        Route::post('/exercices/{id}/cloturer', [ExerciceComptableController::class, 'cloturer'])->whereNumber('id');
+        Route::post('/exercices/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrir'])->whereNumber('id');
     });
 
     // Mouvements d'inventaire et Localisations

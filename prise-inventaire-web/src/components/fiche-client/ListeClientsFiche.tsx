@@ -47,7 +47,7 @@ export function FiltresClients({ valeur, onChange }: { valeur: FiltresListeClien
   const { t } = useLanguage();
   const tf = t.clientFile;
   const id = useId();
-  const { isAdmin } = usePermissions();
+  const { peut } = usePermissions();
   const [categories, setCategories] = useState<CategorieClient[]>([]);
   const [gestion, setGestion] = useState(false);
 
@@ -67,7 +67,7 @@ export function FiltresClients({ valeur, onChange }: { valeur: FiltresListeClien
         <input type="checkbox" checked={Boolean(valeur.favoris)} onChange={e => onChange({ ...valeur, favoris: e.target.checked || undefined })} />
         <Star size={14} className="text-amber-500" fill="currentColor" /> {tf.favorites}
       </label>
-      {isAdmin() && (
+      {peut('clients', 'categories') && (
         <button onClick={() => setGestion(true)} className="ml-auto flex items-center gap-1 px-3 py-2 text-sm rounded-lg border dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700">
           <Tags size={14} /> {tf.manageCategories}
         </button>
