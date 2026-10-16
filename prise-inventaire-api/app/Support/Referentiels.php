@@ -7,8 +7,13 @@ use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
 use App\Models\Devise;
 use App\Models\DeviseTaux;
+use App\Models\Entrepot;
 use App\Models\Fabricant;
+use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\Representant;
+use App\Models\Territoire;
+use App\Models\Transporteur;
 use App\Models\Unite;
 use App\Models\UniteConversion;
 use Illuminate\Database\Eloquent\Model;
@@ -175,6 +180,84 @@ final class Referentiels
                         ]);
                     }
                 },
+            ],
+
+            'entrepots' => [
+                'modele' => Entrepot::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['required', 'string', 'max:20', TenantRule::unique('entrepots', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:100'],
+                    'type' => ['required', Rule::in(Entrepot::TYPES)],
+                    'adresse' => ['nullable', 'string', 'max:255'],
+                    'ville' => ['nullable', 'string', 'max:100'],
+                    'region' => ['nullable', 'string', 'max:100'],
+                    'code_postal' => ['nullable', 'string', 'max:20'],
+                    'pays' => ['nullable', 'string', 'max:100'],
+                    'telephone' => ['nullable', 'string', 'max:30'],
+                    'responsable' => ['nullable', 'string', 'max:150'],
+                    'par_defaut' => ['boolean'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['code', 'asc'],
+                'unique_par_defaut' => true,
+            ],
+
+            'territoires' => [
+                'modele' => Territoire::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['required', 'string', 'max:20', TenantRule::unique('territoires', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:100'],
+                    'description' => ['nullable', 'string', 'max:1000'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['code', 'asc'],
+                'suppression' => fn (Model $territoire) => Itineraire::where('territoire_id', $territoire->getKey())->exists()
+                    || Representant::where('territoire_id', $territoire->getKey())->exists()
+                    ? 'Ce territoire est utilisé par un itinéraire ou un représentant.' : null,
+            ],
+
+            'itineraires' => [
+                'modele' => Itineraire::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['required', 'string', 'max:20', TenantRule::unique('itineraires', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:100'],
+                    'territoire_id' => ['nullable', 'integer', TenantRule::exists('territoires')->whereNull('deleted_at')],
+                    'description' => ['nullable', 'string', 'max:1000'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['code', 'asc'],
+                'avec' => ['territoire:id,code,nom'],
+            ],
+
+            'representants' => [
+                'modele' => Representant::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['nullable', 'string', 'max:20', TenantRule::unique('representants', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:150'],
+                    'email' => ['nullable', 'email', 'max:150'],
+                    'telephone' => ['nullable', 'string', 'max:30'],
+                    'taux_commission' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                    'territoire_id' => ['nullable', 'integer', TenantRule::exists('territoires')->whereNull('deleted_at')],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['nom', 'asc'],
+                'avec' => ['territoire:id,code,nom'],
+            ],
+
+            'transporteurs' => [
+                'modele' => Transporteur::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['nullable', 'string', 'max:20', TenantRule::unique('transporteurs', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:150', TenantRule::unique('transporteurs', 'nom', $id)],
+                    'telephone' => ['nullable', 'string', 'max:30'],
+                    'email' => ['nullable', 'email', 'max:150'],
+                    // Lien de suivi, qui peut contenir {numero} : pas la règle « url », qui refuse les accolades.
+                    'url_suivi' => ['nullable', 'string', 'max:255', 'starts_with:http://,https://'],
+                    'numero_compte' => ['nullable', 'string', 'max:50'],
+                    'notes' => ['nullable', 'string', 'max:2000'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['nom', 'asc'],
             ],
         ];
     }

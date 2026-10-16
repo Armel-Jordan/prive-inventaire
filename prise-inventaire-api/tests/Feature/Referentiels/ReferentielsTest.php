@@ -8,10 +8,15 @@ use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
 use App\Models\Devise;
 use App\Models\DeviseTaux;
+use App\Models\Entrepot;
 use App\Models\Fabricant;
+use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\Representant;
 use App\Models\Scopes\TenantScope;
 use App\Models\Tenant;
+use App\Models\Territoire;
+use App\Models\Transporteur;
 use App\Models\Unite;
 use App\Models\UniteConversion;
 use App\Support\TenantContext;
@@ -53,6 +58,15 @@ class ReferentielsTest extends TestCase
             'conditions_paiement' => ['code' => 'NET30', 'libelle' => 'Net 30 jours', 'delai_jours' => 30],
             'comptes_bancaires' => ['nom' => 'Compte principal', 'banque' => 'Banque Test', 'iban' => 'cm21 1000 1234', 'devise_code' => 'xaf'],
             'devises' => ['code' => 'XAF', 'libelle' => 'Franc CFA', 'symbole' => 'FCFA', 'decimales' => 0, 'taux' => 0.00152449],
+            'entrepots' => ['code' => 'E1', 'nom' => 'Entrepôt central', 'type' => 'entrepot', 'ville' => 'Douala'],
+            'territoires' => ['code' => 'LIT', 'nom' => 'Littoral'],
+            'itineraires' => [
+                'code' => 'R01',
+                'nom' => 'Tournée du lundi',
+                'territoire_id' => $this->postJson('/api/referentiels/territoires', ['code' => 'LIT', 'nom' => 'Littoral'])->json('id'),
+            ],
+            'representants' => ['code' => 'REP1', 'nom' => 'Awa Ndiaye', 'email' => 'awa@example.test', 'taux_commission' => 5],
+            'transporteurs' => ['nom' => 'Express Cargo', 'url_suivi' => 'https://suivi.example/colis/{numero}'],
         };
     }
 
@@ -67,6 +81,11 @@ class ReferentielsTest extends TestCase
             'conditions de paiement' => ['conditions_paiement', 'libelle', 'Net 30 jours fin de mois'],
             'comptes bancaires' => ['comptes_bancaires', 'banque', 'Banque Atlantique'],
             'devises' => ['devises', 'libelle', 'Franc CFA (BEAC)'],
+            'entrepôts' => ['entrepots', 'nom', 'Entrepôt nord'],
+            'territoires' => ['territoires', 'nom', 'Littoral et Ouest'],
+            'itinéraires' => ['itineraires', 'nom', 'Tournée du mardi'],
+            'représentants' => ['representants', 'taux_commission', 7.5],
+            'transporteurs' => ['transporteurs', 'nom', 'Express Cargo SA'],
         ];
     }
 
@@ -102,6 +121,11 @@ class ReferentielsTest extends TestCase
             'conditions de paiement' => ['conditions_paiement', ['code', 'libelle', 'delai_jours']],
             'comptes bancaires' => ['comptes_bancaires', ['nom', 'banque']],
             'devises' => ['devises', ['code', 'libelle', 'taux']],
+            'entrepôts' => ['entrepots', ['code', 'nom', 'type']],
+            'territoires' => ['territoires', ['code', 'nom']],
+            'itinéraires' => ['itineraires', ['code', 'nom']],
+            'représentants' => ['representants', ['nom']],
+            'transporteurs' => ['transporteurs', ['nom']],
         ];
     }
 
@@ -157,6 +181,7 @@ class ReferentielsTest extends TestCase
         $modeles = [
             Unite::class, UniteConversion::class, Categorie::class, Fabricant::class, ModePaiement::class,
             ConditionPaiement::class, CompteBancaire::class, Devise::class, DeviseTaux::class,
+            Entrepot::class, Territoire::class, Itineraire::class, Representant::class, Transporteur::class,
         ];
 
         foreach ($modeles as $modele) {
@@ -304,6 +329,7 @@ class ReferentielsTest extends TestCase
         return [
             'conditions de paiement' => ['conditions_paiement', ['libelle' => 'Comptant', 'delai_jours' => 0], 'code'],
             'comptes bancaires' => ['comptes_bancaires', ['banque' => 'Banque Test'], 'nom'],
+            'entrepôts' => ['entrepots', ['nom' => 'Entrepôt', 'type' => 'entrepot'], 'code'],
         ];
     }
 
@@ -317,6 +343,46 @@ class ReferentielsTest extends TestCase
         $parDefaut = collect($this->getJson("/api/referentiels/{$type}")->json())->where('par_defaut', true)->pluck('id')->all();
         $this->assertSame([$seconde], $parDefaut);
         $this->assertNotSame($premiere, $seconde);
+    }
+
+    // ===== Logistique et commercial =====
+
+    public function test_territoire_utilise_non_supprimable(): void
+    {
+        $this->connecter(Tenant::factory()->create());
+        $itineraire = $this->postJson('/api/referentiels/itineraires', $this->donnees('itineraires'))->assertCreated();
+        $territoire = $itineraire->json('territoire_id');
+        $this->assertSame('LIT', $itineraire->json('territoire.code'));
+
+        $this->deleteJson("/api/referentiels/territoires/{$territoire}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Ce territoire est utilisé par un itinéraire ou un représentant.');
+
+        $this->deleteJson('/api/referentiels/itineraires/'.$itineraire->json('id'))->assertOk();
+        $this->deleteJson("/api/referentiels/territoires/{$territoire}")->assertOk();
+    }
+
+    public function test_territoire_dun_autre_tenant_refuse(): void
+    {
+        $a = Tenant::factory()->create();
+        $territoireA = app(TenantContext::class)->runAsTenant($a->id, fn () => Territoire::create(['code' => 'A', 'nom' => 'Chez A']));
+
+        $this->connecter(Tenant::factory()->create())
+            ->postJson('/api/referentiels/representants', ['nom' => 'Rep B', 'territoire_id' => $territoireA->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['territoire_id']);
+    }
+
+    public function test_lien_de_suivi_transporteur(): void
+    {
+        $this->connecter(Tenant::factory()->create());
+
+        $this->postJson('/api/referentiels/transporteurs', ['nom' => 'Sans http', 'url_suivi' => 'suivi.example/{numero}'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['url_suivi']);
+        $this->postJson('/api/referentiels/transporteurs', ['nom' => 'Avec gabarit', 'url_suivi' => 'https://suivi.example/?n={numero}'])
+            ->assertCreated()
+            ->assertJsonPath('url_suivi', 'https://suivi.example/?n={numero}');
     }
 
     // ===== Permission de l'écran =====

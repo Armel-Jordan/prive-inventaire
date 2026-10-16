@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Pencil, Trash2, History, X, Search,
   Ruler, ArrowLeftRight, FolderTree, Factory, Wallet, CalendarClock, Landmark, Coins,
+  Warehouse, MapIcon, Route, UserRound, Truck,
 } from 'lucide-react';
 import {
   getReferentiel, createReferentiel, updateReferentiel, deleteReferentiel, getHistoriqueDevise,
@@ -32,18 +33,23 @@ interface Champ {
   defaut?: string | number | boolean;
 }
 
+type GroupeReferentiel = 'produits' | 'paiement' | 'logistique' | 'commercial';
+
 interface Onglet {
   type: TypeReferentiel;
+  groupe: GroupeReferentiel;
   icone: LucideIcon;
   champs: Champ[];
 }
 
+const GROUPES: GroupeReferentiel[] = ['produits', 'paiement', 'logistique', 'commercial'];
 const TYPES_PAIEMENT = ['especes', 'cheque', 'virement', 'carte', 'mobile_money', 'prelevement', 'autre'];
+const TYPES_ENTREPOT = ['entrepot', 'magasin', 'vehicule', 'depot', 'autre'];
 
 // Description déclarative des référentiels : une seule logique de liste et de formulaire les sert tous.
 const ONGLETS: Onglet[] = [
   {
-    type: 'unites', icone: Ruler, champs: [
+    type: 'unites', groupe: 'produits', icone: Ruler, champs: [
       { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'symbole', type: 'texte', colonne: true, longueurMax: 20 },
@@ -52,14 +58,14 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'unite_conversions', icone: ArrowLeftRight, champs: [
+    type: 'unite_conversions', groupe: 'produits', icone: ArrowLeftRight, champs: [
       { cle: 'unite_source_id', type: 'reference', reference: 'unites', requis: true, colonne: true },
       { cle: 'facteur', type: 'nombre', requis: true, colonne: true, min: 0, pas: 'any' },
       { cle: 'unite_cible_id', type: 'reference', reference: 'unites', requis: true, colonne: true },
     ],
   },
   {
-    type: 'categories', icone: FolderTree, champs: [
+    type: 'categories', groupe: 'produits', icone: FolderTree, champs: [
       { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'code', type: 'texte', colonne: true, longueurMax: 30 },
       { cle: 'parent_id', type: 'reference', reference: 'categories', colonne: true },
@@ -68,7 +74,7 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'fabricants', icone: Factory, champs: [
+    type: 'fabricants', groupe: 'produits', icone: Factory, champs: [
       { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 150 },
       { cle: 'code', type: 'texte', colonne: true, longueurMax: 30 },
       { cle: 'site_web', type: 'texte', colonne: true, longueurMax: 255 },
@@ -79,7 +85,7 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'modes_paiement', icone: Wallet, champs: [
+    type: 'modes_paiement', groupe: 'paiement', icone: Wallet, champs: [
       { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 30 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'type', type: 'liste', options: TYPES_PAIEMENT, requis: true, colonne: true, defaut: 'autre' },
@@ -87,7 +93,7 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'conditions_paiement', icone: CalendarClock, champs: [
+    type: 'conditions_paiement', groupe: 'paiement', icone: CalendarClock, champs: [
       { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 30 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'delai_jours', type: 'nombre', requis: true, colonne: true, min: 0, max: 3650, defaut: 0 },
@@ -99,7 +105,7 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'comptes_bancaires', icone: Landmark, champs: [
+    type: 'comptes_bancaires', groupe: 'paiement', icone: Landmark, champs: [
       { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'banque', type: 'texte', requis: true, colonne: true, longueurMax: 150 },
       { cle: 'agence', type: 'texte', longueurMax: 150 },
@@ -114,12 +120,68 @@ const ONGLETS: Onglet[] = [
     ],
   },
   {
-    type: 'devises', icone: Coins, champs: [
+    type: 'devises', groupe: 'paiement', icone: Coins, champs: [
       { cle: 'code', type: 'texte', requis: true, colonne: true, majuscules: true, longueurMax: 3 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'symbole', type: 'texte', colonne: true, longueurMax: 10 },
       { cle: 'decimales', type: 'nombre', min: 0, max: 4, defaut: 2 },
       { cle: 'taux', type: 'nombre', requis: true, colonne: true, min: 0, pas: 'any', defaut: 1 },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'entrepots', groupe: 'logistique', icone: Warehouse, champs: [
+      { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'type', type: 'liste', options: TYPES_ENTREPOT, requis: true, colonne: true, defaut: 'entrepot' },
+      { cle: 'adresse', type: 'texte', longueurMax: 255 },
+      { cle: 'ville', type: 'texte', colonne: true, longueurMax: 100 },
+      { cle: 'region', type: 'texte', longueurMax: 100 },
+      { cle: 'code_postal', type: 'texte', longueurMax: 20 },
+      { cle: 'pays', type: 'texte', longueurMax: 100 },
+      { cle: 'telephone', type: 'texte', longueurMax: 30 },
+      { cle: 'responsable', type: 'texte', colonne: true, longueurMax: 150 },
+      { cle: 'par_defaut', type: 'booleen', colonne: true, defaut: false },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'transporteurs', groupe: 'logistique', icone: Truck, champs: [
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 150 },
+      { cle: 'code', type: 'texte', colonne: true, longueurMax: 20 },
+      { cle: 'telephone', type: 'texte', colonne: true, longueurMax: 30 },
+      { cle: 'email', type: 'texte', longueurMax: 150 },
+      { cle: 'url_suivi', type: 'texte', longueurMax: 255 },
+      { cle: 'numero_compte', type: 'texte', longueurMax: 50 },
+      { cle: 'notes', type: 'zone' },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'itineraires', groupe: 'logistique', icone: Route, champs: [
+      { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'territoire_id', type: 'reference', reference: 'territoires', colonne: true },
+      { cle: 'description', type: 'zone' },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'territoires', groupe: 'commercial', icone: MapIcon, champs: [
+      { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'description', type: 'zone' },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    type: 'representants', groupe: 'commercial', icone: UserRound, champs: [
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 150 },
+      { cle: 'code', type: 'texte', colonne: true, longueurMax: 20 },
+      { cle: 'email', type: 'texte', colonne: true, longueurMax: 150 },
+      { cle: 'telephone', type: 'texte', longueurMax: 30 },
+      { cle: 'taux_commission', type: 'nombre', colonne: true, min: 0, max: 100, pas: '0.01' },
+      { cle: 'territoire_id', type: 'reference', reference: 'territoires', colonne: true },
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },
@@ -175,7 +237,7 @@ export default function ReferentielsPage() {
   const [historique, setHistorique] = useState<{ devise: FicheReferentiel; taux: TauxDevise[] } | null>(null);
 
   const libelleChamp = (cle: string) => (tr.fields as Record<string, string>)[cle] ?? cle;
-  const libelleTypePaiement = (valeur: string) => (tr.paymentTypes as Record<string, string>)[valeur] ?? valeur;
+  const libelleOption = (valeur: string) => (tr.options as Record<string, string>)[valeur] ?? valeur;
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
   const formatNombre = (valeur: unknown) => Number(valeur).toLocaleString(locale, { maximumFractionDigits: 8 });
   // « AAAA-MM-JJ » lu comme une date locale : new Date('AAAA-MM-JJ') serait minuit UTC, donc la veille ici.
@@ -218,7 +280,7 @@ export default function ReferentielsPage() {
       const cible = references[champ.reference!]?.find(r => r.id === valeur);
       return cible ? libelleFiche(cible) : '—';
     }
-    if (champ.type === 'liste') return libelleTypePaiement(String(valeur));
+    if (champ.type === 'liste') return libelleOption(String(valeur));
     if (champ.type === 'nombre') return formatNombre(valeur);
     return String(valeur);
   }
@@ -300,7 +362,7 @@ export default function ReferentielsPage() {
     if (champ.type === 'liste') {
       saisie = (
         <select value={String(valeur)} onChange={e => modifierValeur(champ, e.target.value)} className={classeChamp} required={champ.requis}>
-          {champ.options?.map(o => <option key={o} value={o}>{libelleTypePaiement(o)}</option>)}
+          {champ.options?.map(o => <option key={o} value={o}>{libelleOption(o)}</option>)}
         </select>
       );
     } else if (champ.type === 'reference') {
@@ -332,7 +394,8 @@ export default function ReferentielsPage() {
       );
     }
 
-    const aide = champ.cle === 'facteur' ? tr.conversionHint : champ.cle === 'taux' ? tr.rateHint : null;
+    const aides: Record<string, string> = { facteur: tr.conversionHint, taux: tr.rateHint, url_suivi: tr.trackingHint };
+    const aide = aides[champ.cle];
     return (
       <div key={champ.cle}>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -351,94 +414,103 @@ export default function ReferentielsPage() {
         <p className="text-sm text-gray-500 mt-0.5">{tr.subtitle}</p>
       </div>
 
-      {/* Onglets */}
-      <div className="flex gap-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow-sm p-1 mb-4">
-        {ONGLETS.map(o => {
-          const Icone = o.icone;
-          const actif = o.type === typeActif;
-          return (
-            <button key={o.type} onClick={() => changerOnglet(o.type)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${actif
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-              <Icone size={16} /> {tr.tabs[o.type]}
-            </button>
-          );
-        })}
-      </div>
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* Menu des référentiels, groupés par famille */}
+        <nav className="w-full lg:w-60 shrink-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2 space-y-3">
+          {GROUPES.map(groupe => (
+            <div key={groupe}>
+              <p className="px-3 pt-1 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{tr.groups[groupe]}</p>
+              {ONGLETS.filter(o => o.groupe === groupe).map(o => {
+                const Icone = o.icone;
+                const actif = o.type === typeActif;
+                return (
+                  <button key={o.type} onClick={() => changerOnglet(o.type)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${actif
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                    <Icone size={16} /> {tr.tabs[o.type]}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
-      {/* Barre d'outils */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <p className="text-sm text-gray-600 dark:text-gray-300">{tr.descriptions[onglet.type]}</p>
-          {!chargement && <p className="text-xs text-gray-500 mt-0.5">{fiches.length} {tr.count}</p>}
-        </div>
-        <div className="flex gap-2">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder={tr.search}
-              className="pl-9 pr-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+        <section className="flex-1 min-w-0 w-full">
+          {/* Barre d'outils */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{tr.descriptions[onglet.type]}</p>
+              {!chargement && <p className="text-xs text-gray-500 mt-0.5">{fiches.length} {tr.count}</p>}
+            </div>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder={tr.search}
+                  className="pl-9 pr-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+              </div>
+              {canCreate('referentiels') && (
+                <button onClick={() => ouvrirFormulaire(null)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <Plus size={18} /> {tr.add}
+                </button>
+              )}
+            </div>
           </div>
-          {canCreate('referentiels') && (
-            <button onClick={() => ouvrirFormulaire(null)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Plus size={18} /> {tr.add}
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Tableau */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-        {chargement ? (
-          <div className="p-6 text-gray-500">{t.common.loading}</div>
-        ) : fichesAffichees.length === 0 ? (
-          <div className="p-6 text-gray-500">{tr.empty}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-                <tr>
-                  {colonnes.map(c => (
-                    <th key={c.cle} className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">{libelleChamp(c.cle)}</th>
-                  ))}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">{t.common.actions}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-700">
-                {fichesAffichees.map(fiche => (
-                  <tr key={fiche.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    {colonnes.map(c => (
-                      <td key={c.cle} className="px-4 py-3 text-sm dark:text-gray-200">{afficher(c, fiche)}</td>
+          {/* Tableau */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+            {chargement ? (
+              <div className="p-6 text-gray-500">{t.common.loading}</div>
+            ) : fichesAffichees.length === 0 ? (
+              <div className="p-6 text-gray-500">{tr.empty}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+                    <tr>
+                      {colonnes.map(c => (
+                        <th key={c.cle} className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">{libelleChamp(c.cle)}</th>
+                      ))}
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">{t.common.actions}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-700">
+                    {fichesAffichees.map(fiche => (
+                      <tr key={fiche.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        {colonnes.map(c => (
+                          <td key={c.cle} className="px-4 py-3 text-sm dark:text-gray-200">{afficher(c, fiche)}</td>
+                        ))}
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1">
+                            {onglet.type === 'devises' && (
+                              <button onClick={() => ouvrirHistorique(fiche)} title={tr.history}
+                                className="p-1.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded">
+                                <History size={16} />
+                              </button>
+                            )}
+                            {canEdit('referentiels') && (
+                              <button onClick={() => ouvrirFormulaire(fiche)} title={tr.edit}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded">
+                                <Pencil size={16} />
+                              </button>
+                            )}
+                            {canDelete('referentiels') && (
+                              <button onClick={() => setASupprimer(fiche)} title={tr.delete}
+                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     ))}
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        {onglet.type === 'devises' && (
-                          <button onClick={() => ouvrirHistorique(fiche)} title={tr.history}
-                            className="p-1.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded">
-                            <History size={16} />
-                          </button>
-                        )}
-                        {canEdit('referentiels') && (
-                          <button onClick={() => ouvrirFormulaire(fiche)} title={tr.edit}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded">
-                            <Pencil size={16} />
-                          </button>
-                        )}
-                        {canDelete('referentiels') && (
-                          <button onClick={() => setASupprimer(fiche)} title={tr.delete}
-                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
 
       {/* Formulaire créer / modifier */}

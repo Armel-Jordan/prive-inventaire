@@ -978,7 +978,12 @@ export type TypeReferentiel =
   | 'modes_paiement'
   | 'conditions_paiement'
   | 'comptes_bancaires'
-  | 'devises';
+  | 'devises'
+  | 'entrepots'
+  | 'territoires'
+  | 'itineraires'
+  | 'representants'
+  | 'transporteurs';
 
 export interface FicheReferentiel {
   id: number;

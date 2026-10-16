@@ -34,7 +34,7 @@ PARAMÈTRES
 ├── Fiches Employés   ← détails RH complémentaires
 ├── Rôles             ← qui a le droit de faire quoi
 ├── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
-└── Référentiels      ← unités, catégories, fabricants, paiement, comptes bancaires, devises
+└── Référentiels      ← unités, catégories, paiement, devises, entrepôts, territoires, transporteurs…
 ```
 
 **Architecture multi-tenant :**
@@ -398,6 +398,13 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé | Une seule condition « par défaut » |
 | Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
 | Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
+| Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |
+| Transporteurs | Coordonnées, numéro de compte, lien de suivi des colis | Le lien peut contenir `{numero}`, remplacé par le numéro du colis ; il doit commencer par http:// ou https:// |
+| Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
+| Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
+| Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
+
+Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement et finance, Logistique, Commercial.
 
 Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
 
@@ -413,7 +420,7 @@ Une seule API générique :
 | DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
 | GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
 
-`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
 
 ### 11.3 Droits
 
