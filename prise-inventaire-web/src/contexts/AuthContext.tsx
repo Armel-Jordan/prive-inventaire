@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, TenantInfo, AuthState } from '@/types/auth';
-import { apiFetch } from '@/services/http';
+import { apiFetch, ApiError, onSessionExpiree } from '@/services/http';
 
 interface LoginResponse {
   success: boolean;
@@ -9,8 +9,21 @@ interface LoginResponse {
   tenant: TenantInfo;
 }
 
+/**
+ * Résultat d'une étape de connexion. `defi` : le mot de passe est bon mais la double authentification
+ * demande un code ; `defiExpire` : il faut ressaisir le mot de passe.
+ */
+export interface ResultatConnexion {
+  success: boolean;
+  needsProfile?: boolean;
+  defi?: string;
+  defiExpire?: boolean;
+  message?: string;
+}
+
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string, tenantSlug: string) => Promise<{ success: boolean; needsProfile?: boolean }>;
+  login: (email: string, password: string, tenantSlug: string) => Promise<ResultatConnexion>;
+  validerDeuxFacteurs: (defi: string, code: string) => Promise<ResultatConnexion>;
   logout: () => void;
   updateUser: (user: User) => void;
   isLoading: boolean;
@@ -19,6 +32,9 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = 'prise_auth';
+
+/** Marque posée quand l'API a refusé le jeton : la page de connexion explique pourquoi on y revient. */
+export const MARQUE_SESSION_EXPIREE = 'prise_session_expiree';
 
 function getInitialState() {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -39,7 +55,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(initial.token);
   const [isLoading] = useState(false);
 
-  const login = async (email: string, password: string, tenantSlug: string): Promise<{ success: boolean; needsProfile?: boolean }> => {
+  const ouvrirSession = (data: LoginResponse): ResultatConnexion => {
+    if (data.success && data.token) {
+      setUser(data.user);
+      setTenant(data.tenant);
+      setToken(data.token);
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        user: data.user,
+        tenant: data.tenant,
+        token: data.token,
+      }));
+
+      const needsProfile = !data.user.profil_complete;
+      return { success: true, needsProfile };
+    }
+
+    return { success: false };
+  };
+
+  const login = async (email: string, password: string, tenantSlug: string): Promise<ResultatConnexion> => {
     try {
       const data = await apiFetch<LoginResponse>('/auth/login', {
         method: 'POST',
@@ -50,34 +85,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }),
       });
 
-      if (data.success && data.token) {
-        setUser(data.user);
-        setTenant(data.tenant);
-        setToken(data.token);
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          user: data.user,
-          tenant: data.tenant,
-          token: data.token,
-        }));
-
-        const needsProfile = !data.user.profil_complete;
-        return { success: true, needsProfile };
-      }
-
-      return { success: false };
+      return ouvrirSession(data);
     } catch (error) {
+      // Double authentification : l'API répond 403 avec un défi ; la connexion continue avec un code.
+      const donnees = error instanceof ApiError ? (error.data as { deux_facteurs?: boolean; defi?: string } | undefined) : undefined;
+      if (donnees?.deux_facteurs && donnees.defi) {
+        return { success: false, defi: donnees.defi };
+      }
       console.error('Erreur login:', error);
       return { success: false };
     }
   };
 
-  const logout = () => {
+  const validerDeuxFacteurs = async (defi: string, code: string): Promise<ResultatConnexion> => {
+    try {
+      const data = await apiFetch<LoginResponse>('/auth/login/deux-facteurs', {
+        method: 'POST',
+        body: JSON.stringify({ defi, code }),
+      });
+
+      return ouvrirSession(data);
+    } catch (error) {
+      const donnees = error instanceof ApiError ? (error.data as { defi_expire?: boolean } | undefined) : undefined;
+      return { success: false, defiExpire: Boolean(donnees?.defi_expire), message: error instanceof ApiError ? error.message : undefined };
+    }
+  };
+
+  const fermerSession = useCallback(() => {
     setUser(null);
     setTenant(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
+  // Déconnexion : le jeton est révoqué par l'API (il restait valable après la déconnexion). L'appel
+  // part avec le jeton encore présent ; la session locale est fermée sans attendre sa réponse.
+  const logout = () => {
+    if (localStorage.getItem(STORAGE_KEY)) {
+      apiFetch('/auth/logout', { method: 'POST', retries: 0, timeoutMs: 5000, responseType: 'void' }).catch(() => {});
+    }
+    fermerSession();
   };
+
+  // Jeton refusé par l'API (révoqué, périmé, compte désactivé) : retour à la connexion avec un message.
+  useEffect(() => onSessionExpiree(() => {
+    if (!localStorage.getItem(STORAGE_KEY)) return;
+    sessionStorage.setItem(MARQUE_SESSION_EXPIREE, '1');
+    fermerSession();
+  }), [fermerSession]);
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
@@ -101,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         isAuthenticated: !!token,
         login,
+        validerDeuxFacteurs,
         logout,
         updateUser,
         isLoading,

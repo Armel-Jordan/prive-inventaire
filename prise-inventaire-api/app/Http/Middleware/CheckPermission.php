@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\PermissionsAnciennes;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
@@ -27,11 +27,8 @@ class CheckPermission
             return $next($request);
         }
 
-        // Vérifier la permission dans la table
-        $hasPermission = DB::table('role_permissions')
-            ->where('role', $role)
-            ->where('permission', $permission)
-            ->exists();
+        // Vérifier la permission (permissions héritées « rôle + permission »)
+        $hasPermission = PermissionsAnciennes::pour($role)->contains($permission);
 
         if (! $hasPermission) {
             return response()->json([

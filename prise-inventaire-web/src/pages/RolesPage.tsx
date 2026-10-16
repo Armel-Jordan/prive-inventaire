@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Shield, Plus, Edit2, Trash2, Save, X, Check } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, Save, X, Check, Eye, Copy } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { apiFetch, ApiError } from '@/services/http';
 
@@ -52,6 +52,7 @@ const MODULE_LABELS: Record<string, string> = {
   alertes_config: 'Configuration Alertes',
   configuration: 'Configuration Système',
   fiches_employes: 'Fiches Employés',
+  referentiels: 'Référentiels',
 };
 
 const MODULES = Object.keys(MODULE_LABELS);
@@ -161,6 +162,18 @@ export default function RolesPage() {
     }
   }
 
+  // Les rôles système sont communs à toutes les entreprises : on les adapte en créant une copie.
+  function dupliquerRole(role: Role) {
+    const perms: Record<string, Permission> = {};
+    MODULES.forEach(m => {
+      perms[m] = { ...(role.permissions[m] ?? { can_view: false, can_create: false, can_edit: false, can_delete: false }) };
+    });
+    setNewPermissions(perms);
+    setNewRole({ nom: `${role.nom} (copie)`, description: role.description || '' });
+    setEditingRole(null);
+    setShowCreateModal(true);
+  }
+
   function togglePermission(
     perms: Record<string, Permission>,
     setPerms: (p: Record<string, Permission>) => void,
@@ -219,7 +232,7 @@ export default function RolesPage() {
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
                   <Shield size={20} className="text-blue-600" />
                   {role.nom}
-                  {role.is_system && (
+                  {!!role.is_system && (
                     <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">Système</span>
                   )}
                 </h3>
@@ -228,9 +241,17 @@ export default function RolesPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditingRole({ ...role })}
+                  title={role.is_system ? 'Voir les permissions' : 'Modifier'}
                   className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                 >
-                  <Edit2 size={18} />
+                  {role.is_system ? <Eye size={18} /> : <Edit2 size={18} />}
+                </button>
+                <button
+                  onClick={() => dupliquerRole(role)}
+                  title="Dupliquer"
+                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  <Copy size={18} />
                 </button>
                 {!role.is_system && (
                   <button
@@ -341,7 +362,9 @@ export default function RolesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold dark:text-white">Modifier le rôle: {editingRole.nom}</h2>
+              <h2 className="text-lg font-semibold dark:text-white">
+                {editingRole.is_system ? `Rôle système : ${editingRole.nom}` : `Modifier le rôle : ${editingRole.nom}`}
+              </h2>
               <button onClick={() => setEditingRole(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                 <X size={20} />
               </button>
@@ -364,7 +387,8 @@ export default function RolesPage() {
                     type="text"
                     value={editingRole.description || ''}
                     onChange={(e) => setEditingRole({ ...editingRole, description: e.target.value })}
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                    disabled={editingRole.is_system}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -387,6 +411,7 @@ export default function RolesPage() {
                       {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map(perm => (
                         <td key={perm} className="px-3 py-2 text-center">
                           <button
+                            disabled={editingRole.is_system}
                             onClick={() => {
                               const current = editingRole.permissions[module] || { can_view: false, can_create: false, can_edit: false, can_delete: false };
                               setEditingRole({
@@ -397,7 +422,7 @@ export default function RolesPage() {
                                 },
                               });
                             }}
-                            className={`w-6 h-6 rounded ${editingRole.permissions[module]?.[perm] ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}
+                            className={`w-6 h-6 rounded disabled:cursor-not-allowed ${editingRole.permissions[module]?.[perm] ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}
                           >
                             {editingRole.permissions[module]?.[perm] && <Check size={14} className="mx-auto" />}
                           </button>
@@ -408,18 +433,33 @@ export default function RolesPage() {
                 </tbody>
               </table>
             </div>
-            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
+            <div className="p-4 border-t dark:border-gray-700 flex flex-wrap items-center justify-end gap-2">
+              {editingRole.is_system && (
+                <p className="mr-auto text-sm text-gray-500 dark:text-gray-400">
+                  Rôle commun à toutes les entreprises : dupliquez-le pour adapter ses droits.
+                </p>
+              )}
               <button onClick={() => setEditingRole(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
-                Annuler
+                {editingRole.is_system ? 'Fermer' : 'Annuler'}
               </button>
-              <button
-                onClick={handleUpdateRole}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Save size={18} />
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
+              {editingRole.is_system ? (
+                <button
+                  onClick={() => dupliquerRole(editingRole)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Copy size={18} />
+                  Dupliquer
+                </button>
+              ) : (
+                <button
+                  onClick={handleUpdateRole}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <Save size={18} />
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              )}
             </div>
           </div>
         </div>

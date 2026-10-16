@@ -1,8 +1,9 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Package, 
-  Users, 
+  Package,
+  Paperclip,
+  Users,
   MapPin, 
   ClipboardList,
   Menu,
@@ -10,17 +11,22 @@ import {
   LogOut,
   Building2,
   ArrowRightLeft,
+  Coins,
+  Timer,
   BarChart3,
   Bell,
+  ListChecks,
   GitCompare,
   History,
   CalendarClock,
   ShieldCheck,
   Route,
+  Tag,
   FileBarChart,
   RotateCcw,
   User,
   Shield,
+  ListPlus,
   Truck,
   ShoppingCart,
   PackageCheck,
@@ -28,15 +34,22 @@ import {
   ChevronRight,
   Warehouse,
   HandCoins,
-  Settings
+  Settings,
+  Library,
+  Mail,
+  Globe
 } from 'lucide-react';
 import { useState } from 'react';
+import { BookOpen, BookText, CalendarRange, FileSpreadsheet, Scale, ScrollText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
+import RechercheGlobale from './RechercheGlobale';
 import { useLanguage } from '@/i18n/useLanguage';
+import { ClipboardCheck } from 'lucide-react';
+import { NOM_APPLICATION } from '@/config/application';
 
 interface NavItem {
   path: string;
@@ -59,6 +72,8 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: ClipboardList,
     items: [
       { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
+      { path: '/prises-inventaire', label: t.stocktake.nav, icon: ClipboardCheck, module: 'inventaires' },
+      { path: '/valorisation-inventaire', label: t.valuation.nav, icon: Coins, module: 'inventaires' },
       { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
       { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
       { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
@@ -87,9 +102,11 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: HandCoins,
     items: [
       { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
+      { path: '/portail-clients', label: t.portalAdmin.nav, icon: Globe, module: 'clients' },
       { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
+      { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'factures' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
       { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
       { path: '/tournees', label: 'Tournées', icon: Route, module: 'tournees' },
@@ -101,9 +118,14 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: BarChart3,
     items: [
       { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
+      { path: '/plan-comptable', label: t.accounting.chartNav, icon: BookOpen, module: 'comptabilite' },
+      { path: '/exercices-comptables', label: t.accounting.yearsNav, icon: CalendarRange, module: 'comptabilite' },
+      { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
+      { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite' },
+      { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite' },
+      { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
       { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
-      { path: '/alertes-config', label: 'Alertes', icon: Bell, module: 'alertes_config' },
     ],
   },
   {
@@ -111,12 +133,21 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     label: 'Paramètres',
     icon: Settings,
     items: [
+      { path: '/pieces-jointes', label: t.attachments.title, icon: Paperclip, module: 'configuration' },
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
+      { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
+      { path: '/taches-planifiees', label: t.scheduledTasks.title, icon: Timer, module: 'configuration' },
+      // Paramètres (module toujours actif) : les alertes portent aussi sur le stock, les achats et les ventes.
+      { path: '/alertes-config', label: t.alertsConfig.nav, icon: Bell, module: 'alertes_config' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
+      { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
+      { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
+      { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
+      { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
     ],
   },
 ];
@@ -126,7 +157,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, tenant, logout } = useAuth();
   const { t } = useLanguage();
-  const { canView, loading: permissionsLoading } = usePermissions();
+  const { canView, loading: permissionsLoading, permissions } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['inventaire']);
   const allCategories = getNavCategories(t);
@@ -163,10 +194,21 @@ export default function Layout() {
     }))
     .filter(cat => cat.items.length > 0);
 
-  // Fallback si le filtrage par rôle vide tout : on garde au moins le gating module.
-  const displayCategories = categories.length > 0
+  // Droits introuvables (échec de /permissions/me) : on garde au moins le gating module. Des droits chargés
+  // qui ne donnent accès à aucune catégorie ne réaffichent plus tout le menu.
+  const displayCategories = permissionsLoading || permissions
     ? categories
     : allCategories.filter(cat => moduleAllowed(cat.id));
+
+  // Page du menu ouverte par son adresse sans le droit de la consulter : « Accès refusé » au lieu de la page
+  // (l'API refuse de toute façon les écritures que le rôle ne permet pas).
+  const pageCourante = allCategories.flatMap(cat => cat.items)
+    .find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
+  const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !canView(pageCourante.module);
+  // Page d'un module que l'entreprise n'a pas souscrit (Achats, Ventes, Finance) : message au lieu d'une page
+  // vide, voire d'une erreur (les appels de l'API sont refusés).
+  const categorieCourante = allCategories.find(cat => cat.items.some(item => item === pageCourante));
+  const moduleInactif = categorieCourante !== undefined && !moduleAllowed(categorieCourante.id);
 
   const handleLogout = () => {
     logout();
@@ -193,7 +235,7 @@ export default function Layout() {
         <div className="p-6 border-b dark:border-gray-700">
           <div className="flex items-center gap-3 mb-2">
             <Building2 className="text-blue-600" size={24} />
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">Prise Inventaire</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white">{NOM_APPLICATION}</h1>
           </div>
           {tenant && (
             <p className="text-sm text-blue-600 font-medium">{tenant.nom}</p>
@@ -302,9 +344,18 @@ export default function Layout() {
       <main className="lg:ml-64 min-h-screen bg-gray-100 dark:bg-gray-900">
         {/* Top bar with notifications */}
         <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-3 flex items-center justify-end gap-4">
+          <RechercheGlobale />
           <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
+          <Link
+            to="/securite"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            title={t.security.link}
+            aria-label={t.security.link}
+          >
+            <Shield size={20} className="text-gray-600 dark:text-gray-300" />
+          </Link>
           <Link
             to="/profil"
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -314,7 +365,25 @@ export default function Layout() {
           </Link>
         </div>
         <div className="p-6 lg:p-8">
-          <Outlet />
+          {moduleInactif ? (
+            <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
+              <ShieldCheck size={48} className="text-gray-300 dark:text-gray-600 mb-4" aria-hidden />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{t.moduleDisabled.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-lg">
+                {t.moduleDisabled.message.replace('{module}', categorieCourante?.label ?? '')}
+              </p>
+              <Link to="/" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t.moduleDisabled.back}</Link>
+            </div>
+          ) : accesRefuse ? (
+            <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
+              <ShieldCheck size={48} className="text-gray-300 dark:text-gray-600 mb-4" aria-hidden />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{t.accessDenied.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-lg">{t.accessDenied.message}</p>
+              <Link to="/" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t.accessDenied.back}</Link>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </div>
       </main>
     </div>

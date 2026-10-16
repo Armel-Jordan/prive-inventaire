@@ -40,7 +40,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * Écran de connexion : code entreprise (slug) + email + mot de passe.
- * Authentifie via /api/auth/login et stocke le token Sanctum.
+ * Authentifie via /api/auth/login et stocke le token Sanctum. Si le compte a la double authentification,
+ * un second écran demande le code de l'application d'authentification (ou un code de secours).
  */
 class LoginActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
@@ -84,6 +85,56 @@ private fun LoginScreen(onLoggedIn: () -> Unit, onOpenConfig: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Double authentification : défi reçu après le mot de passe, code saisi, code de secours plutôt que l'application.
+    var defi by remember { mutableStateOf<String?>(null) }
+    var code by remember { mutableStateOf("") }
+    var codeSecours by remember { mutableStateOf(false) }
+
+    val defiEnCours = defi
+    if (defiEnCours != null) {
+        DeuxFacteursScreen(
+            code = code,
+            codeSecours = codeSecours,
+            loading = loading,
+            error = error,
+            onCodeChange = { code = it.take(20) },
+            onBasculerSecours = {
+                codeSecours = !codeSecours
+                code = ""
+                error = null
+            },
+            onValider = {
+                error = null
+                loading = true
+                scope.launch {
+                    try {
+                        val result = withContext(Dispatchers.IO) {
+                            InventaireApiService.loginDeuxFacteurs(defiEnCours, code, slug)
+                        }
+                        AuthStore.save(context, result.token ?: "", slug)
+                        loading = false
+                        onLoggedIn()
+                    } catch (e: InventaireApiService.DefiExpireException) {
+                        // Défi expiré : on revient au mot de passe.
+                        loading = false
+                        defi = null
+                        code = ""
+                        password = ""
+                        error = e.message
+                    } catch (e: Exception) {
+                        loading = false
+                        error = e.message ?: "Code refusé"
+                    }
+                }
+            },
+            onRetour = {
+                defi = null
+                code = ""
+                error = null
+            },
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -137,9 +188,16 @@ private fun LoginScreen(onLoggedIn: () -> Unit, onOpenConfig: () -> Unit) {
                         val result = withContext(Dispatchers.IO) {
                             InventaireApiService.login(email, password, slug)
                         }
-                        AuthStore.save(context, result.token ?: "", slug)
                         loading = false
-                        onLoggedIn()
+                        if (!result.defi.isNullOrBlank()) {
+                            // Mot de passe correct, double authentification : l'écran suivant demande le code.
+                            defi = result.defi
+                            code = ""
+                            codeSecours = false
+                        } else {
+                            AuthStore.save(context, result.token ?: "", slug)
+                            onLoggedIn()
+                        }
                     } catch (e: Exception) {
                         loading = false
                         error = e.message ?: "Échec de la connexion"
@@ -155,6 +213,69 @@ private fun LoginScreen(onLoggedIn: () -> Unit, onOpenConfig: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         TextButton(onClick = onOpenConfig) {
             Text("Configurer le serveur")
+        }
+    }
+}
+
+/** Seconde étape de connexion : code à 6 chiffres de l'application d'authentification, ou code de secours. */
+@Composable
+private fun DeuxFacteursScreen(
+    code: String,
+    codeSecours: Boolean,
+    loading: Boolean,
+    error: String?,
+    onCodeChange: (String) -> Unit,
+    onBasculerSecours: () -> Unit,
+    onValider: () -> Unit,
+    onRetour: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("Double authentification", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            if (codeSecours) {
+                "Saisissez l'un de vos codes de secours (ex. ABCDE-FGHJK)."
+            } else {
+                "Saisissez le code à 6 chiffres affiché par votre application d'authentification."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(24.dp))
+        OutlinedTextField(
+            value = code,
+            onValueChange = onCodeChange,
+            label = { Text(if (codeSecours) "Code de secours" else "Code") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = if (codeSecours) KeyboardType.Ascii else KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        error?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = onValider,
+            enabled = !loading && code.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (loading) "Vérification..." else "Valider")
+        }
+
+        Spacer(Modifier.height(12.dp))
+        TextButton(onClick = onBasculerSecours, enabled = !loading) {
+            Text(if (codeSecours) "Utiliser le code de l'application" else "Utiliser un code de secours")
+        }
+        TextButton(onClick = onRetour, enabled = !loading) {
+            Text("Retour")
         }
     }
 }

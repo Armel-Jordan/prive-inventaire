@@ -1,283 +1,207 @@
-import { useState } from 'react';
-import { Bell, AlertTriangle, Clock, CreditCard, Truck, Save, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Bell, AlertTriangle, CalendarClock, CreditCard, ShoppingCart, Truck, ClipboardCheck, Play, Timer } from 'lucide-react';
+import {
+  getTachesPlanifiees, modifierTachePlanifiee, executerTachePlanifiee,
+  type EtatTachesPlanifiees, type TachePlanifiee, type ReglageTache,
+} from '@/services/api';
+import { ApiError } from '@/services/http';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/i18n/useLanguage';
+import { messageErreur } from '@/lib/erreurs';
+import { fuseauValide, reglageDe, resumeTache } from '@/lib/taches';
 
-interface AlerteConfig {
-  id: number;
-  type: 'stock_bas' | 'commande_retard' | 'facture_impayee' | 'livraison_retard' | 'ct_expire';
-  nom: string;
-  seuil?: number;
-  jours?: number;
-  actif: boolean;
-  email: boolean;
-  push: boolean;
-}
-
-const TYPES_ALERTES = [
-  { key: 'stock_bas', label: 'Stock bas', icon: AlertTriangle, color: 'text-red-600', description: 'Quand le stock descend sous le seuil minimum' },
-  { key: 'commande_retard', label: 'Commande en retard', icon: Clock, color: 'text-yellow-600', description: 'Commandes non livrées après X jours' },
-  { key: 'facture_impayee', label: 'Facture impayée', icon: CreditCard, color: 'text-orange-600', description: 'Factures non payées après X jours' },
-  { key: 'livraison_retard', label: 'Livraison en retard', icon: Truck, color: 'text-purple-600', description: 'Bons de livraison non livrés' },
-  { key: 'ct_expire', label: 'CT à renouveler', icon: Truck, color: 'text-blue-600', description: 'Contrôle technique camion expirant bientôt' },
+/** Tâches planifiées qui préviennent par notification, dans l'ordre de l'écran. */
+const ALERTES: { code: string; icone: typeof Bell; couleur: string }[] = [
+  { code: 'alertes_stock', icone: AlertTriangle, couleur: 'text-red-600 bg-red-50 dark:bg-red-900/30' },
+  { code: 'transferts_imminents', icone: CalendarClock, couleur: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30' },
+  { code: 'factures_impayees', icone: CreditCard, couleur: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30' },
+  { code: 'commandes_fournisseur_en_retard', icone: ShoppingCart, couleur: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30' },
+  { code: 'livraisons_en_retard', icone: Truck, couleur: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30' },
+  { code: 'controles_techniques', icone: ClipboardCheck, couleur: 'text-teal-600 bg-teal-50 dark:bg-teal-900/30' },
 ];
 
+/**
+ * Réglage des alertes : les tâches planifiées qui notifient, limitées aux modules de l'entreprise. Activation,
+ * délai en jours et vérification immédiate ; fréquence et historique se règlent dans les tâches planifiées.
+ * Réservé aux administrateurs, comme elles. L'écran était factice (valeurs codées en dur, sauvegarde simulée).
+ */
 export default function NotificationsConfigPage() {
-  const [alertes, setAlertes] = useState<AlerteConfig[]>([
-    { id: 1, type: 'stock_bas', nom: 'Alerte stock critique', seuil: 10, actif: true, email: true, push: true },
-    { id: 2, type: 'facture_impayee', nom: 'Factures impayées > 30j', jours: 30, actif: true, email: true, push: false },
-    { id: 3, type: 'commande_retard', nom: 'Commandes en retard', jours: 7, actif: true, email: false, push: true },
-    { id: 4, type: 'ct_expire', nom: 'CT camions', jours: 30, actif: true, email: true, push: true },
-  ]);
-  const [loading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newAlerte, setNewAlerte] = useState({
-    type: 'stock_bas' as AlerteConfig['type'],
-    seuil: '',
-    jours: '',
+  const { t, language } = useLanguage();
+  const ta = t.alertsConfig;
+  const ts = t.scheduledTasks;
+  const { tenant } = useAuth();
+  const locale = language === 'en' ? 'en-US' : 'fr-FR';
+
+  const [etat, setEtat] = useState<EtatTachesPlanifiees | null>(null);
+  const [refuse, setRefuse] = useState(false);
+  const [version, setVersion] = useState(0);
+  const [message, setMessage] = useState<{ erreur: boolean; texte: string } | null>(null);
+  // Délais en cours de saisie, par tâche (absents : valeur enregistrée).
+  const [delais, setDelais] = useState<Record<number, string>>({});
+  const [enCours, setEnCours] = useState<number | null>(null);
+
+  useEffect(() => {
+    let actif = true;
+    getTachesPlanifiees()
+      .then(e => { if (actif) setEtat(e); })
+      .catch(e => {
+        if (!actif) return;
+        if (e instanceof ApiError && e.status === 403) setRefuse(true);
+        else setMessage({ erreur: true, texte: messageErreur(e, ts.error) });
+      });
+    return () => { actif = false; };
+  }, [version, ts.error]);
+
+  const fuseau = fuseauValide(etat?.fuseau);
+  const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale, { timeZone: fuseau, dateStyle: 'short', timeStyle: 'short' }) : ts.never);
+  const nom = (code: string) => ts.tasks[code]?.name ?? code;
+  const modules = tenant?.modules;
+  const alertes = ALERTES.flatMap(alerte => {
+    const tache = etat?.taches.find(x => x.code === alerte.code);
+    const disponible = tache && (!tache.module || !Array.isArray(modules) || modules.includes(tache.module));
+    return disponible ? [{ ...alerte, tache }] : [];
   });
 
-  
-  const handleToggle = (id: number, field: 'actif' | 'email' | 'push') => {
-    setAlertes(alertes.map(a => 
-      a.id === id ? { ...a, [field]: !a[field] } : a
-    ));
-  };
-
-  const handleUpdateSeuil = (id: number, value: number) => {
-    setAlertes(alertes.map(a => 
-      a.id === id ? { ...a, seuil: value, jours: value } : a
-    ));
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm('Supprimer cette alerte ?')) {
-      setAlertes(alertes.filter(a => a.id !== id));
+  async function enregistrer(tache: TachePlanifiee, changements: Partial<ReglageTache>): Promise<boolean> {
+    setMessage(null);
+    try {
+      await modifierTachePlanifiee(tache.id, { ...reglageDe(tache, fuseau), ...changements });
+      setMessage({ erreur: false, texte: ts.saved });
+      setVersion(v => v + 1);
+      return true;
+    } catch (e) {
+      setMessage({ erreur: true, texte: messageErreur(e, ts.error) });
+      return false;
     }
-  };
+  }
 
-  const handleAddAlerte = () => {
-    const typeInfo = TYPES_ALERTES.find(t => t.key === newAlerte.type);
-    const newConfig: AlerteConfig = {
-      id: alertes.length + 1,
-      type: newAlerte.type,
-      nom: typeInfo?.label || 'Nouvelle alerte',
-      seuil: newAlerte.seuil ? parseInt(newAlerte.seuil) : undefined,
-      jours: newAlerte.jours ? parseInt(newAlerte.jours) : undefined,
-      actif: true,
-      email: true,
-      push: true,
-    };
-    setAlertes([...alertes, newConfig]);
-    setShowAddModal(false);
-    setNewAlerte({ type: 'stock_bas', seuil: '', jours: '' });
-  };
+  async function enregistrerDelai(tache: TachePlanifiee) {
+    const saisie = delais[tache.id] ?? '';
+    const jours = Number(saisie);
+    if (saisie.trim() === '' || !Number.isInteger(jours) || jours < 0 || jours > 365) {
+      setMessage({ erreur: true, texte: ta.invalidDelay });
+      return;
+    }
+    if (await enregistrer(tache, { parametres: { jours } })) {
+      setDelais(d => {
+        const reste = { ...d };
+        delete reste[tache.id];
+        return reste;
+      });
+    }
+  }
 
-  const handleSave = async () => {
-    setSaving(true);
-    // Simuler sauvegarde
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setSaving(false);
-    alert('Configuration sauvegardée !');
-  };
+  async function verifier(tache: TachePlanifiee) {
+    setEnCours(tache.id);
+    setMessage(null);
+    try {
+      const { execution } = await executerTachePlanifiee(tache.id);
+      setMessage({ erreur: execution.resultat === 'erreur', texte: `${nom(tache.code)} : ${execution.message ?? ''}` });
+    } catch (e) {
+      setMessage({ erreur: true, texte: e instanceof ApiError && e.status === 409 ? ts.alreadyRunning : messageErreur(e, ts.error) });
+    } finally {
+      setEnCours(null);
+      setVersion(v => v + 1);
+    }
+  }
 
-  const getTypeInfo = (type: string) => {
-    return TYPES_ALERTES.find(t => t.key === type) || TYPES_ALERTES[0];
-  };
+  const badge = (resultat: 'succes' | 'erreur' | null) => resultat && (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${resultat === 'succes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+      {resultat === 'succes' ? ts.success : ts.failure}
+    </span>
+  );
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Configuration des Alertes</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Gérez les notifications automatiques</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            <Plus size={20} />
-            Ajouter
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
-          >
-            <Save size={20} />
-            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-          </button>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><Bell className="text-purple-600" /> {ta.title}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{ta.subtitle}</p>
       </div>
 
-      {/* Résumé */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-          <div className="flex items-center gap-3">
-            <Bell className="text-purple-600" size={24} />
-            <div>
-              <p className="text-sm text-gray-500">Alertes actives</p>
-              <p className="text-xl font-bold dark:text-white">{alertes.filter(a => a.actif).length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded">📧</div>
-            <div>
-              <p className="text-sm text-gray-500">Notifications email</p>
-              <p className="text-xl font-bold dark:text-white">{alertes.filter(a => a.email && a.actif).length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded">🔔</div>
-            <div>
-              <p className="text-sm text-gray-500">Notifications push</p>
-              <p className="text-xl font-bold dark:text-white">{alertes.filter(a => a.push && a.actif).length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {refuse ? (
+        <p className="px-4 py-3 rounded-lg text-sm bg-amber-50 text-amber-900 max-w-3xl">{ta.adminOnly}</p>
+      ) : (
+        <>
+          {message && (
+            <p role="status" className={`mb-4 px-3 py-2 rounded-lg text-sm max-w-6xl ${message.erreur ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message.texte}</p>
+          )}
+          {etat && (
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
+              {ta.activeCount.replace('{actives}', String(alertes.filter(a => a.tache.actif).length)).replace('{total}', String(alertes.length))}
+              {' · '}
+              {ts.timezone.replace('{fuseau}', etat.fuseau)}
+            </p>
+          )}
+          {etat && alertes.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{ta.none}</p>}
 
-      {/* Liste des alertes */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
-        ) : alertes.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Aucune alerte configurée</div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {alertes.map((alerte) => {
-              const typeInfo = getTypeInfo(alerte.type);
-              const Icon = typeInfo.icon;
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-6xl">
+            {alertes.map(({ code, icone: Icone, couleur, tache }) => {
+              const textes = ts.tasks[code];
+              const delai = tache.parametres?.jours;
+              const saisie = delais[tache.id];
               return (
-                <div key={alerte.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-700 ${typeInfo.color}`}>
-                        <Icon size={24} />
+                <section key={code} aria-labelledby={`alerte-${code}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg shrink-0 ${couleur}`}><Icone size={22} /></div>
+                    <div className="flex-1 min-w-0">
+                      <h2 id={`alerte-${code}`} className="font-semibold text-gray-900 dark:text-white">{nom(code)}</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{textes?.description}</p>
+                    </div>
+                    <label className="inline-flex items-center cursor-pointer shrink-0" title={ts.active}>
+                      <input type="checkbox" className="sr-only peer" checked={tache.actif} aria-label={`${ts.active} — ${nom(code)}`}
+                        onChange={e => enregistrer(tache, { actif: e.target.checked })} />
+                      <span className="w-9 h-5 bg-gray-300 rounded-full relative transition-colors peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4" />
+                    </label>
+                  </div>
+
+                  {delai !== undefined && (
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <label htmlFor={`delai-${code}`} className="text-gray-700 dark:text-gray-300">{textes?.delay ?? ts.delay}</label>
+                      <input id={`delai-${code}`} type="number" min={0} max={365} inputMode="numeric"
+                        value={saisie ?? String(delai)}
+                        onChange={e => setDelais(d => ({ ...d, [tache.id]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') enregistrerDelai(tache); }}
+                        className="w-20 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                      <span className="text-gray-500 dark:text-gray-400">{ts.daysUnit}</span>
+                      {saisie !== undefined && saisie !== String(delai) && (
+                        <button type="button" onClick={() => enregistrerDelai(tache)} className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                          {ta.saveDelay}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-end justify-between gap-3 pt-3 border-t dark:border-gray-700">
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <div>
+                        <dt className="text-xs uppercase text-gray-500 dark:text-gray-400">{ts.frequency}</dt>
+                        <dd className="text-gray-800 dark:text-gray-200">{tache.actif ? resumeTache(tache, ts, date) : ts.inactive}</dd>
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900 dark:text-white">{alerte.nom}</h3>
-                        <p className="text-sm text-gray-500">{typeInfo.description}</p>
+                        <dt className="text-xs uppercase text-gray-500 dark:text-gray-400">{ta.lastCheck}</dt>
+                        <dd className="flex flex-wrap items-center gap-2 text-gray-800 dark:text-gray-200">
+                          {date(tache.derniere_execution)}
+                          {tache.statut === 'en_cours' ? <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">{ts.running}</span> : badge(tache.dernier_resultat)}
+                        </dd>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      {/* Seuil/Jours */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">
-                          {alerte.type === 'stock_bas' ? 'Seuil:' : 'Jours:'}
-                        </span>
-                        <input
-                          type="number"
-                          value={alerte.seuil || alerte.jours || ''}
-                          onChange={(e) => handleUpdateSeuil(alerte.id, parseInt(e.target.value) || 0)}
-                          className="w-16 px-2 py-1 border rounded text-center text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-
-                      {/* Toggles */}
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={alerte.email}
-                            onChange={() => handleToggle(alerte.id, 'email')}
-                            className="w-4 h-4 rounded"
-                          />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">Email</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={alerte.push}
-                            onChange={() => handleToggle(alerte.id, 'push')}
-                            className="w-4 h-4 rounded"
-                          />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">Push</span>
-                        </label>
-                      </div>
-
-                      {/* Actif toggle */}
-                      <button
-                        onClick={() => handleToggle(alerte.id, 'actif')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          alerte.actif
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                        }`}
-                      >
-                        {alerte.actif ? 'Actif' : 'Inactif'}
-                      </button>
-
-                      {/* Delete */}
-                      <button
-                        onClick={() => handleDelete(alerte.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    </dl>
+                    <button type="button" onClick={() => verifier(tache)} disabled={enCours !== null} aria-label={`${ta.checkNow} — ${nom(code)}`}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-700 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-40 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30">
+                      <Play size={14} className={enCours === tache.id ? 'animate-pulse' : ''} /> {ta.checkNow}
+                    </button>
                   </div>
-                </div>
+                </section>
               );
             })}
           </div>
-        )}
-      </div>
 
-      {/* Modal ajout */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 dark:text-white">Nouvelle alerte</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">Type d'alerte</label>
-                <select
-                  value={newAlerte.type}
-                  onChange={(e) => setNewAlerte({ ...newAlerte, type: e.target.value as AlerteConfig['type'] })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  {TYPES_ALERTES.map(t => (
-                    <option key={t.key} value={t.key}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-300">
-                  {newAlerte.type === 'stock_bas' ? 'Seuil minimum' : 'Nombre de jours'}
-                </label>
-                <input
-                  type="number"
-                  value={newAlerte.type === 'stock_bas' ? newAlerte.seuil : newAlerte.jours}
-                  onChange={(e) => setNewAlerte({ 
-                    ...newAlerte, 
-                    [newAlerte.type === 'stock_bas' ? 'seuil' : 'jours']: e.target.value 
-                  })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  placeholder={newAlerte.type === 'stock_bas' ? 'Ex: 10' : 'Ex: 30'}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 border rounded-lg dark:border-gray-600 dark:text-white"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAddAlerte}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-              >
-                Ajouter
-              </button>
-            </div>
-          </div>
-        </div>
+          <p className="mt-6 text-sm">
+            <Link to="/taches-planifiees" className="inline-flex items-center gap-1 text-purple-600 hover:underline dark:text-purple-400">
+              <Timer size={16} /> {ta.advanced}
+            </Link>
+          </p>
+        </>
       )}
     </div>
   );

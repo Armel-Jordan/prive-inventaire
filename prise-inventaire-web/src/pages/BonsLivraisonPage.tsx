@@ -1,5 +1,10 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
+import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
+import { ajouterRemarque } from '@/lib/utils';
 import {
   getBonsLivraison,
   getBonLivraison,
@@ -10,8 +15,21 @@ import {
   annulerBL,
 } from '../services/api';
 import type { BonLivraison, BonLivraisonLigne } from '../services/api';
+import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { formatDateHeure } from '@/lib/documents';
+
+/** Produit d'une ligne de bon : sa désignation (et son numéro) plutôt que son identifiant interne. */
+function nomProduit(ligne: BonLivraisonLigne): string {
+  if (!ligne.produit) return `Produit #${ligne.produit_id}`;
+  return ligne.produit.numero ? `${ligne.produit.numero} — ${ligne.produit.description}` : ligne.produit.description;
+}
 
 export default function BonsLivraisonPage() {
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [bons, setBons] = useState<BonLivraison[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
@@ -26,14 +44,15 @@ export default function BonsLivraisonPage() {
   const loadBons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getBonsLivraison({ statut: filterStatut || undefined });
+      const response = await getBonsLivraison({ statut: filterStatut || undefined, page });
       setBons(response.data || []);
+      setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
       setLoading(false);
     }
-  }, [filterStatut]);
+  }, [filterStatut, page]);
 
   useEffect(() => {
     loadBons();
@@ -45,7 +64,7 @@ export default function BonsLivraisonPage() {
       setSelectedBon(bon);
       setShowDetailModal(true);
     } catch (error) {
-      console.error('Erreur chargement détail:', error);
+      signaler(error, 'Impossible de charger le bon de livraison');
     }
   };
 
@@ -54,7 +73,8 @@ export default function BonsLivraisonPage() {
       await demarrerPreparation(id);
       loadBons();
     } catch (error) {
-      console.error('Erreur démarrage préparation:', error);
+      signaler(error, 'Impossible de démarrer la préparation');
+      loadBons();
     }
   };
 
@@ -70,7 +90,7 @@ export default function BonsLivraisonPage() {
       );
       setShowPreparationModal(true);
     } catch (error) {
-      console.error('Erreur:', error);
+      signaler(error, 'Impossible de charger le bon de livraison');
     }
   };
 
@@ -81,7 +101,7 @@ export default function BonsLivraisonPage() {
       setShowPreparationModal(false);
       loadBons();
     } catch (error) {
-      console.error('Erreur sauvegarde:', error);
+      signaler(error, 'Erreur lors de l\'enregistrement de la préparation');
     }
   };
 
@@ -89,9 +109,8 @@ export default function BonsLivraisonPage() {
     try {
       await marquerBLPret(id);
       loadBons();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      alert(error?.message || 'Toutes les lignes doivent être préparées avant de marquer comme prêt.');
+    } catch (error) {
+      signaler(error, 'Toutes les lignes doivent être préparées avant de marquer le bon comme prêt.');
     }
   };
 
@@ -108,7 +127,7 @@ export default function BonsLivraisonPage() {
       setNotesLivraison('');
       setShowLivraisonModal(true);
     } catch (error) {
-      console.error('Erreur:', error);
+      signaler(error, 'Impossible de charger le bon de livraison');
     }
   };
 
@@ -117,8 +136,8 @@ export default function BonsLivraisonPage() {
     try {
       await annulerBL(id);
       loadBons();
-    } catch {
-      alert('Impossible d\'annuler ce bon.');
+    } catch (error) {
+      signaler(error, 'Impossible d\'annuler ce bon.');
     }
   };
 
@@ -132,7 +151,7 @@ export default function BonsLivraisonPage() {
       setShowLivraisonModal(false);
       loadBons();
     } catch (error) {
-      console.error('Erreur livraison:', error);
+      signaler(error, 'Erreur lors de l\'enregistrement de la livraison');
     }
   };
 
@@ -172,7 +191,8 @@ export default function BonsLivraisonPage() {
         <div className="flex gap-4">
           <select
             value={filterStatut}
-            onChange={(e) => setFilterStatut(e.target.value)}
+            onChange={(e) => { setFilterStatut(e.target.value); setPage(1); }}
+            aria-label="Filtrer par statut"
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
             <option value="">Tous les statuts</option>
@@ -197,6 +217,7 @@ export default function BonsLivraisonPage() {
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Facture</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Client</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Mode</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">Statut</th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">Actions</th>
@@ -205,14 +226,19 @@ export default function BonsLivraisonPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {bons.map((bon) => (
                 <tr key={bon.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{bon.numero}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
+                    {bon.numero}
+                    <BalisesFiche entite="bon_livraison" entiteId={bon.id} />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{bon.facture?.numero}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{bon.facture?.client?.raison_sociale ?? '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {bon.mode_livraison === 'entreprise' ? 'Livraison' : 'Retrait client'}
                   </td>
                   <td className="px-4 py-3 text-center">{getStatutBadge(bon.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                       <button
                         onClick={() => handleVoirDetail(bon.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
@@ -220,6 +246,8 @@ export default function BonsLivraisonPage() {
                       >
                         <Eye size={18} />
                       </button>
+                      <BoutonPdf chemin={`/bons-livraison/${bon.id}/pdf`} nomFichier={`bon-livraison-${bon.numero}.pdf`} />
+                      <BoutonCourriel type="bon_livraison" documentId={bon.id} />
                       {bon.statut === 'cree' && (
                         <>
                           <button
@@ -274,6 +302,7 @@ export default function BonsLivraisonPage() {
                           <Truck size={18} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                     </div>
                   </td>
                 </tr>
@@ -281,11 +310,12 @@ export default function BonsLivraisonPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal détail */}
       {showDetailModal && selectedBon && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               Bon de livraison {selectedBon.numero}
@@ -295,6 +325,10 @@ export default function BonsLivraisonPage() {
                 <div>
                   <span className="text-sm text-gray-500">Facture:</span>
                   <p className="font-medium dark:text-white">{selectedBon.facture?.numero}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-500">Client:</span>
+                  <p className="font-medium dark:text-white">{selectedBon.facture?.client?.raison_sociale ?? '—'}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Statut:</span>
@@ -308,7 +342,7 @@ export default function BonsLivraisonPage() {
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Date livraison:</span>
-                  <p className="dark:text-white">{selectedBon.date_livraison || '-'}</p>
+                  <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>
                 </div>
               </div>
 
@@ -327,7 +361,7 @@ export default function BonsLivraisonPage() {
                     <tbody>
                       {selectedBon.lignes.map((ligne, idx) => (
                         <tr key={idx} className="dark:text-gray-300">
-                          <td className="py-1">Produit #{ligne.produit_id}</td>
+                          <td className="py-1">{nomProduit(ligne)}</td>
                           <td className="py-1 text-right">{ligne.quantite_a_livrer}</td>
                           <td className="py-1 text-right">{ligne.quantite_preparee}</td>
                           <td className="py-1 text-right">{ligne.quantite_livree}</td>
@@ -352,7 +386,7 @@ export default function BonsLivraisonPage() {
 
       {/* Modal préparation */}
       {showPreparationModal && selectedBon && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Préparation - {selectedBon.numero}</h2>
             <div className="space-y-3">
@@ -361,7 +395,7 @@ export default function BonsLivraisonPage() {
                 return (
                   <div key={ligne.id} className="flex items-center justify-between gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="flex-1">
-                      <p className="font-medium dark:text-white">Produit #{ligne.produit_id}</p>
+                      <p className="font-medium dark:text-white">{nomProduit(ligne)}</p>
                       <p className="text-sm text-gray-500">À préparer: {ligne.quantite_a_livrer}</p>
                     </div>
                     <input
@@ -403,7 +437,7 @@ export default function BonsLivraisonPage() {
 
       {/* Modal livraison */}
       {showLivraisonModal && selectedBon && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Livraison - {selectedBon.numero}</h2>
             <div className="space-y-3">
@@ -412,7 +446,7 @@ export default function BonsLivraisonPage() {
                 return (
                   <div key={ligne.id} className="flex items-center justify-between gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="flex-1">
-                      <p className="font-medium dark:text-white">Produit #{ligne.produit_id}</p>
+                      <p className="font-medium dark:text-white">{nomProduit(ligne)}</p>
                       <p className="text-sm text-gray-500">Préparé: {ligne.quantite_preparee}</p>
                     </div>
                     <input
@@ -442,6 +476,7 @@ export default function BonsLivraisonPage() {
                   rows={2}
                   placeholder="Remarques, problèmes..."
                 />
+                <BoutonRemarquesRapides onInserer={texte => setNotesLivraison(n => ajouterRemarque(n, texte))} />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

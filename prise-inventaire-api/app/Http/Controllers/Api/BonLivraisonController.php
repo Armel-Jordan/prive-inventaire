@@ -26,6 +26,10 @@ class BonLivraisonController extends Controller
         if ($request->has('mode_livraison')) {
             $query->where('mode_livraison', $request->mode_livraison);
         }
+        // Bons pas encore placés dans une tournée (liste « Ajouter » d'une tournée).
+        if ($request->boolean('sans_tournee')) {
+            $query->whereDoesntHave('tourneeBon');
+        }
 
         $bons = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
 
@@ -34,7 +38,10 @@ class BonLivraisonController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $bon = BonLivraison::with(['facture.client', 'lignes', 'tourneeBon.tournee'])->findOrFail($id);
+        $bon = BonLivraison::with([
+            'facture.client', 'lignes', 'tourneeBon.tournee',
+            'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
+        ])->findOrFail($id);
 
         return response()->json($bon);
     }
@@ -171,6 +178,10 @@ class BonLivraisonController extends Controller
             $bon->notes_livraison = $validated['notes_livraison'] ?? null;
             $bon->date_livraison = now();
 
+            // Les lignes viennent d'être livrées par d'autres instances : on les recharge avant de conclure.
+            // Sans cela, estComplet() lisait les quantités d'avant la livraison : toute livraison était vue
+            // comme partielle et une facture du « reste » était émise pour la totalité du bon.
+            $bon->load('lignes');
             if ($bon->estComplet()) {
                 $bon->statut = 'livre_complet';
             } else {

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X, RotateCcw } from 'lucide-react';
 import { getSecteurs, createSecteur, updateSecteur, deleteSecteur, getConfiguration } from '@/services/api';
 import type { Secteur } from '@/types';
 import QRCode from 'qrcode';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -25,14 +27,18 @@ export default function SecteursPage() {
   const [importing, setImporting] = useState(false);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  // Secteurs désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
+  const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [qrSecteur, setQrSecteur] = useState<Secteur | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
+  // Boutons selon les droits du rôle sur les secteurs (l'API refuse de toute façon les autres écritures).
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   async function loadData() {
     try {
-      const data = await getSecteurs();
+      const data = await getSecteurs(filterStatut);
       setSecteurs(data);
     } catch {
       toast('Erreur lors du chargement', 'error');
@@ -42,13 +48,29 @@ export default function SecteursPage() {
   }
 
   useEffect(() => {
-    loadData();
     getConfiguration('secteur').then(setConfigNumero).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatut]);
+
+  async function handleReactiver(secteur: Secteur) {
+    try {
+      await updateSecteur(secteur.id!, { actif: true });
+      toast('Secteur réactivé');
+      loadData();
+    } catch {
+      toast('Erreur lors de la réactivation', 'error');
+    }
+  }
+
   async function openQr(secteur: Secteur) {
     setQrSecteur(secteur);
-    const qrData = JSON.stringify({ code: secteur.code, nom: secteur.nom, id: secteur.id });
+    // Le code du secteur seul : l'application mobile compare le contenu scanné au code (ou au nom) du secteur,
+    // et ne reconnaissait pas le JSON {"code","nom","id"} imprimé jusqu'ici.
+    const qrData = secteur.code;
     const url = await QRCode.toDataURL(qrData, { width: 280, margin: 2, color: { dark: '#1e293b', light: '#ffffff' } });
     setQrDataUrl(url);
   }
@@ -98,8 +120,9 @@ export default function SecteursPage() {
       }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      // Raison donnée par l'API (code déjà pris, champ invalide) plutôt qu'un message générique.
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     }
   }
 
@@ -108,8 +131,8 @@ export default function SecteursPage() {
       await deleteSecteur(id);
       toast('Secteur supprimé');
       loadData();
-    } catch {
-      toast('Erreur lors de la suppression', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la suppression'), 'error');
     } finally {
       setConfirmId(null);
     }
@@ -139,6 +162,8 @@ export default function SecteursPage() {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
       let imported = 0, errors = 0;
+      // Lignes refusées, avec leur numéro et la raison donnée par l'API (seul un total était affiché).
+      const refus: string[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';').map(v => v.trim());
         const row: Record<string, string> = {};
@@ -147,10 +172,14 @@ export default function SecteursPage() {
           try {
             await createSecteur({ code: row.code, nom: row.nom, description: row.description || '' });
             imported++;
-          } catch { errors++; }
+          } catch (e) {
+            errors++;
+            refus.push(`ligne ${i + 1} (${row.code}) : ${messageErreur(e, 'refusée')}`);
+          }
         }
       }
-      toast(`${imported} secteurs importés${errors ? `, ${errors} erreurs` : ''}`, errors ? 'info' : 'success');
+      const detail = refus.length ? ` — ${refus.slice(0, 3).join(' ; ')}${refus.length > 3 ? ' ; …' : ''}` : '';
+      toast(`${imported} secteurs importés${errors ? `, ${errors} erreurs${detail}` : ''}`, errors ? 'info' : 'success');
       loadData();
     } catch {
       toast('Erreur lors de l\'import', 'error');
@@ -172,19 +201,30 @@ export default function SecteursPage() {
           )}
         </div>
         <div className="flex gap-2">
+          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
+            aria-label="Statut"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+            <option value="actifs">Actifs</option>
+            <option value="inactifs">Désactivés</option>
+            <option value="tous">Tous</option>
+          </select>
           <button onClick={exportToCSV} disabled={secteurs.length === 0}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
           </button>
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-            <Upload size={18} />
-            {importing ? 'Import...' : 'Importer'}
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
-          </label>
-          <button onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-            <Plus size={20} /> Ajouter
-          </button>
+          {canCreate('secteurs') && (
+            <>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                <Upload size={18} />
+                {importing ? 'Import...' : 'Importer'}
+                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
+              </label>
+              <button onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <Plus size={20} /> Ajouter
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -213,7 +253,12 @@ export default function SecteursPage() {
                         {secteur.code}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">{secteur.nom}</td>
+                    <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">
+                      {secteur.nom}
+                      {secteur.actif === false && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{secteur.description || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -221,14 +266,24 @@ export default function SecteursPage() {
                           className="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded" title="QR Code">
                           <QrCode size={16} />
                         </button>
-                        <button onClick={() => openEdit(secteur)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded" title="Modifier">
-                          <Pencil size={16} />
-                        </button>
-                        <button onClick={() => setConfirmId(secteur.id!)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
-                          <Trash2 size={16} />
-                        </button>
+                        {canEdit('secteurs') && (
+                          <button onClick={() => openEdit(secteur)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded" title="Modifier">
+                            <Pencil size={16} />
+                          </button>
+                        )}
+                        {secteur.actif === false && canEdit('secteurs') && (
+                          <button onClick={() => handleReactiver(secteur)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                        {secteur.actif !== false && canDelete('secteurs') && (
+                          <button onClick={() => setConfirmId(secteur.id!)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -306,8 +361,9 @@ export default function SecteursPage() {
 
       <ConfirmModal
         open={confirmId !== null}
-        title="Supprimer le secteur"
-        message="Cette action est irréversible. Les produits liés à ce secteur ne seront plus associés."
+        title="Désactiver le secteur"
+        message="Le secteur n'apparaîtra plus dans les listes de choix ni dans l'application mobile. Ses produits restent rattachés et son historique est conservé ; vous pourrez le réactiver depuis le filtre « Désactivés »."
+        confirmLabel="Désactiver"
         onConfirm={() => confirmId !== null && handleDelete(confirmId)}
         onCancel={() => setConfirmId(null)}
       />

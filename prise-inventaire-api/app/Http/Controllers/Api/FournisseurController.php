@@ -8,7 +8,6 @@ use App\Models\Fournisseur;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class FournisseurController extends Controller
 {
@@ -80,7 +79,7 @@ class FournisseurController extends Controller
     public function update(Request $request, Fournisseur $fournisseur): JsonResponse
     {
         $validated = $request->validate([
-            'code' => ['nullable', 'string', 'max:20', Rule::unique('fournisseurs', 'code')->ignore($fournisseur->id)],
+            'code' => ['nullable', 'string', 'max:20', TenantRule::unique('fournisseurs', 'code', $fournisseur->id)],
             'raison_sociale' => 'required|string|max:255',
             'adresse' => 'nullable|string',
             'telephone' => 'nullable|string|max:20',
@@ -115,7 +114,9 @@ class FournisseurController extends Controller
         $tenantId = auth()->user()->tenant_id;
         $fournisseurs = Fournisseur::where('tenant_id', $tenantId)->where('actif', true)
             ->orderBy('raison_sociale')
-            ->get(['id', 'code', 'raison_sociale']);
+            // La devise sert au formulaire de commande : sans elle, toute commande partait dans la devise de
+            // l'entreprise, sans taux de change, même chez un fournisseur qui facture en dollars.
+            ->get(['id', 'code', 'raison_sociale', 'devise']);
 
         return response()->json($fournisseurs);
     }

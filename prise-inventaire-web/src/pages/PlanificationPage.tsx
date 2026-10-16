@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { apiFetch, ApiError } from '@/services/http';
+import { depuisChampDateHeure, versChampDateHeure } from '@/lib/periodes';
 
 interface TransfertPlanifie {
   id: number;
@@ -111,7 +112,8 @@ export default function PlanificationPage() {
         unite_mesure: transfert.unite_mesure || 'unité',
         motif: transfert.motif || '',
         employe: transfert.employe,
-        date_planifiee: transfert.date_planifiee.slice(0, 16),
+        // Heure locale du navigateur : l'heure UTC de l'API était affichée telle quelle.
+        date_planifiee: versChampDateHeure(transfert.date_planifiee),
         notes: transfert.notes || '',
       });
     } else {
@@ -129,7 +131,7 @@ export default function PlanificationPage() {
         unite_mesure: 'unité',
         motif: '',
         employe: '',
-        date_planifiee: tomorrow.toISOString().slice(0, 16),
+        date_planifiee: versChampDateHeure(tomorrow),
         notes: '',
       });
     }
@@ -148,6 +150,8 @@ export default function PlanificationPage() {
         body: JSON.stringify({
           ...form,
           quantite: parseFloat(form.quantite),
+          // Instant exact : sans fuseau, 9 h saisi à Montréal était enregistré comme 9 h UTC (5 h affiché).
+          date_planifiee: depuisChampDateHeure(form.date_planifiee),
         }),
       });
 

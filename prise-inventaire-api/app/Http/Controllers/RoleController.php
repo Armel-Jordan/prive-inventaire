@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PermissionsAnciennes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class RoleController extends Controller
 {
@@ -44,9 +44,7 @@ class RoleController extends Controller
      */
     public function permissions(string $role): JsonResponse
     {
-        $permissions = DB::table('role_permissions')
-            ->where('role', $role)
-            ->pluck('permission');
+        $permissions = PermissionsAnciennes::pour($role);
 
         return response()->json([
             'role' => $role,
@@ -136,10 +134,7 @@ class RoleController extends Controller
             return response()->json(['has_permission' => true]);
         }
 
-        $hasPermission = DB::table('role_permissions')
-            ->where('role', $role)
-            ->where('permission', $permission)
-            ->exists();
+        $hasPermission = PermissionsAnciennes::pour($role)->contains($permission);
 
         return response()->json(['has_permission' => $hasPermission]);
     }
@@ -157,16 +152,8 @@ class RoleController extends Controller
 
         $role = $user->role ?? 'user';
 
-        if ($role === 'admin') {
-            // Admin a toutes les permissions
-            $permissions = DB::table('role_permissions')
-                ->distinct()
-                ->pluck('permission');
-        } else {
-            $permissions = DB::table('role_permissions')
-                ->where('role', $role)
-                ->pluck('permission');
-        }
+        // Admin a toutes les permissions
+        $permissions = PermissionsAnciennes::pour($role === 'admin' ? null : $role);
 
         return response()->json([
             'role' => $role,

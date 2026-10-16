@@ -5,15 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Configuration;
 use App\Models\ProduitTenant;
 use App\Support\TenantRule;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProduitTenantController extends Controller
 {
-    public function index(): JsonResponse
+    /**
+     * Produits actifs (listes de choix, application mobile) ; ?statut=inactifs ou ?statut=tous pour retrouver les
+     * produits désactivés, qui disparaissaient de l'écran sans moyen de les réactiver.
+     */
+    public function index(Request $request): JsonResponse
     {
+        $statut = $request->query('statut', 'actifs');
         $produits = ProduitTenant::with('secteur')
-            ->where('actif', true)
+            ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')
             ->get();
@@ -21,10 +27,25 @@ class ProduitTenantController extends Controller
         return response()->json($produits);
     }
 
+    /**
+     * Numéro déjà pris par un produit désactivé : l'utilisateur est invité à le réactiver (le message générique
+     * « The numero has already been taken » laissait croire à une erreur).
+     */
+    private function numeroNonDesactive(?int $ignorer = null): Closure
+    {
+        return function (string $attribut, mixed $valeur, Closure $echec) use ($ignorer) {
+            $desactive = ProduitTenant::where('numero', $valeur)->where('actif', false)
+                ->when($ignorer, fn ($q) => $q->whereKeyNot($ignorer))->first();
+            if ($desactive) {
+                $echec("Le numéro « {$valeur} » appartient au produit désactivé « {$desactive->description} » : réactivez-le (filtre « Désactivés » de la liste des produits).");
+            }
+        };
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'numero' => ['nullable', 'string', 'max:50', TenantRule::unique('produits', 'numero')],
+            'numero' => ['nullable', 'string', 'max:50', $this->numeroNonDesactive(), TenantRule::unique('produits', 'numero')],
             'description' => 'required|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',
@@ -84,7 +105,7 @@ class ProduitTenantController extends Controller
         $produit = ProduitTenant::findOrFail($id);
 
         $request->validate([
-            'numero' => ['sometimes', 'string', 'max:50', TenantRule::unique('produits', 'numero', $id)],
+            'numero' => ['sometimes', 'string', 'max:50', $this->numeroNonDesactive((int) $id), TenantRule::unique('produits', 'numero', $id)],
             'description' => 'sometimes|string|max:255',
             'mesure' => 'sometimes|string|max:20',
             'unite_achat' => 'nullable|string|max:30',

@@ -1,8 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Search, X, Plus, Download, Calendar, Filter, CheckSquare, Square } from 'lucide-react';
-import { getScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
+import { getHistoriqueScans, exporterScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
 import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { signaler } from '@/lib/erreurs';
+import Pagination from '@/components/Pagination';
+import { bornesPeriode, fuseauNavigateur } from '@/lib/periodes';
 
 interface ScanForm {
   numero: string;
@@ -33,6 +36,25 @@ export default function ScansPage() {
   const [form, setForm] = useState<ScanForm>(emptyForm);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  // Historique filtré et paginé par l'API : l'écran ne voyait que les 100 derniers scans.
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
+  const [produitRecherche, setProduitRecherche] = useState('');
+  const [exportEnCours, setExportEnCours] = useState(false);
+
+  // Recherche produit envoyée 300 ms après la dernière frappe.
+  useEffect(() => {
+    const minuterie = setTimeout(() => { setProduitRecherche(filterProduit.trim()); setPage(1); }, 300);
+    return () => clearTimeout(minuterie);
+  }, [filterProduit]);
+
+  /** Filtres transmis à l'API (période en instants, dans le fuseau du navigateur). */
+  const filtresApi = () => ({
+    secteur: filterSecteur || undefined,
+    employe: filterEmploye || undefined,
+    produit: produitRecherche || undefined,
+    ...bornesPeriode(filterDateDebut, filterDateFin),
+  });
 
   // Sélection par lot
   const toggleSelect = (id: number) => {
@@ -63,33 +85,15 @@ export default function ScansPage() {
       setSelectedIds(new Set());
       loadData();
     } catch (error) {
-      console.error('Erreur suppression lot:', error);
-      alert('Erreur lors de la suppression');
+      signaler(error, 'Erreur lors de la suppression');
+      loadData();
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Filtrage local des scans
-  const filteredScans = useMemo(() => {
-    return scans.filter(scan => {
-      // Filtre par produit (recherche texte)
-      if (filterProduit && !scan.numero.toLowerCase().includes(filterProduit.toLowerCase())) {
-        return false;
-      }
-      // Filtre par date début
-      if (filterDateDebut) {
-        const scanDate = new Date(scan.date_saisie).toISOString().split('T')[0];
-        if (scanDate < filterDateDebut) return false;
-      }
-      // Filtre par date fin
-      if (filterDateFin) {
-        const scanDate = new Date(scan.date_saisie).toISOString().split('T')[0];
-        if (scanDate > filterDateFin) return false;
-      }
-      return true;
-    });
-  }, [scans, filterProduit, filterDateDebut, filterDateFin]);
+  // Les filtres sont appliqués par l'API : la page affichée est déjà filtrée.
+  const filteredScans = scans;
 
   const hasActiveFilters = filterSecteur || filterEmploye || filterProduit || filterDateDebut || filterDateFin;
 
@@ -99,18 +103,20 @@ export default function ScansPage() {
     setFilterProduit('');
     setFilterDateDebut('');
     setFilterDateFin('');
+    setPage(1);
   }
 
   async function loadData() {
     setLoading(true);
     try {
       const [scansData, secteursData, employesData, produitsData] = await Promise.all([
-        getScans({ secteur: filterSecteur || undefined, employe: filterEmploye || undefined }),
+        getHistoriqueScans({ ...filtresApi(), page, per_page: 100 }),
         getSecteurs(),
         getEmployes(),
         getProduits(),
       ]);
-      setScans(scansData);
+      setScans(scansData.data || []);
+      setPagination({ dernierePage: scansData.last_page ?? 1, total: scansData.total ?? 0 });
       setSecteurs(secteursData);
       setEmployes(employesData);
       setProduits(produitsData);
@@ -126,22 +132,18 @@ export default function ScansPage() {
     setShowCreateModal(true);
   }
 
-  function exportToCSV() {
-    const headers = ['Numéro', 'Type', 'Quantité', 'Unité', 'Employé', 'Secteur', 'Date'];
-    const csvContent = [
-      headers.join(';'),
-      ...filteredScans.map(s => [
-        s.numero,
-        s.type || '',
-        s.quantite,
-        s.unite_mesure,
-        s.employe,
-        s.secteur,
-        formatDate(s.date_saisie)
-      ].join(';'))
-    ].join('\n');
-    
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  // Export de tous les scans filtrés, préparé par l'API (seules les 100 lignes chargées étaient exportées).
+  async function exportToCSV() {
+    setExportEnCours(true);
+    let blob: Blob;
+    try {
+      blob = await exporterScans({ ...filtresApi(), fuseau: fuseauNavigateur() });
+    } catch (error) {
+      signaler(error, 'Erreur lors de l\'export');
+      return;
+    } finally {
+      setExportEnCours(false);
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -166,15 +168,14 @@ export default function ScansPage() {
       setShowCreateModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la création');
+      signaler(error, 'Erreur lors de la création');
     }
   }
 
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterSecteur, filterEmploye]);
+  }, [filterSecteur, filterEmploye, produitRecherche, filterDateDebut, filterDateFin, page]);
 
   async function handleUpdate() {
     if (!editingScan) return;
@@ -183,7 +184,8 @@ export default function ScansPage() {
       setEditingScan(null);
       loadData();
     } catch (error) {
-      console.error('Erreur modification:', error);
+      // Quantité refusée (négative…) : la fenêtre restait ouverte sans aucune explication.
+      signaler(error, 'Erreur lors de la modification');
     }
   }
 
@@ -193,7 +195,7 @@ export default function ScansPage() {
       await deleteScan(id);
       loadData();
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      signaler(error, 'Erreur lors de la suppression');
     }
   }
 
@@ -205,10 +207,10 @@ export default function ScansPage() {
           <button
             onClick={exportToCSV}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            disabled={filteredScans.length === 0}
+            disabled={pagination.total === 0 || exportEnCours}
           >
             <Download size={18} />
-            Exporter ({filteredScans.length})
+            {exportEnCours ? 'Export…' : `Exporter (${pagination.total})`}
           </button>
           <button
             onClick={openCreate}
@@ -262,7 +264,7 @@ export default function ScansPage() {
               <label className="block text-xs text-gray-500 mb-1">Secteur</label>
               <select
                 value={filterSecteur}
-                onChange={(e) => setFilterSecteur(e.target.value)}
+                onChange={(e) => { setFilterSecteur(e.target.value); setPage(1); }}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Tous</option>
@@ -277,7 +279,7 @@ export default function ScansPage() {
               <label className="block text-xs text-gray-500 mb-1">Employé</label>
               <select
                 value={filterEmploye}
-                onChange={(e) => setFilterEmploye(e.target.value)}
+                onChange={(e) => { setFilterEmploye(e.target.value); setPage(1); }}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Tous</option>
@@ -296,7 +298,7 @@ export default function ScansPage() {
               <input
                 type="date"
                 value={filterDateDebut}
-                onChange={(e) => setFilterDateDebut(e.target.value)}
+                onChange={(e) => { setFilterDateDebut(e.target.value); setPage(1); }}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -310,7 +312,7 @@ export default function ScansPage() {
               <input
                 type="date"
                 value={filterDateFin}
-                onChange={(e) => setFilterDateFin(e.target.value)}
+                onChange={(e) => { setFilterDateFin(e.target.value); setPage(1); }}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -320,7 +322,7 @@ export default function ScansPage() {
         {hasActiveFilters && (
           <div className="flex items-center justify-between mt-3 pt-3 border-t">
             <span className="text-sm text-gray-500">
-              {filteredScans.length} résultat(s) trouvé(s)
+              {pagination.total} résultat(s) trouvé(s)
             </span>
             <button
               onClick={resetFilters}
@@ -444,6 +446,7 @@ export default function ScansPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal édition */}
@@ -561,7 +564,8 @@ export default function ScansPage() {
                     required
                   >
                     <option value="">Sélectionner</option>
-                    {employes.map(e => (
+                    {/* Employés actifs seulement : un employé désactivé restait proposé pour un nouveau scan. */}
+                    {employes.filter(e => e.actif !== false).map(e => (
                       <option key={e.id} value={e.numero}>{e.nom}</option>
                     ))}
                   </select>

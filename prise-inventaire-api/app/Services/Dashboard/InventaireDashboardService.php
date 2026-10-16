@@ -8,76 +8,79 @@ use Illuminate\Support\Facades\DB;
 class InventaireDashboardService
 {
     /**
-     * Agrège produits (stock + alertes) et mouvements d'inventaire.
+     * Agrège produits (stock et alertes), secteurs, employés actifs et mouvements de la période.
      *
      * Tables :
-     *   - produits              (tenant_id, seuil_alerte, deleted_at)
-     *   - alertes_stock         (tenant_id, statut)
-     *   - mouvement_inventaire  (tenant_id, type_mouvement IN 'ENTREE','SORTIE','CORRECTION')
+     *   - produits                  (tenant_id, actif, seuil_alerte, deleted_at)
+     *   - inventaire_scan           (stock d'un produit = somme de ses quantités scannées, comme l'écran Alertes)
+     *   - secteurs, employes        (actif, deleted_at)
+     *   - mouvement_relocalisation  (type : arrivage, transfert, sortie, ajustement ; date_mouvement)
+     *
+     * Le tableau de bord lisait d'anciennes tables (alertes_stock, mouvement_inventaire) restées vides, et
+     * comptait les produits désactivés : « 0 alerte », « 0 mouvement ce mois », « 0 secteur ».
      */
     public function getData(int $tenantId, Carbon $dateFrom, Carbon $dateTo): array
     {
         return [
             'produits' => $this->produits($tenantId),
             'mouvements' => $this->mouvements($tenantId, $dateFrom, $dateTo),
+            'secteurs' => $this->actifs('secteurs', $tenantId),
+            'employes_actifs' => $this->actifs('employes', $tenantId),
         ];
     }
 
     // -------------------------------------------------------------------------
-    // Produits — total et alertes actives configurées
-    // alertes_stock stocke les seuils (seuil_min, seuil_critique, actif)
+    // Produits actifs ; alertes et ruptures parmi les produits suivis (seuil d'alerte > 0)
     // -------------------------------------------------------------------------
     private function produits(int $tenantId): array
     {
-        // Total produits actifs du tenant
-        $rTotal = DB::selectOne(
-            'SELECT COUNT(*) AS total
-             FROM produits
-             WHERE tenant_id = ?
-               AND deleted_at IS NULL',
-            [$tenantId]
-        );
+        $produitsActifs = fn () => DB::table('produits')
+            ->where('produits.tenant_id', $tenantId)
+            ->whereNull('produits.deleted_at')
+            ->where('produits.actif', true);
 
-        // Alertes configurées et actives (seuil_min > seuil_critique = critique/rupture)
-        $rAlertes = DB::selectOne(
-            'SELECT
-                COUNT(*) AS en_alerte,
-                SUM(CASE WHEN seuil_critique > 0 THEN 1 ELSE 0 END) AS rupture
-             FROM alertes_stock
-             WHERE tenant_id = ?
-               AND actif = 1',
-            [$tenantId]
-        );
+        $stocks = DB::table('inventaire_scan')
+            ->where('tenant_id', $tenantId)
+            ->whereNull('deleted_at')
+            ->selectRaw('numero, SUM(quantite) AS stock')
+            ->groupBy('numero');
+
+        $suivis = $produitsActifs()
+            ->where('produits.seuil_alerte', '>', 0)
+            ->leftJoinSub($stocks, 'stocks', 'stocks.numero', '=', 'produits.numero')
+            ->get(['produits.seuil_alerte', DB::raw('COALESCE(stocks.stock, 0) AS stock')]);
 
         return [
-            'total' => (int) ($rTotal->total ?? 0),
-            'en_alerte' => (int) ($rAlertes->en_alerte ?? 0),
-            'rupture' => (int) ($rAlertes->rupture ?? 0),
+            'total' => $produitsActifs()->count(),
+            'en_alerte' => $suivis->filter(fn ($p) => (float) $p->stock < (float) $p->seuil_alerte)->count(),
+            'rupture' => $suivis->filter(fn ($p) => (float) $p->stock <= 0)->count(),
         ];
     }
 
     // -------------------------------------------------------------------------
-    // Mouvements de la période
-    // Table : mouvement_inventaire (tenant_id ajouté par migration 2026_04_10_200001)
-    // type_mouvement : ENTREE | SORTIE | CORRECTION
+    // Mouvements de la période (relocalisation : arrivages = entrées, sorties)
     // -------------------------------------------------------------------------
     private function mouvements(int $tenantId, Carbon $dateFrom, Carbon $dateTo): array
     {
-        $r = DB::selectOne(
-            'SELECT
-                COUNT(*) AS total_periode,
-                SUM(CASE WHEN type_mouvement = \'ENTREE\' THEN 1 ELSE 0 END) AS entrees,
-                SUM(CASE WHEN type_mouvement = \'SORTIE\' THEN 1 ELSE 0 END) AS sorties
-             FROM mouvement_inventaire
-             WHERE tenant_id = ?
-               AND created_at BETWEEN ? AND ?',
-            [$tenantId, $dateFrom, $dateTo]
-        );
+        $r = DB::table('mouvement_relocalisation')
+            ->where('tenant_id', $tenantId)
+            ->whereNull('deleted_at')
+            ->whereBetween('date_mouvement', [$dateFrom, $dateTo])
+            ->selectRaw("COUNT(*) AS total_periode,
+                SUM(CASE WHEN type = 'arrivage' THEN 1 ELSE 0 END) AS entrees,
+                SUM(CASE WHEN type = 'sortie' THEN 1 ELSE 0 END) AS sorties")
+            ->first();
 
         return [
             'total_periode' => (int) ($r->total_periode ?? 0),
             'entrees' => (int) ($r->entrees ?? 0),
             'sorties' => (int) ($r->sorties ?? 0),
         ];
+    }
+
+    /** Lignes actives d'une table de l'entreprise (secteurs, employés). */
+    private function actifs(string $table, int $tenantId): int
+    {
+        return DB::table($table)->where('tenant_id', $tenantId)->whereNull('deleted_at')->where('actif', true)->count();
     }
 }

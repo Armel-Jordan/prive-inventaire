@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10
+> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi, modèles, envoi des documents et historique
 
 ---
 
@@ -17,7 +17,9 @@
 8. [Configuration — Entreprise](#8-configuration--entreprise)
 9. [Configuration — Devise & TVA](#9-configuration--devise--tva)
 10. [Configuration — Délais & Alertes](#10-configuration--délais--alertes)
-11. [Ordre recommandé de configuration initiale](#11-ordre-recommandé-de-configuration-initiale)
+11. [Référentiels](#11-référentiels)
+12. [Configuration — Courriels](#12-configuration--courriels)
+13. [Ordre recommandé de configuration initiale](#13-ordre-recommandé-de-configuration-initiale)
 
 ---
 
@@ -32,7 +34,8 @@ PARAMÈTRES
 ├── Employés          ← les utilisateurs de l'application
 ├── Fiches Employés   ← détails RH complémentaires
 ├── Rôles             ← qui a le droit de faire quoi
-└── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+├── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+└── Référentiels      ← unités, catégories, paiement, devises, entrepôts, territoires, transporteurs…
 ```
 
 **Architecture multi-tenant :**
@@ -102,7 +105,14 @@ Produit → suivi en stock (Localisations, Mouvements)
 
 ### 2.7 Points d'attention
 
-- Un produit ne peut pas être supprimé s'il est référencé dans des commandes ou des lignes de facturation.
+- **Désactiver plutôt que supprimer.** Le bouton de la liste (`DELETE /produits/{id}`) désactive le produit. Il
+  disparaît alors des listes de choix et de l'application mobile, mais son historique (scans, mouvements,
+  documents) est conservé.
+  - Le filtre **Désactivés** (`GET /produits?statut=inactifs`, ou `tous`) le retrouve, avec un bouton
+    **Réactiver**.
+  - Son numéro reste réservé. Le reprendre pour un nouveau produit donne un message qui invite à réactiver le
+    produit désactivé.
+  - Il en va de même pour les secteurs (§3) : `GET /secteurs?statut=…`, code réservé, réactivation.
 - Le `secteur_id` du produit est son secteur "naturel" de rangement — il peut être stocké ailleurs en pratique.
 - La `mesure` doit être cohérente avec la façon dont on achète et on vend (ex: acheter en `KG`, vendre en `KG`).
 
@@ -143,13 +153,15 @@ Les secteurs servent à deux choses :
 
 ### 3.4 QR Code
 
-Chaque secteur peut avoir un QR code unique :
-- Généré via le bouton "Générer QR" sur la fiche secteur
-- À imprimer et coller physiquement dans l'entrepôt
-- Scannable avec l'application mobile
-- Le QR code contient l'identifiant du secteur → permet de savoir où on est quand on scanne
-
-**Endpoint :** `POST /secteurs/{id}/generate-qr`
+Chaque secteur a une étiquette QR (bouton QR de la liste des secteurs), à imprimer et coller dans l'entrepôt :
+- **Contenu :** le **code** du secteur (« A1 »). L'application mobile compare le contenu scanné au code (ou au
+  nom) du secteur. Les étiquettes imprimées auparavant contenaient un JSON `{"code","nom","id"}` que
+  l'application ne reconnaissait pas : il faut les **réimprimer**.
+- **Validation** (`POST /secteurs/validate-qr`, aussi sous `/mobile`) : un secteur actif est reconnu par :
+  - son code, sans tenir compte des majuscules ;
+  - le JSON des anciennes étiquettes ;
+  - un QR attribué (`SECT-A1-…`, `POST /secteurs/{id}/generate-qr`) ;
+  - son nom.
 
 ### 3.5 Relation avec les autres modules
 
@@ -186,9 +198,13 @@ Un **Employé** est une personne qui utilise l'application. Chaque employé :
 
 | Rôle | Droits |
 |------|--------|
-| `user` | Scans, lecture, opérations basiques |
-| `manager` | + Validation, approbations, rapports |
+| `readonly` | Lecture seule : tableau de bord, inventaires, statistiques, rapports, achats et ventes en consultation |
+| `user` | Scans, relocalisation, réceptions, commandes client et bons de livraison ; le reste en lecture |
+| `manager` | Crée et modifie partout, sans supprimer ; ni configuration, ni rôles, ni fiches employés |
 | `admin` | Tout — gestion complète |
+
+Le détail par module est celui de la matrice de l'écran Rôles (§6). Un **rôle personnalisé** peut remplacer ces
+droits pour un compte donné.
 
 ### 4.4 Flow de création d'un employé
 
@@ -204,9 +220,14 @@ Un **Employé** est une personne qui utilise l'application. Chaque employé :
 
 ### 4.5 Désactivation vs Suppression
 
-- La suppression via l'API **désactive** l'employé (soft delete ou `actif = false`)
-- Un employé désactivé ne peut plus se connecter
-- Son historique (scans, logs) est conservé
+- « Désactiver » (`DELETE /employes/{id}`, ou `PUT` avec `actif: false`) désactive l'employé **et son compte
+  d'accès** : il ne peut plus se connecter et ses sessions ouvertes sont fermées. Seul l'employé était marqué
+  inactif auparavant ; son accès restait entier.
+- La liste affiche le statut. Les employés désactivés sont masqués par défaut ; le filtre « Désactivés » les
+  retrouve, avec un bouton « Réactiver » qui rend aussi l'accès.
+- Les listes de choix (nouveau scan) ne proposent que les employés actifs (`GET /employes?actif=1`).
+- Le dernier administrateur actif ne se désactive pas (422).
+- Son historique (scans, logs) est conservé.
 
 ### 4.6 Import / Export
 
@@ -230,20 +251,63 @@ Section complémentaire aux Employés, dédiée aux informations RH détaillées
 
 ### 6.1 Système de rôles
 
-L'application a **3 rôles de base** (user, manager, admin) plus la possibilité de créer des **rôles personnalisés**.
+Chaque compte a un **rôle de base** : `admin`, `manager`, `user` ou `readonly`, et peut recevoir en plus un
+**rôle personnalisé** de son entreprise.
+- Le rôle de base ouvre les fonctions réservées par rôle : par exemple, seule une route `role:admin` est
+  accessible à un admin (utilisateurs, rôles, tâches planifiées).
+- Les **permissions par module** (voir, créer, modifier, supprimer) sont celles du rôle personnalisé s'il y en a
+  un, sinon celles du rôle système du même nom. Elles sont servies par `GET /permissions/me`.
+- Le **menu** n'affiche que les modules consultables. Une page ouverte par son adresse sans le droit de la
+  consulter affiche « Accès refusé ».
+- **L'API applique la matrice aux écritures** (middleware `droits`, `App\Support\Droits`) :
+  - `POST` sur une liste vaut « créer » ;
+  - `PUT`, `PATCH` et un `POST` d'action sur un élément (valider, annuler…) valent « modifier » ;
+  - `DELETE` vaut « supprimer ».
+  - Un refus répond **403** avec le message « Droit insuffisant : votre rôle ne permet pas de créer dans
+    « Produits » ».
+  - Paramètres, taxes, groupes de taxes, numérotation, champs personnalisés, balises, modèles de courriel et
+    réglages des approbations relèvent du module `configuration`.
+  - Les lectures, les calculs (prix, taxes), les aperçus, les envois de courriels, les favoris, la catégorie
+    d'un client et les remarques des fiches restent ouverts.
+- Un compte désactivé est refusé (401) même s'il présente encore un jeton.
+- **Module non souscrit** (Achats, Ventes, Finance) : ses pages, ouvertes par leur adresse, affichent « Module
+  non activé » au lieu d'une page vide ou d'une erreur, et le tableau de bord n'en montre pas la section.
+- Un administrateur a tous les droits, même avec un rôle personnalisé.
 
-### 6.2 Rôles personnalisés
+### 6.2 Rôles système et rôles personnalisés
 
-Via `GET/POST/PUT/DELETE /roles-custom/{id}`, on peut créer des rôles sur mesure et leur assigner des permissions granulaires par module.
+L'écran « Rôles » (`GET/POST/PUT/DELETE /roles-custom/{id}`, réservé aux administrateurs) distingue deux sortes de rôles.
 
-**Exemple :** Créer un rôle "Préparateur BL" qui peut seulement :
-- Voir les bons de livraison
-- Démarrer la préparation
-- Marquer un BL comme prêt
+**Rôles système** (`admin`, `manager`, `user`, `readonly`) :
+- Ils sont communs à toutes les entreprises.
+- On peut consulter leurs permissions, mais pas les modifier : `PUT`/`DELETE` répond 403.
+- Le bouton « Dupliquer » crée une copie modifiable.
 
-### 6.3 Assignation
+**Rôles personnalisés** :
+- Ils appartiennent à l'entreprise qui les crée et restent invisibles des autres (404).
+- Leur nom est unique dans l'entreprise. Les noms des rôles système sont réservés, sans tenir compte des majuscules.
 
-`POST /users/{userId}/assign-role` pour changer le rôle d'un utilisateur.
+**Exemple :** dupliquer `user` en « Préparateur BL », puis ne garder que la consultation des bons de livraison.
+
+### 6.3 Accès à l'application (fiche employé)
+
+L'accès se règle dans **Employés → Accès à l'application** : rôle de base, rôle personnalisé et mot de passe.
+- Le **courriel**, identifiant de connexion, est obligatoire pour donner l'accès (422 sur `email`, au lieu
+  d'une erreur 500).
+- Le **rôle personnalisé** (administrateurs seulement) remplace les droits par module du rôle choisi ; il ne
+  s'applique pas à un administrateur.
+- La création, la modification et la suppression d'employés sont réservées aux rôles admin et manager. Tous les comptes peuvent lire la liste, qui alimente des listes de choix.
+- Un **administrateur** attribue tous les rôles.
+- Un **manager** n'attribue que les rôles `user` et `readonly`, sans rôle personnalisé. Il ne touche pas aux comptes administrateur ou manager : ni leur rôle, ni leur mot de passe, ni leur adresse, qui sert à réinitialiser le mot de passe.
+- Le **dernier administrateur actif** de l'entreprise ne peut être ni rétrogradé, ni désactivé, ni privé d'accès (422), y compris via `PUT /users/{id}`.
+
+`POST /users/{userId}/assign-role` rattache un compte de l'entreprise (`admin_users`) à l'un de ses rôles
+personnalisés (`role_id` null pour revenir au rôle de base). Un rôle encore attribué ne se supprime pas (400).
+
+> **Changement de comportement :** les écritures suivent désormais la matrice. Un manager ne modifie plus les
+> paramètres, les taxes ni la numérotation (module `configuration`) ; un compte `user` ne crée plus de produits
+> ni de secteurs. Pour ouvrir un droit, créer un rôle personnalisé (par exemple en dupliquant `manager`) et
+> l'attribuer au compte depuis la fiche employé.
 
 ---
 
@@ -251,20 +315,25 @@ Via `GET/POST/PUT/DELETE /roles-custom/{id}`, on peut créer des rôles sur mesu
 
 ### 7.1 Ce que c'est
 
-La numérotation automatique génère les numéros de documents dans tout le système. Elle est configurable pour chaque type de document :
+La numérotation automatique génère les numéros de documents dans tout le système. Elle est configurable pour chaque type de document. Le tableau donne la numérotation par défaut (`Configuration::DEFAUTS`) :
 
-| Entité | Exemple de numéro |
+| Entité | Numéro par défaut |
 |--------|-------------------|
-| `produit` | PRD-0001 |
-| `employe` | EMP-0001 |
-| `secteur` | SEC-001 |
-| `fournisseur` | FRN-0001 |
-| `client` | CLT-0001 |
-| `devis` | DEV-2026-0001 |
-| `commande` | CMD-2026-0001 |
-| `facture` | FAC-2026-0001 |
-| `bon_livraison` | BL-2026-0001 |
-| `tournee` | TRN-2026-0001 |
+| `produit` | P00001 |
+| `employe` | E0001 |
+| `secteur` | saisi à la main (pas d'incrément) |
+| `fournisseur` | F00001 |
+| `client` | C00001 |
+| `devis` | DEV-00001 |
+| `commande` (commandes clients) | CMD-00001 |
+| `commande_fournisseur` | BC-00001 |
+| `facture` | FAC-00001 |
+| `bon_livraison` | BL-00001 |
+| `tournee` | T0001 |
+
+- Une entreprise qui n'a pas encore enregistré la numérotation d'un type la reçoit **au premier besoin** (écran Configuration ou création du document). Avant le 2026-10-16, son premier bon de livraison ou devis était refusé (« Numéro requis »).
+- Les commandes fournisseur ont leur propre séquence (`commande_fournisseur`) : elles consommaient celle des commandes clients, qui avait alors des trous.
+- Chaque entreprise numérote pour elle : deux entreprises peuvent toutes deux émettre FAC-00001.
 
 ### 7.2 Format configurable
 
@@ -342,12 +411,14 @@ L'application supporte plusieurs taux de TVA ou taxes différentes.
 | Champ | Description |
 |-------|-------------|
 | `nom` | Nom de la taxe (ex: "TVA 20%") |
-| `taux` | Taux en % (ex: 20) |
-| `defaut` | Si true, appliqué par défaut sur les lignes |
+| `taux` | Taux en %, jusqu'à 4 décimales (ex: 20, 9.975) |
+| `par_defaut` | Taxe par défaut : son taux devient le taux par défaut de l'entreprise (§9.3) |
 
 **Endpoints :** `GET/POST/PUT/DELETE /taxes`
 
 **Exemple :** Une entreprise au Canada peut avoir TVA + TPS + TVQ comme trois taxes distinctes.
+
+Une taxe utilisée dans un groupe de taxes (§9.4) ne peut pas être supprimée.
 
 ### 9.3 Comment les taxes s'appliquent
 
@@ -357,6 +428,47 @@ montant_ht = quantite × prix_unitaire_ht × (1 - remise_ligne/100)
 montant_tva = montant_ht × (taux_tva/100)
 montant_ttc = montant_ht + montant_tva
 ```
+
+**Taux d'une ligne**, dans l'ordre :
+1. le groupe de taxes de la ligne, ou le groupe par défaut (§9.4) ;
+2. sinon le taux saisi sur la ligne ;
+3. sinon le **taux par défaut de l'entreprise** : `tva_taux` des paramètres (Configuration › Devise & TVA).
+   Marquer une taxe « par défaut » (§9.2) met ce taux à jour. Sans réglage, il vaut 20 %.
+
+Ce taux par défaut s'applique aux commandes, aux factures et aux commandes issues d'un devis. Les documents
+prenaient auparavant 20 % en dur, même pour une entreprise à 19,25 % (Cameroun) ou 18 % (Sénégal).
+
+### 9.4 Groupes de taxes
+
+Un groupe combine, dans un ordre de calcul, des taxes déclarées au §9.2. Chaque taxe du groupe dit à quoi s'applique son taux :
+
+| `applique_sur` | Base de calcul | Exemple |
+|---|---|---|
+| `base` | Le montant HT | TPS 5 % + TVQ 9,975 % (Québec) |
+| `base_et_taxes_precedentes` | Le HT + les taxes déjà calculées (taxe composée) | Ancienne TVQ, calculée sur HT + TPS |
+| `taxe_precedente` | Le montant de la taxe précédente (taxe sur la taxe) | CAC 10 % de la TVA (Cameroun) |
+
+Chaque taxe est arrondie au centime. Le **taux effectif** du groupe est le taux global équivalent : TVA 17,5 % + CAC 10 % de la TVA = **19,25 %**. Un groupe sans taxe sert aux ventes exonérées. Un seul groupe peut être « par défaut ».
+
+**Endpoints :** `GET/POST /groupes-taxes`, `PUT/DELETE /groupes-taxes/{id}`, `POST /groupes-taxes/{id}/calculer` (`montant_ht` → détail des taxes, total TTC).
+
+L'écran se trouve dans **Configuration → Devise & TVA**, sous les taxes, avec un simulateur sur un montant.
+
+### 9.5 Groupes de taxes dans les documents
+
+Les lignes de **commande client** et de **facture** utilisent un groupe de taxes :
+
+| Cas | Calcul |
+|---|---|
+| La ligne reçoit un `groupe_taxe_id` | Taxes du groupe |
+| Pas de groupe ni de taux saisi, et un groupe **par défaut** existe | Taxes du groupe par défaut |
+| Un `taux_tva` est saisi, ou aucun groupe par défaut n'existe | Calcul du §9.3, inchangé |
+
+Avec un groupe, la ligne garde son `taux_tva` (taux effectif, pour information) et son total TTC = HT + somme des taxes, chacune arrondie au centime. Le détail de chaque taxe est enregistré dans `document_taxes`, en instantané (nom, taux, base, montant) : un document ne change pas si une taxe est modifiée ensuite. Une facture créée depuis une commande reprend ce détail.
+
+Les fiches commande et facture (`GET /commandes-client/{id}`, `GET /factures/{id}`) renvoient `recapitulatif_taxes` : base et montant cumulés par taxe, affichés sous les totaux. La liste est vide pour le calcul au taux unique.
+
+> Les écrans de saisie n'envoient pas de taux : définir un groupe **par défaut** suffit pour que toutes les nouvelles commandes et factures l'utilisent.
 
 ---
 
@@ -380,7 +492,137 @@ Les alertes sont vérifiées à chaque mouvement de stock.
 
 ---
 
-## 11. Ordre recommandé de configuration initiale
+## 11. Référentiels
+
+### 11.1 Ce que c'est
+
+Listes de référence réutilisées par toute l'application, gérées dans **Paramètres → Référentiels** (un onglet par liste). Elles sont propres à chaque entreprise (`tenant_id`) et ne modifient aucun écran existant : les fiches (produits, documents, paiements) s'y brancheront au fil du [plan de parité avec fripv2](../16-PLAN-PARITE-FRIPV2.md).
+
+| Onglet | Contenu | Règles |
+|---|---|---|
+| Unités | Unités de mesure : code, libellé, symbole, décimales | Code unique |
+| Conversions | 1 unité source = facteur × unité cible | Deux unités différentes de l'entreprise, facteur > 0, pas de doublon. Une unité utilisée dans une conversion ne peut pas être supprimée |
+| Catégories | Classement hiérarchique des produits | Parent de la même entreprise, pas de boucle, nom unique entre catégories sœurs. Une catégorie qui a des sous-catégories ne peut pas être supprimée |
+| Fabricants | Fabricants et marques | Nom et code uniques |
+| Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
+| Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé | Une seule condition « par défaut » |
+| Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
+| Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
+| Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |
+| Transporteurs | Coordonnées, numéro de compte, lien de suivi des colis | Le lien peut contenir `{numero}`, remplacé par le numéro du colis ; il doit commencer par http:// ou https:// |
+| Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
+| Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
+| Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
+| Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types) |
+| Statuts personnalisés | Statuts de suivi propres à l'entreprise, par type de document, avec couleur et ordre d'affichage | Code unique par type de document, couleur au format `#RRGGBB` |
+
+Les motifs saisis aujourd'hui en texte libre (mouvements, refus de commande) ne changent pas : les écrans proposeront ces raisons au fil des fonctionnalités.
+
+Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement et finance, Logistique, Commercial, Suivi des opérations.
+
+Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
+
+### 11.2 API
+
+Une seule API générique :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/api/referentiels/{type}` | Liste (`?actif=1` : fiches actives seulement) |
+| POST | `/api/referentiels/{type}` | Création |
+| PUT | `/api/referentiels/{type}/{id}` | Modification |
+| DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
+| GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
+
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+
+### 11.3 Droits
+
+Module de permission `referentiels` : l'admin a tous les droits, le manager peut consulter, créer et modifier. Les autres rôles s'ouvrent depuis l'écran des rôles.
+
+---
+
+## 12. Configuration — Courriels
+
+Onglet **Courriels** de la page Paramètres, envoi des documents par courriel et historique (plan de parité fripv2, phase 0.6).
+
+### 12.1 Serveur d'envoi
+
+| Mode | Expéditeur | Usage |
+|---|---|---|
+| Serveur de la plateforme (par défaut) | Adresse de la plateforme (`MAIL_FROM_ADDRESS`), au nom de l'entreprise | Rien à configurer ; les réponses vont à l'adresse de réponse |
+| SMTP de l'entreprise | Adresse d'expédition saisie | Envoyer depuis sa propre messagerie (hébergeur, Gmail, Outlook…) |
+
+- SMTP : serveur, port (587 par défaut, 465 en SSL/TLS), chiffrement (STARTTLS exigé, SSL/TLS ou aucun), utilisateur, mot de passe.
+- Le mot de passe est chiffré en base avec la clé de l'application et n'est jamais renvoyé par l'API. Laissé vide à l'enregistrement, il est conservé.
+- Communs aux deux modes : nom de l'expéditeur (par défaut, le nom de l'entreprise), adresse de réponse (par défaut, le courriel de l'entreprise), copie cachée systématique pour l'archivage, signature ajoutée sous chaque courriel.
+- **Tester l'envoi** : envoie un courriel de test avec les paramètres enregistrés. En cas d'échec, le message d'erreur du serveur est affiché.
+- Modifier ou tester le serveur est réservé aux administrateurs ; le test est limité à 5 par minute.
+
+### 12.2 Modèles de courriel
+
+Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personnalisé, un modèle par défaut neutre s'applique.
+
+| Type | Document | Pièce jointe par défaut |
+|---|---|---|
+| `devis` | Devis | `devis-{numero}.pdf` |
+| `commande_client` | Commande client | `commande-{numero}.pdf` |
+| `facture` | Facture | `facture-{numero}.pdf` |
+| `bon_livraison` | Bon de livraison | `bon-livraison-{numero}.pdf` |
+| `commande_fournisseur` | Commande fournisseur | `bon-commande-{numero}.pdf` |
+| `general` | Courriel libre | — |
+
+- Champs : objet, contenu, nom du PDF joint (facultatif, variables admises), adresse de réponse propre au modèle, accusé de lecture.
+- **Variables** `{nom}` : celles du type (`{numero}`, `{client_nom}`, `{montant_ttc}`, `{date_echeance}`…) et celles de l'entreprise (`{entreprise_nom}`, `{entreprise_adresse}`…), insérées d'un clic. Montants écrits selon la langue, avec des espaces insécables, dans la devise de l'entreprise (ou celle du fournisseur pour une commande fournisseur).
+- **Mise en forme** légère : `**gras**`, `*italique*`, listes. Le HTML saisi n'est jamais interprété et les valeurs insérées sont échappées.
+- **Aperçu** : rendu avec le document le plus récent du type, ou des valeurs d'exemple ; les variables inconnues sont signalées et surlignées.
+- Le type et la langue d'un modèle ne changent plus après sa création. « Revenir au modèle par défaut » supprime le modèle personnalisé.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/catalogue` | Types, variables de chaque type, modèles par défaut |
+| `GET` / `PUT /courriels/parametres` | Paramètres d'envoi (modification : administrateur) |
+| `POST /courriels/parametres/test` | Courriel de test (administrateur) |
+| `GET` / `POST /courriels/modeles` | Liste, création |
+| `PUT` / `DELETE /courriels/modeles/{id}` | Modification, suppression |
+| `POST /courriels/modeles/apercu` | Aperçu d'un modèle, même non enregistré |
+
+Code : catalogue `App\Support\Courriels`, rendu `App\Services\Courriels\RenduCourriel` (vue `emails.courriel`), serveur `App\Services\Courriels\MailerTenant`.
+
+### 12.3 Envoi des documents, file d'envoi et historique
+
+Les listes des devis, commandes client, factures, bons de livraison et commandes fournisseur ont un bouton **Envoyer par courriel** :
+
+1. La fenêtre se pré-remplit avec le modèle de l'entreprise (ou le modèle par défaut) dans la langue choisie : destinataire (courriel du client, ou du fournisseur pour une commande fournisseur), objet et texte complétés. Tout reste modifiable ; Cc et Cci sont facultatifs.
+2. Le PDF du document est joint sous le nom défini par le modèle (case à décocher pour ne pas le joindre).
+3. **Envoyer** : le courriel est enregistré dans la file (`courriel_envois`) tel qu'il partira, signature et coordonnées comprises, avec la copie cachée systématique des paramètres. Il est ensuite envoyé par le job `EnvoyerCourriel` : tout de suite avec `QUEUE_CONNECTION=sync` (cas actuel), en arrière-plan avec une vraie file.
+
+| Statut | Signification |
+|---|---|
+| `en_attente` | Enregistré, pas encore envoyé |
+| `en_cours` | Envoi en cours ; la prise en charge est atomique, un même courriel ne part jamais deux fois |
+| `envoye` | Remis au serveur d'envoi |
+| `echec` | Refusé ou serveur injoignable ; l'erreur est conservée |
+
+- **Relance manuelle** : bouton **Réessayer**, dans la fenêtre d'envoi et dans l'historique.
+- **Relance automatique** : commande `courriels:relancer`, planifiée toutes les 5 minutes. Elle envoie les courriels en attente depuis plus de 5 minutes, relance les échecs (3 tentatives automatiques au plus, espacées de 15 minutes) et libère les envois interrompus. Elle ne tourne que si le planificateur est lancé (`php artisan schedule:work`, ou `schedule:run` chaque minute par cron).
+- Le PDF est régénéré à chaque tentative, depuis l'état actuel du document.
+- **Historique** : page **Paramètres → Courriels envoyés** (filtres par statut et par type, détail du courriel tel qu'il est parti), et envois précédents listés dans la fenêtre d'envoi de chaque document.
+- Le module du document (ventes, achats) doit être actif ; un document d'une autre entreprise est introuvable. Envois et relances sont limités à 30 par minute.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/preparer?type=&document_id=&langue=` | Pré-remplissage de la fenêtre d'envoi |
+| `POST /courriels/envois` | Mise en file et envoi |
+| `GET /courriels/envois` | Historique paginé (filtres `type`, `document_id`, `statut`) |
+| `GET /courriels/envois/{id}` | Détail, corps du courriel compris |
+| `POST /courriels/envois/{id}/reessayer` | Relance d'un courriel en échec |
+
+Code : `App\Services\Courriels\EnvoiCourriel`, `App\Jobs\EnvoyerCourriel`, `App\Console\Commands\RelancerCourriels`.
+
+---
+
+## 13. Ordre recommandé de configuration initiale
 
 Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'ordre optimal :
 
@@ -388,11 +630,12 @@ Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'
 Étape 1 → Configuration Entreprise (nom, adresse, SIRET...)
 Étape 2 → Configuration Devise & TVA (quelle monnaie, quels taux)
 Étape 3 → Configuration Numérotation (format des numéros de documents)
-Étape 4 → Configuration Délais & Alertes
-Étape 5 → Créer les Secteurs de l'entrepôt
-Étape 6 → Créer les Produits du catalogue
-Étape 7 → Créer les Employés et leurs rôles
-Étape 8 → Commencer les Achats / Ventes
+Étape 4 → Configuration Délais & Alertes, puis Courriels (facultatif : serveur d'envoi et modèles)
+Étape 5 → Référentiels (unités, catégories, devises, modes et conditions de paiement…)
+Étape 6 → Créer les Secteurs de l'entrepôt
+Étape 7 → Créer les Produits du catalogue
+Étape 8 → Créer les Employés et leurs rôles
+Étape 9 → Commencer les Achats / Ventes
 ```
 
 > Si on commence les Ventes sans avoir configuré la numérotation, les numéros seront générés avec les valeurs par défaut (ce qui peut ne pas correspondre à la charte de l'entreprise).

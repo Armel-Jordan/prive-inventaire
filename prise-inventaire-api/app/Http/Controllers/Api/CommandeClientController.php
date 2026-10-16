@@ -8,6 +8,8 @@ use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
+use App\Services\TaxesDocument;
+use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class CommandeClientController extends Controller
 {
+    public function __construct(private readonly TaxesDocument $taxes) {}
+
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
@@ -41,6 +45,8 @@ class CommandeClientController extends Controller
     public function show(int $id): JsonResponse
     {
         $commande = ComClientEntete::with(['client', 'lignes', 'facture'])->findOrFail($id);
+        // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
+        $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
         return response()->json($commande);
     }
@@ -54,10 +60,13 @@ class CommandeClientController extends Controller
             'remise_globale' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
-            'lignes.*.produit_id' => 'required|integer',
+            // Produit de l'entreprise (un id quelconque, ou celui d'une autre entreprise, était accepté).
+            'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
-            'lignes.*.taux_tva' => 'nullable|numeric|in:0,5.5,10,20',
+            // Taux libre (19,25 % au Cameroun…) ; il était limité aux taux français.
+            'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
 
@@ -86,11 +95,13 @@ class CommandeClientController extends Controller
                     'produit_id' => $ligneData['produit_id'],
                     'quantite' => $ligneData['quantite'],
                     'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                    'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                    'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                     'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                 ]);
                 $ligne->calculerMontants();
+                $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
                 $commande->lignes()->save($ligne);
+                $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
             }
 
             $commande->calculerMontants();
@@ -111,36 +122,45 @@ class CommandeClientController extends Controller
         }
 
         $validated = $request->validate([
+            'client_id' => ['sometimes', TenantRule::exists('clients')],
+            'date_commande' => 'sometimes|date',
             'date_livraison_souhaitee' => 'nullable|date',
             'remise_globale' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
             'lignes' => 'sometimes|array|min:1',
-            'lignes.*.produit_id' => 'required|integer',
+            'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
-            'lignes.*.taux_tva' => 'nullable|numeric',
+            'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
 
         DB::transaction(function () use ($commande, $validated) {
+            // Client et date se modifient aussi ; une note vidée est effacée (elle était conservée).
             $commande->update([
-                'date_livraison_souhaitee' => $validated['date_livraison_souhaitee'] ?? $commande->date_livraison_souhaitee,
+                'client_id' => $validated['client_id'] ?? $commande->client_id,
+                'date_commande' => $validated['date_commande'] ?? $commande->date_commande,
+                'date_livraison_souhaitee' => array_key_exists('date_livraison_souhaitee', $validated) ? $validated['date_livraison_souhaitee'] : $commande->date_livraison_souhaitee,
                 'remise_globale' => $validated['remise_globale'] ?? $commande->remise_globale,
-                'notes' => $validated['notes'] ?? $commande->notes,
+                'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $commande->notes,
             ]);
 
             if (isset($validated['lignes'])) {
+                $this->taxes->supprimer('commande_client', $commande->lignes()->pluck('id'));
                 $commande->lignes()->delete();
                 foreach ($validated['lignes'] as $ligneData) {
                     $ligne = new ComClientLigne([
                         'produit_id' => $ligneData['produit_id'],
                         'quantite' => $ligneData['quantite'],
                         'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                        'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                        'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                         'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                     ]);
                     $ligne->calculerMontants();
+                    $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
                     $commande->lignes()->save($ligne);
+                    $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
                 }
             }
 

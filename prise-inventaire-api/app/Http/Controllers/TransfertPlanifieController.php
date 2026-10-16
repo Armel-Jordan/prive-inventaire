@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MouvementTenant;
 use App\Models\TransfertPlanifie;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,7 +55,8 @@ class TransfertPlanifieController extends Controller
 
         $validated['statut'] = 'planifie';
         $validated['tenant_id'] = $tenantId;
-        $validated['cree_par'] = $request->user()->name ?? 'Admin';
+        // AdminUser n'a pas de « name » : l'auteur était toujours « Admin ».
+        $validated['cree_par'] = $request->user()->nom ?: $request->user()->email;
 
         $transfert = TransfertPlanifie::create($validated);
 
@@ -131,24 +131,7 @@ class TransfertPlanifieController extends Controller
             ], 422);
         }
 
-        MouvementTenant::create([
-            'tenant_id' => $tenantId,
-            'type' => $transfert->type,
-            'produit_numero' => $transfert->produit_numero,
-            'produit_nom' => $transfert->produit_nom,
-            'secteur_source' => $transfert->secteur_source,
-            'secteur_destination' => $transfert->secteur_destination,
-            'quantite' => $transfert->quantite,
-            'unite_mesure' => $transfert->unite_mesure,
-            'motif' => $transfert->motif,
-            'employe' => $transfert->employe,
-        ]);
-
-        $transfert->update([
-            'statut' => 'execute',
-            'execute_le' => now(),
-            'execute_par' => $request->user()->name ?? 'Admin',
-        ]);
+        $transfert->executer($request->user()->nom ?: $request->user()->email);
 
         return response()->json([
             'success' => true,

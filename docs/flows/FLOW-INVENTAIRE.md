@@ -190,9 +190,29 @@ Le système d'**approbations** est un workflow de validation pour les mouvements
 
 ### 4.2 Paramétrage des seuils
 
-Les seuils sont configurables par tenant :
-- `seuil_quantite` : quantité à partir de laquelle une approbation est requise
-- `seuil_valeur` : valeur monétaire à partir de laquelle une approbation est requise
+Les seuils se règlent par entreprise et par type de mouvement (arrivage, transfert, sortie) dans
+**Approbations › Paramètres** :
+- `seuil_quantite` : quantité à partir de laquelle une approbation est requise ;
+- `actif` : le seuil ne s'applique que s'il est actif.
+
+Les seuils proposés à la première ouverture (100, 50, 50) sont **inactifs** : l'entreprise choisit de les
+activer. Un ajustement n'est jamais soumis à approbation.
+
+**Où les seuils s'appliquent :** à tout mouvement enregistré, depuis l'écran Relocalisation (mouvement simple
+ou lot) comme depuis l'application mobile (`POST /relocalisation`, `/relocalisation/par-secteur`,
+`/relocalisation/arrivage-lot`, `/mobile/relocalisation`).
+- Une quantité qui atteint le seuil de son type devient une demande d'approbation, et le mouvement n'est créé
+  qu'à l'approbation.
+- Un mouvement simple répond alors **202**, avec `requires_approval: true` et un message.
+- Un lot enregistre les autres lignes et liste celles mises en attente.
+- Les seuils n'étaient appliqués auparavant que par `POST /approbations`, que ni l'écran ni l'application
+  n'appellent : un transfert de 5 000 unités passait sans approbation.
+
+**Auteurs :**
+- l'auteur d'un mouvement saisi sur le web est l'utilisateur connecté ; c'était « Admin Web » pour tout le
+  monde ;
+- l'approbateur est toujours le compte connecté qui décide. Le nom envoyé par l'écran était libre, donc
+  usurpable ; il est désormais ignoré.
 
 Endpoint de configuration :
 ```
@@ -311,7 +331,8 @@ Chaque secteur reçoit un **score de priorité** basé sur :
 
 **Onglet Suggestions :**
 - Liste des secteurs à compter en priorité, triés par score
-- Indique quand le secteur a été compté pour la dernière fois
+- Indique quand le secteur a été compté pour la dernière fois, et depuis combien de jours (toujours positif ;
+  absent pour un secteur jamais scanné, qui compte pour 365 jours dans le score)
 - Affiche `"Tous les secteurs sont à jour !"` si tout a été compté récemment
 
 **Onglet Planning :**
@@ -346,11 +367,14 @@ Le module **Rapports** produit des analyses agrégées sur les mouvements de sto
 
 **Évolution annuelle (12 mois)**
 - Mois par mois sur une année : nombre de mouvements et de scans
-- `GET /rapports/evolution-annuelle?annee=2026`
+- `GET /rapports/evolution-annuelle?annee=2026` (MySQL et SQLite)
 
 **Top produits du mois**
 - Les produits les plus manipulés dans la période
 - `GET /rapports/top-produits?mois=4&annee=2026&limit=10`
+
+**Export CSV** : un fichier par onglet, Évolution comprise. Fichier UTF-8 avec BOM, pour qu'Excel affiche
+les accents. Une erreur de chargement d'un rapport est signalée au lieu de laisser un tableau vide.
 
 ### 8.3 Source des données
 
@@ -364,22 +388,36 @@ Chaque rapport fusionne deux sources :
 
 ### 9.1 Ce que c'est
 
-Le **journal d'audit** enregistre automatiquement toutes les créations, modifications et suppressions importantes dans le système. Il permet de savoir qui a fait quoi et quand.
+Le **journal d'audit** (écran Historique) enregistre automatiquement les créations, modifications et
+suppressions des fiches et des documents. Il permet de savoir qui a fait quoi et quand.
+
+Il est alimenté par l'observateur `App\Observers\JournalModifications`, enregistré pour chaque modèle suivi
+dans `AppServiceProvider`. Le journal existait auparavant (table, écran, `AuditLog::log`) sans que rien ne
+l'écrive : il restait vide.
 
 ### 9.2 Ce qui est tracé
 
-Chaque entrée d'audit contient :
+| Objet (`model_type`) | Actions |
+|---|---|
+| Produit, Secteur, Employé, Compte utilisateur, Client, Fournisseur | création, modification, suppression |
+| Devis, Commande client, Commande fournisseur, Facture, Bon de livraison | création, modification, suppression |
+| Paramètres, Taxe, Numérotation | création, modification, suppression |
+| Scan, Mouvement (très nombreux, déjà historisés) | modification et suppression seulement |
+
+Chaque entrée contient :
 
 | Champ | Description |
 |-------|-------------|
-| `action` | `create`, `update`, `delete`, `approve`, `reject`, `send`, `cancel` |
-| `model_type` | Type de l'objet modifié (ex: `Produit`, `CommandeClient`) |
-| `model_id` | ID de l'objet modifié |
-| `changes` | JSON des champs avant/après (pour les mises à jour) |
-| `user_id` | L'employé qui a fait l'action |
-| `user_name` | Son nom |
-| `ip_address` | Adresse IP |
-| `tenant_id` | Isolation multi-tenant |
+| `action` | `create`, `update`, `delete` |
+| `model_type` / `model_id` | Objet concerné (libellé ci-dessus) et son identifiant |
+| `old_values` / `new_values` | Valeurs avant / après. Pour une modification : seulement les champs modifiés |
+| `user_id` / `user_name` | Utilisateur connecté qui a fait l'action |
+| `ip_address`, `user_agent` | Origine de la requête |
+| `tenant_id` | Entreprise : chaque entreprise ne voit que son journal |
+
+Ne sont jamais journalisés : les mots de passe, les secrets de double authentification, les champs masqués
+du modèle et les horodatages techniques. Une erreur d'écriture du journal n'empêche jamais l'opération ; hors
+d'un contexte d'entreprise (commandes, initialisation des données), rien n'est journalisé.
 
 ### 9.3 Endpoints
 
@@ -486,3 +524,47 @@ Toutes les tables du module Inventaire sont isolées par `tenant_id` :
 3. **Les approbations bloquent les gros mouvements** — vérifier les seuils configurés si un mouvement ne passe pas directement.
 4. **La traçabilité fusionne deux sources** (mouvements + scans) — un produit peut apparaître dans l'historique même sans mouvement formel, via un scan d'inventaire.
 5. **Les alertes se basent sur `actif = 1`** (pas sur un champ `statut`) — une alerte sans seuil critique ne génère pas d'alerte critique même si le stock est à zéro.
+
+---
+
+## 13. Prises d'inventaire (sessions de comptage)
+
+Sessions de comptage par-dessus les scans : écarts avec le dernier inventaire validé, mouvements connus depuis, corrections, validation qui forme l'inventaire officiel. Voir [FLOW-PRISE-INVENTAIRE.md](./FLOW-PRISE-INVENTAIRE.md).
+
+---
+
+## 14. Historique des scans, statistiques, comparaison, tableau de bord
+
+Les écrans travaillent sur **tout l'historique**, filtré par l'API. Ils voyaient auparavant les 100 derniers
+scans ou mouvements : filtres de dates vides, export de 100 lignes, statistiques identiques sur 7, 30 et
+90 jours.
+
+**Dates et fuseau horaire :** une période choisie à l'écran (« du 15/10 au 15/10 ») est envoyée en instants,
+du début du premier jour au début du lendemain du dernier, dans le fuseau du navigateur. Les jours des
+graphiques sont regroupés dans ce même fuseau (paramètre `fuseau`, par exemple `America/Toronto`). La
+planification envoie l'heure saisie avec son fuseau : 9 h saisi à Montréal reste 9 h à l'affichage.
+
+**Secteur :** un filtre par secteur retrouve les scans enregistrés sous son code (web) comme sous son nom
+(application mobile). Les statistiques comptent ce secteur une seule fois.
+
+| Endpoint | Rôle |
+|---|---|
+| `GET /scan/historique?page=&per_page=&secteur=&employe=&produit=&depuis=&jusqu_a=` | Historique paginé (500 par page au plus). Sans `page` : liste des 100 derniers, format attendu par l'application mobile |
+| `GET /scan/export?…&fuseau=` | CSV de tous les scans filtrés (BOM UTF-8, `;`, virgule décimale) |
+| `GET /scan/statistiques?depuis=&jusqu_a=&fuseau=` | Total, jours d'activité, moyenne par jour, secteurs et employés distincts ; répartition par jour, secteur (8 premiers), employé (10 premiers) et type |
+| `GET /scan/comparaison?a_depuis=&a_jusqu_a=&b_depuis=&b_jusqu_a=` | Quantités comptées par produit sur deux périodes, écart et variation |
+| `GET /scan/stats` | Total, scans du jour, instants du premier et du dernier scan |
+| `GET /relocalisation?page=&per_page=` | Historique des mouvements paginé (sans `page` : liste limitée, comme avant) |
+
+**Comparaison :** elle met face à face les quantités **comptées** à chacune des deux dates. Elle additionnait
+auparavant tous les scans jusqu'à chaque date : ce cumul ne faisait que croître, et « Diminutions » restait
+à 0.
+
+**Tableau de bord, section Inventaire :**
+- produits actifs (les désactivés ne comptent plus) ;
+- alertes et ruptures parmi les produits suivis (seuil d'alerte > 0), avec le stock calculé comme sur l'écran
+  Alertes (somme des quantités scannées) ;
+- secteurs et employés actifs ;
+- mouvements de relocalisation de la période (arrivages = entrées, sorties).
+
+Il lisait auparavant d'anciennes tables vides.

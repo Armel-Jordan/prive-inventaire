@@ -76,15 +76,19 @@ Un fournisseur peut fournir plusieurs produits. Pour chaque produit qu'il fourni
 | `delai_livraison` | Délai en jours |
 | `fournisseur_principal` | Est-ce le fournisseur principal pour ce produit ? |
 
-Cela permet de pré-remplir le prix quand on crée une commande.
+Ce catalogue se gère dans l'onglet **Produits fournis** de la fiche fournisseur (un seul fournisseur principal par produit). Le formulaire de commande ne s'en sert pas encore pour pré-remplir le prix.
 
-### 2.4 Statut actif / inactif
+### 2.4 Fiche fournisseur
+
+Un clic sur le code d'un fournisseur ouvre sa fiche : synthèse des achats et des livraisons, historique, produits fournis, contacts, adresses, coordonnées bancaires et remarques. Voir [FLOW-FICHE-FOURNISSEUR.md](./FLOW-FICHE-FOURNISSEUR.md).
+
+### 2.5 Statut actif / inactif
 
 - Un fournisseur **inactif** n'apparaît pas dans la liste de sélection lors de la création d'une commande.
 - Ses commandes et historique restent accessibles.
 - Utiliser l'inactivation plutôt que la suppression pour préserver l'historique.
 
-### 2.5 Endpoints
+### 2.6 Endpoints
 
 ```
 GET    /fournisseurs          → liste avec pagination et filtre
@@ -108,13 +112,13 @@ Une **Commande Fournisseur** (appelée aussi "bon de commande" ou "PO — Purcha
 
 | Champ | Description |
 |-------|-------------|
-| `numero` | Ex: CF-2026-0001 (auto-généré) |
+| `numero` | Ex: BC-00001 : numérotation propre aux commandes fournisseur (`commande_fournisseur`), distincte de celle des commandes clients |
 | `fournisseur_id` | Le fournisseur concerné |
 | `date_commande` | Date de création de la commande |
 | `date_livraison_prevue` | Date à laquelle on attend la livraison |
 | `statut` | État actuel (voir section statuts) |
 | `montant_total` | Somme de toutes les lignes |
-| `devise` | Devise de la commande (héritée du fournisseur) |
+| `devise` | Devise de la commande ; sans devise transmise, celle du fournisseur |
 | `taux_change` | Taux de change si devise ≠ devise entreprise |
 | `notes` | Notes internes |
 
@@ -209,10 +213,11 @@ Ce que ça fait :
 
 ### 3.10 Multi-devise
 
-Si le fournisseur facture en USD mais que l'entreprise utilise EUR :
-- Le `taux_change` est chargé automatiquement depuis l'API externe **Frankfurter** (`api.frankfurter.app`)
-- Les montants sont stockés dans la devise du fournisseur
-- La conversion s'affiche pour information
+Si le fournisseur facture en USD mais que l'entreprise utilise une autre devise (XAF, CAD…) :
+- Le choix du fournisseur reprend sa devise et propose un taux (voir §8), modifiable avant l'enregistrement.
+- Sans taux disponible, le formulaire le demande : la commande n'est plus enregistrée au taux 1.
+- Les montants sont stockés et affichés dans la devise du fournisseur, avec leur équivalent dans la devise de
+  l'entreprise (« 25,00 $US ≈ 15 000 FCFA »).
 
 ---
 
@@ -398,10 +403,17 @@ L'application gère plusieurs devises pour les achats internationaux.
 
 ### Taux de change
 
-- Chargé automatiquement depuis **Frankfurter API** (`api.frankfurter.app`)
-- Endpoint interne : `GET /taux-change?from=USD&to=EUR`
-- Le taux est stocké dans la commande au moment de sa création
-- Le taux ne change pas rétroactivement — il est figé dans la commande
+Endpoint interne : `GET /taux-change?from=USD&to=XAF`. Sources, dans l'ordre :
+1. **Référentiel des devises de l'entreprise** (Paramètres › Référentiels › Devises) : chaque taux y exprime une
+   unité de la devise dans la devise de référence. Un taux croisé passe par cette devise de référence. Réponse
+   `source: "entreprise"`.
+2. **Cours du jour de Frankfurter** (`api.frankfurter.app`), mis en cache pour la journée. Réponse
+   `source: "frankfurter"`.
+3. Sinon **404** avec un message : le formulaire demande le taux. Un échec du cours du jour (devise inconnue du
+   service, comme XAF, ou service injoignable) est retenu dix minutes.
+
+Le taux est stocké dans la commande au moment de sa création et ne change pas rétroactivement. Un taux nul ou
+négatif est refusé (`taux_change` > 0).
 
 ### Affichage
 

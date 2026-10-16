@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10 — ajout modifier commande, facture manuelle, annuler BL, retirer BL tournée, supprimer tournée, isolation multi-tenant complète
+> Dernière mise à jour : 2026-10-15 — documents PDF (devis, commande, facture, bon de livraison)
 
 ---
 
@@ -19,6 +19,7 @@
 10. [Flow complet bout en bout](#10-flow-complet-bout-en-bout)
 11. [Tous les statuts et transitions](#11-tous-les-statuts-et-transitions)
 12. [Livraison partielle — cas particulier](#12-livraison-partielle--cas-particulier)
+13. [Documents PDF](#13-documents-pdf)
 
 ---
 
@@ -279,14 +280,15 @@ Un devis accepté peut être **converti en commande client** directement — san
 ### 3.5 Conversion en commande
 
 Quand on convertit un devis accepté :
-1. Une **Commande Client** est créée avec les mêmes lignes et prix
-2. La commande est en statut `brouillon` (elle peut encore être modifiée)
-3. Le devis garde son statut `accepte` (lien de traçabilité)
-4. L'ID de la commande est stocké dans le devis (`com_entete_id`)
+1. Une **Commande Client** est créée avec les mêmes lignes et prix.
+2. Les taxes sont calculées comme pour une commande saisie directement : le groupe de taxes par défaut de l'entreprise s'il existe, sinon le taux par défaut.
+3. La commande est en statut `brouillon` : elle peut encore être modifiée.
+4. Le devis garde son statut `accepte` et pointe vers sa commande (`commande_id`), affichée dans la liste (« → CMD-… »).
+5. **Un devis ne se convertit qu'une fois.** Une seconde conversion répond 422 avec le numéro de la commande existante ; un verrou empêche deux conversions simultanées.
 
 ### 3.6 Points d'attention
 
-- La date de validité est informative — le passage en `expire` n'est pas automatique côté backend aujourd'hui (c'est le frontend qui filtre l'affichage).
+- **Expiration.** Un devis envoyé dont la date de validité est passée devient `expire` au chargement de la liste, et on ne peut plus l'accepter (422 avec la date d'expiration).
 - Les prix dans le devis sont libres — ils ne sont pas forcément les mêmes que les prix catalogues.
 
 ---
@@ -455,7 +457,8 @@ La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal :
 
 Étape 3 : Créer le Bon de Livraison
           → Endpoint: POST /factures/{id}/creer-bl
-          → Crée un BonLivraison lié à cette facture
+          → Crée un BonLivraison lié à cette facture (émise, partiellement payée ou payée)
+          → Un seul bon en cours par facture ; un bon annulé ne compte pas, on peut en recréer un
 
 Étape 4 : Enregistrer les paiements
           → Endpoint: POST /factures/{id}/paiement
@@ -490,12 +493,16 @@ Si le client paye en plusieurs fois, on peut définir un échéancier :
 
 Exemple : Facture de 3000€ → 1000€ le 1er mai + 1000€ le 1er juin + 1000€ le 1er juillet.
 
+Les paiements se répartissent sur les échéances dans leur ordre : chacune passe `payee`, `partiellement_payee` ou reste `en_attente`, avec son `montant_paye`.
+
 ### 5.7 Facture de reliquat (livraison partielle)
 
 Quand un BL est livré partiellement, le système génère automatiquement une **nouvelle facture** pour les articles non livrés. Cette nouvelle facture :
 - Référence la facture d'origine via `facture_mere_id`
 - Contient uniquement les lignes non livrées avec les quantités restantes
 - Repart en statut `brouillon`
+
+Une livraison **complète** passe le BL en `livre_complet` et ne crée aucune facture. (Avant le 2026-10-16, les quantités livrées étaient lues avant leur enregistrement : toute livraison était vue comme partielle et une facture de reliquat reprenait la totalité du bon.)
 
 ---
 
@@ -650,6 +657,34 @@ Un **Camion** est un véhicule de livraison. Il est associé à une tournée et 
 ### 7.3 Disponibilité
 
 `GET /camions/disponibles?date=YYYY-MM-DD` retourne les camions qui n'ont pas de tournée planifiée ou en cours ce jour-là. Utilisé lors de la création d'une tournée pour ne proposer que les camions libres.
+
+---
+
+## 7 bis. Comptes clients (Ventes → Comptes clients)
+
+Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'est un état ; rien n'est enregistré.
+
+- **Factures prises en compte** : les factures émises, partiellement payées ou payées, datées au plus tard ce jour. Les brouillons et les factures annulées sont exclus.
+- **Reste dû à une date** : le montant TTC, moins les paiements datés jusqu'à ce jour. Une facture payée depuis compte donc encore comme due à une date antérieure.
+- **Analyse chronologique** :
+  - le retard se compte depuis l'échéance, ou depuis la date de facture si la facture n'a pas d'échéance ;
+  - tranches : non échu, 1 à 30 jours, 31 à 60, 61 à 90, plus de 90 ;
+  - par client : total, tranches, nombre de factures, retard maximal ;
+  - les clients sont triés par montant dû, avec les totaux, le montant en retard et le montant à plus de 90 jours ;
+  - les cases se colorent selon l'ancienneté ; export CSV.
+- **Relevé de compte d'un client** (bouton de la ligne, du 1er janvier à la date choisie par défaut) :
+  - solde d'ouverture (factures moins paiements antérieurs) ;
+  - factures au débit et paiements au crédit, avec le solde progressif ; le même jour, les factures passent avant les paiements ;
+  - solde final ;
+  - factures encore dues au dernier jour, avec leur retard ;
+  - export CSV.
+
+| Route | Rôle |
+|---|---|
+| `GET /comptes-clients?date=[&format=csv]` | Analyse chronologique (aujourd'hui par défaut) |
+| `GET /comptes-clients/{client}/releve?du=&au=[&format=csv]` | Relevé de compte |
+
+Code : `App\Services\ComptesClients`, `App\Http\Controllers\Api\CompteClientController`, écran `ComptesClientsPage`, service `src/services/comptesClients.ts`.
 
 ---
 
@@ -869,3 +904,47 @@ Quand un livreur arrive chez le client mais ne peut livrer qu'une partie des art
 |-------|------------------|
 | Préparation articles | `sortie_preparation` (secteur → zone préparation) |
 | Livraison au client | `livraison_client` (camion → client) |
+
+---
+
+## 13. Documents PDF
+
+Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dans la liste :
+
+| Document | Route | Contenu propre |
+|---|---|---|
+| Devis | `GET /devis/{id}/pdf` | Total HT, mention « Montants hors taxes », zone « Bon pour accord » |
+| Commande client | `GET /commandes-client/{id}/pdf` | Sous-total HT, taxes, total TTC |
+| Facture | `GET /factures/{id}/pdf` | Sous-total HT, taxes, total TTC, payé, reste à payer |
+| Bon de livraison | `GET /bons-livraison/{id}/pdf` | Adresse de livraison, quantités à livrer / préparées / livrées, signatures |
+
+**Communs à tous :**
+- En-tête et pied de page tirés des paramètres de l'entreprise (Configuration → Entreprise) : nom, adresse, téléphone, courriel, numéros d'entreprise et de taxe. Sans paramètres, le nom de l'entreprise (tenant) est utilisé.
+- Montants dans la devise de l'entreprise (`devise_symbole`).
+- Taxes : une ligne par taxe quand le document utilise des groupes de taxes (ex. TVA 17,5 % puis CAC 10 %), sinon une ligne « TVA » avec son taux s'il est unique.
+- Gabarit unique `resources/views/pdf/document-vente.blade.php`, alimenté par `App\Services\DocumentsVentePdf`. Police en sous-ensemble : environ 25 Ko par document.
+
+**Envoi par courriel :** le bouton à côté du PDF envoie le document avec son PDF joint (voir FLOW-PARAMETRES §12.3).
+
+**Accès :** comme le reste de l'API (jeton dans l'en-tête `Authorization`, entreprise par `X-Tenant-Slug`), donc jamais de jeton dans l'URL. Un document d'une autre entreprise renvoie 404. Le PDF existant des bons de commande fournisseur n'est pas modifié.
+
+---
+
+## 14. Écrans de vente : règles d'affichage communes
+
+- **Devise** : les montants (devis, commandes, factures, clients, comptabilité) s'affichent avec le symbole de
+  devise des paramètres de l'entreprise, au format de la langue (« 1 234,50 FCFA »), et non en euros d'office.
+- **Dates** : une date de document (`date_facture`, `date_commande`…) est lue telle quelle, sans passer par un
+  instant UTC qui la décalait d'un jour à l'ouest de Greenwich. Une date du jour proposée par défaut est celle du
+  fuseau de l'utilisateur.
+- **Listes paginées** : devis, commandes, factures, bons de livraison, tournées, clients et fournisseurs affichent
+  le nombre total et passent de page en page. Un changement de filtre revient à la première page.
+- **Lignes** : le détail d'une facture ou d'un bon de livraison donne la désignation du produit (même retiré du
+  catalogue) ; une ligne nouvelle reprend le prix du catalogue tant qu'aucun prix n'est saisi.
+- **Facture** : la liste donne le montant TTC (comme le reste à payer) ; le détail donne HT, TVA (ou le détail
+  par taxe) et TTC.
+- **Erreurs** : le message renvoyé par l'API (encours dépassé, statut incompatible, champ invalide) est affiché
+  au lieu d'un échec silencieux.
+- **Tournées** : la liste « Ajouter un bon » ne propose que les bons prêts et pas encore placés
+  (`GET /bons-livraison?statut=pret&sans_tournee=1`). Ajouter, retirer, démarrer ou terminer renvoie la tournée
+  complète (camion, bons, factures, clients).

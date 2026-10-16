@@ -27,4 +27,9 @@ class BonLivraisonLigne extends Model
     {
         return $this->belongsTo(BonLivraison::class, 'bon_id');
     }
+
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
+    }
 }

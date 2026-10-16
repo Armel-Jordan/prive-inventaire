@@ -1,3 +1,7 @@
+@php
+    // Montants dans la devise de l'entreprise (ses paramètres), comme les documents de vente.
+    $montant = fn ($valeur) => number_format((float) $valeur, 2, ',', ' ').' '.$devise;
+@endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -221,10 +225,11 @@
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <div class="company-name">Prise Inventaire</div>
+                <div class="company-name">{{ $entreprise['nom'] }}</div>
                 <div class="company-info">
-                    Système de gestion d'inventaire<br>
-                    contact@prise-inventaire.com
+                    @foreach (array_filter([$entreprise['adresse'], $entreprise['telephone'], $entreprise['email'], $entreprise['mentions']]) as $coordonnee)
+                        {{ $coordonnee }}@if (! $loop->last)<br>@endif
+                    @endforeach
                 </div>
             </div>
             <div class="header-right document-title">
@@ -300,8 +305,8 @@
                     <td>{{ $ligne->produit->numero ?? '-' }}</td>
                     <td>{{ $ligne->produit->description ?? 'Produit #'.$ligne->produit_id }}</td>
                     <td class="right">{{ number_format($ligne->quantite_commandee, 0, ',', ' ') }}</td>
-                    <td class="right">{{ number_format($ligne->prix_unitaire, 2, ',', ' ') }} €</td>
-                    <td class="right">{{ number_format($ligne->montant_ligne, 2, ',', ' ') }} €</td>
+                    <td class="right">{{ $montant($ligne->prix_unitaire) }}</td>
+                    <td class="right">{{ $montant($ligne->montant_ligne) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -309,17 +314,13 @@
 
         <div class="totals-section">
             <table class="totals-table">
-                <tr>
-                    <td class="label">Sous-total HT</td>
-                    <td class="right">{{ number_format($commande->montant_total, 2, ',', ' ') }} €</td>
-                </tr>
-                <tr>
-                    <td class="label">TVA (20%)</td>
-                    <td class="right">{{ number_format($commande->montant_total * 0.20, 2, ',', ' ') }} €</td>
-                </tr>
+                {{-- Les lignes d'achat ne portent pas de taxe : total hors taxes, les taxes figurent sur la facture du fournisseur. --}}
                 <tr class="total-row">
-                    <td><strong>TOTAL TTC</strong></td>
-                    <td class="right"><strong>{{ number_format($commande->montant_total * 1.20, 2, ',', ' ') }} €</strong></td>
+                    <td><strong>TOTAL HT</strong></td>
+                    <td class="right"><strong>{{ $montant($commande->montant_total) }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="label" colspan="2">Montants hors taxes</td>
                 </tr>
             </table>
         </div>
@@ -348,7 +349,7 @@
     </div>
 
     <div class="footer">
-        Document généré le {{ now()->format('d/m/Y à H:i') }} | Prise Inventaire - Système de gestion d'inventaire
+        {{ $entreprise['nom'] }} — document généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
 </body>
 </html>

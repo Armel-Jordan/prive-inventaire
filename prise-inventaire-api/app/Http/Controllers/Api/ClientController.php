@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Configuration;
+use App\Models\Devis;
+use App\Models\Facture;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +30,13 @@ class ClientController extends Controller
         if ($request->has('actif')) {
             $query->where('actif', $request->boolean('actif'));
         }
+
+        // Fiche client : filtres facultatifs (catégorie, favoris de l'utilisateur), catégorie et favori affichés.
+        $utilisateur = $request->user()->id;
+        $query->when($request->filled('categorie_id'), fn ($q) => $q->where('categorie_id', $request->integer('categorie_id')))
+            ->when($request->boolean('favoris'), fn ($q) => $q->whereHas('favoris', fn ($f) => $f->where('user_id', $utilisateur)))
+            ->with('categorie:id,nom')
+            ->withExists(['favoris as favori' => fn ($f) => $f->where('user_id', $utilisateur)]);
 
         $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
 
@@ -109,8 +118,12 @@ class ClientController extends Controller
     {
         $client = Client::findOrFail($id);
 
-        if ($client->commandes()->exists()) {
-            return response()->json(['message' => 'Impossible de supprimer un client avec des commandes'], 422);
+        // Un client qui a des documents reste : ses factures et devis perdaient leur destinataire.
+        // Pour ne plus le proposer, on le rend inactif.
+        if ($client->commandes()->exists()
+            || Facture::where('client_id', $client->id)->exists()
+            || Devis::where('client_id', $client->id)->exists()) {
+            return response()->json(['message' => 'Impossible de supprimer un client qui a des commandes, factures ou devis : rendez-le plutôt inactif.'], 422);
         }
 
         $client->delete();

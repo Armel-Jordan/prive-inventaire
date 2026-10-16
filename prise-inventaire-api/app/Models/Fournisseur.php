@@ -34,9 +34,30 @@ class Fournisseur extends Model
 
     public function produits(): BelongsToMany
     {
-        return $this->belongsToMany(ProduitTenant::class, 'produit_fournisseur')
+        // Clés explicites : la table pivot porte « produit_id » (Laravel déduirait « produit_tenant_id »).
+        return $this->belongsToMany(ProduitTenant::class, 'produit_fournisseur', 'fournisseur_id', 'produit_id')
             ->withPivot(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal'])
             ->withTimestamps();
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(FournisseurContact::class)->orderByDesc('principal')->orderBy('nom');
+    }
+
+    public function adresses(): HasMany
+    {
+        return $this->hasMany(FournisseurAdresse::class)->orderByDesc('principale')->orderBy('libelle');
+    }
+
+    public function comptesBancaires(): HasMany
+    {
+        return $this->hasMany(FournisseurCompteBancaire::class)->orderByDesc('principal')->orderBy('banque');
+    }
+
+    public function remarques(): HasMany
+    {
+        return $this->hasMany(FournisseurRemarque::class)->orderByDesc('epinglee')->latest()->orderByDesc('id');
     }
 
     public function commandes(): HasMany

@@ -44,26 +44,31 @@ Le module Finance lit les données créées dans les modules Achats et Ventes :
 
 ### 2.1 Ce que c'est
 
-La page Comptabilité offre une synthèse financière de l'activité :
-- Chiffre d'affaires facturé
-- Encaissements reçus
-- Créances en attente
-- Factures en retard
+La page Comptabilité rapproche, sur une période (du… au…, un mois par défaut), les ventes facturées et les achats
+reçus :
+- **Journal des ventes** : les factures de la période, hors brouillons et factures annulées, en montant HT.
+- **Journal des achats** : les réceptions de la période, valorisées au prix de la commande fournisseur et
+  converties dans la devise de l'entreprise au taux enregistré sur la commande.
+- **Marge brute** : ventes HT moins achats.
+- **Évolution mensuelle** : ventes et achats par mois, d'après la date du document.
 
 ### 2.2 Indicateurs clés
 
 | Indicateur | Calcul | Source |
 |------------|--------|--------|
-| CA total facturé | Somme `montant_ttc` des factures émises | Table `factures` |
-| CA encaissé | Somme de tous les paiements | Table `facture_paiements` |
-| Reste à encaisser | `CA total - CA encaissé` | Calculé |
-| Factures en retard | Factures avec `date_echeance < aujourd'hui` et `reste_a_payer > 0` | Calculé |
+| Total ventes HT | Somme `montant_ht` des factures de la période (ni brouillon ni annulée) | `factures` |
+| Total achats | Somme `quantite_recue × prix_unitaire × taux_change` des réceptions de la période | `reception_arrivages_ligne`, `com_four_ligne`, `com_four_entete` |
+| Marge brute | Ventes HT − achats | Calculé |
 
-### 2.3 Filtres disponibles
+Toutes les pages de résultats sont chargées : le journal ne s'arrête pas aux 20 dernières factures ni aux
+15 dernières réceptions. Les montants s'affichent avec le symbole de devise de l'entreprise (paramètres).
 
-- Par période (mois, trimestre, année)
-- Par client
-- Par statut de paiement
+### 2.3 Filtres et export
+
+- Période : dates de début et de fin, appliquées par l'API (`date_debut`, `date_fin`).
+- Achats : filtre par fournisseur, regroupement par commande ; le total suit le filtre.
+- Export CSV du journal affiché : séparateur `;`, virgule décimale et BOM UTF-8, pour une ouverture directe
+  dans Excel en français sans perte des accents.
 
 ### 2.4 Enregistrement des paiements
 

@@ -1,10 +1,15 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter } from 'lucide-react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw } from 'lucide-react';
+import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface ProduitForm {
   numero: string;
@@ -34,6 +39,8 @@ export default function ProduitsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
+  // Produits désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
+  const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
@@ -42,10 +49,12 @@ export default function ProduitsPage() {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
+  // Boutons selon les droits du rôle sur les produits (l'API refuse de toute façon les autres écritures).
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   async function loadData() {
     try {
-      const [produitsData, secteursData] = await Promise.all([getProduits(), getSecteurs()]);
+      const [produitsData, secteursData] = await Promise.all([getProduits(filterStatut), getSecteurs()]);
       setProduits(produitsData);
       setSecteurs(secteursData);
     } catch {
@@ -56,9 +65,23 @@ export default function ProduitsPage() {
   }
 
   useEffect(() => {
-    loadData();
     getConfiguration('produit').then(setConfigNumero).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatut]);
+
+  async function handleReactiver(produit: Produit) {
+    try {
+      await updateProduit(produit.id!, { actif: true });
+      toast('Produit réactivé');
+      loadData();
+    } catch {
+      toast('Erreur lors de la réactivation', 'error');
+    }
+  }
 
   // Unique types for filter
   const types = [...new Set(produits.map(p => p.type).filter(Boolean))].sort();
@@ -109,8 +132,9 @@ export default function ProduitsPage() {
       }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      // Raison donnée par l'API (numéro déjà pris, champ invalide) plutôt qu'un message générique.
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     }
   }
 
@@ -119,8 +143,8 @@ export default function ProduitsPage() {
       await deleteProduit(id);
       toast('Produit supprimé');
       loadData();
-    } catch {
-      toast('Erreur lors de la suppression', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la suppression'), 'error');
     } finally {
       setConfirmId(null);
     }
@@ -151,6 +175,8 @@ export default function ProduitsPage() {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
       let imported = 0, errors = 0;
+      // Lignes refusées, avec leur numéro et la raison donnée par l'API (seul un total était affiché).
+      const refus: string[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';').map(v => v.trim());
         const row: Record<string, string> = {};
@@ -160,10 +186,14 @@ export default function ProduitsPage() {
             const secteur = secteurs.find(s => s.code === row.secteur_code);
             await createProduit({ numero: row.numero, description: row.description, mesure: row.mesure || 'UN', type: row.type || '', secteur_id: secteur?.id });
             imported++;
-          } catch { errors++; }
+          } catch (e) {
+            errors++;
+            refus.push(`ligne ${i + 1} (${row.numero}) : ${messageErreur(e, 'refusée')}`);
+          }
         }
       }
-      toast(`${imported} produits importés${errors ? `, ${errors} erreurs` : ''}`, errors ? 'info' : 'success');
+      const detail = refus.length ? ` — ${refus.slice(0, 3).join(' ; ')}${refus.length > 3 ? ' ; …' : ''}` : '';
+      toast(`${imported} produits importés${errors ? `, ${errors} erreurs${detail}` : ''}`, errors ? 'info' : 'success');
       loadData();
     } catch {
       toast('Erreur lors de l\'import', 'error');
@@ -191,15 +221,19 @@ export default function ProduitsPage() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
           </button>
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-            <Upload size={18} />
-            {importing ? 'Import...' : 'Importer'}
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
-          </label>
-          <button onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-            <Plus size={20} /> Ajouter
-          </button>
+          {canCreate('produits') && (
+            <>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                <Upload size={18} />
+                {importing ? 'Import...' : 'Importer'}
+                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" disabled={importing} />
+              </label>
+              <button onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <Plus size={20} /> Ajouter
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -228,6 +262,13 @@ export default function ProduitsPage() {
               {secteurs.map(s => <option key={s.id} value={String(s.id)}>{s.code} — {s.nom}</option>)}
             </select>
           </div>
+          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
+            aria-label="Statut"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+            <option value="actifs">Actifs</option>
+            <option value="inactifs">Désactivés</option>
+            <option value="tous">Tous</option>
+          </select>
           {hasFilters && (
             <button onClick={() => { setFilterType(''); setFilterSecteur(''); }}
               className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
@@ -261,7 +302,13 @@ export default function ProduitsPage() {
                 {filtered.map((produit) => (
                   <tr key={produit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
-                    <td className="px-4 py-3 text-sm dark:text-gray-200">{produit.description}</td>
+                    <td className="px-4 py-3 text-sm dark:text-gray-200">
+                      {produit.description}
+                      {produit.actif === false && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
+                      )}
+                      <BalisesFiche entite="produit" entiteId={produit.id!} />
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       {produit.secteur
                         ? <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">{produit.secteur.code}</span>
@@ -283,12 +330,24 @@ export default function ProduitsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Supprimer">
-                        <Trash2 size={16} />
-                      </button>
+                      <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
+                      {canEdit('produits') && (
+                        <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {produit.actif === false ? (
+                        canEdit('produits') && (
+                          <button onClick={() => handleReactiver(produit)} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                            <RotateCcw size={16} />
+                          </button>
+                        )
+                      ) : canDelete('produits') && (
+                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      <BoutonChampsPersonnalises entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="ml-2" />
                     </td>
                   </tr>
                 ))}
@@ -392,8 +451,9 @@ export default function ProduitsPage() {
 
       <ConfirmModal
         open={confirmId !== null}
-        title="Supprimer le produit"
-        message="Cette action est irréversible. Le produit sera définitivement supprimé."
+        title="Désactiver le produit"
+        message="Le produit n'apparaîtra plus dans les listes de choix ni dans l'application mobile. Son historique (scans, mouvements, documents) est conservé, et vous pourrez le réactiver depuis le filtre « Désactivés »."
+        confirmLabel="Désactiver"
         onConfirm={() => confirmId !== null && handleDelete(confirmId)}
         onCancel={() => setConfirmId(null)}
       />

@@ -66,7 +66,7 @@ Remplace le compromis « slug non authentifié ». On implémente une **authenti
 | C2 | **`update()` de lignes enfants scopé au parent** (FAILLE 1/8) | DevisController:136, CommandeFournisseurController:152, ReceptionController:55/116 | `$parent->lignes()->where('id',$x)->update(...)` |
 | C3 | **`ReceptionController::index` + `LocalisationController::mouvements`** (FAILLE 3/8) | ReceptionController:17, LocalisationController:89-119 | scoper via parent (`whereHas`) ou ajouter `tenant_id` |
 | C4 | **`DB::table` Dashboard** (§4.3) | DashboardController:13-62 | `->where('tenant_id',$ctx)` manuel |
-| C5 | **Règles `unique:` scopées** (FAILLE R5) | Secteur:25, ProduitTenant:26, EmployeTenant:28, Fournisseur, Camion, ZonePreparation | `Rule::unique(...)->where('tenant_id',$ctx)` |
+| C5 | **Règles `unique:` scopées** (FAILLE R5) | Secteur:25, ProduitTenant:26, EmployeTenant:28, Fournisseur, Camion, ZonePreparation | `Rule::unique(...)->where('tenant_id',$ctx)` ; index en base `(tenant_id, colonne)` : migrations `scope_unique_indexes_to_tenant` puis, le 2026-10-16, `numeros_uniques_par_entreprise` (codes clients, numéros de devis, commandes, factures, BL, tournées, alertes de stock) |
 | C6 | **Garde de rôle SuperAdmin** (FAILLE 7/F2) | routes/api.php:105 | middleware `ability:super-admin` ou `abort_unless(instanceof SuperAdmin)` |
 | C7 | **`RolePermissionController` + `CheckPermission`** (FAILLE 5) | RolePermissionController:106-244, CheckPermission:31 | scoper par tenant + vérifier appartenance `userId`/`role_id` (dépend de l'arbitrage roles_custom) |
 
@@ -137,6 +137,29 @@ Appliquer `BelongsToTenant` (fail-closed) à `AdminUser` **casse toute l'authent
 - ✅ Lot 1 (5) · Lot 2a (4) · Lot 3 ventes (11) = **20 modèles** scopés, testés, poussés. IDOR fermés sur tous ces modèles (show/update/destroy par id → 404 cross-tenant).
 - ⏸ Lot 2b (5 modèles couplés `/mobile`) : reporté en Livraison 2 (auth mobile réelle).
 - ⏸ AdminUser : scoping explicite + C6 (pas de trait).
+
+### Chantier C7 — fait (2026-10-16)
+
+**Arbitrage :**
+- Le web lit les permissions **par module** (`/permissions/me`, menus, écran « Rôles »), c'est-à-dire le schéma `000016`. Le schéma `000012` (`role`/`permission`) n'était utilisé que par `CheckPermission`, branché sur aucune route, et par `RoleController`.
+- La migration `2026_10_16_100019_isoler_roles_par_entreprise` :
+  - renomme l'ancienne table en `role_permissions_anciennes`, toujours lue par `CheckPermission`/`RoleController` via `App\Support\PermissionsAnciennes` ;
+  - crée la table par module ;
+  - recrée les 4 rôles système avec leur matrice, sans toucher aux lignes existantes ;
+  - rend le nom de rôle unique par entreprise.
+- Sur une base créée dans l'ordre, un manager ou un utilisateur voyait jusque-là un menu vide. Sur MySQL, `/permissions/me` répondait 500.
+
+**`RolePermissionController` :**
+- Chaque entreprise voit les rôles système et les siens.
+- Elle ne crée, modifie ou supprime que ses propres rôles personnalisés : 403 sur un rôle système, 404 sur le rôle d'une autre entreprise.
+- Les noms des rôles système sont réservés.
+- Les anciens rôles personnalisés sans entreprise restent masqués.
+
+**Faille trouvée pendant la campagne de tests du 2026-10-16 :**
+- `POST/PUT/DELETE /employes` n'avaient aucune garde de rôle. N'importe quel compte pouvait se donner le rôle admin ou retirer l'accès de l'administrateur.
+- Les écritures sont désormais réservées aux rôles admin et manager.
+- Un manager n'attribue que le rôle `user` et ne touche pas aux comptes admin ou manager (rôle, mot de passe, adresse).
+- Le dernier administrateur actif garde son accès, y compris via `PUT /users/{id}`.
 
 ---
 

@@ -1,7 +1,15 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-react';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { useCodeDevise } from '@/lib/documents';
+import BalisesFiche from '@/components/BalisesFiche';
 import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseur, getConfiguration } from '@/services/api';
 import type { Fournisseur } from '@/services/api';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -39,9 +47,14 @@ const emptyForm: FournisseurForm = {
 };
 
 export default function FournisseursPage() {
+  const { t } = useLanguage();
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
+  // Devise de l'entreprise : celle proposée pour un nouveau fournisseur (et non l'euro d'office).
+  const codeDevise = useCodeDevise();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FournisseurForm>(emptyForm);
@@ -49,8 +62,9 @@ export default function FournisseursPage() {
 
   async function loadData() {
     try {
-      const response = await getFournisseurs({ search: search || undefined });
+      const response = await getFournisseurs({ search: search || undefined, page });
       setFournisseurs(response.data || []);
+      setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
@@ -68,19 +82,19 @@ export default function FournisseursPage() {
   }
 
   useEffect(() => {
-    loadData();
     loadConfig();
   }, []);
 
+  // Premier chargement compris : la liste ne se chargeait plus deux fois à l'ouverture.
   useEffect(() => {
     const timer = setTimeout(() => {
       loadData();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, page]);
 
   function openCreate() {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, devise: codeDevise || emptyForm.devise });
     setEditingId(null);
     setShowModal(true);
   }
@@ -95,7 +109,7 @@ export default function FournisseursPage() {
       contact_nom: fournisseur.contact_nom || '',
       contact_telephone: fournisseur.contact_telephone || '',
       conditions_paiement: fournisseur.conditions_paiement || '',
-      devise: fournisseur.devise || 'EUR',
+      devise: fournisseur.devise || codeDevise || 'EUR',
       actif: fournisseur.actif,
     });
     setEditingId(fournisseur.id);
@@ -113,8 +127,7 @@ export default function FournisseursPage() {
       setShowModal(false);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la sauvegarde');
+      signaler(error, 'Erreur lors de la sauvegarde');
     }
   }
 
@@ -124,8 +137,7 @@ export default function FournisseursPage() {
       await deleteFournisseur(id);
       loadData();
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la suppression. Ce fournisseur a peut-être des commandes associées.');
+      signaler(error, 'Erreur lors de la suppression. Ce fournisseur a peut-être des commandes associées.');
     }
   }
 
@@ -149,7 +161,7 @@ export default function FournisseursPage() {
             type="text"
             placeholder="Rechercher par code, nom ou email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 border rounded-lg"
           />
         </div>
@@ -176,7 +188,9 @@ export default function FournisseursPage() {
               <tbody className="divide-y">
                 {fournisseurs.map((fournisseur) => (
                   <tr key={fournisseur.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-mono font-medium">{fournisseur.code}</td>
+                    <td className="px-4 py-3 text-sm font-mono font-medium">
+                      <Link to={`/fournisseurs/${fournisseur.id}`} title={t.supplierFile.open} className="text-teal-700 dark:text-teal-300 hover:underline">{fournisseur.code}</Link>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building2 size={16} className="text-gray-400" />
@@ -188,6 +202,7 @@ export default function FournisseursPage() {
                           <span className="text-xs text-gray-500">{fournisseur.email}</span>
                         </div>
                       )}
+                      <BalisesFiche entite="fournisseur" entiteId={fournisseur.id} />
                     </td>
                     <td className="px-4 py-3 text-sm">{fournisseur.contact_nom || '-'}</td>
                     <td className="px-4 py-3">
@@ -208,6 +223,7 @@ export default function FournisseursPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <BoutonPiecesJointes entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" />
                       <button
                         onClick={() => openEdit(fournisseur)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-2"
@@ -220,6 +236,7 @@ export default function FournisseursPage() {
                       >
                         <Trash2 size={16} />
                       </button>
+                      <BoutonChampsPersonnalises entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="ml-2" />
                     </td>
                   </tr>
                 ))}
@@ -227,6 +244,7 @@ export default function FournisseursPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {showModal && (

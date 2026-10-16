@@ -56,4 +56,34 @@ class TransfertPlanifie extends Model
     {
         return $this->statut === 'annule';
     }
+
+    /**
+     * Exécute le transfert : crée le mouvement correspondant et passe le transfert à « exécuté ».
+     * Utilisé par l'exécution manuelle et par la tâche planifiée.
+     */
+    public function executer(string $executePar): MouvementTenant
+    {
+        $mouvement = MouvementTenant::create([
+            'tenant_id' => $this->tenant_id,
+            'type' => $this->type,
+            'produit_numero' => $this->produit_numero,
+            'produit_nom' => $this->produit_nom,
+            'secteur_source' => $this->secteur_source,
+            'secteur_destination' => $this->secteur_destination,
+            'quantite' => $this->quantite,
+            'unite_mesure' => $this->unite_mesure,
+            'motif' => $this->motif,
+            'employe' => $this->employe,
+            // Colonne obligatoire, longtemps omise : l'exécution échouait en MySQL strict.
+            'date_mouvement' => now(),
+        ]);
+
+        $this->update([
+            'statut' => 'execute',
+            'execute_le' => now(),
+            'execute_par' => $executePar,
+        ]);
+
+        return $mouvement;
+    }
 }

@@ -2,9 +2,19 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Plus, Truck, Filter, Package, Trash2, Layers, X } from 'lucide-react';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import { messageErreur } from '@/lib/erreurs';
 import PageSkeleton from '@/components/PageSkeleton';
 import EmptyState from '@/components/EmptyState';
 import { apiFetch } from '@/services/http';
+import Pagination from '@/components/Pagination';
+import type { PageHistorique } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+
+/** Réponse d'un mouvement : mis en attente quand sa quantité atteint le seuil d'approbation de son type. */
+interface ReponseMouvement {
+  requires_approval?: boolean;
+  message?: string;
+}
 
 interface Mouvement {
   id: number;
@@ -43,12 +53,18 @@ interface BatchItem {
 
 export default function RelocalisationPage() {
   const { toasts, toast, dismiss } = useToast();
+  // Auteur des mouvements : l'utilisateur connecté (et non « Admin Web » pour tout le monde).
+  const { user } = useAuth();
+  const auteur = user?.nom || user?.email || 'Web';
   const [mouvements, setMouvements] = useState<Mouvement[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'single' | 'arrivage' | 'transfert' | 'batch'>('single');
   const [filterType, setFilterType] = useState<string>('');
+  // Historique complet, page par page (l'écran s'arrêtait aux 100 derniers mouvements).
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
@@ -74,17 +90,19 @@ export default function RelocalisationPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterType]);
+  }, [filterType, page]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const params = filterType ? `?type=${filterType}` : '';
+      const params = new URLSearchParams({ page: String(page), per_page: '50' });
+      if (filterType) params.append('type', filterType);
       const [mouvementsRes, secteursRes] = await Promise.all([
-        apiFetch<Mouvement[]>(`/relocalisation${params}`),
+        apiFetch<PageHistorique<Mouvement>>(`/relocalisation?${params}`),
         apiFetch<Secteur[]>('/secteurs'),
       ]);
-      setMouvements(mouvementsRes);
+      setMouvements(mouvementsRes.data || []);
+      setPagination({ dernierePage: mouvementsRes.last_page ?? 1, total: mouvementsRes.total ?? 0 });
       setSecteurs(secteursRes);
     } catch {
       toast('Erreur de chargement des données', 'error');
@@ -142,7 +160,7 @@ export default function RelocalisationPage() {
     try {
       // Envoyer chaque produit comme un mouvement séparé
       const promises = batchItems.map(item =>
-        apiFetch('/relocalisation', {
+        apiFetch<ReponseMouvement>('/relocalisation', {
           method: 'POST',
           body: JSON.stringify({
             type: batchType,
@@ -153,15 +171,19 @@ export default function RelocalisationPage() {
             quantite: parseFloat(item.quantite),
             unite_mesure: item.unite_mesure,
             motif: batchMotif,
-            employe: 'Admin Web',
+            employe: auteur,
           }),
         })
       );
-      await Promise.all(promises);
+      const reponses = await Promise.all(promises);
+      const enAttente = reponses.filter(r => r?.requires_approval).length;
+      if (enAttente > 0) {
+        toast(`${enAttente} mouvement(s) en attente d'approbation : quantité au-delà du seuil.`, 'info');
+      }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de l\'enregistrement', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de l\'enregistrement'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -170,18 +192,22 @@ export default function RelocalisationPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await apiFetch('/relocalisation', {
+      const reponse = await apiFetch<ReponseMouvement>('/relocalisation', {
         method: 'POST',
         body: JSON.stringify({
           ...form,
           quantite: parseFloat(form.quantite),
-          employe: 'Admin Web',
+          employe: auteur,
         }),
       });
+      if (reponse?.requires_approval) {
+        toast(reponse.message || 'Le mouvement attend une approbation.', 'info');
+      }
       setShowModal(false);
       loadData();
-    } catch {
-      toast('Erreur lors de l\'enregistrement', 'error');
+    } catch (e) {
+      // « Le secteur source et destination doivent être différents » plutôt qu'un échec sans raison.
+      toast(messageErreur(e, 'Erreur lors de l\'enregistrement'), 'error');
     }
   }
 
@@ -236,7 +262,8 @@ export default function RelocalisationPage() {
             <Filter size={18} className="text-gray-400" />
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
+              aria-label="Type de mouvement"
               className="border rounded-lg px-3 py-1.5 text-sm"
             >
               <option value="">Tous les types</option>
@@ -309,6 +336,7 @@ export default function RelocalisationPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal */}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MouvementTenant;
+use App\Support\SeuilsApprobation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,9 +38,17 @@ class MouvementTenantController extends Controller
             $query->whereDate('date_mouvement', '<=', $request->date_fin);
         }
 
-        $mouvements = $query->orderByDesc('date_mouvement')
-            ->limit($request->get('limit', 100))
-            ->get();
+        $query->orderByDesc('date_mouvement')->orderByDesc('id');
+
+        // Avec « page » : tout l'historique, page par page (l'écran s'arrêtait aux 100 derniers mouvements).
+        // Sans : la liste limitée attendue par l'application mobile.
+        if ($request->has('page')) {
+            $request->validate(['per_page' => 'nullable|integer|min:1|max:500']);
+
+            return response()->json($query->paginate((int) $request->input('per_page', 50)));
+        }
+
+        $mouvements = $query->limit($request->get('limit', 100))->get();
 
         return response()->json($mouvements);
     }
@@ -82,6 +91,17 @@ class MouvementTenantController extends Controller
             return response()->json([
                 'message' => 'Une sortie nécessite un secteur source',
             ], 422);
+        }
+
+        // Quantité au-delà du seuil d'approbation de son type : demande d'approbation, mouvement différé.
+        $approbation = SeuilsApprobation::soumettre($validated, auth()->user()->tenant_id, $validated['employe']);
+        if ($approbation) {
+            return response()->json([
+                'success' => true,
+                'requires_approval' => true,
+                'message' => 'Quantité supérieure ou égale au seuil ('.(float) $approbation->seuil_declenchement.') : le mouvement attend une approbation.',
+                'approbation' => $approbation,
+            ], 202);
         }
 
         $mouvement = MouvementTenant::create([
@@ -129,31 +149,18 @@ class MouvementTenantController extends Controller
         }
 
         $tenantId = auth()->user()->tenant_id;
-        $mouvements = [];
-
-        DB::transaction(function () use ($validated, $tenantId, &$mouvements) {
-            foreach ($validated['produits'] as $produit) {
-                $mouvement = MouvementTenant::create([
-                    'tenant_id' => $tenantId,
-                    'type' => 'transfert',
-                    'produit_numero' => $produit['numero'],
-                    'produit_nom' => $produit['nom'] ?? null,
-                    'secteur_source' => $validated['secteur_source'],
-                    'secteur_destination' => $validated['secteur_destination'],
-                    'quantite' => $produit['quantite'],
-                    'unite_mesure' => $produit['unite_mesure'] ?? null,
-                    'motif' => $validated['motif'] ?? 'Relocalisation par secteur',
-                    'employe' => $validated['employe'],
-                    'date_mouvement' => now(),
-                ]);
-                $mouvements[] = $mouvement;
-            }
-        });
+        [$mouvements, $approbations] = $this->enregistrerLot($validated, $tenantId, fn (array $produit) => [
+            'type' => 'transfert',
+            'secteur_source' => $validated['secteur_source'],
+            'secteur_destination' => $validated['secteur_destination'],
+            'motif' => $validated['motif'] ?? 'Relocalisation par secteur',
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => count($mouvements).' produit(s) relocalisé(s) avec succès',
+            'message' => $this->messageLot(count($mouvements), count($approbations), 'relocalisé(s)'),
             'mouvements' => $mouvements,
+            'approbations' => $approbations,
         ], 201);
     }
 
@@ -174,32 +181,66 @@ class MouvementTenantController extends Controller
         ]);
 
         $tenantId = auth()->user()->tenant_id;
-        $mouvements = [];
-
-        DB::transaction(function () use ($validated, $tenantId, &$mouvements) {
-            foreach ($validated['produits'] as $produit) {
-                $mouvement = MouvementTenant::create([
-                    'tenant_id' => $tenantId,
-                    'type' => 'arrivage',
-                    'produit_numero' => $produit['numero'],
-                    'produit_nom' => $produit['nom'] ?? null,
-                    'secteur_source' => null,
-                    'secteur_destination' => $validated['secteur_destination'],
-                    'quantite' => $produit['quantite'],
-                    'unite_mesure' => $produit['unite_mesure'] ?? null,
-                    'motif' => $validated['motif'] ?? 'Arrivage',
-                    'employe' => $validated['employe'],
-                    'date_mouvement' => now(),
-                ]);
-                $mouvements[] = $mouvement;
-            }
-        });
+        [$mouvements, $approbations] = $this->enregistrerLot($validated, $tenantId, fn (array $produit) => [
+            'type' => 'arrivage',
+            'secteur_source' => null,
+            'secteur_destination' => $validated['secteur_destination'],
+            'motif' => $validated['motif'] ?? 'Arrivage',
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => count($mouvements).' produit(s) ajouté(s) avec succès',
+            'message' => $this->messageLot(count($mouvements), count($approbations), 'ajouté(s)'),
             'mouvements' => $mouvements,
+            'approbations' => $approbations,
         ], 201);
+    }
+
+    /**
+     * Mouvements d'un lot : chaque ligne qui atteint le seuil d'approbation de son type devient une demande
+     * d'approbation, les autres sont enregistrées.
+     *
+     * @return array{0: array<int, MouvementTenant>, 1: array<int, \App\Models\Approbation>}
+     */
+    private function enregistrerLot(array $validated, int $tenantId, callable $champsDuLot): array
+    {
+        $mouvements = [];
+        $approbations = [];
+
+        DB::transaction(function () use ($validated, $tenantId, $champsDuLot, &$mouvements, &$approbations) {
+            foreach ($validated['produits'] as $produit) {
+                $ligne = [
+                    ...$champsDuLot($produit),
+                    'produit_numero' => $produit['numero'],
+                    'produit_nom' => $produit['nom'] ?? null,
+                    'quantite' => $produit['quantite'],
+                    'unite_mesure' => $produit['unite_mesure'] ?? null,
+                ];
+
+                $approbation = SeuilsApprobation::soumettre($ligne, $tenantId, $validated['employe']);
+                if ($approbation) {
+                    $approbations[] = $approbation;
+
+                    continue;
+                }
+
+                $mouvements[] = MouvementTenant::create([
+                    ...$ligne,
+                    'tenant_id' => $tenantId,
+                    'employe' => $validated['employe'],
+                    'date_mouvement' => now(),
+                ]);
+            }
+        });
+
+        return [$mouvements, $approbations];
+    }
+
+    private function messageLot(int $enregistres, int $enAttente, string $participe): string
+    {
+        $message = "{$enregistres} produit(s) {$participe} avec succès";
+
+        return $enAttente > 0 ? "{$message} ; {$enAttente} en attente d'approbation (seuil atteint)" : $message;
     }
 
     /**

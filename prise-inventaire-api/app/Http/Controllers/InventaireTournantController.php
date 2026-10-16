@@ -6,6 +6,7 @@ use App\Models\MouvementTenant;
 use App\Models\ScanTenant;
 use App\Models\Secteur;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class InventaireTournantController extends Controller
 {
@@ -44,12 +45,14 @@ class InventaireTournantController extends Controller
             }
 
             // Calculer le score de priorité
+            // Jours écoulés, toujours positifs (l'écart signé donnait « -0,14 jour » pour un scan du jour) ;
+            // null si le secteur n'a jamais été scanné.
             $joursDepuisScan = $dernierScan
-                ? now()->diffInDays($dernierScan->date_saisie)
-                : 365; // Si jamais scanné, très haute priorité
+                ? (int) Carbon::parse($dernierScan->date_saisie)->diffInDays(now(), true)
+                : null;
 
-            // Score = jours depuis scan + (mouvements * 2)
-            $score = $joursDepuisScan + ($mouvementsDepuisScan * 2);
+            // Score = jours depuis scan + (mouvements * 2) ; un secteur jamais scanné compte pour 365 jours.
+            $score = ($joursDepuisScan ?? 365) + ($mouvementsDepuisScan * 2);
 
             return [
                 'secteur' => $secteur->code,
@@ -186,9 +189,9 @@ class InventaireTournantController extends Controller
         ]);
     }
 
-    private function getRaison(int $jours, int $mouvements): string
+    private function getRaison(?int $jours, int $mouvements): string
     {
-        if ($jours >= 365) {
+        if ($jours === null) {
             return 'Jamais inventorié';
         }
         if ($jours >= 30 && $mouvements >= 10) {

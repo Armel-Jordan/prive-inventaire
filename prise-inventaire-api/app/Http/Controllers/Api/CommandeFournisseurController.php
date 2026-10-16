@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\Configuration;
+use App\Models\Fournisseur;
 use App\Models\HistoriquePrixAchat;
 use App\Models\ProduitTenant;
 use App\Support\TenantRule;
@@ -59,7 +60,7 @@ class CommandeFournisseurController extends Controller
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'devise' => 'nullable|string|max:10',
-            'taux_change' => 'nullable|numeric|min:0',
+            'taux_change' => 'nullable|numeric|gt:0',
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
@@ -67,12 +68,14 @@ class CommandeFournisseurController extends Controller
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
-        $config = Configuration::pourEntite('commande', $tenantId);
+        // Numérotation propre aux commandes fournisseur : elles consommaient celle des commandes clients,
+        // qui avait alors des trous.
+        $config = Configuration::pourEntite('commande_fournisseur', $tenantId);
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
         $commande = DB::transaction(function () use ($validated, $request, $tenantId) {
-            $numero = Configuration::consommerNumero('commande', $tenantId);
+            $numero = Configuration::consommerNumero('commande_fournisseur', $tenantId);
 
             $commande = ComFourEntete::create([
                 'tenant_id' => $tenantId,
@@ -81,7 +84,8 @@ class CommandeFournisseurController extends Controller
                 'date_commande' => $validated['date_commande'],
                 'date_livraison_prevue' => $validated['date_livraison_prevue'] ?? null,
                 'notes' => $validated['notes'] ?? null,
-                'devise' => $validated['devise'] ?? 'EUR',
+                // Sans devise transmise : celle du fournisseur (et non l'euro d'office).
+                'devise' => $validated['devise'] ?? Fournisseur::find($validated['fournisseur_id'])?->devise ?? 'EUR',
                 'taux_change' => $validated['taux_change'] ?? 1.0,
                 'statut' => ComFourEntete::STATUT_BROUILLON,
                 'created_by' => $request->user()->id,

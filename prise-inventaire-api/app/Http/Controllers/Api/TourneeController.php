@@ -8,6 +8,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,16 +37,24 @@ class TourneeController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $tournee = Tournee::with(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes'])->findOrFail($id);
+        return response()->json($this->detail(Tournee::findOrFail($id)));
+    }
 
-        return response()->json($tournee);
+    /**
+     * Tournée avec ses bons, leur facture et leur client : ce que l'écran affiche. Après un ajout ou un retrait,
+     * la réponse ne portait que les liens tournée-bon, et la fiche ouverte perdait les numéros et les clients.
+     */
+    private function detail(Tournee $tournee): Tournee
+    {
+        return $tournee->fresh(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes']);
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'date_tournee' => 'required|date',
-            'camion_id' => 'required|exists:camions,id',
+            // Camion de l'entreprise : celui d'une autre était accepté (et la réponse révélait son existence).
+            'camion_id' => ['required', TenantRule::exists('camions')],
             'livreur_id' => 'nullable|integer',
             'zone' => 'nullable|string|max:100',
             'heure_depart' => 'nullable|date_format:H:i',
@@ -56,19 +65,16 @@ class TourneeController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numero = $config->genererNumero();
-        $config->incrementer();
-
-        $tournee = Tournee::create([
+        $tournee = DB::transaction(fn () => Tournee::create([
             'tenant_id' => $tenantId,
-            'numero' => $numero,
+            'numero' => Configuration::consommerNumero('tournee', $tenantId),
             'date_tournee' => $validated['date_tournee'],
             'camion_id' => $validated['camion_id'],
             'livreur_id' => $validated['livreur_id'] ?? null,
             'zone' => $validated['zone'] ?? null,
             'heure_depart' => $validated['heure_depart'] ?? null,
             'statut' => 'planifiee',
-        ]);
+        ]));
 
         return response()->json($tournee, 201);
     }
@@ -82,7 +88,7 @@ class TourneeController extends Controller
         }
 
         $validated = $request->validate([
-            'bon_livraison_id' => 'required|exists:bons_livraison,id',
+            'bon_livraison_id' => ['required', TenantRule::exists('bons_livraison')],
         ]);
 
         $bon = BonLivraison::findOrFail($validated['bon_livraison_id']);
@@ -103,7 +109,7 @@ class TourneeController extends Controller
             'ordre_livraison' => $ordre,
         ]);
 
-        return response()->json($tournee->fresh('tourneeBons.bonLivraison'));
+        return response()->json($this->detail($tournee));
     }
 
     public function retirerBon(int $id, int $bonId): JsonResponse
@@ -116,7 +122,7 @@ class TourneeController extends Controller
 
         TourneeBon::where('tournee_id', $id)->where('bon_livraison_id', $bonId)->delete();
 
-        return response()->json($tournee->fresh('tourneeBons'));
+        return response()->json($this->detail($tournee));
     }
 
     public function updateOrdre(Request $request, int $id): JsonResponse
@@ -141,7 +147,7 @@ class TourneeController extends Controller
             }
         });
 
-        return response()->json($tournee->fresh('tourneeBons'));
+        return response()->json($this->detail($tournee));
     }
 
     public function demarrer(Request $request, int $id): JsonResponse
@@ -185,7 +191,7 @@ class TourneeController extends Controller
             }
         });
 
-        return response()->json($tournee->fresh(['tourneeBons.bonLivraison']));
+        return response()->json($this->detail($tournee));
     }
 
     public function destroy(int $id): JsonResponse
@@ -215,6 +221,6 @@ class TourneeController extends Controller
         $tournee->km_retour = $request->get('km_retour');
         $tournee->save();
 
-        return response()->json($tournee);
+        return response()->json($this->detail($tournee));
     }
 }

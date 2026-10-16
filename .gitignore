@@ -26,3 +26,6 @@ prise-inventaire-android/*.key
 # Web (futur)
 prise-inventaire-web/node_modules/
 prise-inventaire-web/.env
+
+# Secrets de déploiement : à garder hors de git
+DEPLOYMENT_INFO.md

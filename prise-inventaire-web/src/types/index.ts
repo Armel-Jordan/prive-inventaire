@@ -9,6 +9,8 @@ export interface Employe {
   admin_user?: {
     id: number;
     role: string;
+    /** Rôle personnalisé de l'entreprise, dont les droits remplacent ceux du rôle. */
+    role_custom_id?: number | null;
     actif: boolean;
   };
 }
@@ -17,18 +19,24 @@ export interface Produit {
   id?: number;
   numero: string;
   description: string;
+  /** false : produit désactivé (masqué des listes de choix, réactivable). */
+  actif?: boolean;
   mesure: string;
   unite_achat?: string | null;
   qte_par_unite_achat?: number;
   type: string;
   secteur_id?: number;
   secteur?: Secteur;
+  /** Prix de vente du catalogue (chaîne décimale renvoyée par l'API), proposé sur les lignes de documents. */
+  prix_unitaire?: number | string | null;
 }
 
 export interface Secteur {
   id?: number;
   code: string;
   nom: string;
+  /** false : secteur désactivé (masqué des listes de choix, réactivable). */
+  actif?: boolean;
   description?: string;
 }
 

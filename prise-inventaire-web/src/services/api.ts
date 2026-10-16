@@ -1,5 +1,5 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
-import { apiFetch, getAuthHeaders, type ApiOptions } from './http';
+import { apiFetch, getAuthHeaders, API_BASE_URL, type ApiOptions } from './http';
 
 // Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
 export { getAuthHeaders };
@@ -35,6 +35,28 @@ const mockScans: InventaireScan[] = [
 async function fetchApi<T>(endpoint: string, options?: ApiOptions): Promise<T> {
   // Délègue au client central résilient (timeout, retry idempotent, erreurs typées).
   return apiFetch<T>(endpoint, options);
+}
+
+/** Page de résultats renvoyée par l'API (pagination Laravel). */
+export interface PageResultats<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+/**
+ * Tous les éléments d'une liste paginée (totaux, journaux, exports), page après page, dans la limite de
+ * `maxPages` pages pour ne pas emballer le navigateur sur un très gros volume.
+ */
+export async function toutesLesPages<T>(charger: (page: number) => Promise<PageResultats<T>>, maxPages = 50): Promise<T[]> {
+  const premiere = await charger(1);
+  const elements = [...(premiere.data || [])];
+  const derniere = Math.min(premiere.last_page ?? 1, maxPages);
+  for (let page = 2; page <= derniere; page++) {
+    elements.push(...((await charger(page)).data || []));
+  }
+  return elements;
 }
 
 // === EMPLOYES ===
@@ -82,9 +104,10 @@ export async function deleteEmploye(id: number): Promise<void> {
 }
 
 // === PRODUITS ===
-export async function getProduits(): Promise<Produit[]> {
+/** Produits actifs, ou désactivés / tous (écran Produits, pour les réactiver). */
+export async function getProduits(statut: 'actifs' | 'inactifs' | 'tous' = 'actifs'): Promise<Produit[]> {
   if (MOCK_MODE) return mockProduits;
-  return fetchApi<Produit[]>('/produits');
+  return fetchApi<Produit[]>(statut === 'actifs' ? '/produits' : `/produits?statut=${statut}`);
 }
 
 export async function createProduit(produit: Omit<Produit, 'id'>): Promise<Produit> {
@@ -125,10 +148,139 @@ export async function deleteProduit(id: number): Promise<void> {
   await fetchApi(`/produits/${id}`, { method: 'DELETE' });
 }
 
+// === BALISES ET REMARQUES RAPIDES ===
+export type EntiteBalise =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+export type CouleurBalise = 'gris' | 'bleu' | 'vert' | 'jaune' | 'orange' | 'rouge' | 'violet' | 'rose';
+
+export interface BaliseItem {
+  id: number;
+  balise_id: number;
+  libelle: string;
+  couleur: CouleurBalise;
+  ordre: number;
+  actif: boolean;
+}
+
+export interface Balise {
+  id: number;
+  nom: string;
+  /** choix : un seul item par fiche ; options : plusieurs. */
+  type: 'choix' | 'options';
+  entites: EntiteBalise[];
+  ordre: number;
+  actif: boolean;
+  items: BaliseItem[];
+}
+
+export interface RemarqueRapide {
+  id: number;
+  categorie: string | null;
+  texte: string;
+}
+
+const cleEntreprise = () => getAuthHeaders()['X-Tenant-Slug'] ?? '';
+
+// Balises actives d'un type de fiche, demandées une fois pour toutes les lignes d'une liste.
+const cacheBalisesActives = new Map<string, Promise<Balise[]>>();
+
+export function balisesActives(entite: EntiteBalise): Promise<Balise[]> {
+  const cle = `${cleEntreprise()}:${entite}`;
+  if (!cacheBalisesActives.has(cle)) {
+    const requete = fetchApi<Balise[]>(`/balises?entite=${entite}&actifs=1`);
+    requete.catch(() => cacheBalisesActives.delete(cle));
+    cacheBalisesActives.set(cle, requete);
+  }
+  return cacheBalisesActives.get(cle)!;
+}
+
+// Items posés : les demandes des lignes d'une liste partent ensemble, par lots de 200.
+const lotsPoses = new Map<string, { ids: Set<number>; resultat: Promise<Record<string, number[]>> }>();
+
+export function posesBalises(entite: EntiteBalise, entiteId: number): Promise<number[]> {
+  const cle = `${cleEntreprise()}:${entite}`;
+  let lot = lotsPoses.get(cle);
+  if (!lot) {
+    const ids = new Set<number>();
+    const resultat = new Promise(attendre => setTimeout(attendre, 20)).then(async () => {
+      lotsPoses.delete(cle);
+      const tous = [...ids];
+      const morceaux: Record<string, number[]>[] = [];
+      for (let i = 0; i < tous.length; i += 200) {
+        morceaux.push(await fetchApi<Record<string, number[]>>(`/balises/affectations?entite=${entite}&ids=${tous.slice(i, i + 200).join(',')}`));
+      }
+      return Object.assign({}, ...morceaux) as Record<string, number[]>;
+    });
+    lot = { ids, resultat };
+    lotsPoses.set(cle, lot);
+  }
+  lot.ids.add(entiteId);
+  return lot.resultat.then(poses => poses[String(entiteId)] ?? []);
+}
+
+export async function enregistrerPosesBalises(entite: EntiteBalise, entiteId: number, items: number[]): Promise<number[]> {
+  const reponse = await fetchApi<{ items: number[] }>('/balises/affectations', { method: 'PUT', body: JSON.stringify({ entite, entite_id: entiteId, items }) });
+  return reponse.items;
+}
+
+export async function getBalises(): Promise<Balise[]> {
+  return fetchApi('/balises');
+}
+
+async function modifierBalises<T>(chemin: string, options: ApiOptions): Promise<T> {
+  const resultat = await fetchApi<T>(chemin, options);
+  cacheBalisesActives.clear();
+  return resultat;
+}
+
+export const creerBalise = (balise: Pick<Balise, 'nom' | 'type' | 'entites' | 'actif'>) =>
+  modifierBalises<Balise>('/balises', { method: 'POST', body: JSON.stringify(balise) });
+export const modifierBalise = (id: number, balise: Pick<Balise, 'nom' | 'type' | 'entites' | 'actif'>) =>
+  modifierBalises<Balise>(`/balises/${id}`, { method: 'PUT', body: JSON.stringify(balise) });
+export const supprimerBalise = (id: number) => modifierBalises<void>(`/balises/${id}`, { method: 'DELETE' });
+export const ajouterItemBalise = (baliseId: number, item: Pick<BaliseItem, 'libelle' | 'couleur'>) =>
+  modifierBalises<BaliseItem>(`/balises/${baliseId}/items`, { method: 'POST', body: JSON.stringify(item) });
+export const modifierItemBalise = (id: number, item: Pick<BaliseItem, 'libelle' | 'couleur' | 'actif'>) =>
+  modifierBalises<BaliseItem>(`/balises/items/${id}`, { method: 'PUT', body: JSON.stringify(item) });
+export const supprimerItemBalise = (id: number) => modifierBalises<void>(`/balises/items/${id}`, { method: 'DELETE' });
+
+export async function rechercherParBalises(entite: EntiteBalise, items: number[], mode: 'un' | 'tous'): Promise<{ entite_id: number; libelle_entite: string | null }[]> {
+  const parametres = new URLSearchParams({ entite, mode });
+  items.forEach(id => parametres.append('items[]', String(id)));
+  return fetchApi(`/balises/recherche?${parametres}`);
+}
+
+// Remarques rapides, chargées une fois par entreprise pour tous les champs de notes.
+const cacheRemarques = new Map<string, Promise<RemarqueRapide[]>>();
+
+export function remarquesRapides(): Promise<RemarqueRapide[]> {
+  const cle = cleEntreprise();
+  if (!cacheRemarques.has(cle)) {
+    const requete = fetchApi<RemarqueRapide[]>('/remarques-rapides');
+    requete.catch(() => cacheRemarques.delete(cle));
+    cacheRemarques.set(cle, requete);
+  }
+  return cacheRemarques.get(cle)!;
+}
+
+async function modifierRemarques<T>(chemin: string, options: ApiOptions): Promise<T> {
+  const resultat = await fetchApi<T>(chemin, options);
+  cacheRemarques.clear();
+  return resultat;
+}
+
+export const creerRemarqueRapide = (remarque: Omit<RemarqueRapide, 'id'>) =>
+  modifierRemarques<RemarqueRapide>('/remarques-rapides', { method: 'POST', body: JSON.stringify(remarque) });
+export const modifierRemarqueRapide = (id: number, remarque: Omit<RemarqueRapide, 'id'>) =>
+  modifierRemarques<RemarqueRapide>(`/remarques-rapides/${id}`, { method: 'PUT', body: JSON.stringify(remarque) });
+export const supprimerRemarqueRapide = (id: number) => modifierRemarques<void>(`/remarques-rapides/${id}`, { method: 'DELETE' });
+
 // === SECTEURS ===
-export async function getSecteurs(): Promise<Secteur[]> {
+/** Secteurs actifs, ou désactivés / tous (écran Secteurs, pour les réactiver). */
+export async function getSecteurs(statut: 'actifs' | 'inactifs' | 'tous' = 'actifs'): Promise<Secteur[]> {
   if (MOCK_MODE) return mockSecteurs;
-  return fetchApi<Secteur[]>('/secteurs');
+  return fetchApi<Secteur[]>(statut === 'actifs' ? '/secteurs' : `/secteurs?statut=${statut}`);
 }
 
 export async function createSecteur(secteur: Omit<Secteur, 'id'>): Promise<Secteur> {
@@ -167,6 +319,75 @@ export async function deleteSecteur(id: number): Promise<void> {
   await fetchApi(`/secteurs/${id}`, { method: 'DELETE' });
 }
 
+// === TÂCHES PLANIFIÉES ===
+export type RecurrenceTache = 'horaire' | 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'une_fois';
+
+export interface ReglageTache {
+  actif: boolean;
+  recurrence: RecurrenceTache;
+  /** HH:MM dans le fuseau des tâches (pour « horaire », seules les minutes comptent). */
+  heure: string;
+  /** 1 = lundi … 7 = dimanche */
+  jours_semaine: number[] | null;
+  jour_du_mois: number | null;
+  /** Exécution unique : AAAA-MM-JJTHH:MM dans le fuseau des tâches. */
+  prochaine_execution?: string | null;
+  /** Paramètres prévus par la tâche (ex. « jours » : délai d'une alerte) ; les autres sont ignorés. */
+  parametres?: Record<string, number>;
+}
+
+export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'> {
+  id: number;
+  code: string;
+  dernier_resultat: 'succes' | 'erreur' | null;
+  statut: 'en_attente' | 'en_cours';
+  prochaine_execution: string | null;
+  derniere_execution: string | null;
+  /** Paramètres réglables, valeurs par défaut comprises (vide si la tâche n'en a pas). */
+  parametres: Record<string, number>;
+  /** Module de l'entreprise requis par la tâche (ventes, achats…), null si aucun. */
+  module: string | null;
+}
+
+export interface ExecutionTache {
+  id: number;
+  tache_planifiee_id: number;
+  code: string;
+  mode: 'planifie' | 'manuel';
+  duree_ms: number | null;
+  resultat: 'succes' | 'erreur' | null;
+  message: string | null;
+  debut: string | null;
+  fin: string | null;
+  auteur: string | null;
+}
+
+export interface EtatTachesPlanifiees {
+  taches: TachePlanifiee[];
+  dernier_passage: { date: string; source: 'planificateur' | 'requetes' } | null;
+  declenchement_requetes: boolean;
+  fuseau: string;
+}
+
+export async function getTachesPlanifiees(): Promise<EtatTachesPlanifiees> {
+  return fetchApi('/taches-planifiees');
+}
+
+export async function modifierTachePlanifiee(id: number, reglage: ReglageTache): Promise<TachePlanifiee> {
+  return fetchApi(`/taches-planifiees/${id}`, { method: 'PUT', body: JSON.stringify(reglage) });
+}
+
+export async function executerTachePlanifiee(id: number): Promise<{ execution: ExecutionTache; tache: TachePlanifiee }> {
+  // Une tâche peut prendre un moment : délai plus long que les appels ordinaires.
+  return fetchApi(`/taches-planifiees/${id}/executer`, { method: 'POST', timeoutMs: 120000 });
+}
+
+export async function getHistoriqueTaches(filtres: { tache_id?: number; page?: number } = {}): Promise<{ data: ExecutionTache[]; current_page: number; last_page: number; total: number }> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
+  return fetchApi(`/taches-planifiees/historique?${parametres}`);
+}
+
 // === SCANS ===
 export async function getScans(filters?: { employe?: string; secteur?: string }): Promise<InventaireScan[]> {
   if (MOCK_MODE) {
@@ -179,6 +400,78 @@ export async function getScans(filters?: { employe?: string; secteur?: string })
   if (filters?.employe) params.append('employe', filters.employe);
   if (filters?.secteur) params.append('secteur', filters.secteur);
   return fetchApi<InventaireScan[]>(`/scan/historique?${params}`);
+}
+
+/** Page d'un historique paginé par l'API. */
+export interface PageHistorique<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+/** Filtres de l'historique des scans ; la période est en instants (voir lib/periodes). */
+export interface FiltresScans {
+  employe?: string;
+  secteur?: string;
+  produit?: string;
+  depuis?: string;
+  jusqu_a?: string;
+}
+
+function requeteScans(parametres: object): string {
+  const params = new URLSearchParams();
+  Object.entries(parametres).forEach(([cle, valeur]) => {
+    if (valeur !== undefined && valeur !== '') params.append(cle, String(valeur));
+  });
+  return params.toString();
+}
+
+/** Historique complet des scans, filtré et paginé par l'API (getScans s'arrête aux 100 derniers). */
+export async function getHistoriqueScans(filtres: FiltresScans & { page: number; per_page?: number }): Promise<PageHistorique<InventaireScan>> {
+  return fetchApi(`/scan/historique?${requeteScans(filtres)}`);
+}
+
+/** Fichier CSV de tous les scans filtrés, dates dans le fuseau donné. */
+export async function exporterScans(filtres: FiltresScans & { fuseau: string }): Promise<Blob> {
+  return fetchApi(`/scan/export?${requeteScans(filtres)}`, { responseType: 'blob' });
+}
+
+export interface StatistiquesScans {
+  total: number;
+  jours_actifs: number;
+  moyenne_par_jour: number;
+  secteurs_distincts: number;
+  employes_distincts: number;
+  par_jour: { date: string; total: number }[];
+  par_secteur: { nom: string; total: number }[];
+  par_employe: { nom: string; total: number }[];
+  par_type: { nom: string; total: number }[];
+}
+
+/** Statistiques des scans d'une période, calculées par l'API sur tous ses scans. */
+export async function getStatistiquesScans(periode: { depuis: string; jusqu_a: string; fuseau: string }): Promise<StatistiquesScans> {
+  return fetchApi(`/scan/statistiques?${requeteScans(periode)}`);
+}
+
+export interface LigneComparaisonScans {
+  numero: string;
+  type: string;
+  secteur: string;
+  quantite_a: number;
+  quantite_b: number;
+  difference: number;
+  pourcentage: number;
+}
+
+/** Quantités comptées par produit sur deux périodes (A puis B). */
+export async function getComparaisonScans(a: { depuis: string; jusqu_a: string }, b: { depuis: string; jusqu_a: string }): Promise<{ lignes: LigneComparaisonScans[] }> {
+  return fetchApi(`/scan/comparaison?${requeteScans({ a_depuis: a.depuis, a_jusqu_a: a.jusqu_a, b_depuis: b.depuis, b_jusqu_a: b.jusqu_a })}`);
+}
+
+/** Nombre de scans, scans du jour, instants du premier et du dernier scan. */
+export async function getBornesScans(): Promise<{ total: number; today: number; premier: string | null; dernier: string | null }> {
+  return fetchApi('/scan/stats');
 }
 
 export async function createScan(scan: Omit<InventaireScan, 'id' | 'date_saisie'>): Promise<InventaireScan> {
@@ -219,6 +512,34 @@ export async function deleteScan(id: number): Promise<void> {
   await fetchApi(`/scan/${id}`, { method: 'DELETE' });
 }
 
+// === CONFIGURATION À COMPLÉTER ===
+export interface ReglageAMettreEnPlace {
+  cle: string;
+  obligatoire: boolean;
+  faite: boolean;
+  /** Écran où se fait le réglage. */
+  lien: string;
+  ignoree: { raison: string; par: string | null; le: string | null } | null;
+}
+
+export interface ConfigurationACompleter {
+  etapes: { cle: string; taches: ReglageAMettreEnPlace[] }[];
+  qualite: { cle: string; nombre: number; lien: string }[];
+  restantes: { obligatoires: number; recommandees: number };
+}
+
+export async function getConfigurationACompleter(): Promise<ConfigurationACompleter> {
+  return fetchApi('/configuration-a-completer');
+}
+
+export async function ignorerReglage(cle: string, raison: string): Promise<ConfigurationACompleter> {
+  return fetchApi(`/configuration-a-completer/${cle}/ignorer`, { method: 'POST', body: JSON.stringify({ raison }) });
+}
+
+export async function reprendreReglage(cle: string): Promise<ConfigurationACompleter> {
+  return fetchApi(`/configuration-a-completer/${cle}/ignorer`, { method: 'DELETE' });
+}
+
 // === UTILISATEURS ADMIN ===
 export async function getUsers(): Promise<AdminUser[]> {
   return fetchApi<AdminUser[]>('/users');
@@ -244,6 +565,95 @@ export async function deleteUser(id: number): Promise<void> {
   await fetchApi(`/users/${id}`, { method: 'DELETE' });
 }
 
+// === CHAMPS PERSONNALISÉS ===
+export type EntiteChampPersonnalise =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+export type TypeChampPersonnalise = 'texte' | 'texte_long' | 'nombre' | 'date' | 'case' | 'liste' | 'liste_multiple' | 'courriel' | 'url' | 'telephone';
+export type ValeurChampPersonnalise = string | number | boolean | string[] | null;
+
+export interface DefinitionChampPersonnalise {
+  libelle: string;
+  options: string[] | null;
+  format: 'nombre' | 'montant' | 'pourcentage' | null;
+  decimales: number | null;
+  obligatoire: boolean;
+  sans_doublon: boolean;
+  valeur_defaut: ValeurChampPersonnalise;
+  aide: string | null;
+  actif: boolean;
+}
+
+export interface ChampPersonnalise extends DefinitionChampPersonnalise {
+  id: number;
+  entite: EntiteChampPersonnalise;
+  type: TypeChampPersonnalise;
+  code: string;
+  ordre: number;
+}
+
+/** Champ d'une fiche : sa valeur (ou la valeur par défaut tant que rien n'est saisi). */
+export interface ChampPersonnaliseFiche extends ChampPersonnalise {
+  valeur: ValeurChampPersonnalise;
+  saisie: boolean;
+}
+
+// Champs actifs par entreprise et type de fiche, demandés une fois pour toutes les lignes d'une liste.
+const cacheChampsActifs = new Map<string, Promise<ChampPersonnalise[]>>();
+
+export function champsPersonnalisesActifs(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  const cle = `${getAuthHeaders()['X-Tenant-Slug'] ?? ''}:${entite}`;
+  if (!cacheChampsActifs.has(cle)) {
+    const requete = fetchApi<ChampPersonnalise[]>(`/champs-personnalises?entite=${entite}&actifs=1`);
+    requete.catch(() => cacheChampsActifs.delete(cle));
+    cacheChampsActifs.set(cle, requete);
+  }
+  return cacheChampsActifs.get(cle)!;
+}
+
+export async function getChampsPersonnalises(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  return fetchApi(`/champs-personnalises?entite=${entite}`);
+}
+
+export async function creerChampPersonnalise(champ: DefinitionChampPersonnalise & { entite: EntiteChampPersonnalise; type: TypeChampPersonnalise }): Promise<ChampPersonnalise> {
+  const cree = await fetchApi<ChampPersonnalise>('/champs-personnalises', { method: 'POST', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return cree;
+}
+
+export async function modifierChampPersonnalise(id: number, champ: DefinitionChampPersonnalise): Promise<ChampPersonnalise> {
+  const modifie = await fetchApi<ChampPersonnalise>(`/champs-personnalises/${id}`, { method: 'PUT', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return modifie;
+}
+
+export async function supprimerChampPersonnalise(id: number): Promise<void> {
+  await fetchApi(`/champs-personnalises/${id}`, { method: 'DELETE' });
+  cacheChampsActifs.clear();
+}
+
+export async function ordonnerChampsPersonnalises(entite: EntiteChampPersonnalise, ids: number[]): Promise<ChampPersonnalise[]> {
+  const champs = await fetchApi<ChampPersonnalise[]>('/champs-personnalises/ordre', { method: 'PUT', body: JSON.stringify({ entite, ids }) });
+  cacheChampsActifs.clear();
+  return champs;
+}
+
+export async function getValeursChampsPersonnalises(entite: EntiteChampPersonnalise, entiteId: number): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi(`/champs-personnalises/valeurs?entite=${entite}&entite_id=${entiteId}`);
+}
+
+export async function enregistrerValeursChampsPersonnalises(
+  entite: EntiteChampPersonnalise,
+  entiteId: number,
+  valeurs: Record<number, ValeurChampPersonnalise>,
+): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi('/champs-personnalises/valeurs', { method: 'PUT', body: JSON.stringify({ entite, entite_id: entiteId, valeurs }) });
+}
+
+export async function rechercherChampPersonnalise(champId: number, valeur: string): Promise<{ entite_id: number; libelle_entite: string | null; valeur: ValeurChampPersonnalise }[]> {
+  return fetchApi(`/champs-personnalises/recherche?${new URLSearchParams({ champ_id: String(champId), valeur })}`);
+}
+
 // === FOURNISSEURS ===
 export interface Fournisseur {
   id: number;
@@ -261,10 +671,11 @@ export interface Fournisseur {
   updated_at?: string;
 }
 
-export async function getFournisseurs(params?: { search?: string; actif?: boolean }): Promise<{ data: Fournisseur[]; total: number }> {
+export async function getFournisseurs(params?: { search?: string; actif?: boolean; page?: number }): Promise<PageResultats<Fournisseur>> {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.append('search', params.search);
   if (params?.actif !== undefined) searchParams.append('actif', params.actif.toString());
+  if (params?.page) searchParams.append('page', String(params.page));
   return fetchApi(`/fournisseurs?${searchParams}`);
 }
 
@@ -294,6 +705,143 @@ export async function deleteFournisseur(id: number): Promise<void> {
   await fetchApi(`/fournisseurs/${id}`, { method: 'DELETE' });
 }
 
+// Fiche fournisseur : synthèse des achats, historique, produits fournis, contacts, adresses, comptes, remarques
+export interface FicheFournisseur extends Fournisseur {
+  contacts_count: number;
+  adresses_count: number;
+  comptes_bancaires_count: number;
+  remarques_count: number;
+  produits_count: number;
+}
+
+export interface SyntheseFournisseur {
+  achats: { total: number; annee_courante: number; annee_precedente: number };
+  commandes: {
+    nombre: number;
+    montant_moyen: number;
+    brouillons: number;
+    premiere: string | null;
+    /** Montant dans la devise de la commande. */
+    derniere: { id: number; numero: string; date: string; montant: number; devise: string | null; statut: string } | null;
+  };
+  a_recevoir: { commandes: number; quantite: number; montant: number };
+  livraisons: { commandes_livrees: number; delai_moyen_jours: number | null; a_temps: number | null; taux_reception: number | null };
+  achats_mensuels: { mois: string; montant: number }[];
+  produits_les_plus_achetes: { produit_id: number; numero: string | null; description: string | null; quantite: number; montant: number; commandes: number; dernier_achat: string | null }[];
+}
+
+export interface LigneHistoriqueFournisseur {
+  id: number;
+  date: string;
+  commande_id: number;
+  commande_numero: string;
+  statut: string;
+  produit_id: number;
+  produit_numero: string | null;
+  produit_description: string | null;
+  quantite_commandee: number;
+  quantite_recue: number;
+  /** Prix et montant dans la devise de la commande. */
+  prix_unitaire: number;
+  montant: number;
+  devise: string | null;
+}
+
+export interface HistoriqueFournisseur {
+  data: LigneHistoriqueFournisseur[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  totaux: { quantite_commandee: number; quantite_recue: number; montant: number };
+}
+
+export interface ProduitFourni {
+  produit_id: number;
+  numero: string;
+  description: string;
+  reference_fournisseur: string | null;
+  prix_achat: number | null;
+  delai_livraison: number | null;
+  fournisseur_principal: boolean;
+  dernier_prix: number | null;
+  dernier_prix_devise: string | null;
+  derniere_commande: string | null;
+}
+
+export interface ContactFournisseur {
+  id: number;
+  nom: string;
+  fonction: string | null;
+  telephone: string | null;
+  telephone_secondaire: string | null;
+  email: string | null;
+  principal: boolean;
+  recoit_commandes: boolean;
+  notes: string | null;
+  actif: boolean;
+}
+
+export interface AdresseFournisseur {
+  id: number;
+  libelle: string;
+  adresse: string;
+  ville: string | null;
+  code_postal: string | null;
+  region: string | null;
+  pays: string | null;
+  enlevement: boolean;
+  principale: boolean;
+  instructions: string | null;
+  actif: boolean;
+}
+
+export interface CompteBancaireFournisseur {
+  id: number;
+  banque: string;
+  agence: string | null;
+  titulaire: string | null;
+  numero_compte: string | null;
+  iban: string | null;
+  bic: string | null;
+  devise: string | null;
+  principal: boolean;
+  notes: string | null;
+  actif: boolean;
+  updated_at: string;
+  auteur_modification: { id: number; nom: string } | null;
+}
+
+export async function getFicheFournisseur(id: number): Promise<FicheFournisseur> {
+  return fetchApi(`/fournisseurs/${id}/fiche`);
+}
+
+export async function getSyntheseFournisseur(id: number): Promise<SyntheseFournisseur> {
+  return fetchApi(`/fournisseurs/${id}/synthese`);
+}
+
+export async function getHistoriqueFournisseur(id: number, params: { du?: string; au?: string; recherche?: string; page?: number }): Promise<HistoriqueFournisseur> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/fournisseurs/${id}/historique-achats?${query.toString()}`);
+}
+
+export async function getProduitsFournis(id: number): Promise<ProduitFourni[]> {
+  return fetchApi(`/fournisseurs/${id}/produits`);
+}
+
+export type SaisieProduitFourni = Pick<ProduitFourni, 'reference_fournisseur' | 'prix_achat' | 'delai_livraison' | 'fournisseur_principal'>;
+
+export async function enregistrerProduitFourni(fournisseurId: number, produitId: number, donnees: SaisieProduitFourni, nouveau: boolean): Promise<void> {
+  await fetchApi(nouveau ? `/fournisseurs/${fournisseurId}/produits` : `/fournisseurs/${fournisseurId}/produits/${produitId}`, {
+    method: nouveau ? 'POST' : 'PUT',
+    body: JSON.stringify(nouveau ? { ...donnees, produit_id: produitId } : donnees),
+  });
+}
+
+export async function retirerProduitFourni(fournisseurId: number, produitId: number): Promise<void> {
+  await fetchApi(`/fournisseurs/${fournisseurId}/produits/${produitId}`, { method: 'DELETE' });
+}
+
 // === COMMANDES FOURNISSEUR ===
 export interface ComFourLigne {
   id?: number;
@@ -306,6 +854,8 @@ export interface ComFourLigne {
   qte_par_unite_achat?: number;
   prix_unitaire: number;
   montant_ligne: number;
+  /** Commande de la ligne (chargée avec les réceptions : numéro, fournisseur, devise et taux). */
+  commande?: ComFourEntete;
 }
 
 export interface ComFourEntete {
@@ -326,15 +876,17 @@ export interface ComFourEntete {
   updated_at?: string;
 }
 
-export async function getCommandesFournisseur(params?: { 
-  statut?: string; 
+export async function getCommandesFournisseur(params?: {
+  statut?: string;
   fournisseur_id?: number;
   search?: string;
-}): Promise<{ data: ComFourEntete[]; total: number }> {
+  page?: number;
+}): Promise<PageResultats<ComFourEntete>> {
   const searchParams = new URLSearchParams();
   if (params?.statut) searchParams.append('statut', params.statut);
   if (params?.fournisseur_id) searchParams.append('fournisseur_id', params.fournisseur_id.toString());
   if (params?.search) searchParams.append('search', params.search);
+  if (params?.page) searchParams.append('page', String(params.page));
   return fetchApi(`/commandes-fournisseur?${searchParams}`);
 }
 
@@ -386,19 +938,94 @@ export async function deleteCommandeFournisseur(id: number): Promise<void> {
   await fetchApi(`/commandes-fournisseur/${id}`, { method: 'DELETE' });
 }
 
-export function getCommandePdfUrl(id: number): string {
-  const stored = localStorage.getItem('prise_auth');
-  let token = '';
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      token = data.token || '';
-    } catch {
-      // ignore
+// === PIÈCES JOINTES ===
+export type EntitePieceJointe =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+
+export interface PieceJointe {
+  id: number;
+  entite: EntitePieceJointe;
+  entite_id: number;
+  categorie: string | null;
+  description: string | null;
+  nom_original: string;
+  type_mime: string | null;
+  taille: number;
+  /** Type sans risque (PDF, image, texte) : s'ouvre dans un onglet ; les autres se téléchargent. */
+  affichable: boolean;
+  auteur: string | null;
+  created_at: string | null;
+  /** Nom de la fiche ou numéro du document (liste globale). */
+  libelle_entite?: string | null;
+}
+
+export interface PagePiecesJointes {
+  data: PieceJointe[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export async function getPiecesJointes(filtres: { entite?: EntitePieceJointe; entite_id?: number; recherche?: string; page?: number } = {}): Promise<PagePiecesJointes> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined && valeur !== '') parametres.set(cle, String(valeur)); });
+  return fetchApi(`/pieces-jointes?${parametres}`);
+}
+
+export async function getCategoriesPiecesJointes(entite?: EntitePieceJointe): Promise<string[]> {
+  return fetchApi(`/pieces-jointes/categories${entite ? `?entite=${entite}` : ''}`);
+}
+
+export async function ajouterPiecesJointes(
+  entite: EntitePieceJointe,
+  entiteId: number,
+  fichiers: { fichier: File; description: string }[],
+  categorie: string,
+): Promise<PieceJointe[]> {
+  const formulaire = new FormData();
+  formulaire.append('entite', entite);
+  formulaire.append('entite_id', String(entiteId));
+  if (categorie) formulaire.append('categorie', categorie);
+  fichiers.forEach(({ fichier, description }, index) => {
+    formulaire.append(`fichiers[${index}]`, fichier, fichier.name);
+    formulaire.append(`descriptions[${index}]`, description);
+  });
+  // Envoi de fichiers : délai plus long que les appels ordinaires.
+  return fetchApi('/pieces-jointes', { method: 'POST', body: formulaire, timeoutMs: 120000 });
+}
+
+export async function modifierPieceJointe(id: number, donnees: { description: string | null; categorie: string | null }): Promise<PieceJointe> {
+  return fetchApi(`/pieces-jointes/${id}`, { method: 'PUT', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerPieceJointe(id: number): Promise<void> {
+  await fetchApi(`/pieces-jointes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre une pièce jointe dans un nouvel onglet si son type est sans risque (PDF, image, texte),
+ * sinon la télécharge. Le jeton part dans l'en-tête ; l'onglet est ouvert pendant le clic pour ne
+ * pas être bloqué par le navigateur.
+ */
+export async function ouvrirPieceJointe(piece: PieceJointe): Promise<void> {
+  const fenetre = piece.affichable ? window.open('', '_blank') : null;
+  try {
+    const contenu = await fetchApi<Blob>(`/pieces-jointes/${piece.id}/fichier`, { responseType: 'blob', headers: { Accept: '*/*' }, timeoutMs: 120000 });
+    const url = URL.createObjectURL(contenu);
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = piece.nom_original;
+      lien.click();
     }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
   }
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-  return `${API_BASE_URL}/commandes-fournisseur/${id}/pdf?token=${token}`;
 }
 
 // === RECEPTIONS ===
@@ -416,15 +1043,19 @@ export interface ReceptionLigne {
   secteur?: Secteur;
 }
 
-export async function getReceptions(params?: { 
+export async function getReceptions(params?: {
   commande_id?: number;
   date_debut?: string;
   date_fin?: string;
-}): Promise<{ data: ReceptionLigne[]; total: number }> {
+  page?: number;
+  per_page?: number;
+}): Promise<PageResultats<ReceptionLigne>> {
   const searchParams = new URLSearchParams();
   if (params?.commande_id) searchParams.append('commande_id', params.commande_id.toString());
   if (params?.date_debut) searchParams.append('date_debut', params.date_debut);
   if (params?.date_fin) searchParams.append('date_fin', params.date_fin);
+  if (params?.page) searchParams.append('page', String(params.page));
+  if (params?.per_page) searchParams.append('per_page', String(params.per_page));
   return fetchApi(`/receptions?${searchParams}`);
 }
 
@@ -491,6 +1122,9 @@ export interface Client {
   taux_remise_global: number;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
+  categorie_id?: number | null;
+  categorie?: { id: number; nom: string } | null;
+  favori?: boolean;
 }
 
 export interface ConditionPaiement {
@@ -502,7 +1136,16 @@ export interface ConditionPaiement {
   ordre: number;
 }
 
+/** Détail d'un document par taxe (groupes de taxes) ; vide pour le calcul au taux unique. */
+export interface RecapitulatifTaxe {
+  nom: string;
+  taux: number;
+  base: number;
+  montant: number;
+}
+
 export interface ComClientEntete {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   client_id: number;
@@ -532,6 +1175,7 @@ export interface ComClientLigne {
 }
 
 export interface Facture {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   commande_id?: number;
@@ -551,10 +1195,19 @@ export interface Facture {
   bon_livraison?: BonLivraison;
 }
 
+/** Produit d'une ligne de document, tel que renvoyé par le détail (même s'il a été retiré du catalogue). */
+export interface ProduitLigne {
+  id: number;
+  numero?: string;
+  description: string;
+  mesure?: string;
+}
+
 export interface FactureLigne {
   id: number;
   facture_id: number;
   produit_id: number;
+  produit?: ProduitLigne;
   quantite: number;
   prix_unitaire_ht: number;
   taux_tva: number;
@@ -590,6 +1243,7 @@ export interface BonLivraisonLigne {
   id: number;
   bon_id: number;
   produit_id: number;
+  produit?: ProduitLigne;
   quantite_a_livrer: number;
   quantite_preparee: number;
   quantite_livree: number;
@@ -641,10 +1295,13 @@ export interface ZonePreparation {
 }
 
 // Clients API
-export async function getClients(params?: { search?: string; actif?: boolean }): Promise<{ data: Client[] }> {
+export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean; page?: number }): Promise<PageResultats<Client>> {
   const queryParams = new URLSearchParams();
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
+  if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
+  if (params?.favoris) queryParams.append('favoris', '1');
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/clients?${queryParams.toString()}`);
 }
 
@@ -679,11 +1336,157 @@ export async function setConditionsPaiement(clientId: number, conditions: Partia
   });
 }
 
+// Fiche client complète : synthèse, historique d'achats, contacts, adresses, remarques, catégories, favoris
+export interface FicheClient extends Client {
+  contacts_count: number;
+  adresses_count: number;
+  remarques_count: number;
+}
+
+export interface SyntheseClient {
+  chiffre_affaires: { total: number; annee_courante: number; annee_precedente: number };
+  factures: {
+    nombre: number;
+    panier_moyen: number;
+    premiere: string | null;
+    derniere: { id: number; numero: string; date: string; montant_ttc: number } | null;
+  };
+  encours: { montant: number; maximum: number | null; en_retard: { nombre: number; montant: number } };
+  commandes: { en_cours: number; nombre: number };
+  devis: { en_cours: number; nombre: number };
+  ventes_mensuelles: { mois: string; montant_ht: number }[];
+  produits_les_plus_achetes: { produit_id: number; numero: string | null; description: string | null; quantite: number; montant_ht: number; factures: number; dernier_achat: string | null }[];
+}
+
+export interface LigneHistoriqueAchat {
+  id: number;
+  date: string;
+  facture_id: number;
+  facture_numero: string;
+  produit_id: number;
+  produit_numero: string | null;
+  produit_description: string | null;
+  quantite: number;
+  prix_unitaire_ht: number;
+  remise_ligne: number;
+  montant_ht: number;
+}
+
+export interface HistoriqueAchats {
+  data: LigneHistoriqueAchat[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  totaux: { quantite: number; montant_ht: number };
+}
+
+export interface ContactClient {
+  id: number;
+  nom: string;
+  fonction: string | null;
+  telephone: string | null;
+  telephone_secondaire: string | null;
+  email: string | null;
+  principal: boolean;
+  recoit_factures: boolean;
+  recoit_commandes: boolean;
+  notes: string | null;
+  actif: boolean;
+}
+
+export interface AdresseClient {
+  id: number;
+  libelle: string;
+  adresse: string;
+  ville: string | null;
+  code_postal: string | null;
+  region: string | null;
+  pays: string | null;
+  livraison: boolean;
+  principale: boolean;
+  instructions: string | null;
+  actif: boolean;
+}
+
+/** Remarque datée d'une fiche (client, fournisseur…). */
+export interface RemarqueFiche {
+  id: number;
+  texte: string;
+  epinglee: boolean;
+  auteur_id: number | null;
+  auteur: { id: number; nom: string } | null;
+  created_at: string;
+}
+
+export type RemarqueClient = RemarqueFiche;
+
+export interface CategorieClient {
+  id: number;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+  clients_count?: number;
+}
+
+export async function getFicheClient(id: number): Promise<FicheClient> {
+  return fetchApi(`/clients/${id}/fiche`);
+}
+
+export async function getSyntheseClient(id: number): Promise<SyntheseClient> {
+  return fetchApi(`/clients/${id}/synthese`);
+}
+
+export async function getHistoriqueAchatsClient(id: number, params: { du?: string; au?: string; recherche?: string; page?: number }): Promise<HistoriqueAchats> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/clients/${id}/historique-achats?${query.toString()}`);
+}
+
+export async function changerCategorieClient(id: number, categorieId: number | null): Promise<Client> {
+  return fetchApi(`/clients/${id}/categorie`, { method: 'PUT', body: JSON.stringify({ categorie_id: categorieId }) });
+}
+
+export async function basculerFavoriClient(id: number, favori: boolean): Promise<{ favori: boolean }> {
+  return fetchApi(`/clients/${id}/favori`, { method: favori ? 'POST' : 'DELETE' });
+}
+
+/**
+ * Listes rattachées à une fiche (contacts, adresses, remarques, comptes…), toutes sur le même modèle de
+ * routes : `chemin` vaut par exemple `/clients/12/contacts` ou `/fournisseurs/5/comptes-bancaires`.
+ */
+export async function getListeFiche<T>(chemin: string): Promise<T[]> {
+  return fetchApi(chemin);
+}
+
+export async function enregistrerElementFiche<T>(chemin: string, donnees: Partial<T>, id?: number): Promise<T> {
+  return fetchApi(id ? `${chemin}/${id}` : chemin, {
+    method: id ? 'PUT' : 'POST',
+    body: JSON.stringify(donnees),
+  });
+}
+
+export async function supprimerElementFiche(chemin: string, id: number): Promise<void> {
+  await fetchApi(`${chemin}/${id}`, { method: 'DELETE' });
+}
+
+export async function getCategoriesClients(): Promise<CategorieClient[]> {
+  return fetchApi('/categories-clients');
+}
+
+export async function enregistrerCategorieClient(donnees: Partial<CategorieClient>, id?: number): Promise<CategorieClient> {
+  return fetchApi(id ? `/categories-clients/${id}` : '/categories-clients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerCategorieClient(id: number): Promise<void> {
+  await fetchApi(`/categories-clients/${id}`, { method: 'DELETE' });
+}
+
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number }): Promise<{ data: ComClientEntete[] }> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/commandes-client?${queryParams.toString()}`);
 }
 
@@ -723,10 +1526,14 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; client_id?: number }): Promise<{ data: Facture[] }> {
+export async function getFactures(params?: { statut?: string; client_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  if (params?.date_debut) queryParams.append('date_debut', params.date_debut);
+  if (params?.date_fin) queryParams.append('date_fin', params.date_fin);
+  if (params?.page) queryParams.append('page', String(params.page));
+  if (params?.per_page) queryParams.append('per_page', String(params.per_page));
   return fetchApi(`/factures?${queryParams.toString()}`);
 }
 
@@ -770,9 +1577,12 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string }): Promise<{ data: BonLivraison[] }> {
+export async function getBonsLivraison(params?: { statut?: string; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.page) queryParams.append('page', String(params.page));
+  if (params?.per_page) queryParams.append('per_page', String(params.per_page));
+  if (params?.sans_tournee) queryParams.append('sans_tournee', '1');
   return fetchApi(`/bons-livraison?${queryParams.toString()}`);
 }
 
@@ -832,10 +1642,11 @@ export async function deleteCamion(id: number): Promise<void> {
 }
 
 // Tournées API
-export async function getTournees(params?: { statut?: string; date?: string }): Promise<{ data: Tournee[] }> {
+export async function getTournees(params?: { statut?: string; date?: string; page?: number }): Promise<PageResultats<Tournee>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.date) queryParams.append('date', params.date);
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/tournees?${queryParams.toString()}`);
 }
 
@@ -905,6 +1716,118 @@ export async function getMouvementsProduit(produitId: number): Promise<unknown[]
   return fetchApi(`/produits/${produitId}/mouvements`);
 }
 
+// === PRIX ET REMISES ===
+export interface ListePrix {
+  id: number;
+  nom: string;
+  description: string | null;
+  ajustement_pourcentage: number;
+  precision: number;
+  actif: boolean;
+  prix_produits_count?: number;
+  clients_count?: number;
+}
+
+export interface LigneGrillePrix {
+  id: number;
+  numero: string;
+  description: string;
+  categorie: string | null;
+  actif: boolean;
+  prix_base: number | null;
+  prix: Record<string, { prix: number | null; saisi: boolean; formule: number | null }>;
+}
+
+export interface GrillePrix {
+  data: LigneGrillePrix[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  listes: ListePrix[];
+  categories: string[];
+}
+
+export type TypeReglePrix = 'prix_fixe' | 'remise_pourcentage' | 'remise_montant';
+
+export interface ReglePrix {
+  id: number;
+  libelle: string;
+  client_id: number | null;
+  liste_prix_id: number | null;
+  produit_id: number | null;
+  categorie_produit: string | null;
+  quantite_min: number;
+  date_debut: string | null;
+  date_fin: string | null;
+  type: TypeReglePrix;
+  valeur: number;
+  actif: boolean;
+  client?: { id: number; code: string; raison_sociale: string } | null;
+  produit?: { id: number; numero: string; description: string } | null;
+  liste_prix?: { id: number; nom: string } | null;
+}
+
+export interface PrixCalcule {
+  produit_id: number;
+  quantite: number;
+  prix_base: number | null;
+  liste: { id: number; nom: string } | null;
+  prix_liste: number | null;
+  prix: number | null;
+  remise_pourcentage: number;
+  origine: 'base' | 'liste' | 'remise_client' | 'regle';
+  regle: { id: number; libelle: string } | null;
+  candidats: { origine: PrixCalcule['origine']; libelle: string | null; prix: number | null; regle_id?: number }[];
+}
+
+export async function getListesPrix(): Promise<ListePrix[]> {
+  return fetchApi('/listes-prix');
+}
+
+export async function enregistrerListePrix(donnees: Partial<ListePrix>, id?: number): Promise<ListePrix> {
+  return fetchApi(id ? `/listes-prix/${id}` : '/listes-prix', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerListePrix(id: number): Promise<void> {
+  await fetchApi(`/listes-prix/${id}`, { method: 'DELETE' });
+}
+
+export async function getClientsListePrix(id: number): Promise<{ id: number; code: string; raison_sociale: string; ville: string }[]> {
+  return fetchApi(`/listes-prix/${id}/clients`);
+}
+
+export async function rattacherClientListePrix(clientId: number, listePrixId: number | null): Promise<void> {
+  await fetchApi(`/clients/${clientId}/liste-prix`, { method: 'PUT', body: JSON.stringify({ liste_prix_id: listePrixId }) });
+}
+
+export async function getGrillePrix(params: { recherche?: string; categorie?: string; page?: number }): Promise<GrillePrix> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/grille-prix?${query.toString()}`);
+}
+
+export async function enregistrerGrillePrix(modifications: { produit_id: number; liste_prix_id: number | null; prix: number | null }[]): Promise<{ message: string }> {
+  return fetchApi('/grille-prix', { method: 'PUT', body: JSON.stringify({ modifications }) });
+}
+
+export async function getReglesPrix(params: { statut?: string; recherche?: string }): Promise<{ data: ReglePrix[]; total: number }> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([cle, valeur]) => { if (valeur) query.append(cle, String(valeur)); });
+  return fetchApi(`/regles-prix?${query.toString()}`);
+}
+
+export async function enregistrerReglePrix(donnees: Partial<ReglePrix>, id?: number): Promise<ReglePrix> {
+  return fetchApi(id ? `/regles-prix/${id}` : '/regles-prix', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerReglePrix(id: number): Promise<void> {
+  await fetchApi(`/regles-prix/${id}`, { method: 'DELETE' });
+}
+
+export async function calculerPrix(donnees: { client_id?: number; date?: string; lignes: { produit_id: number; quantite?: number }[] }): Promise<PrixCalcule[]> {
+  return fetchApi('/prix/calculer', { method: 'POST', body: JSON.stringify(donnees) });
+}
+
 // === CONFIGURATIONS ===
 export interface ConfigurationFormat {
   id?: number;
@@ -969,6 +1892,306 @@ export async function deleteTaxe(id: number): Promise<void> {
   await fetchApi(`/taxes/${id}`, { method: 'DELETE' });
 }
 
+// ── Référentiels génériques (unités, catégories, devises…) ──────────────────
+export type TypeReferentiel =
+  | 'unites'
+  | 'unite_conversions'
+  | 'categories'
+  | 'fabricants'
+  | 'modes_paiement'
+  | 'conditions_paiement'
+  | 'comptes_bancaires'
+  | 'devises'
+  | 'entrepots'
+  | 'territoires'
+  | 'itineraires'
+  | 'representants'
+  | 'transporteurs'
+  | 'raisons'
+  | 'statuts_personnalises';
+
+export interface FicheReferentiel {
+  id: number;
+  [champ: string]: unknown;
+}
+
+export interface TauxDevise {
+  id: number;
+  taux: string;
+  date_effet: string;
+}
+
+export async function getReferentiel(type: TypeReferentiel, actifsSeulement = false): Promise<FicheReferentiel[]> {
+  return fetchApi(`/referentiels/${type}${actifsSeulement ? '?actif=1' : ''}`);
+}
+
+export async function createReferentiel(type: TypeReferentiel, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateReferentiel(type: TypeReferentiel, id: number, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteReferentiel(type: TypeReferentiel, id: number): Promise<void> {
+  await fetchApi(`/referentiels/${type}/${id}`, { method: 'DELETE' });
+}
+
+export async function getHistoriqueDevise(id: number): Promise<TauxDevise[]> {
+  return fetchApi(`/referentiels/devises/${id}/historique`);
+}
+
+// ── Groupes de taxes (TPS + TVQ, TVA + CAC…) ────────────────────────────────
+export type AppliqueSur = 'base' | 'base_et_taxes_precedentes' | 'taxe_precedente';
+
+export interface LigneGroupeTaxe {
+  tenant_taxe_id: number;
+  applique_sur: AppliqueSur;
+  taxe?: { id: number; nom: string; taux: string };
+}
+
+export interface GroupeTaxe {
+  id: number;
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  taux_effectif: number;
+  lignes: LigneGroupeTaxe[];
+}
+
+export interface DetailTaxes {
+  montant_ht: number;
+  taxes: { taxe_id: number; nom: string; taux: number; applique_sur: AppliqueSur; base: number; montant: number }[];
+  total_taxes: number;
+  montant_ttc: number;
+  taux_effectif: number;
+}
+
+export interface DonneesGroupeTaxe {
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  lignes: { tenant_taxe_id: number; applique_sur: AppliqueSur }[];
+}
+
+export async function getGroupesTaxes(): Promise<GroupeTaxe[]> {
+  return fetchApi('/groupes-taxes');
+}
+
+export async function createGroupeTaxe(data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi('/groupes-taxes', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateGroupeTaxe(id: number, data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi(`/groupes-taxes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteGroupeTaxe(id: number): Promise<void> {
+  await fetchApi(`/groupes-taxes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre le PDF d'un document (ex. `/factures/12/pdf`) dans un nouvel onglet. Le jeton part dans
+ * l'en-tête, pas dans l'URL. L'onglet est ouvert pendant le clic (sinon le navigateur bloque la
+ * fenêtre) ; s'il est bloqué malgré tout, le PDF est téléchargé.
+ */
+export async function ouvrirPdf(chemin: string, nomFichier: string): Promise<void> {
+  const fenetre = window.open('', '_blank');
+  try {
+    const entetes = getAuthHeaders();
+    delete entetes['Content-Type'];
+    const reponse = await fetch(`${API_BASE_URL}${chemin}`, { headers: { ...entetes, Accept: 'application/pdf' } });
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+    const url = URL.createObjectURL(await reponse.blob());
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = nomFichier;
+      lien.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
+  }
+}
+
+export async function calculerGroupeTaxe(id: number, montantHt: number): Promise<DetailTaxes> {
+  return fetchApi(`/groupes-taxes/${id}/calculer`, { method: 'POST', body: JSON.stringify({ montant_ht: montantHt }) });
+}
+
+// === COURRIELS (paramètres d'envoi et modèles) ===
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type LangueCourriel = 'fr' | 'en';
+
+export interface ContenuModeleCourriel {
+  objet: string;
+  contenu: string;
+  nom_fichier: string | null;
+  repondre_a: string | null;
+  accuse_lecture: boolean;
+}
+
+export interface ModeleCourriel extends ContenuModeleCourriel {
+  id: number;
+  type: TypeCourriel;
+  langue: LangueCourriel;
+}
+
+export interface CatalogueCourriels {
+  langues: LangueCourriel[];
+  types: { type: TypeCourriel; variables: string[]; piece_jointe: boolean; defauts: Record<LangueCourriel, ContenuModeleCourriel> }[];
+}
+
+export interface ApercuCourriel {
+  objet: string;
+  html: string;
+  texte: string;
+  nom_fichier: string | null;
+  inconnues: string[];
+  /** Numéro du document utilisé, ou null pour des valeurs d'exemple. */
+  document: string | null;
+}
+
+export interface ParametresCourriel {
+  transport: 'plateforme' | 'smtp';
+  smtp_hote: string | null;
+  smtp_port: number | null;
+  smtp_chiffrement: 'tls' | 'ssl' | 'aucun' | null;
+  smtp_utilisateur: string | null;
+  /** Envoyé seulement pour le changer ; jamais renvoyé par l'API. */
+  smtp_mot_de_passe?: string;
+  smtp_mot_de_passe_defini?: boolean;
+  expediteur_adresse: string | null;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  copie_cachee: string | null;
+  signature: string | null;
+  adresse_plateforme?: string | null;
+}
+
+export async function getCatalogueCourriels(): Promise<CatalogueCourriels> {
+  return fetchApi('/courriels/catalogue');
+}
+
+export async function getModelesCourriel(): Promise<ModeleCourriel[]> {
+  return fetchApi('/courriels/modeles');
+}
+
+export async function createModeleCourriel(modele: Omit<ModeleCourriel, 'id'>): Promise<ModeleCourriel> {
+  return fetchApi('/courriels/modeles', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function updateModeleCourriel(id: number, modele: ContenuModeleCourriel): Promise<ModeleCourriel> {
+  return fetchApi(`/courriels/modeles/${id}`, { method: 'PUT', body: JSON.stringify(modele) });
+}
+
+export async function deleteModeleCourriel(id: number): Promise<void> {
+  await fetchApi(`/courriels/modeles/${id}`, { method: 'DELETE' });
+}
+
+export async function apercuModeleCourriel(modele: { type: TypeCourriel; langue: LangueCourriel; objet: string; contenu: string; nom_fichier: string | null }): Promise<ApercuCourriel> {
+  return fetchApi('/courriels/modeles/apercu', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function getParametresCourriel(): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres');
+}
+
+export async function updateParametresCourriel(parametres: ParametresCourriel): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres', { method: 'PUT', body: JSON.stringify(parametres) });
+}
+
+export async function testerParametresCourriel(destinataire: string, langue: LangueCourriel): Promise<{ message: string }> {
+  return fetchApi('/courriels/parametres/test', { method: 'POST', body: JSON.stringify({ destinataire, langue }) });
+}
+
+// === COURRIELS (envoi des documents, file d'envoi et historique) ===
+export type TypeDocumentCourriel = Exclude<TypeCourriel, 'general'>;
+export type StatutCourriel = 'en_attente' | 'en_cours' | 'envoye' | 'echec';
+
+export interface PreparationCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  document_numero: string;
+  langue: LangueCourriel;
+  modele_personnalise: boolean;
+  destinataires: string[];
+  objet: string;
+  contenu: string;
+  piece_jointe: string | null;
+}
+
+export interface EnvoiCourriel {
+  id: number;
+  type: TypeDocumentCourriel;
+  document_id: number | null;
+  document_numero: string | null;
+  destinataires: string[];
+  copies: string[] | null;
+  copies_cachees: string[] | null;
+  expediteur_adresse: string;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  objet: string;
+  piece_jointe: string | null;
+  statut: StatutCourriel;
+  tentatives: number;
+  erreur: string | null;
+  dernier_essai: string | null;
+  envoye_le: string | null;
+  created_at: string | null;
+  auteur: string | null;
+  /** Présents dans le détail d'un envoi seulement. */
+  corps_html?: string;
+  corps_texte?: string;
+}
+
+export interface PageEnvoisCourriel {
+  data: EnvoiCourriel[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export interface NouveauCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  langue: LangueCourriel;
+  destinataires: string[];
+  copies: string[];
+  copies_cachees: string[];
+  objet: string;
+  contenu: string;
+  joindre_pdf: boolean;
+}
+
+export async function preparerCourriel(type: TypeDocumentCourriel, documentId: number, langue: LangueCourriel): Promise<PreparationCourriel> {
+  return fetchApi(`/courriels/preparer?${new URLSearchParams({ type, document_id: String(documentId), langue })}`);
+}
+
+export async function envoyerCourriel(courriel: NouveauCourriel): Promise<EnvoiCourriel> {
+  return fetchApi('/courriels/envois', { method: 'POST', body: JSON.stringify(courriel) });
+}
+
+export async function getEnvoisCourriel(filtres: { type?: TypeDocumentCourriel; document_id?: number; statut?: StatutCourriel; page?: number } = {}): Promise<PageEnvoisCourriel> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
+  return fetchApi(`/courriels/envois?${parametres}`);
+}
+
+export async function getEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}`);
+}
+
+export async function reessayerEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}/reessayer`, { method: 'POST' });
+}
+
 export async function getParametres(): Promise<TenantParametres> {
   return fetchApi('/parametres');
 }
@@ -977,7 +2200,7 @@ export async function updateParametres(data: TenantParametres): Promise<{ messag
   return fetchApi('/parametres', { method: 'PUT', body: JSON.stringify(data) });
 }
 
-export async function getTauxChange(from: string, to: string): Promise<{ from: string; to: string; taux: number; date: string }> {
+export async function getTauxChange(from: string, to: string): Promise<{ from: string; to: string; taux: number; date: string; source?: 'identique' | 'entreprise' | 'frankfurter' }> {
   return fetchApi(`/taux-change?from=${from}&to=${to}`);
 }
 
@@ -1008,12 +2231,16 @@ export interface DevisRecord {
   montant_total: number;
   notes?: string;
   lignes: DevisLigne[];
+  /** Commande issue de la conversion : un devis ne se convertit qu'une fois. */
+  commande_id?: number | null;
+  commande?: { id: number; numero: string } | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string }): Promise<{ data: DevisRecord[] }> {
+export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
   if (params?.statut) qs.append('statut', params.statut);
   if (params?.search) qs.append('search', params.search);
+  if (params?.page) qs.append('page', String(params.page));
   return fetchApi(`/devis?${qs.toString()}`);
 }
 
