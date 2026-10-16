@@ -8,6 +8,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,8 @@ class TourneeController extends Controller
     {
         $validated = $request->validate([
             'date_tournee' => 'required|date',
-            'camion_id' => 'required|exists:camions,id',
+            // Camion de l'entreprise : celui d'une autre était accepté (et la réponse révélait son existence).
+            'camion_id' => ['required', TenantRule::exists('camions')],
             'livreur_id' => 'nullable|integer',
             'zone' => 'nullable|string|max:100',
             'heure_depart' => 'nullable|date_format:H:i',
@@ -56,19 +58,16 @@ class TourneeController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $numero = $config->genererNumero();
-        $config->incrementer();
-
-        $tournee = Tournee::create([
+        $tournee = DB::transaction(fn () => Tournee::create([
             'tenant_id' => $tenantId,
-            'numero' => $numero,
+            'numero' => Configuration::consommerNumero('tournee', $tenantId),
             'date_tournee' => $validated['date_tournee'],
             'camion_id' => $validated['camion_id'],
             'livreur_id' => $validated['livreur_id'] ?? null,
             'zone' => $validated['zone'] ?? null,
             'heure_depart' => $validated['heure_depart'] ?? null,
             'statut' => 'planifiee',
-        ]);
+        ]));
 
         return response()->json($tournee, 201);
     }
@@ -82,7 +81,7 @@ class TourneeController extends Controller
         }
 
         $validated = $request->validate([
-            'bon_livraison_id' => 'required|exists:bons_livraison,id',
+            'bon_livraison_id' => ['required', TenantRule::exists('bons_livraison')],
         ]);
 
         $bon = BonLivraison::findOrFail($validated['bon_livraison_id']);

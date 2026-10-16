@@ -2100,6 +2100,9 @@ export interface DevisRecord {
   montant_total: number;
   notes?: string;
   lignes: DevisLigne[];
+  /** Commande issue de la conversion : un devis ne se convertit qu'une fois. */
+  commande_id?: number | null;
+  commande?: { id: number; numero: string } | null;
 }
 
 export async function getDevis(params?: { statut?: string; search?: string }): Promise<{ data: DevisRecord[] }> {

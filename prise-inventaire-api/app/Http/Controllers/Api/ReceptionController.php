@@ -10,6 +10,7 @@ use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ReceptionController extends Controller
 {
@@ -58,18 +59,19 @@ class ReceptionController extends Controller
 
         $ligneCommande = ComFourLigne::findOrFail($validated['com_four_ligne_id']);
 
+        // La relation commande porte le scope tenant (trait sur ComFourEntete) :
+        // une ligne d'un autre tenant renvoie une commande null -> 404 (ferme l'IDOR).
+        // Vérifié avant les quantités, pour ne rien révéler d'une ligne d'une autre entreprise.
+        $commande = $ligneCommande->commande;
+        if (! $commande) {
+            return response()->json(['message' => 'Ligne de commande introuvable.'], 404);
+        }
+
         $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
         if ($validated['quantite_recue'] > $quantiteRestante) {
             return response()->json([
                 'message' => "La quantité reçue ({$validated['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante}).",
             ], 422);
-        }
-
-        // La relation commande porte le scope tenant (trait sur ComFourEntete) :
-        // une ligne d'un autre tenant renvoie une commande null -> 404 (ferme l'IDOR).
-        $commande = $ligneCommande->commande;
-        if (! $commande) {
-            return response()->json(['message' => 'Ligne de commande introuvable.'], 404);
         }
         if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
@@ -127,7 +129,10 @@ class ReceptionController extends Controller
                 $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
 
                 if ($receptionData['quantite_recue'] > $quantiteRestante) {
-                    throw new \Exception("Quantité reçue dépasse la quantité restante pour le produit {$ligneCommande->produit->description}");
+                    // 422 (et non 500) ; la transaction annule les réceptions déjà créées.
+                    throw ValidationException::withMessages([
+                        'receptions' => "La quantité reçue ({$receptionData['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante}) pour le produit {$ligneCommande->produit?->description}.",
+                    ]);
                 }
 
                 $created[] = ReceptionArrivagesLigne::create([

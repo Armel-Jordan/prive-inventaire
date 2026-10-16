@@ -23,6 +23,7 @@ class Devis extends Model
         'montant_total',
         'notes',
         'created_by',
+        'commande_id',
     ];
 
     protected $casts = [
@@ -54,6 +55,18 @@ class Devis extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'created_by');
+    }
+
+    /** Commande issue de la conversion du devis (un devis ne se convertit qu'une fois). */
+    public function commande(): BelongsTo
+    {
+        return $this->belongsTo(ComClientEntete::class, 'commande_id');
+    }
+
+    /** Devis envoyé dont la date de validité est passée. */
+    public function estExpire(): bool
+    {
+        return $this->date_validite !== null && $this->date_validite->lt(now()->startOfDay());
     }
 
     public function recalculerTotal(): void

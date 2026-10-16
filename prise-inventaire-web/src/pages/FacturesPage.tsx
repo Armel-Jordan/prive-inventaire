@@ -17,6 +17,7 @@ import {
   getProduits,
 } from '../services/api';
 import type { Facture, Client } from '../services/api';
+import { ApiError } from '@/services/http';
 import type { Produit } from '../types';
 import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
 import BoutonPdf from '@/components/BoutonPdf';
@@ -90,10 +91,11 @@ export default function FacturesPage() {
 
   const handleCreerBL = async (id: number) => {
     try {
-      await creerBonLivraison(id);
+      const bon = await creerBonLivraison(id);
+      alert(`Bon de livraison ${bon.numero} créé.`);
       loadFactures();
     } catch (error) {
-      console.error('Erreur création BL:', error);
+      alert(error instanceof ApiError ? ((error.data as { message?: string } | null)?.message || 'Erreur lors de la création du bon de livraison') : 'Erreur lors de la création du bon de livraison');
     }
   };
 
@@ -268,24 +270,23 @@ export default function FacturesPage() {
                         </>
                       )}
                       {(facture.statut === 'emise' || facture.statut === 'partiellement_payee') && (
-                        <>
-                          <button
-                            onClick={() => { setSelectedFacture(facture); setPaiementData({ ...paiementData, montant: facture.reste_a_payer.toString() }); setShowPaiementModal(true); }}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                            title="Enregistrer paiement"
-                          >
-                            <CreditCard size={18} />
-                          </button>
-                          {!facture.bon_livraison && (
-                            <button
-                              onClick={() => handleCreerBL(facture.id)}
-                              className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                              title="Créer bon de livraison"
-                            >
-                              <FileText size={18} />
-                            </button>
-                          )}
-                        </>
+                        <button
+                          onClick={() => { setSelectedFacture(facture); setPaiementData({ ...paiementData, montant: facture.reste_a_payer.toString() }); setShowPaiementModal(true); }}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Enregistrer paiement"
+                        >
+                          <CreditCard size={18} />
+                        </button>
+                      )}
+                      {/* Une facture émise, même payée, se livre une fois : le bouton disparaît avec le bon en cours. */}
+                      {['emise', 'partiellement_payee', 'payee'].includes(facture.statut) && !facture.bon_livraison && (
+                        <button
+                          onClick={() => handleCreerBL(facture.id)}
+                          className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                          title="Créer bon de livraison"
+                        >
+                          <FileText size={18} />
+                        </button>
                       )}
                       <BoutonChampsPersonnalises entite="facture" entiteId={facture.id} titre={facture.numero} />
                     </div>

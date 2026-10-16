@@ -16,6 +16,7 @@ use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FactureController extends Controller
 {
@@ -24,7 +25,8 @@ class FactureController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = Facture::with(['client', 'commande'])->where('tenant_id', $tenantId);
+        // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
+        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -61,10 +63,11 @@ class FactureController extends Controller
             'date_echeance' => 'nullable|date',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
-            'lignes.*.produit_id' => 'required|integer',
+            // Produit de l'entreprise : un id quelconque (0, ou celui d'une autre entreprise) était accepté.
+            'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
-            'lignes.*.taux_tva' => 'nullable|numeric',
+            'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
@@ -238,7 +241,8 @@ class FactureController extends Controller
             'mode_paiement' => 'required|in:especes,cheque,virement,carte,autre',
             'reference' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
-            'echeance_id' => 'nullable|exists:facture_echeances,id',
+            // Échéance de cette facture uniquement.
+            'echeance_id' => ['nullable', Rule::exists('facture_echeances', 'id')->where('facture_id', $id)],
         ]);
 
         try {
@@ -282,7 +286,8 @@ class FactureController extends Controller
     {
         $facture = Facture::with('lignes')->findOrFail($id);
 
-        if ($facture->bonLivraison) {
+        // Un bon annulé ne compte pas : la facture doit pouvoir être livrée avec un nouveau bon.
+        if (BonLivraison::where('facture_id', $facture->id)->where('statut', '!=', 'annule')->exists()) {
             return response()->json(['message' => 'Un bon de livraison existe déjà'], 422);
         }
 
