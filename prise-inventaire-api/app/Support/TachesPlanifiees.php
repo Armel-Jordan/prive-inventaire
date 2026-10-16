@@ -5,6 +5,10 @@ namespace App\Support;
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\NettoyerNotifications;
 use App\Taches\SignalerAlertesStock;
+use App\Taches\SignalerCommandesFournisseurEnRetard;
+use App\Taches\SignalerControlesTechniques;
+use App\Taches\SignalerFacturesImpayees;
+use App\Taches\SignalerLivraisonsEnRetard;
 use App\Taches\SignalerTransfertsImminents;
 
 /**
@@ -21,6 +25,29 @@ final class TachesPlanifiees
         'transferts_imminents' => [SignalerTransfertsImminents::class, 'quotidienne', '07:00'],
         'alertes_stock' => [SignalerAlertesStock::class, 'quotidienne', '07:00'],
         'nettoyage_notifications' => [NettoyerNotifications::class, 'quotidienne', '02:00'],
+        'factures_impayees' => [SignalerFacturesImpayees::class, 'quotidienne', '07:00'],
+        'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
+        'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
+        'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
+    ];
+
+    /**
+     * Paramètres réglables d'une tâche et leur valeur par défaut. « jours » : délai de l'alerte (retard toléré
+     * pour une facture, une commande ou une livraison ; préavis pour un contrôle technique).
+     */
+    public const PARAMETRES = [
+        'factures_impayees' => ['jours' => 30],
+        'commandes_fournisseur_en_retard' => ['jours' => 0],
+        'livraisons_en_retard' => ['jours' => 3],
+        'controles_techniques' => ['jours' => 30],
+    ];
+
+    /** Module requis par une tâche : sans lui, l'écran des alertes ne la propose pas. */
+    public const MODULES = [
+        'factures_impayees' => 'ventes',
+        'commandes_fournisseur_en_retard' => 'achats',
+        'livraisons_en_retard' => 'ventes',
+        'controles_techniques' => 'ventes',
     ];
 
     public static function codes(): array
@@ -32,5 +59,11 @@ final class TachesPlanifiees
     public static function classe(string $code): string
     {
         return self::TACHES[$code][0];
+    }
+
+    /** Paramètres par défaut d'une tâche (vide si elle n'en a pas). */
+    public static function parametresParDefaut(string $code): array
+    {
+        return self::PARAMETRES[$code] ?? [];
     }
 }

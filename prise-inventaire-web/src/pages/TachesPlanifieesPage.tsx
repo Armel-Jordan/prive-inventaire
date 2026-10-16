@@ -6,28 +6,11 @@ import {
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
+import { fuseauValide, reglageDe as reglageTache, resumeTache } from '@/lib/taches';
 
 const RECURRENCES: RecurrenceTache[] = ['horaire', 'quotidienne', 'hebdomadaire', 'mensuelle', 'une_fois'];
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
 const classeLibelle = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
-
-/** Fuseau reconnu par le navigateur, sinon celui du navigateur. */
-function fuseauValide(fuseau: string | undefined): string | undefined {
-  try {
-    if (fuseau) new Intl.DateTimeFormat('fr-FR', { timeZone: fuseau });
-    return fuseau;
-  } catch {
-    return undefined;
-  }
-}
-
-/** « AAAA-MM-JJTHH:MM » dans le fuseau des tâches, pour un champ date et heure. */
-function versSaisie(iso: string | null, fuseau: string | undefined): string {
-  if (!iso) return '';
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone: fuseau, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(new Date(iso)).replace(' ', 'T');
-}
 
 /** Traitements automatiques : activation, réglage de la fréquence, exécution manuelle, historique. */
 export default function TachesPlanifieesPage() {
@@ -64,21 +47,8 @@ export default function TachesPlanifieesPage() {
     return () => { actif = false; };
   }, [filtre, page, version]);
 
-  function resume(tache: TachePlanifiee): string {
-    const s = ts.summary;
-    switch (tache.recurrence) {
-      case 'horaire': return s.horaire.replace('{minute}', tache.heure.slice(3));
-      case 'quotidienne': return s.quotidienne.replace('{heure}', tache.heure);
-      case 'hebdomadaire': return s.hebdomadaire.replace('{jours}', (tache.jours_semaine ?? []).map(j => ts.weekdays[j - 1]).join(', ')).replace('{heure}', tache.heure);
-      case 'mensuelle': return s.mensuelle.replace('{jour}', String(tache.jour_du_mois ?? 1)).replace('{heure}', tache.heure);
-      default: return s.une_fois.replace('{date}', date(tache.prochaine_execution));
-    }
-  }
-
-  const reglageDe = (tache: TachePlanifiee): ReglageTache => ({
-    actif: tache.actif, recurrence: tache.recurrence, heure: tache.heure, jours_semaine: tache.jours_semaine, jour_du_mois: tache.jour_du_mois,
-    prochaine_execution: tache.recurrence === 'une_fois' ? versSaisie(tache.prochaine_execution, fuseau) : null,
-  });
+  const resume = (tache: TachePlanifiee) => resumeTache(tache, ts, date);
+  const reglageDe = (tache: TachePlanifiee): ReglageTache => reglageTache(tache, fuseau);
 
   async function enregistrer(tache: TachePlanifiee, reglage: ReglageTache) {
     try {
@@ -166,6 +136,11 @@ export default function TachesPlanifieesPage() {
                 <td className="px-4 py-3 max-w-sm">
                   <p className="font-medium text-gray-900 dark:text-white">{nom(tache.code)}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{ts.tasks[tache.code]?.description}</p>
+                  {tache.parametres?.jours !== undefined && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                      {ts.delayValue.replace('{libelle}', ts.tasks[tache.code]?.delay ?? ts.delay).replace('{jours}', String(tache.parametres.jours))}
+                    </p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <label className="inline-flex items-center cursor-pointer" title={ts.active}>
@@ -310,6 +285,14 @@ export default function TachesPlanifieesPage() {
                 <label htmlFor="tache-date" className={classeLibelle}>{ts.date_}</label>
                 <input id="tache-date" type="datetime-local" required className={classeChamp} value={edition.reglage.prochaine_execution ?? ''}
                   onChange={e => modifierReglage({ prochaine_execution: e.target.value })} />
+              </div>
+            )}
+            {edition.tache.parametres?.jours !== undefined && (
+              <div>
+                <label htmlFor="tache-delai" className={classeLibelle}>{ts.tasks[edition.tache.code]?.delay ?? ts.delay} ({ts.daysUnit})</label>
+                <input id="tache-delai" type="number" min={0} max={365} required className={classeChamp}
+                  value={edition.reglage.parametres?.jours ?? edition.tache.parametres.jours}
+                  onChange={e => modifierReglage({ parametres: { ...edition.reglage.parametres, jours: Number(e.target.value) } })} />
               </div>
             )}
             {etat && <p className="text-xs text-gray-500">{ts.timezone.replace('{fuseau}', etat.fuseau)}</p>}

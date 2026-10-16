@@ -39,11 +39,19 @@ class TachePlanifieController extends Controller
             'jours_semaine.*' => ['integer', 'between:1,7', 'distinct'],
             'jour_du_mois' => ['nullable', 'required_if:recurrence,mensuelle', 'integer', 'between:1,31'],
             'prochaine_execution' => ['nullable', 'date'],
+            // Paramètres prévus par le catalogue pour cette tâche (ex. délai d'une alerte, en jours).
+            'parametres' => ['nullable', 'array'],
+            'parametres.jours' => ['sometimes', 'integer', 'between:0,365'],
         ], [
             'heure.regex' => 'L\'heure doit être au format HH:MM.',
             'jours_semaine.required_if' => 'Choisissez au moins un jour de la semaine.',
             'jour_du_mois.required_if' => 'Indiquez le jour du mois.',
         ]);
+
+        if (array_key_exists('parametres', $donnees)) {
+            $prevus = TachesPlanifiees::parametresParDefaut($tache->code);
+            $tache->parametres = array_merge($tache->parametres ?? [], array_intersect_key($donnees['parametres'] ?? [], $prevus));
+        }
 
         $tache->fill([
             'actif' => $donnees['actif'],
@@ -104,6 +112,9 @@ class TachePlanifieController extends Controller
         return $tache->only(['id', 'code', 'actif', 'recurrence', 'heure', 'jours_semaine', 'jour_du_mois', 'dernier_resultat', 'statut']) + [
             'prochaine_execution' => $tache->prochaine_execution?->toIso8601String(),
             'derniere_execution' => $tache->derniere_execution?->toIso8601String(),
+            // Paramètres réglables (valeurs par défaut comprises) et module requis par la tâche.
+            'parametres' => (object) $tache->parametresEffectifs(),
+            'module' => TachesPlanifiees::MODULES[$tache->code] ?? null,
         ];
     }
 
