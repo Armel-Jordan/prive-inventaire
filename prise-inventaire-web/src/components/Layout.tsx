@@ -100,6 +100,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
+      { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'factures' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
       { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
       { path: '/tournees', label: 'Tournées', icon: Route, module: 'tournees' },

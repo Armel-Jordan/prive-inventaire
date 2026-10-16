@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\ClientFicheController;
 use App\Http\Controllers\Api\ClientFicheRemarqueController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
+use App\Http\Controllers\Api\CompteClientController;
 use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\CourrielEnvoiController;
@@ -536,6 +537,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
         Route::post('/{id}/creer-bl', [FactureController::class, 'creerBonLivraison']);
         Route::delete('/{id}', [FactureController::class, 'destroy']);
+    });
+
+    // Comptes clients : analyse chronologique des sommes dues, relevé de compte d'un client.
+    Route::prefix('comptes-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [CompteClientController::class, 'analyse']);
+        Route::get('/{client}/releve', [CompteClientController::class, 'releve'])->whereNumber('client');
     });
 
     // Bons de Livraison

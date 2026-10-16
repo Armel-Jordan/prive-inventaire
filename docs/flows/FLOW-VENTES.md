@@ -654,6 +654,34 @@ Un **Camion** est un véhicule de livraison. Il est associé à une tournée et 
 
 ---
 
+## 7 bis. Comptes clients (Ventes → Comptes clients)
+
+Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'est un état ; rien n'est enregistré.
+
+- **Factures prises en compte** : les factures émises, partiellement payées ou payées, datées au plus tard ce jour. Les brouillons et les factures annulées sont exclus.
+- **Reste dû à une date** : le montant TTC, moins les paiements datés jusqu'à ce jour. Une facture payée depuis compte donc encore comme due à une date antérieure.
+- **Analyse chronologique** :
+  - le retard se compte depuis l'échéance, ou depuis la date de facture si la facture n'a pas d'échéance ;
+  - tranches : non échu, 1 à 30 jours, 31 à 60, 61 à 90, plus de 90 ;
+  - par client : total, tranches, nombre de factures, retard maximal ;
+  - les clients sont triés par montant dû, avec les totaux, le montant en retard et le montant à plus de 90 jours ;
+  - les cases se colorent selon l'ancienneté ; export CSV.
+- **Relevé de compte d'un client** (bouton de la ligne, du 1er janvier à la date choisie par défaut) :
+  - solde d'ouverture (factures moins paiements antérieurs) ;
+  - factures au débit et paiements au crédit, avec le solde progressif ; le même jour, les factures passent avant les paiements ;
+  - solde final ;
+  - factures encore dues au dernier jour, avec leur retard ;
+  - export CSV.
+
+| Route | Rôle |
+|---|---|
+| `GET /comptes-clients?date=[&format=csv]` | Analyse chronologique (aujourd'hui par défaut) |
+| `GET /comptes-clients/{client}/releve?du=&au=[&format=csv]` | Relevé de compte |
+
+Code : `App\Services\ComptesClients`, `App\Http\Controllers\Api\CompteClientController`, écran `ComptesClientsPage`, service `src/services/comptesClients.ts`.
+
+---
+
 ## 8. Tournées
 
 ### 8.1 Ce que c'est
