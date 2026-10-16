@@ -1,7 +1,7 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
+import { Search, Plus, X, Eye, Send, Ban, Trash2, Package } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -14,7 +14,6 @@ import {
   validerCommandeFournisseur,
   annulerCommandeFournisseur,
   deleteCommandeFournisseur,
-  getCommandePdfUrl,
   getConfiguration,
   cloturerCommandeFournisseur,
   getTauxChange,
@@ -23,6 +22,7 @@ import {
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
 import BoutonCourriel from '@/components/BoutonCourriel';
+import BoutonPdf from '@/components/BoutonPdf';
 
 const statutLabels: Record<string, { label: string; color: string }> = {
   brouillon: { label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
@@ -317,15 +317,7 @@ export default function CommandesFournisseurPage() {
                       >
                         <Eye size={16} />
                       </button>
-                      <a
-                        href={getCommandePdfUrl(commande.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 text-purple-600 hover:bg-purple-50 rounded mr-1 inline-block"
-                        title="Télécharger PDF"
-                      >
-                        <FileText size={16} />
-                      </a>
+                      <BoutonPdf chemin={`/commandes-fournisseur/${commande.id}/pdf`} nomFichier={`bon-commande-${commande.numero}.pdf`} taille={16} />
                       <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" />
                       {commande.statut === 'brouillon' && (
                         <>

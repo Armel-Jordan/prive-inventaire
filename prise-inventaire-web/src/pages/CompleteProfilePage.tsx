@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserCheck, Building2, AlertCircle, Camera, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch, ApiError } from '@/services/http';
+import { NOM_APPLICATION } from '@/config/application';
 
 interface ProfileForm {
   telephone: string;
@@ -126,7 +127,7 @@ export default function CompleteProfilePage() {
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
             <Building2 size={16} className="text-blue-600" />
-            <span className="text-sm text-blue-600 font-medium">Prise Inventaire</span>
+            <span className="text-sm text-blue-600 font-medium">{NOM_APPLICATION}</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Bienvenue, {user?.nom} !</h1>
           <p className="text-gray-500 mt-1">Complétez votre profil pour continuer</p>

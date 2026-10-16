@@ -5,6 +5,7 @@ import {
   Search, RefreshCw, Clock, TrendingUp, ChevronRight, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { apiFetch, type ApiOptions } from '@/services/http';
+import { NOM_APPLICATION } from '@/config/application';
 
 const STORAGE_KEY = 'prise_super_admin';
 
@@ -173,7 +174,7 @@ export default function SuperAdminDashboard() {
               <Shield size={20} className="text-white" />
             </div>
             <div>
-              <span className="text-white font-semibold text-sm">Prise Inventaire</span>
+              <span className="text-white font-semibold text-sm">{NOM_APPLICATION}</span>
               <span className="ml-2 px-2 py-0.5 bg-purple-900 text-purple-300 text-xs rounded-full font-medium">
                 Super Admin
               </span>

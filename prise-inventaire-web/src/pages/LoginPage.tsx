@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, Building2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth, type ResultatConnexion } from '@/contexts/AuthContext';
 import { useLanguage } from '@/i18n/useLanguage';
+import { NOM_APPLICATION } from '@/config/application';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -129,7 +130,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
             <Building2 className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Prise Inventaire</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{NOM_APPLICATION}</h1>
           <p className="text-gray-500 mt-1">Connectez-vous à votre espace</p>
         </div>
 

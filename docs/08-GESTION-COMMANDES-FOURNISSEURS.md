@@ -170,8 +170,7 @@ Le module de gestion des commandes fournisseurs permet de :
 | POST | `/api/commandes-fournisseur/{id}/valider` | Valider/envoyer |
 | POST | `/api/commandes-fournisseur/{id}/annuler` | Annuler |
 | DELETE | `/api/commandes-fournisseur/{id}` | Supprimer (brouillon) |
-| GET | `/api/commandes-fournisseur/{id}/pdf` | Télécharger PDF |
-| GET | `/api/commandes-fournisseur/{id}/pdf/preview` | Prévisualiser PDF |
+| GET | `/api/commandes-fournisseur/{id}/pdf` | PDF du bon de commande (jeton en en-tête `Authorization`, comme le reste de l'API) |
 
 ### 3.3 Réceptions
 
@@ -285,23 +284,22 @@ Le module de gestion des commandes fournisseurs permet de :
 
 ### Template
 
-Le bon de commande PDF inclut :
-- En-tête avec logo et informations entreprise
+Le bon de commande PDF (`App\Services\BonCommandePdf`, vue `pdf.bon-commande`) inclut :
+- En-tête au nom de l'entreprise qui commande : ses paramètres (nom, adresse, téléphone, courriel, numéros d'entreprise et de taxe), comme les documents de vente (`App\Support\EntreprisePdf`)
 - Informations fournisseur
 - Dates (commande, livraison prévue)
-- Tableau des produits (référence, désignation, quantité, prix, montant)
-- Totaux (HT, TVA 20%, TTC)
+- Tableau des produits (référence, désignation, quantité, prix, montant), dans la devise de l'entreprise
+- Total hors taxes : les lignes d'achat ne portent pas de taxe, les taxes figurent sur la facture du fournisseur
 - Notes/instructions
 - Zones de signature
+
+Le même PDF part en pièce jointe quand on envoie le bon de commande par courriel.
 
 ### Utilisation
 
 ```php
-// Téléchargement
+// Ouvert par le site avec le jeton en en-tête (plus de ?token= dans l'URL)
 GET /api/commandes-fournisseur/{id}/pdf
-
-// Prévisualisation (stream)
-GET /api/commandes-fournisseur/{id}/pdf/preview
 ```
 
 ### Dépendance
