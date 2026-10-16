@@ -37,9 +37,17 @@ class MouvementTenantController extends Controller
             $query->whereDate('date_mouvement', '<=', $request->date_fin);
         }
 
-        $mouvements = $query->orderByDesc('date_mouvement')
-            ->limit($request->get('limit', 100))
-            ->get();
+        $query->orderByDesc('date_mouvement')->orderByDesc('id');
+
+        // Avec « page » : tout l'historique, page par page (l'écran s'arrêtait aux 100 derniers mouvements).
+        // Sans : la liste limitée attendue par l'application mobile.
+        if ($request->has('page')) {
+            $request->validate(['per_page' => 'nullable|integer|min:1|max:500']);
+
+            return response()->json($query->paginate((int) $request->input('per_page', 50)));
+        }
+
+        $mouvements = $query->limit($request->get('limit', 100))->get();
 
         return response()->json($mouvements);
     }

@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Calendar, Package, Users } from 'lucide-react';
-import { getScans, getSecteurs, getEmployes } from '@/services/api';
-import type { InventaireScan } from '@/types';
+import { getStatistiquesScans, type StatistiquesScans } from '@/services/api';
+import { derniersJours, fuseauNavigateur, jourLocal } from '@/lib/periodes';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
@@ -11,20 +11,17 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function StatsPage() {
   const { toasts, toast, dismiss } = useToast();
-  const [scans, setScans] = useState<InventaireScan[]>([]);
+  const [stats, setStats] = useState<StatistiquesScans | null>(null);
   const [loading, setLoading] = useState(true);
   const [periode, setPeriode] = useState<'7' | '30' | '90'>('30');
 
+  // Statistiques calculées par l'API sur tous les scans de la période (et non sur les 100 derniers), jours
+  // regroupés dans le fuseau du navigateur.
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        const [scansData] = await Promise.all([
-          getScans(),
-          getSecteurs(),
-          getEmployes(),
-        ]);
-        setScans(scansData);
+        setStats(await getStatistiquesScans({ ...derniersJours(parseInt(periode)), fuseau: fuseauNavigateur() }));
       } catch {
         toast('Erreur de chargement des données', 'error');
       } finally {
@@ -32,68 +29,18 @@ export default function StatsPage() {
       }
     }
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periode]);
 
-  // Filtrer par période
-  const filteredScans = useMemo(() => {
-    const now = new Date();
-    const daysAgo = new Date(now.getTime() - parseInt(periode) * 24 * 60 * 60 * 1000);
-    return scans.filter(s => new Date(s.date_saisie) >= daysAgo);
-  }, [scans, periode]);
+  const scansByDay = (stats?.par_jour ?? []).map(j => ({ date: j.date, count: j.total }));
+  const scansBySecteur = (stats?.par_secteur ?? []).map(s => ({ name: s.nom, value: s.total }));
+  const scansByEmploye = (stats?.par_employe ?? []).map(e => ({ name: e.nom, value: e.total }));
+  const scansByType = (stats?.par_type ?? []).map(t => ({ name: t.nom, value: t.total }));
 
-  // Stats par jour
-  const scansByDay = useMemo(() => {
-    const grouped: Record<string, number> = {};
-    filteredScans.forEach(scan => {
-      const date = new Date(scan.date_saisie).toISOString().split('T')[0];
-      grouped[date] = (grouped[date] || 0) + 1;
-    });
-    return Object.entries(grouped)
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredScans]);
-
-  // Stats par secteur
-  const scansBySecteur = useMemo(() => {
-    const grouped: Record<string, number> = {};
-    filteredScans.forEach(scan => {
-      grouped[scan.secteur] = (grouped[scan.secteur] || 0) + 1;
-    });
-    return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-  }, [filteredScans]);
-
-  // Stats par employé
-  const scansByEmploye = useMemo(() => {
-    const grouped: Record<string, number> = {};
-    filteredScans.forEach(scan => {
-      grouped[scan.employe] = (grouped[scan.employe] || 0) + 1;
-    });
-    return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [filteredScans]);
-
-  // Stats par type
-  const scansByType = useMemo(() => {
-    const grouped: Record<string, number> = {};
-    filteredScans.forEach(scan => {
-      const type = scan.type || 'Non défini';
-      grouped[type] = (grouped[type] || 0) + 1;
-    });
-    return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredScans]);
-
-  // Calculs stats
-  const totalScans = filteredScans.length;
-  const uniqueSecteurs = new Set(filteredScans.map(s => s.secteur)).size;
-  const uniqueEmployes = new Set(filteredScans.map(s => s.employe)).size;
-  const avgPerDay = scansByDay.length > 0 ? Math.round(totalScans / scansByDay.length) : 0;
+  const totalScans = stats?.total ?? 0;
+  const uniqueSecteurs = stats?.secteurs_distincts ?? 0;
+  const uniqueEmployes = stats?.employes_distincts ?? 0;
+  const avgPerDay = stats?.moyenne_par_jour ?? 0;
 
   if (loading) return <PageSkeleton kpis={4} rows={4} />;
 
@@ -172,11 +119,11 @@ export default function StatsPage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                tickFormatter={(val) => jourLocal(val).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
               />
               <YAxis />
               <Tooltip 
-                labelFormatter={(val) => new Date(val).toLocaleDateString('fr-FR')}
+                labelFormatter={(val) => jourLocal(String(val)).toLocaleDateString('fr-FR')}
                 formatter={(value) => [value ?? 0, 'Scans']}
               />
               <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />

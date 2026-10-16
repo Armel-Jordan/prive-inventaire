@@ -372,6 +372,78 @@ export async function getScans(filters?: { employe?: string; secteur?: string })
   return fetchApi<InventaireScan[]>(`/scan/historique?${params}`);
 }
 
+/** Page d'un historique paginé par l'API. */
+export interface PageHistorique<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+/** Filtres de l'historique des scans ; la période est en instants (voir lib/periodes). */
+export interface FiltresScans {
+  employe?: string;
+  secteur?: string;
+  produit?: string;
+  depuis?: string;
+  jusqu_a?: string;
+}
+
+function requeteScans(parametres: object): string {
+  const params = new URLSearchParams();
+  Object.entries(parametres).forEach(([cle, valeur]) => {
+    if (valeur !== undefined && valeur !== '') params.append(cle, String(valeur));
+  });
+  return params.toString();
+}
+
+/** Historique complet des scans, filtré et paginé par l'API (getScans s'arrête aux 100 derniers). */
+export async function getHistoriqueScans(filtres: FiltresScans & { page: number; per_page?: number }): Promise<PageHistorique<InventaireScan>> {
+  return fetchApi(`/scan/historique?${requeteScans(filtres)}`);
+}
+
+/** Fichier CSV de tous les scans filtrés, dates dans le fuseau donné. */
+export async function exporterScans(filtres: FiltresScans & { fuseau: string }): Promise<Blob> {
+  return fetchApi(`/scan/export?${requeteScans(filtres)}`, { responseType: 'blob' });
+}
+
+export interface StatistiquesScans {
+  total: number;
+  jours_actifs: number;
+  moyenne_par_jour: number;
+  secteurs_distincts: number;
+  employes_distincts: number;
+  par_jour: { date: string; total: number }[];
+  par_secteur: { nom: string; total: number }[];
+  par_employe: { nom: string; total: number }[];
+  par_type: { nom: string; total: number }[];
+}
+
+/** Statistiques des scans d'une période, calculées par l'API sur tous ses scans. */
+export async function getStatistiquesScans(periode: { depuis: string; jusqu_a: string; fuseau: string }): Promise<StatistiquesScans> {
+  return fetchApi(`/scan/statistiques?${requeteScans(periode)}`);
+}
+
+export interface LigneComparaisonScans {
+  numero: string;
+  type: string;
+  secteur: string;
+  quantite_a: number;
+  quantite_b: number;
+  difference: number;
+  pourcentage: number;
+}
+
+/** Quantités comptées par produit sur deux périodes (A puis B). */
+export async function getComparaisonScans(a: { depuis: string; jusqu_a: string }, b: { depuis: string; jusqu_a: string }): Promise<{ lignes: LigneComparaisonScans[] }> {
+  return fetchApi(`/scan/comparaison?${requeteScans({ a_depuis: a.depuis, a_jusqu_a: a.jusqu_a, b_depuis: b.depuis, b_jusqu_a: b.jusqu_a })}`);
+}
+
+/** Nombre de scans, scans du jour, instants du premier et du dernier scan. */
+export async function getBornesScans(): Promise<{ total: number; today: number; premier: string | null; dernier: string | null }> {
+  return fetchApi('/scan/stats');
+}
+
 export async function createScan(scan: Omit<InventaireScan, 'id' | 'date_saisie'>): Promise<InventaireScan> {
   if (MOCK_MODE) {
     const newScan = { ...scan, id: mockScans.length + 1, date_saisie: new Date().toISOString() } as InventaireScan;

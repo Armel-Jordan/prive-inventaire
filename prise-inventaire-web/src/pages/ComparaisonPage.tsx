@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { ArrowUp, ArrowDown, Minus, Calendar, Download, RefreshCw } from 'lucide-react';
-import { getScans } from '@/services/api';
-import type { InventaireScan } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { getBornesScans, getComparaisonScans } from '@/services/api';
+import { bornesPeriode, dateLocale, jourLocal } from '@/lib/periodes';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import PageSkeleton from '@/components/PageSkeleton';
@@ -20,95 +19,50 @@ interface ProduitComparaison {
 
 export default function ComparaisonPage() {
   const { toasts, toast, dismiss } = useToast();
-  const [scans, setScans] = useState<InventaireScan[]>([]);
+  const [comparaison, setComparaison] = useState<ProduitComparaison[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateDebut, setDateDebut] = useState('');
   const [dateFin, setDateFin] = useState('');
   const [filterDiff, setFilterDiff] = useState<'all' | 'up' | 'down' | 'same'>('all');
 
+  // Dates proposées : jour du premier et du dernier scan, dans le fuseau du navigateur.
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const data = await getScans();
-        setScans(data);
-        
-        // Définir les dates par défaut
-        if (data.length > 0) {
-          const dates = data.map(s => new Date(s.date_saisie).toISOString().split('T')[0]);
-          const uniqueDates = [...new Set(dates)].sort();
-          if (uniqueDates.length >= 2) {
-            setDateDebut(uniqueDates[0]);
-            setDateFin(uniqueDates[uniqueDates.length - 1]);
-          } else if (uniqueDates.length === 1) {
-            setDateDebut(uniqueDates[0]);
-            setDateFin(uniqueDates[0]);
-          }
-        }
-      } catch {
+    getBornesScans()
+      .then(bornes => {
+        if (bornes.premier) setDateDebut(dateLocale(bornes.premier));
+        if (bornes.dernier) setDateFin(dateLocale(bornes.dernier));
+        if (!bornes.premier) setLoading(false);
+      })
+      .catch(() => {
         toast('Erreur de chargement des données', 'error');
-      } finally {
         setLoading(false);
-      }
-    }
-    loadData();
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Calculer la comparaison
-  const comparaison = useMemo(() => {
-    if (!dateDebut || !dateFin) return [];
+  // Quantités comptées à chacune des deux dates, calculées par l'API sur tout l'historique. La page
+  // additionnait tous les scans jusqu'à chaque date (sur les 100 derniers) : un cumul ne baisse jamais.
+  useEffect(() => {
+    if (!dateDebut || !dateFin) return;
+    const a = bornesPeriode(dateDebut, dateDebut);
+    const b = bornesPeriode(dateFin, dateFin);
+    setLoading(true);
+    getComparaisonScans({ depuis: a.depuis!, jusqu_a: a.jusqu_a! }, { depuis: b.depuis!, jusqu_a: b.jusqu_a! })
+      .then(({ lignes }) => setComparaison(lignes.map(l => ({
+        numero: l.numero,
+        type: l.type || '',
+        secteur: l.secteur || '',
+        quantitePrecedente: l.quantite_a,
+        quantiteActuelle: l.quantite_b,
+        difference: l.difference,
+        pourcentage: l.pourcentage,
+      }))))
+      .catch(() => toast('Erreur de chargement des données', 'error'))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateDebut, dateFin]);
 
-    // Scans de la période de référence (début)
-    const scansPrecedents = scans.filter(s => {
-      const date = new Date(s.date_saisie).toISOString().split('T')[0];
-      return date <= dateDebut;
-    });
-
-    // Scans de la période actuelle (fin)
-    const scansActuels = scans.filter(s => {
-      const date = new Date(s.date_saisie).toISOString().split('T')[0];
-      return date <= dateFin;
-    });
-
-    // Grouper par produit
-    const groupByProduit = (items: InventaireScan[]) => {
-      const grouped: Record<string, { quantite: number; type: string; secteur: string }> = {};
-      items.forEach(scan => {
-        if (!grouped[scan.numero]) {
-          grouped[scan.numero] = { quantite: 0, type: scan.type || '', secteur: scan.secteur };
-        }
-        grouped[scan.numero].quantite += parseFloat(String(scan.quantite));
-      });
-      return grouped;
-    };
-
-    const precedents = groupByProduit(scansPrecedents);
-    const actuels = groupByProduit(scansActuels);
-
-    // Créer la liste de comparaison
-    const allNumeros = new Set([...Object.keys(precedents), ...Object.keys(actuels)]);
-    const result: ProduitComparaison[] = [];
-
-    allNumeros.forEach(numero => {
-      const qteActuelle = actuels[numero]?.quantite || 0;
-      const qtePrecedente = precedents[numero]?.quantite || 0;
-      const diff = qteActuelle - qtePrecedente;
-      const pct = qtePrecedente > 0 ? ((diff / qtePrecedente) * 100) : (qteActuelle > 0 ? 100 : 0);
-
-      result.push({
-        numero,
-        type: actuels[numero]?.type || precedents[numero]?.type || '',
-        quantiteActuelle: qteActuelle,
-        quantitePrecedente: qtePrecedente,
-        difference: diff,
-        pourcentage: Math.round(pct * 10) / 10,
-        secteur: actuels[numero]?.secteur || precedents[numero]?.secteur || '',
-      });
-    });
-
-    // Trier par différence absolue décroissante
-    return result.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
-  }, [scans, dateDebut, dateFin]);
+  const jourAffiche = (date: string) => (date ? jourLocal(date).toLocaleDateString('fr-FR') : '-');
 
   // Filtrer selon le type de différence
   const filteredComparaison = useMemo(() => {
@@ -146,7 +100,7 @@ export default function ComparaisonPage() {
         `${c.pourcentage}%`
       ].join(';'))
     ].join('\n');
-    
+
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -163,7 +117,7 @@ export default function ComparaisonPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Comparaison d'Inventaire</h1>
-          <p className="text-gray-500">Comparez l'évolution des stocks entre deux périodes</p>
+          <p className="text-gray-500">Comparez, produit par produit, les quantités comptées à deux dates</p>
         </div>
         <button
           onClick={exportToCSV}
@@ -180,11 +134,12 @@ export default function ComparaisonPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Calendar size={20} className="text-gray-400" />
-            <span className="font-medium text-gray-700">Période de comparaison</span>
+            <span className="font-medium text-gray-700">Dates comparées</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">Du:</label>
+            <label htmlFor="comparaison-date-a" className="text-sm text-gray-500">Première date :</label>
             <input
+              id="comparaison-date-a"
               type="date"
               value={dateDebut}
               onChange={(e) => setDateDebut(e.target.value)}
@@ -192,8 +147,9 @@ export default function ComparaisonPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">Au:</label>
+            <label htmlFor="comparaison-date-b" className="text-sm text-gray-500">Seconde date :</label>
             <input
+              id="comparaison-date-b"
               type="date"
               value={dateFin}
               onChange={(e) => setDateFin(e.target.value)}
@@ -205,7 +161,7 @@ export default function ComparaisonPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div 
+        <div
           className={`bg-white rounded-xl shadow-sm p-5 cursor-pointer transition-all ${filterDiff === 'all' ? 'ring-2 ring-blue-500' : ''}`}
           onClick={() => setFilterDiff('all')}
         >
@@ -219,7 +175,7 @@ export default function ComparaisonPage() {
             </div>
           </div>
         </div>
-        <div 
+        <div
           className={`bg-white rounded-xl shadow-sm p-5 cursor-pointer transition-all ${filterDiff === 'up' ? 'ring-2 ring-green-500' : ''}`}
           onClick={() => setFilterDiff(filterDiff === 'up' ? 'all' : 'up')}
         >
@@ -233,7 +189,7 @@ export default function ComparaisonPage() {
             </div>
           </div>
         </div>
-        <div 
+        <div
           className={`bg-white rounded-xl shadow-sm p-5 cursor-pointer transition-all ${filterDiff === 'down' ? 'ring-2 ring-red-500' : ''}`}
           onClick={() => setFilterDiff(filterDiff === 'down' ? 'all' : 'down')}
         >
@@ -247,7 +203,7 @@ export default function ComparaisonPage() {
             </div>
           </div>
         </div>
-        <div 
+        <div
           className={`bg-white rounded-xl shadow-sm p-5 cursor-pointer transition-all ${filterDiff === 'same' ? 'ring-2 ring-gray-500' : ''}`}
           onClick={() => setFilterDiff(filterDiff === 'same' ? 'all' : 'same')}
         >
@@ -276,10 +232,10 @@ export default function ComparaisonPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Secteur</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                    Qté au {dateDebut ? formatDate(dateDebut) : '-'}
+                    Qté le {jourAffiche(dateDebut)}
                   </th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                    Qté au {dateFin ? formatDate(dateFin) : '-'}
+                    Qté le {jourAffiche(dateFin)}
                   </th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Différence</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Variation</th>
