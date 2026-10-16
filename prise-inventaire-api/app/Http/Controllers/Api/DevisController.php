@@ -213,16 +213,17 @@ class DevisController extends Controller
             ]);
 
             foreach ($devis->lignes as $ligne) {
-                $l = \App\Models\ComClientLigne::create([
-                    'com_entete_id' => $commande->id,
+                // Un devis ne porte pas de TVA : la commande prend le taux par défaut,
+                // comme une commande saisie directement (et non 0 %).
+                $ligneCommande = new \App\Models\ComClientLigne([
                     'produit_id' => $ligne->produit_id,
                     'quantite' => $ligne->quantite,
                     'prix_unitaire_ht' => $ligne->prix_unitaire,
-                    'taux_tva' => 0,
+                    'taux_tva' => \App\Models\ComClientLigne::TAUX_TVA_DEFAUT,
                     'remise_ligne' => 0,
-                    'montant_ht' => $ligne->montant_ligne,
-                    'montant_ttc' => $ligne->montant_ligne,
                 ]);
+                $ligneCommande->calculerMontants();
+                $commande->lignes()->save($ligneCommande);
             }
 
             $commande->load('lignes');

@@ -100,11 +100,11 @@ Le middleware `CheckPermission` (`app/Http/Middleware/CheckPermission.php`) n'es
 
 ### 3.6 🔴 Secrets de production commités en clair
 
-- `DEPLOYMENT_INFO.md` : mot de passe MySQL `PriseInv2026!`, mot de passe admin `Admin123`, IP serveur, user SSH `root` (l.48, 63, 72).
-- Historique git (commit `518d570`) : `.env` de l'API avec `APP_KEY=base64:vKZ...` et `DB_PASSWORD=PriseInv2026!` — exposés même si le fichier est aujourd'hui gitignoré.
-- `prise-inventaire-api/.env.example:24-28` : credentials RDS de prod (host `prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com`, `admin` / `PriseInv2026!`).
+- `DEPLOYMENT_INFO.md` : mot de passe MySQL, mot de passe admin, IP serveur, user SSH `root` (l.48, 63, 72). *(Valeurs masquées ici ; fichier sorti du dépôt le 2026-10-05.)*
+- Historique git (commit `518d570`) : `.env` de l'API avec `APP_KEY=base64:vKZ...` et `DB_PASSWORD` — exposés même si le fichier est aujourd'hui gitignoré.
+- `prise-inventaire-api/.env.example:24-28` : credentials RDS de prod (host `prise-inventaire.c2dai848u8x4.us-east-1.rds.amazonaws.com`, utilisateur `admin` et son mot de passe). *(Retirés le 2026-10-05.)*
 - `prise-inventaire-web/.env` : `VITE_API_URL=http://143.110.210.158/api` (IP prod, HTTP clair) — `.gitignore` n'ignore que `*.local`, pas `.env`.
-- `prise-inventaire-android/app/build.gradle:22-24` : `storePassword 'tircis'`, `keyPassword 'tircis'`, alias `tircis` (le keystore `Tircis.key` lui-même n'est PAS commité — point positif).
+- `prise-inventaire-android/app/build.gradle:22-24` : `storePassword` et `keyPassword` en clair, alias `tircis` (le keystore `Tircis.key` lui-même n'est PAS commité — point positif).
 
 **Recommandation** : **rotation immédiate** de tous les secrets (DB, admin, `APP_KEY`), purge de l'historique git (git-filter-repo/BFG), externalisation des mots de passe keystore, passage du repo en privé. ⚠️ La rotation de l'`APP_KEY` invalide sessions/tokens chiffrés — à planifier.
 
