@@ -1,4 +1,6 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -13,6 +15,8 @@ import {
   annulerBL,
 } from '../services/api';
 import type { BonLivraison, BonLivraisonLigne } from '../services/api';
+import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function BonsLivraisonPage() {
   const [bons, setBons] = useState<BonLivraison[]>([]);
@@ -219,6 +223,7 @@ export default function BonsLivraisonPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(bon.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                       <button
                         onClick={() => handleVoirDetail(bon.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
@@ -226,6 +231,8 @@ export default function BonsLivraisonPage() {
                       >
                         <Eye size={18} />
                       </button>
+                      <BoutonPdf chemin={`/bons-livraison/${bon.id}/pdf`} nomFichier={`bon-livraison-${bon.numero}.pdf`} />
+                      <BoutonCourriel type="bon_livraison" documentId={bon.id} />
                       {bon.statut === 'cree' && (
                         <>
                           <button
@@ -280,6 +287,7 @@ export default function BonsLivraisonPage() {
                           <Truck size={18} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                     </div>
                   </td>
                 </tr>

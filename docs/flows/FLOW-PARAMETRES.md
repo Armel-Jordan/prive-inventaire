@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10
+> Dernière mise à jour : 2026-10-15 — référentiels ; courriels : serveur d'envoi, modèles, envoi des documents et historique
 
 ---
 
@@ -17,7 +17,9 @@
 8. [Configuration — Entreprise](#8-configuration--entreprise)
 9. [Configuration — Devise & TVA](#9-configuration--devise--tva)
 10. [Configuration — Délais & Alertes](#10-configuration--délais--alertes)
-11. [Ordre recommandé de configuration initiale](#11-ordre-recommandé-de-configuration-initiale)
+11. [Référentiels](#11-référentiels)
+12. [Configuration — Courriels](#12-configuration--courriels)
+13. [Ordre recommandé de configuration initiale](#13-ordre-recommandé-de-configuration-initiale)
 
 ---
 
@@ -32,7 +34,8 @@ PARAMÈTRES
 ├── Employés          ← les utilisateurs de l'application
 ├── Fiches Employés   ← détails RH complémentaires
 ├── Rôles             ← qui a le droit de faire quoi
-└── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+├── Configuration     ← numérotation, entreprise, TVA, devise, délais, alertes
+└── Référentiels      ← unités, catégories, paiement, devises, entrepôts, territoires, transporteurs…
 ```
 
 **Architecture multi-tenant :**
@@ -342,12 +345,14 @@ L'application supporte plusieurs taux de TVA ou taxes différentes.
 | Champ | Description |
 |-------|-------------|
 | `nom` | Nom de la taxe (ex: "TVA 20%") |
-| `taux` | Taux en % (ex: 20) |
+| `taux` | Taux en %, jusqu'à 4 décimales (ex: 20, 9.975) |
 | `defaut` | Si true, appliqué par défaut sur les lignes |
 
 **Endpoints :** `GET/POST/PUT/DELETE /taxes`
 
 **Exemple :** Une entreprise au Canada peut avoir TVA + TPS + TVQ comme trois taxes distinctes.
+
+Une taxe utilisée dans un groupe de taxes (§9.4) ne peut pas être supprimée.
 
 ### 9.3 Comment les taxes s'appliquent
 
@@ -357,6 +362,38 @@ montant_ht = quantite × prix_unitaire_ht × (1 - remise_ligne/100)
 montant_tva = montant_ht × (taux_tva/100)
 montant_ttc = montant_ht + montant_tva
 ```
+
+### 9.4 Groupes de taxes
+
+Un groupe combine, dans un ordre de calcul, des taxes déclarées au §9.2. Chaque taxe du groupe dit à quoi s'applique son taux :
+
+| `applique_sur` | Base de calcul | Exemple |
+|---|---|---|
+| `base` | Le montant HT | TPS 5 % + TVQ 9,975 % (Québec) |
+| `base_et_taxes_precedentes` | Le HT + les taxes déjà calculées (taxe composée) | Ancienne TVQ, calculée sur HT + TPS |
+| `taxe_precedente` | Le montant de la taxe précédente (taxe sur la taxe) | CAC 10 % de la TVA (Cameroun) |
+
+Chaque taxe est arrondie au centime. Le **taux effectif** du groupe est le taux global équivalent : TVA 17,5 % + CAC 10 % de la TVA = **19,25 %**. Un groupe sans taxe sert aux ventes exonérées. Un seul groupe peut être « par défaut ».
+
+**Endpoints :** `GET/POST /groupes-taxes`, `PUT/DELETE /groupes-taxes/{id}`, `POST /groupes-taxes/{id}/calculer` (`montant_ht` → détail des taxes, total TTC).
+
+L'écran se trouve dans **Configuration → Devise & TVA**, sous les taxes, avec un simulateur sur un montant.
+
+### 9.5 Groupes de taxes dans les documents
+
+Les lignes de **commande client** et de **facture** utilisent un groupe de taxes :
+
+| Cas | Calcul |
+|---|---|
+| La ligne reçoit un `groupe_taxe_id` | Taxes du groupe |
+| Pas de groupe ni de taux saisi, et un groupe **par défaut** existe | Taxes du groupe par défaut |
+| Un `taux_tva` est saisi, ou aucun groupe par défaut n'existe | Calcul du §9.3, inchangé |
+
+Avec un groupe, la ligne garde son `taux_tva` (taux effectif, pour information) et son total TTC = HT + somme des taxes, chacune arrondie au centime. Le détail de chaque taxe est enregistré dans `document_taxes`, en instantané (nom, taux, base, montant) : un document ne change pas si une taxe est modifiée ensuite. Une facture créée depuis une commande reprend ce détail.
+
+Les fiches commande et facture (`GET /commandes-client/{id}`, `GET /factures/{id}`) renvoient `recapitulatif_taxes` : base et montant cumulés par taxe, affichés sous les totaux. La liste est vide pour le calcul au taux unique.
+
+> Les écrans de saisie n'envoient pas de taux : définir un groupe **par défaut** suffit pour que toutes les nouvelles commandes et factures l'utilisent.
 
 ---
 
@@ -380,7 +417,137 @@ Les alertes sont vérifiées à chaque mouvement de stock.
 
 ---
 
-## 11. Ordre recommandé de configuration initiale
+## 11. Référentiels
+
+### 11.1 Ce que c'est
+
+Listes de référence réutilisées par toute l'application, gérées dans **Paramètres → Référentiels** (un onglet par liste). Elles sont propres à chaque entreprise (`tenant_id`) et ne modifient aucun écran existant : les fiches (produits, documents, paiements) s'y brancheront au fil du [plan de parité avec fripv2](../16-PLAN-PARITE-FRIPV2.md).
+
+| Onglet | Contenu | Règles |
+|---|---|---|
+| Unités | Unités de mesure : code, libellé, symbole, décimales | Code unique |
+| Conversions | 1 unité source = facteur × unité cible | Deux unités différentes de l'entreprise, facteur > 0, pas de doublon. Une unité utilisée dans une conversion ne peut pas être supprimée |
+| Catégories | Classement hiérarchique des produits | Parent de la même entreprise, pas de boucle, nom unique entre catégories sœurs. Une catégorie qui a des sous-catégories ne peut pas être supprimée |
+| Fabricants | Fabricants et marques | Nom et code uniques |
+| Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
+| Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé | Une seule condition « par défaut » |
+| Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
+| Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
+| Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |
+| Transporteurs | Coordonnées, numéro de compte, lien de suivi des colis | Le lien peut contenir `{numero}`, remplacé par le numéro du colis ; il doit commencer par http:// ou https:// |
+| Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
+| Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
+| Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
+| Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types) |
+| Statuts personnalisés | Statuts de suivi propres à l'entreprise, par type de document, avec couleur et ordre d'affichage | Code unique par type de document, couleur au format `#RRGGBB` |
+
+Les motifs saisis aujourd'hui en texte libre (mouvements, refus de commande) ne changent pas : les écrans proposeront ces raisons au fil des fonctionnalités.
+
+Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement et finance, Logistique, Commercial, Suivi des opérations.
+
+Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
+
+### 11.2 API
+
+Une seule API générique :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/api/referentiels/{type}` | Liste (`?actif=1` : fiches actives seulement) |
+| POST | `/api/referentiels/{type}` | Création |
+| PUT | `/api/referentiels/{type}/{id}` | Modification |
+| DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
+| GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
+
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+
+### 11.3 Droits
+
+Module de permission `referentiels` : l'admin a tous les droits, le manager peut consulter, créer et modifier. Les autres rôles s'ouvrent depuis l'écran des rôles.
+
+---
+
+## 12. Configuration — Courriels
+
+Onglet **Courriels** de la page Paramètres, envoi des documents par courriel et historique (plan de parité fripv2, phase 0.6).
+
+### 12.1 Serveur d'envoi
+
+| Mode | Expéditeur | Usage |
+|---|---|---|
+| Serveur de la plateforme (par défaut) | Adresse de la plateforme (`MAIL_FROM_ADDRESS`), au nom de l'entreprise | Rien à configurer ; les réponses vont à l'adresse de réponse |
+| SMTP de l'entreprise | Adresse d'expédition saisie | Envoyer depuis sa propre messagerie (hébergeur, Gmail, Outlook…) |
+
+- SMTP : serveur, port (587 par défaut, 465 en SSL/TLS), chiffrement (STARTTLS exigé, SSL/TLS ou aucun), utilisateur, mot de passe.
+- Le mot de passe est chiffré en base avec la clé de l'application et n'est jamais renvoyé par l'API. Laissé vide à l'enregistrement, il est conservé.
+- Communs aux deux modes : nom de l'expéditeur (par défaut, le nom de l'entreprise), adresse de réponse (par défaut, le courriel de l'entreprise), copie cachée systématique pour l'archivage, signature ajoutée sous chaque courriel.
+- **Tester l'envoi** : envoie un courriel de test avec les paramètres enregistrés. En cas d'échec, le message d'erreur du serveur est affiché.
+- Modifier ou tester le serveur est réservé aux administrateurs ; le test est limité à 5 par minute.
+
+### 12.2 Modèles de courriel
+
+Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personnalisé, un modèle par défaut neutre s'applique.
+
+| Type | Document | Pièce jointe par défaut |
+|---|---|---|
+| `devis` | Devis | `devis-{numero}.pdf` |
+| `commande_client` | Commande client | `commande-{numero}.pdf` |
+| `facture` | Facture | `facture-{numero}.pdf` |
+| `bon_livraison` | Bon de livraison | `bon-livraison-{numero}.pdf` |
+| `commande_fournisseur` | Commande fournisseur | `bon-commande-{numero}.pdf` |
+| `general` | Courriel libre | — |
+
+- Champs : objet, contenu, nom du PDF joint (facultatif, variables admises), adresse de réponse propre au modèle, accusé de lecture.
+- **Variables** `{nom}` : celles du type (`{numero}`, `{client_nom}`, `{montant_ttc}`, `{date_echeance}`…) et celles de l'entreprise (`{entreprise_nom}`, `{entreprise_adresse}`…), insérées d'un clic. Montants écrits selon la langue, avec des espaces insécables, dans la devise de l'entreprise (ou celle du fournisseur pour une commande fournisseur).
+- **Mise en forme** légère : `**gras**`, `*italique*`, listes. Le HTML saisi n'est jamais interprété et les valeurs insérées sont échappées.
+- **Aperçu** : rendu avec le document le plus récent du type, ou des valeurs d'exemple ; les variables inconnues sont signalées et surlignées.
+- Le type et la langue d'un modèle ne changent plus après sa création. « Revenir au modèle par défaut » supprime le modèle personnalisé.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/catalogue` | Types, variables de chaque type, modèles par défaut |
+| `GET` / `PUT /courriels/parametres` | Paramètres d'envoi (modification : administrateur) |
+| `POST /courriels/parametres/test` | Courriel de test (administrateur) |
+| `GET` / `POST /courriels/modeles` | Liste, création |
+| `PUT` / `DELETE /courriels/modeles/{id}` | Modification, suppression |
+| `POST /courriels/modeles/apercu` | Aperçu d'un modèle, même non enregistré |
+
+Code : catalogue `App\Support\Courriels`, rendu `App\Services\Courriels\RenduCourriel` (vue `emails.courriel`), serveur `App\Services\Courriels\MailerTenant`.
+
+### 12.3 Envoi des documents, file d'envoi et historique
+
+Les listes des devis, commandes client, factures, bons de livraison et commandes fournisseur ont un bouton **Envoyer par courriel** :
+
+1. La fenêtre se pré-remplit avec le modèle de l'entreprise (ou le modèle par défaut) dans la langue choisie : destinataire (courriel du client, ou du fournisseur pour une commande fournisseur), objet et texte complétés. Tout reste modifiable ; Cc et Cci sont facultatifs.
+2. Le PDF du document est joint sous le nom défini par le modèle (case à décocher pour ne pas le joindre).
+3. **Envoyer** : le courriel est enregistré dans la file (`courriel_envois`) tel qu'il partira, signature et coordonnées comprises, avec la copie cachée systématique des paramètres. Il est ensuite envoyé par le job `EnvoyerCourriel` : tout de suite avec `QUEUE_CONNECTION=sync` (cas actuel), en arrière-plan avec une vraie file.
+
+| Statut | Signification |
+|---|---|
+| `en_attente` | Enregistré, pas encore envoyé |
+| `en_cours` | Envoi en cours ; la prise en charge est atomique, un même courriel ne part jamais deux fois |
+| `envoye` | Remis au serveur d'envoi |
+| `echec` | Refusé ou serveur injoignable ; l'erreur est conservée |
+
+- **Relance manuelle** : bouton **Réessayer**, dans la fenêtre d'envoi et dans l'historique.
+- **Relance automatique** : commande `courriels:relancer`, planifiée toutes les 5 minutes. Elle envoie les courriels en attente depuis plus de 5 minutes, relance les échecs (3 tentatives automatiques au plus, espacées de 15 minutes) et libère les envois interrompus. Elle ne tourne que si le planificateur est lancé (`php artisan schedule:work`, ou `schedule:run` chaque minute par cron).
+- Le PDF est régénéré à chaque tentative, depuis l'état actuel du document.
+- **Historique** : page **Paramètres → Courriels envoyés** (filtres par statut et par type, détail du courriel tel qu'il est parti), et envois précédents listés dans la fenêtre d'envoi de chaque document.
+- Le module du document (ventes, achats) doit être actif ; un document d'une autre entreprise est introuvable. Envois et relances sont limités à 30 par minute.
+
+| Route | Rôle |
+|---|---|
+| `GET /courriels/preparer?type=&document_id=&langue=` | Pré-remplissage de la fenêtre d'envoi |
+| `POST /courriels/envois` | Mise en file et envoi |
+| `GET /courriels/envois` | Historique paginé (filtres `type`, `document_id`, `statut`) |
+| `GET /courriels/envois/{id}` | Détail, corps du courriel compris |
+| `POST /courriels/envois/{id}/reessayer` | Relance d'un courriel en échec |
+
+Code : `App\Services\Courriels\EnvoiCourriel`, `App\Jobs\EnvoyerCourriel`, `App\Console\Commands\RelancerCourriels`.
+
+---
+
+## 13. Ordre recommandé de configuration initiale
 
 Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'ordre optimal :
 
@@ -388,11 +555,12 @@ Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'
 Étape 1 → Configuration Entreprise (nom, adresse, SIRET...)
 Étape 2 → Configuration Devise & TVA (quelle monnaie, quels taux)
 Étape 3 → Configuration Numérotation (format des numéros de documents)
-Étape 4 → Configuration Délais & Alertes
-Étape 5 → Créer les Secteurs de l'entrepôt
-Étape 6 → Créer les Produits du catalogue
-Étape 7 → Créer les Employés et leurs rôles
-Étape 8 → Commencer les Achats / Ventes
+Étape 4 → Configuration Délais & Alertes, puis Courriels (facultatif : serveur d'envoi et modèles)
+Étape 5 → Référentiels (unités, catégories, devises, modes et conditions de paiement…)
+Étape 6 → Créer les Secteurs de l'entrepôt
+Étape 7 → Créer les Produits du catalogue
+Étape 8 → Créer les Employés et leurs rôles
+Étape 9 → Commencer les Achats / Ventes
 ```
 
 > Si on commence les Ventes sans avoir configuré la numérotation, les numéros seront générés avec les valeurs par défaut (ce qui peut ne pas correspondre à la charte de l'entreprise).

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\GroupeTaxeLigne;
 use App\Models\TenantTaxe;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,6 +61,11 @@ class TenantTaxeController extends Controller
     {
         $tenantId = $request->attributes->get('tenant')->id;
         $taxe = TenantTaxe::where('tenant_id', $tenantId)->findOrFail($id);
+
+        if (GroupeTaxeLigne::where('tenant_taxe_id', $taxe->id)->exists()) {
+            return response()->json(['message' => 'Cette taxe est utilisée dans un groupe de taxes.'], 422);
+        }
+
         $taxe->delete();
 
         return response()->json(['message' => 'Taxe supprimée.']);

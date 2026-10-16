@@ -8,6 +8,7 @@ use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
+use App\Services\TaxesDocument;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class CommandeClientController extends Controller
 {
+    public function __construct(private readonly TaxesDocument $taxes) {}
+
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
@@ -41,6 +44,8 @@ class CommandeClientController extends Controller
     public function show(int $id): JsonResponse
     {
         $commande = ComClientEntete::with(['client', 'lignes', 'facture'])->findOrFail($id);
+        // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
+        $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
         return response()->json($commande);
     }
@@ -58,6 +63,7 @@ class CommandeClientController extends Controller
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
             'lignes.*.taux_tva' => 'nullable|numeric|in:0,5.5,10,20',
+            'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
 
@@ -86,11 +92,13 @@ class CommandeClientController extends Controller
                     'produit_id' => $ligneData['produit_id'],
                     'quantite' => $ligneData['quantite'],
                     'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                    'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                    'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
                     'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                 ]);
                 $ligne->calculerMontants();
+                $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
                 $commande->lignes()->save($ligne);
+                $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
             }
 
             $commande->calculerMontants();
@@ -119,6 +127,7 @@ class CommandeClientController extends Controller
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire_ht' => 'required|numeric|min:0',
             'lignes.*.taux_tva' => 'nullable|numeric',
+            'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
         ]);
 
@@ -130,17 +139,20 @@ class CommandeClientController extends Controller
             ]);
 
             if (isset($validated['lignes'])) {
+                $this->taxes->supprimer('commande_client', $commande->lignes()->pluck('id'));
                 $commande->lignes()->delete();
                 foreach ($validated['lignes'] as $ligneData) {
                     $ligne = new ComClientLigne([
                         'produit_id' => $ligneData['produit_id'],
                         'quantite' => $ligneData['quantite'],
                         'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
-                        'taux_tva' => $ligneData['taux_tva'] ?? 20,
+                        'taux_tva' => $ligneData['taux_tva'] ?? ComClientLigne::TAUX_TVA_DEFAUT,
                         'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
                     ]);
                     $ligne->calculerMontants();
+                    $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
                     $commande->lignes()->save($ligne);
+                    $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
                 }
             }
 

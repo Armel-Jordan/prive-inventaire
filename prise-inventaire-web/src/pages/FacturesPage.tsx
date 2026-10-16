@@ -1,4 +1,6 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, CreditCard, FileText, Send, Trash2, Plus, X } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -16,6 +18,9 @@ import {
 } from '../services/api';
 import type { Facture, Client } from '../services/api';
 import type { Produit } from '../types';
+import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
+import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -234,6 +239,7 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(facture.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="facture" entiteId={facture.id} titre={facture.numero} />
                       <button
                         onClick={() => handleVoirDetail(facture.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
@@ -241,6 +247,8 @@ export default function FacturesPage() {
                       >
                         <Eye size={18} />
                       </button>
+                      <BoutonPdf chemin={`/factures/${facture.id}/pdf`} nomFichier={`facture-${facture.numero}.pdf`} />
+                      <BoutonCourriel type="facture" documentId={facture.id} />
                       {facture.statut === 'brouillon' && (
                         <>
                           <button
@@ -279,6 +287,7 @@ export default function FacturesPage() {
                           )}
                         </>
                       )}
+                      <BoutonChampsPersonnalises entite="facture" entiteId={facture.id} titre={facture.numero} />
                     </div>
                   </td>
                 </tr>
@@ -346,6 +355,16 @@ export default function FacturesPage() {
                   <span className="dark:text-white">Total:</span>
                   <span className="dark:text-white">{Number(selectedFacture.montant_ht ?? 0).toFixed(2)} €</span>
                 </div>
+                {/* Détail par taxe, quand la facture utilise des groupes de taxes. */}
+                {selectedFacture.recapitulatif_taxes && selectedFacture.recapitulatif_taxes.length > 0 && (
+                  <>
+                    <RecapitulatifTaxes recapitulatif={selectedFacture.recapitulatif_taxes} />
+                    <div className="flex justify-between font-medium">
+                      <span className="dark:text-white">Total TTC:</span>
+                      <span className="dark:text-white">{Number(selectedFacture.montant_ttc ?? 0).toFixed(2)} €</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between mt-2">
                   <span className="text-gray-500">Payé:</span>
                   <span className="text-green-600">{Number(selectedFacture.montant_paye ?? 0).toFixed(2)} €</span>

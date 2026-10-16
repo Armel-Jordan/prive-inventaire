@@ -14,7 +14,7 @@ class ComClientLigne extends Model
 
     protected $fillable = [
         'com_entete_id', 'produit_id', 'quantite', 'prix_unitaire_ht',
-        'taux_tva', 'remise_ligne', 'montant_ht', 'montant_ttc',
+        'taux_tva', 'groupe_taxe_id', 'remise_ligne', 'montant_ht', 'montant_ttc',
     ];
 
     protected $casts = [
@@ -26,9 +26,17 @@ class ComClientLigne extends Model
         'montant_ttc' => 'decimal:2',
     ];
 
+    // Taux appliqué quand la ligne n'en précise pas (saisie directe ou conversion d'un devis).
+    const TAUX_TVA_DEFAUT = 20;
+
     public function commande(): BelongsTo
     {
         return $this->belongsTo(ComClientEntete::class, 'com_entete_id');
+    }
+
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
     }
 
     public function calculerMontants(): void

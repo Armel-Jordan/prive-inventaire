@@ -1,8 +1,9 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Package, 
-  Users, 
+  Package,
+  Paperclip,
+  Users,
   MapPin, 
   ClipboardList,
   Menu,
@@ -22,6 +23,7 @@ import {
   RotateCcw,
   User,
   Shield,
+  ListPlus,
   Truck,
   ShoppingCart,
   PackageCheck,
@@ -29,7 +31,9 @@ import {
   ChevronRight,
   Warehouse,
   HandCoins,
-  Settings
+  Settings,
+  Library,
+  Mail
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -112,13 +116,17 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     label: 'Paramètres',
     icon: Settings,
     items: [
+      { path: '/pieces-jointes', label: t.attachments.title, icon: Paperclip, module: 'configuration' },
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
       { path: '/roles', label: 'Rôles', icon: Shield, module: 'roles' },
+      { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
+      { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
+      { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
     ],
   },
 ];

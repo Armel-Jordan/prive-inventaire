@@ -9,11 +9,13 @@
 | Document | Module | Contenu |
 |----------|--------|---------|
 | [FLOW-PARAMETRES.md](./FLOW-PARAMETRES.md) | Paramètres | Produits, Secteurs, Employés, Configuration, Numérotation, TVA, Devise |
+| [FLOW-CHAMPS-PERSONNALISES.md](./FLOW-CHAMPS-PERSONNALISES.md) | Transverse | Champs ajoutés par l'entreprise aux fiches et documents, recherche par valeur |
 | [FLOW-ACHATS.md](./FLOW-ACHATS.md) | Achats | Fournisseurs, Commandes Fournisseur, Réceptions, Multi-devise |
 | [FLOW-BALISES-REMARQUES.md](./FLOW-BALISES-REMARQUES.md) | Transverse | Balises de classement des fiches et documents, remarques rapides |
 | [FLOW-VENTES.md](./FLOW-VENTES.md) | Ventes | Clients, Devis, Commandes, Factures, Bons de Livraison, Tournées |
 | [FLOW-FINANCE.md](./FLOW-FINANCE.md) | Finance | Paiements, Encours, Taxes, Taux de change, Prévisions |
 | [FLOW-INVENTAIRE.md](./FLOW-INVENTAIRE.md) | Inventaire | Relocalisations, Planification, Approbations, Traçabilité, Alertes, Inventaire Tournant, Rapports, Audit |
+| [FLOW-PIECES-JOINTES.md](./FLOW-PIECES-JOINTES.md) | Transverse | Pièces jointes des fiches et documents, stockage, sécurité |
 
 ---
 

@@ -1,4 +1,6 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, FileText } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -20,6 +22,7 @@ import {
 } from '@/services/api';
 import type { ComFourEntete, Fournisseur } from '@/services/api';
 import type { Produit } from '@/types';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 const statutLabels: Record<string, { label: string; color: string }> = {
   brouillon: { label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
@@ -306,6 +309,7 @@ export default function CommandesFournisseurPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <BoutonPiecesJointes entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" />
                       <button
                         onClick={() => openDetail(commande)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-1"
@@ -322,6 +326,7 @@ export default function CommandesFournisseurPage() {
                       >
                         <FileText size={16} />
                       </a>
+                      <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" />
                       {commande.statut === 'brouillon' && (
                         <>
                           <button
@@ -358,6 +363,7 @@ export default function CommandesFournisseurPage() {
                           <Ban size={16} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="ml-1" />
                     </td>
                   </tr>
                 ))}

@@ -24,6 +24,7 @@ import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import ProfilPage from '@/pages/ProfilPage';
 import RolesPage from '@/pages/RolesPage';
 import FournisseursPage from '@/pages/FournisseursPage';
+import ChampsPersonnalisesPage from '@/pages/ChampsPersonnalisesPage';
 import CommandesFournisseurPage from '@/pages/CommandesFournisseurPage';
 import ReceptionsPage from '@/pages/ReceptionsPage';
 import ClientsPage from '@/pages/ClientsPage';
@@ -36,11 +37,14 @@ import TourneesPage from '@/pages/TourneesPage';
 import ComptabilitePage from '@/pages/ComptabilitePage';
 import PrevisionsStockPage from '@/pages/PrevisionsStockPage';
 import DevisPage from '@/pages/DevisPage';
+import PiecesJointesPage from '@/pages/PiecesJointesPage';
 import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
+import CourrielsPage from '@/pages/CourrielsPage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
+import ReferentielsPage from '@/pages/ReferentielsPage';
 import LoginPage from '@/pages/LoginPage';
 import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
@@ -96,6 +100,7 @@ function AppRoutes() {
         <Route path="profil" element={<ProfilPage />} />
         <Route path="roles" element={<RolesPage />} />
         <Route path="fournisseurs" element={<FournisseursPage />} />
+        <Route path="champs-personnalises" element={<ChampsPersonnalisesPage />} />
         <Route path="commandes-fournisseur" element={<CommandesFournisseurPage />} />
         <Route path="receptions" element={<ReceptionsPage />} />
         <Route path="clients" element={<ClientsPage />} />
@@ -108,10 +113,13 @@ function AppRoutes() {
         <Route path="comptabilite" element={<ComptabilitePage />} />
         <Route path="previsions-stock" element={<PrevisionsStockPage />} />
         <Route path="devis" element={<DevisPage />} />
+        <Route path="pieces-jointes" element={<PiecesJointesPage />} />
         <Route path="gestion-prix" element={<GestionPrixPage />} />
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />
+        <Route path="courriels" element={<CourrielsPage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
+        <Route path="referentiels" element={<ReferentielsPage />} />
       </Route>
       
       {/* Routes Super Admin */}

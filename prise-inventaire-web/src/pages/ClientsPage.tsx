@@ -1,4 +1,6 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import {
@@ -243,6 +245,7 @@ export default function ClientsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-2">
+                      <BoutonPiecesJointes entite="client" entiteId={client.id} titre={client.raison_sociale} />
                       <button
                         onClick={() => handleEdit(client)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"
@@ -255,6 +258,7 @@ export default function ClientsPage() {
                       >
                         <Trash2 size={18} />
                       </button>
+                      <BoutonChampsPersonnalises entite="client" entiteId={client.id} titre={client.raison_sociale} />
                     </div>
                   </td>
                 </tr>

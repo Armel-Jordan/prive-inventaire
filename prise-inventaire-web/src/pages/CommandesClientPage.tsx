@@ -1,4 +1,6 @@
+import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -13,10 +15,14 @@ import {
   refuserCommandeClient,
   creerFactureDepuisCommande,
   deleteCommandeClient,
+  getCommandeClient,
 } from '../services/api';
 import type { ComClientEntete, Client } from '../services/api';
 import { getProduits } from '../services/api';
 import type { Produit } from '../types';
+import RecapitulatifTaxes from '@/components/RecapitulatifTaxes';
+import BoutonPdf from '@/components/BoutonPdf';
+import BoutonCourriel from '@/components/BoutonCourriel';
 
 export default function CommandesClientPage() {
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
@@ -281,13 +287,23 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
+                      <BoutonPiecesJointes entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                       <button
-                        onClick={() => { setSelectedCommande(cmd); setShowDetailModal(true); }}
+                        onClick={() => {
+                          setSelectedCommande(cmd);
+                          setShowDetailModal(true);
+                          // Fiche complète (détail des taxes), si la commande affichée n'a pas changé entre-temps.
+                          getCommandeClient(cmd.id)
+                            .then(complete => setSelectedCommande(actuelle => (actuelle?.id === complete.id ? complete : actuelle)))
+                            .catch(() => {});
+                        }}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
                         title="Voir détails"
                       >
                         <Eye size={18} />
                       </button>
+                      <BoutonPdf chemin={`/commandes-client/${cmd.id}/pdf`} nomFichier={`commande-${cmd.numero}.pdf`} />
+                      <BoutonCourriel type="commande_client" documentId={cmd.id} />
                       {cmd.statut === 'brouillon' && (
                         <>
                           <button
@@ -340,6 +356,7 @@ export default function CommandesClientPage() {
                           <FileText size={18} />
                         </button>
                       )}
+                      <BoutonChampsPersonnalises entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                     </div>
                   </td>
                 </tr>
@@ -520,6 +537,7 @@ export default function CommandesClientPage() {
                   <span className="text-gray-500">TVA:</span>
                   <span className="dark:text-white">{Number(selectedCommande.montant_tva ?? 0).toFixed(2)} €</span>
                 </div>
+                <RecapitulatifTaxes recapitulatif={selectedCommande.recapitulatif_taxes} />
                 <div className="flex justify-between font-bold">
                   <span className="dark:text-white">Total TTC:</span>
                   <span className="dark:text-white">{Number(selectedCommande.montant_ttc ?? 0).toFixed(2)} €</span>

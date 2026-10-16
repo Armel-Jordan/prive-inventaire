@@ -27,16 +27,24 @@ use App\Http\Controllers\Api\BaliseController;
 use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
+use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\CourrielEnvoiController;
+use App\Http\Controllers\Api\CourrielModeleController;
+use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
+use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\ReceptionController;
+use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
@@ -62,6 +70,7 @@ use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
+use App\Support\Referentiels;
 use Illuminate\Support\Facades\Route;
 
 // ============================================
@@ -224,6 +233,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/{modelType}/{modelId}', [AuditLogController::class, 'history']);
     });
 
+    // Pièces jointes des fiches (clients, fournisseurs, produits, employés) et des documents.
+    Route::prefix('pieces-jointes')->group(function () {
+        Route::get('/', [PieceJointeController::class, 'index']);
+        Route::get('/categories', [PieceJointeController::class, 'categories']);
+        Route::post('/', [PieceJointeController::class, 'store'])->middleware('throttle:60,1');
+        Route::get('/{id}/fichier', [PieceJointeController::class, 'fichier'])->whereNumber('id');
+        Route::put('/{id}', [PieceJointeController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [PieceJointeController::class, 'destroy'])->whereNumber('id');
+    });
+
     // Transferts planifiés
     Route::prefix('transferts-planifies')->group(function () {
         Route::get('/', [TransfertPlanifieController::class, 'index']);
@@ -253,6 +272,18 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::get('/search', [TracabiliteController::class, 'search']);
         Route::get('/produit/{numero}', [TracabiliteController::class, 'produitHistory']);
         Route::get('/timeline/{numero}', [TracabiliteController::class, 'timeline']);
+    });
+
+    // Champs personnalisés des fiches et documents : définitions, valeurs, recherche par valeur.
+    Route::prefix('champs-personnalises')->group(function () {
+        Route::get('/', [ChampPersonnaliseController::class, 'index']);
+        Route::post('/', [ChampPersonnaliseController::class, 'store']);
+        Route::put('/ordre', [ChampPersonnaliseController::class, 'ordonner']);
+        Route::get('/valeurs', [ChampPersonnaliseController::class, 'valeurs']);
+        Route::put('/valeurs', [ChampPersonnaliseController::class, 'enregistrerValeurs']);
+        Route::get('/recherche', [ChampPersonnaliseController::class, 'recherche']);
+        Route::put('/{id}', [ChampPersonnaliseController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ChampPersonnaliseController::class, 'destroy'])->whereNumber('id');
     });
 
     // Notifications
@@ -365,6 +396,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('devis')->middleware('module:ventes')->group(function () {
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
+        Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
         Route::get('/{devis}', [DevisController::class, 'show']);
         Route::put('/{devis}', [DevisController::class, 'update']);
         Route::post('/{devis}/envoyer', [DevisController::class, 'envoyer']);
@@ -390,6 +422,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('commandes-client')->middleware('module:ventes')->group(function () {
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
         Route::post('/', [CommandeClientController::class, 'store']);
         Route::put('/{id}', [CommandeClientController::class, 'update']);
         Route::post('/{id}/soumettre', [CommandeClientController::class, 'soumettre']);
@@ -402,6 +435,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('factures')->middleware('module:ventes')->group(function () {
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);
         Route::post('/', [FactureController::class, 'store']);
         Route::post('/commande/{commandeId}', [FactureController::class, 'creerDepuisCommande']);
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
@@ -414,6 +448,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
     Route::prefix('bons-livraison')->middleware('module:ventes')->group(function () {
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
+        Route::get('/{id}/pdf', [DocumentPdfController::class, 'bonLivraison']);
         Route::post('/{id}/preparer', [BonLivraisonController::class, 'demarrerPreparation']);
         Route::put('/{id}/lignes', [BonLivraisonController::class, 'updateLignes']);
         Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);
@@ -479,6 +514,45 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function 
         Route::post('/', [TenantTaxeController::class, 'store']);
         Route::put('/{id}', [TenantTaxeController::class, 'update']);
         Route::delete('/{id}', [TenantTaxeController::class, 'destroy']);
+    });
+
+    // Référentiels génériques (unités, catégories, devises…) : un seul contrôleur,
+    // piloté par le catalogue App\Support\Referentiels.
+    Route::get('/referentiels/devises/{id}/historique', [ReferentielController::class, 'historiqueDevise'])->whereNumber('id');
+    Route::prefix('referentiels/{type}')->where(['type' => implode('|', Referentiels::types())])->group(function () {
+        Route::get('/', [ReferentielController::class, 'index']);
+        Route::post('/', [ReferentielController::class, 'store']);
+        Route::put('/{id}', [ReferentielController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ReferentielController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Groupes de taxes (TPS + TVQ, TVA + CAC…) et calcul du détail des taxes sur un montant.
+    Route::prefix('groupes-taxes')->group(function () {
+        Route::get('/', [GroupeTaxeController::class, 'index']);
+        Route::post('/', [GroupeTaxeController::class, 'store']);
+        Route::put('/{id}', [GroupeTaxeController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [GroupeTaxeController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/calculer', [GroupeTaxeController::class, 'calculer'])->whereNumber('id');
+    });
+
+    // Courriels : paramètres d'envoi (serveur réservé aux administrateurs) et modèles par type et par langue.
+    Route::prefix('courriels')->group(function () {
+        Route::get('/catalogue', [CourrielModeleController::class, 'catalogue']);
+        Route::get('/parametres', [CourrielParametresController::class, 'show']);
+        Route::put('/parametres', [CourrielParametresController::class, 'update'])->middleware('role:admin');
+        Route::post('/parametres/test', [CourrielParametresController::class, 'tester'])->middleware(['role:admin', 'throttle:5,1']);
+        Route::get('/modeles', [CourrielModeleController::class, 'index']);
+        Route::post('/modeles', [CourrielModeleController::class, 'store']);
+        Route::post('/modeles/apercu', [CourrielModeleController::class, 'apercu']);
+        Route::put('/modeles/{id}', [CourrielModeleController::class, 'update'])->whereNumber('id');
+        Route::delete('/modeles/{id}', [CourrielModeleController::class, 'destroy'])->whereNumber('id');
+
+        // Envoi des documents, file d'envoi et historique.
+        Route::get('/preparer', [CourrielEnvoiController::class, 'preparer']);
+        Route::get('/envois', [CourrielEnvoiController::class, 'index']);
+        Route::post('/envois', [CourrielEnvoiController::class, 'store'])->middleware('throttle:30,1');
+        Route::get('/envois/{id}', [CourrielEnvoiController::class, 'show'])->whereNumber('id');
+        Route::post('/envois/{id}/reessayer', [CourrielEnvoiController::class, 'reessayer'])->whereNumber('id')->middleware('throttle:30,1');
     });
 
     // Configuration des numéros

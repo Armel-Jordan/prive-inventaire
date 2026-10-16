@@ -14,7 +14,7 @@ class FactureLigne extends Model
 
     protected $fillable = [
         'facture_id', 'produit_id', 'quantite', 'prix_unitaire_ht',
-        'taux_tva', 'remise_ligne', 'montant_ht', 'montant_tva', 'montant_ttc',
+        'taux_tva', 'groupe_taxe_id', 'remise_ligne', 'montant_ht', 'montant_tva', 'montant_ttc',
     ];
 
     protected $casts = [
@@ -30,5 +30,10 @@ class FactureLigne extends Model
     public function facture(): BelongsTo
     {
         return $this->belongsTo(Facture::class);
+    }
+
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(ProduitTenant::class, 'produit_id');
     }
 }

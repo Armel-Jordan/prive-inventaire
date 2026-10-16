@@ -1,5 +1,5 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
-import { apiFetch, getAuthHeaders, type ApiOptions } from './http';
+import { apiFetch, getAuthHeaders, API_BASE_URL, type ApiOptions } from './http';
 
 // Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
 export { getAuthHeaders };
@@ -372,6 +372,95 @@ export async function deleteUser(id: number): Promise<void> {
   await fetchApi(`/users/${id}`, { method: 'DELETE' });
 }
 
+// === CHAMPS PERSONNALISÉS ===
+export type EntiteChampPersonnalise =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+export type TypeChampPersonnalise = 'texte' | 'texte_long' | 'nombre' | 'date' | 'case' | 'liste' | 'liste_multiple' | 'courriel' | 'url' | 'telephone';
+export type ValeurChampPersonnalise = string | number | boolean | string[] | null;
+
+export interface DefinitionChampPersonnalise {
+  libelle: string;
+  options: string[] | null;
+  format: 'nombre' | 'montant' | 'pourcentage' | null;
+  decimales: number | null;
+  obligatoire: boolean;
+  sans_doublon: boolean;
+  valeur_defaut: ValeurChampPersonnalise;
+  aide: string | null;
+  actif: boolean;
+}
+
+export interface ChampPersonnalise extends DefinitionChampPersonnalise {
+  id: number;
+  entite: EntiteChampPersonnalise;
+  type: TypeChampPersonnalise;
+  code: string;
+  ordre: number;
+}
+
+/** Champ d'une fiche : sa valeur (ou la valeur par défaut tant que rien n'est saisi). */
+export interface ChampPersonnaliseFiche extends ChampPersonnalise {
+  valeur: ValeurChampPersonnalise;
+  saisie: boolean;
+}
+
+// Champs actifs par entreprise et type de fiche, demandés une fois pour toutes les lignes d'une liste.
+const cacheChampsActifs = new Map<string, Promise<ChampPersonnalise[]>>();
+
+export function champsPersonnalisesActifs(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  const cle = `${getAuthHeaders()['X-Tenant-Slug'] ?? ''}:${entite}`;
+  if (!cacheChampsActifs.has(cle)) {
+    const requete = fetchApi<ChampPersonnalise[]>(`/champs-personnalises?entite=${entite}&actifs=1`);
+    requete.catch(() => cacheChampsActifs.delete(cle));
+    cacheChampsActifs.set(cle, requete);
+  }
+  return cacheChampsActifs.get(cle)!;
+}
+
+export async function getChampsPersonnalises(entite: EntiteChampPersonnalise): Promise<ChampPersonnalise[]> {
+  return fetchApi(`/champs-personnalises?entite=${entite}`);
+}
+
+export async function creerChampPersonnalise(champ: DefinitionChampPersonnalise & { entite: EntiteChampPersonnalise; type: TypeChampPersonnalise }): Promise<ChampPersonnalise> {
+  const cree = await fetchApi<ChampPersonnalise>('/champs-personnalises', { method: 'POST', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return cree;
+}
+
+export async function modifierChampPersonnalise(id: number, champ: DefinitionChampPersonnalise): Promise<ChampPersonnalise> {
+  const modifie = await fetchApi<ChampPersonnalise>(`/champs-personnalises/${id}`, { method: 'PUT', body: JSON.stringify(champ) });
+  cacheChampsActifs.clear();
+  return modifie;
+}
+
+export async function supprimerChampPersonnalise(id: number): Promise<void> {
+  await fetchApi(`/champs-personnalises/${id}`, { method: 'DELETE' });
+  cacheChampsActifs.clear();
+}
+
+export async function ordonnerChampsPersonnalises(entite: EntiteChampPersonnalise, ids: number[]): Promise<ChampPersonnalise[]> {
+  const champs = await fetchApi<ChampPersonnalise[]>('/champs-personnalises/ordre', { method: 'PUT', body: JSON.stringify({ entite, ids }) });
+  cacheChampsActifs.clear();
+  return champs;
+}
+
+export async function getValeursChampsPersonnalises(entite: EntiteChampPersonnalise, entiteId: number): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi(`/champs-personnalises/valeurs?entite=${entite}&entite_id=${entiteId}`);
+}
+
+export async function enregistrerValeursChampsPersonnalises(
+  entite: EntiteChampPersonnalise,
+  entiteId: number,
+  valeurs: Record<number, ValeurChampPersonnalise>,
+): Promise<ChampPersonnaliseFiche[]> {
+  return fetchApi('/champs-personnalises/valeurs', { method: 'PUT', body: JSON.stringify({ entite, entite_id: entiteId, valeurs }) });
+}
+
+export async function rechercherChampPersonnalise(champId: number, valeur: string): Promise<{ entite_id: number; libelle_entite: string | null; valeur: ValeurChampPersonnalise }[]> {
+  return fetchApi(`/champs-personnalises/recherche?${new URLSearchParams({ champ_id: String(champId), valeur })}`);
+}
+
 // === FOURNISSEURS ===
 export interface Fournisseur {
   id: number;
@@ -529,6 +618,96 @@ export function getCommandePdfUrl(id: number): string {
   return `${API_BASE_URL}/commandes-fournisseur/${id}/pdf?token=${token}`;
 }
 
+// === PIÈCES JOINTES ===
+export type EntitePieceJointe =
+  | 'client' | 'fournisseur' | 'produit' | 'employe'
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+
+export interface PieceJointe {
+  id: number;
+  entite: EntitePieceJointe;
+  entite_id: number;
+  categorie: string | null;
+  description: string | null;
+  nom_original: string;
+  type_mime: string | null;
+  taille: number;
+  /** Type sans risque (PDF, image, texte) : s'ouvre dans un onglet ; les autres se téléchargent. */
+  affichable: boolean;
+  auteur: string | null;
+  created_at: string | null;
+  /** Nom de la fiche ou numéro du document (liste globale). */
+  libelle_entite?: string | null;
+}
+
+export interface PagePiecesJointes {
+  data: PieceJointe[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export async function getPiecesJointes(filtres: { entite?: EntitePieceJointe; entite_id?: number; recherche?: string; page?: number } = {}): Promise<PagePiecesJointes> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined && valeur !== '') parametres.set(cle, String(valeur)); });
+  return fetchApi(`/pieces-jointes?${parametres}`);
+}
+
+export async function getCategoriesPiecesJointes(entite?: EntitePieceJointe): Promise<string[]> {
+  return fetchApi(`/pieces-jointes/categories${entite ? `?entite=${entite}` : ''}`);
+}
+
+export async function ajouterPiecesJointes(
+  entite: EntitePieceJointe,
+  entiteId: number,
+  fichiers: { fichier: File; description: string }[],
+  categorie: string,
+): Promise<PieceJointe[]> {
+  const formulaire = new FormData();
+  formulaire.append('entite', entite);
+  formulaire.append('entite_id', String(entiteId));
+  if (categorie) formulaire.append('categorie', categorie);
+  fichiers.forEach(({ fichier, description }, index) => {
+    formulaire.append(`fichiers[${index}]`, fichier, fichier.name);
+    formulaire.append(`descriptions[${index}]`, description);
+  });
+  // Envoi de fichiers : délai plus long que les appels ordinaires.
+  return fetchApi('/pieces-jointes', { method: 'POST', body: formulaire, timeoutMs: 120000 });
+}
+
+export async function modifierPieceJointe(id: number, donnees: { description: string | null; categorie: string | null }): Promise<PieceJointe> {
+  return fetchApi(`/pieces-jointes/${id}`, { method: 'PUT', body: JSON.stringify(donnees) });
+}
+
+export async function supprimerPieceJointe(id: number): Promise<void> {
+  await fetchApi(`/pieces-jointes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre une pièce jointe dans un nouvel onglet si son type est sans risque (PDF, image, texte),
+ * sinon la télécharge. Le jeton part dans l'en-tête ; l'onglet est ouvert pendant le clic pour ne
+ * pas être bloqué par le navigateur.
+ */
+export async function ouvrirPieceJointe(piece: PieceJointe): Promise<void> {
+  const fenetre = piece.affichable ? window.open('', '_blank') : null;
+  try {
+    const contenu = await fetchApi<Blob>(`/pieces-jointes/${piece.id}/fichier`, { responseType: 'blob', headers: { Accept: '*/*' }, timeoutMs: 120000 });
+    const url = URL.createObjectURL(contenu);
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = piece.nom_original;
+      lien.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
+  }
+}
+
 // === RECEPTIONS ===
 export interface ReceptionLigne {
   id: number;
@@ -630,7 +809,16 @@ export interface ConditionPaiement {
   ordre: number;
 }
 
+/** Détail d'un document par taxe (groupes de taxes) ; vide pour le calcul au taux unique. */
+export interface RecapitulatifTaxe {
+  nom: string;
+  taux: number;
+  base: number;
+  montant: number;
+}
+
 export interface ComClientEntete {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   client_id: number;
@@ -660,6 +848,7 @@ export interface ComClientLigne {
 }
 
 export interface Facture {
+  recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
   commande_id?: number;
@@ -1095,6 +1284,306 @@ export async function updateTaxe(id: number, data: Omit<TenantTaxe, 'id'>): Prom
 
 export async function deleteTaxe(id: number): Promise<void> {
   await fetchApi(`/taxes/${id}`, { method: 'DELETE' });
+}
+
+// ── Référentiels génériques (unités, catégories, devises…) ──────────────────
+export type TypeReferentiel =
+  | 'unites'
+  | 'unite_conversions'
+  | 'categories'
+  | 'fabricants'
+  | 'modes_paiement'
+  | 'conditions_paiement'
+  | 'comptes_bancaires'
+  | 'devises'
+  | 'entrepots'
+  | 'territoires'
+  | 'itineraires'
+  | 'representants'
+  | 'transporteurs'
+  | 'raisons'
+  | 'statuts_personnalises';
+
+export interface FicheReferentiel {
+  id: number;
+  [champ: string]: unknown;
+}
+
+export interface TauxDevise {
+  id: number;
+  taux: string;
+  date_effet: string;
+}
+
+export async function getReferentiel(type: TypeReferentiel, actifsSeulement = false): Promise<FicheReferentiel[]> {
+  return fetchApi(`/referentiels/${type}${actifsSeulement ? '?actif=1' : ''}`);
+}
+
+export async function createReferentiel(type: TypeReferentiel, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateReferentiel(type: TypeReferentiel, id: number, data: Record<string, unknown>): Promise<FicheReferentiel> {
+  return fetchApi(`/referentiels/${type}/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteReferentiel(type: TypeReferentiel, id: number): Promise<void> {
+  await fetchApi(`/referentiels/${type}/${id}`, { method: 'DELETE' });
+}
+
+export async function getHistoriqueDevise(id: number): Promise<TauxDevise[]> {
+  return fetchApi(`/referentiels/devises/${id}/historique`);
+}
+
+// ── Groupes de taxes (TPS + TVQ, TVA + CAC…) ────────────────────────────────
+export type AppliqueSur = 'base' | 'base_et_taxes_precedentes' | 'taxe_precedente';
+
+export interface LigneGroupeTaxe {
+  tenant_taxe_id: number;
+  applique_sur: AppliqueSur;
+  taxe?: { id: number; nom: string; taux: string };
+}
+
+export interface GroupeTaxe {
+  id: number;
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  taux_effectif: number;
+  lignes: LigneGroupeTaxe[];
+}
+
+export interface DetailTaxes {
+  montant_ht: number;
+  taxes: { taxe_id: number; nom: string; taux: number; applique_sur: AppliqueSur; base: number; montant: number }[];
+  total_taxes: number;
+  montant_ttc: number;
+  taux_effectif: number;
+}
+
+export interface DonneesGroupeTaxe {
+  code: string;
+  nom: string;
+  par_defaut: boolean;
+  actif: boolean;
+  lignes: { tenant_taxe_id: number; applique_sur: AppliqueSur }[];
+}
+
+export async function getGroupesTaxes(): Promise<GroupeTaxe[]> {
+  return fetchApi('/groupes-taxes');
+}
+
+export async function createGroupeTaxe(data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi('/groupes-taxes', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateGroupeTaxe(id: number, data: DonneesGroupeTaxe): Promise<GroupeTaxe> {
+  return fetchApi(`/groupes-taxes/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteGroupeTaxe(id: number): Promise<void> {
+  await fetchApi(`/groupes-taxes/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * Ouvre le PDF d'un document (ex. `/factures/12/pdf`) dans un nouvel onglet. Le jeton part dans
+ * l'en-tête, pas dans l'URL. L'onglet est ouvert pendant le clic (sinon le navigateur bloque la
+ * fenêtre) ; s'il est bloqué malgré tout, le PDF est téléchargé.
+ */
+export async function ouvrirPdf(chemin: string, nomFichier: string): Promise<void> {
+  const fenetre = window.open('', '_blank');
+  try {
+    const entetes = getAuthHeaders();
+    delete entetes['Content-Type'];
+    const reponse = await fetch(`${API_BASE_URL}${chemin}`, { headers: { ...entetes, Accept: 'application/pdf' } });
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+    const url = URL.createObjectURL(await reponse.blob());
+    if (fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = nomFichier;
+      lien.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (erreur) {
+    fenetre?.close();
+    throw erreur;
+  }
+}
+
+export async function calculerGroupeTaxe(id: number, montantHt: number): Promise<DetailTaxes> {
+  return fetchApi(`/groupes-taxes/${id}/calculer`, { method: 'POST', body: JSON.stringify({ montant_ht: montantHt }) });
+}
+
+// === COURRIELS (paramètres d'envoi et modèles) ===
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type LangueCourriel = 'fr' | 'en';
+
+export interface ContenuModeleCourriel {
+  objet: string;
+  contenu: string;
+  nom_fichier: string | null;
+  repondre_a: string | null;
+  accuse_lecture: boolean;
+}
+
+export interface ModeleCourriel extends ContenuModeleCourriel {
+  id: number;
+  type: TypeCourriel;
+  langue: LangueCourriel;
+}
+
+export interface CatalogueCourriels {
+  langues: LangueCourriel[];
+  types: { type: TypeCourriel; variables: string[]; piece_jointe: boolean; defauts: Record<LangueCourriel, ContenuModeleCourriel> }[];
+}
+
+export interface ApercuCourriel {
+  objet: string;
+  html: string;
+  texte: string;
+  nom_fichier: string | null;
+  inconnues: string[];
+  /** Numéro du document utilisé, ou null pour des valeurs d'exemple. */
+  document: string | null;
+}
+
+export interface ParametresCourriel {
+  transport: 'plateforme' | 'smtp';
+  smtp_hote: string | null;
+  smtp_port: number | null;
+  smtp_chiffrement: 'tls' | 'ssl' | 'aucun' | null;
+  smtp_utilisateur: string | null;
+  /** Envoyé seulement pour le changer ; jamais renvoyé par l'API. */
+  smtp_mot_de_passe?: string;
+  smtp_mot_de_passe_defini?: boolean;
+  expediteur_adresse: string | null;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  copie_cachee: string | null;
+  signature: string | null;
+  adresse_plateforme?: string | null;
+}
+
+export async function getCatalogueCourriels(): Promise<CatalogueCourriels> {
+  return fetchApi('/courriels/catalogue');
+}
+
+export async function getModelesCourriel(): Promise<ModeleCourriel[]> {
+  return fetchApi('/courriels/modeles');
+}
+
+export async function createModeleCourriel(modele: Omit<ModeleCourriel, 'id'>): Promise<ModeleCourriel> {
+  return fetchApi('/courriels/modeles', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function updateModeleCourriel(id: number, modele: ContenuModeleCourriel): Promise<ModeleCourriel> {
+  return fetchApi(`/courriels/modeles/${id}`, { method: 'PUT', body: JSON.stringify(modele) });
+}
+
+export async function deleteModeleCourriel(id: number): Promise<void> {
+  await fetchApi(`/courriels/modeles/${id}`, { method: 'DELETE' });
+}
+
+export async function apercuModeleCourriel(modele: { type: TypeCourriel; langue: LangueCourriel; objet: string; contenu: string; nom_fichier: string | null }): Promise<ApercuCourriel> {
+  return fetchApi('/courriels/modeles/apercu', { method: 'POST', body: JSON.stringify(modele) });
+}
+
+export async function getParametresCourriel(): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres');
+}
+
+export async function updateParametresCourriel(parametres: ParametresCourriel): Promise<ParametresCourriel> {
+  return fetchApi('/courriels/parametres', { method: 'PUT', body: JSON.stringify(parametres) });
+}
+
+export async function testerParametresCourriel(destinataire: string, langue: LangueCourriel): Promise<{ message: string }> {
+  return fetchApi('/courriels/parametres/test', { method: 'POST', body: JSON.stringify({ destinataire, langue }) });
+}
+
+// === COURRIELS (envoi des documents, file d'envoi et historique) ===
+export type TypeDocumentCourriel = Exclude<TypeCourriel, 'general'>;
+export type StatutCourriel = 'en_attente' | 'en_cours' | 'envoye' | 'echec';
+
+export interface PreparationCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  document_numero: string;
+  langue: LangueCourriel;
+  modele_personnalise: boolean;
+  destinataires: string[];
+  objet: string;
+  contenu: string;
+  piece_jointe: string | null;
+}
+
+export interface EnvoiCourriel {
+  id: number;
+  type: TypeDocumentCourriel;
+  document_id: number | null;
+  document_numero: string | null;
+  destinataires: string[];
+  copies: string[] | null;
+  copies_cachees: string[] | null;
+  expediteur_adresse: string;
+  expediteur_nom: string | null;
+  repondre_a: string | null;
+  objet: string;
+  piece_jointe: string | null;
+  statut: StatutCourriel;
+  tentatives: number;
+  erreur: string | null;
+  dernier_essai: string | null;
+  envoye_le: string | null;
+  created_at: string | null;
+  auteur: string | null;
+  /** Présents dans le détail d'un envoi seulement. */
+  corps_html?: string;
+  corps_texte?: string;
+}
+
+export interface PageEnvoisCourriel {
+  data: EnvoiCourriel[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+export interface NouveauCourriel {
+  type: TypeDocumentCourriel;
+  document_id: number;
+  langue: LangueCourriel;
+  destinataires: string[];
+  copies: string[];
+  copies_cachees: string[];
+  objet: string;
+  contenu: string;
+  joindre_pdf: boolean;
+}
+
+export async function preparerCourriel(type: TypeDocumentCourriel, documentId: number, langue: LangueCourriel): Promise<PreparationCourriel> {
+  return fetchApi(`/courriels/preparer?${new URLSearchParams({ type, document_id: String(documentId), langue })}`);
+}
+
+export async function envoyerCourriel(courriel: NouveauCourriel): Promise<EnvoiCourriel> {
+  return fetchApi('/courriels/envois', { method: 'POST', body: JSON.stringify(courriel) });
+}
+
+export async function getEnvoisCourriel(filtres: { type?: TypeDocumentCourriel; document_id?: number; statut?: StatutCourriel; page?: number } = {}): Promise<PageEnvoisCourriel> {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
+  return fetchApi(`/courriels/envois?${parametres}`);
+}
+
+export async function getEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}`);
+}
+
+export async function reessayerEnvoiCourriel(id: number): Promise<EnvoiCourriel> {
+  return fetchApi(`/courriels/envois/${id}/reessayer`, { method: 'POST' });
 }
 
 export async function getParametres(): Promise<TenantParametres> {
