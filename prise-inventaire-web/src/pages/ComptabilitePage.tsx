@@ -166,7 +166,7 @@ export default function ComptabilitePage() {
     }
 
     // BOM : sans lui, Excel lit le fichier en ANSI et abîme les accents (« Numéro », raisons sociales).
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `journal_${activeTab}_${dateDebut}_${dateFin}.csv`;
