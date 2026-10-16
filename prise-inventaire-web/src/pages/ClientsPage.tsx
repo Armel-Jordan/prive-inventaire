@@ -10,7 +10,8 @@ import {
   deleteClient,
   getConfiguration,
 } from '../services/api';
-import type { Client } from '../services/api';
+import type { Client, FicheReferentiel } from '../services/api';
+import { getReferentiel } from '../services/api';
 import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
@@ -50,7 +51,10 @@ export default function ClientsPage() {
     contact_telephone: '',
     encours_max: '',
     taux_remise_global: '0',
+    condition_paiement_id: '',
   });
+  // Conditions de paiement du référentiel (délai, escompte pour paiement rapide).
+  const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
 
   async function loadConfig() {
     try {
@@ -64,6 +68,7 @@ export default function ClientsPage() {
   useEffect(() => {
     loadClients();
     loadConfig();
+    getReferentiel('conditions_paiement', true).then(setConditions, () => {});
   }, []);
 
   const loadClients = async () => {
@@ -93,6 +98,7 @@ export default function ClientsPage() {
         ...formData,
         encours_max: formData.encours_max ? parseFloat(formData.encours_max) : undefined,
         taux_remise_global: parseFloat(formData.taux_remise_global) || 0,
+        condition_paiement_id: formData.condition_paiement_id ? Number(formData.condition_paiement_id) : null,
       };
 
       if (editingClient) {
@@ -123,6 +129,7 @@ export default function ClientsPage() {
       contact_telephone: client.contact_telephone || '',
       encours_max: client.encours_max?.toString() || '',
       taux_remise_global: client.taux_remise_global?.toString() || '0',
+      condition_paiement_id: client.condition_paiement_id ? String(client.condition_paiement_id) : '',
     });
     setShowModal(true);
   };
@@ -152,6 +159,7 @@ export default function ClientsPage() {
       contact_telephone: '',
       encours_max: '',
       taux_remise_global: '0',
+      condition_paiement_id: '',
     });
   };
 
@@ -262,12 +270,16 @@ export default function ClientsPage() {
                       <button
                         onClick={() => handleEdit(client)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Modifier"
+                        aria-label={`Modifier ${client.raison_sociale}`}
                       >
                         <Edit size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(client.id)}
                         className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Supprimer"
+                        aria-label={`Supprimer ${client.raison_sociale}`}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -417,6 +429,17 @@ export default function ClientsPage() {
                     onChange={(e) => setFormData({ ...formData, taux_remise_global: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">Condition de paiement</label>
+                  <select
+                    value={formData.condition_paiement_id}
+                    onChange={(e) => setFormData({ ...formData, condition_paiement_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">Condition par défaut de l'entreprise</option>
+                    {conditions.map(c => <option key={c.id} value={c.id}>{String(c.libelle)}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">

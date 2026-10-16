@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — acomptes et demandes d'acompte (§5.9)
+> Dernière mise à jour : 2026-10-16 — conditions de paiement et escompte (§5.10)
 
 ---
 
@@ -412,7 +412,9 @@ La **Facture** est le document officiel de demande de paiement envoyé au client
 | `montant_ttc` | Total TTC |
 | `montant_paye` | Somme des paiements reçus (calculé) |
 | `montant_credite` | Somme des crédits de notes de crédit imputés sur la facture (calculé, §5.8) |
-| `reste_a_payer` | `montant_ttc - montant_paye - montant_credite` |
+| `montant_escompte` | Somme des escomptes accordés à ses paiements (calculé, §5.10) |
+| `condition_paiement_id` | Condition de paiement (§5.10) |
+| `reste_a_payer` | `montant_ttc - montant_paye - montant_credite - montant_escompte` |
 
 ### 5.3 Statuts de la facture
 
@@ -479,6 +481,7 @@ La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal :
 | `date_paiement` | Date du paiement |
 | `mode_paiement` | `virement`, `cheque`, `carte`, `especes`, `autre` |
 | `reference` | Référence du virement/chèque |
+| `escompte` | Escompte pour paiement rapide accordé avec ce paiement (§5.10) |
 
 Après chaque paiement :
 - `updateMontantPaye()` recalcule `montant_paye` et `reste_a_payer`
@@ -732,6 +735,59 @@ Code :
 - API : services `App\Services\Acomptes` et `App\Services\DemandesAcompte`, contrôleurs `AcompteController` et `DemandeAcompteController`, migration `2026_10_16_100031_creer_acomptes` ;
 - web : écrans `AcomptesPage` et `DemandesAcomptePage`, composants `components/acomptes/FormulaireAcompte` et `components/acomptes/UtiliserAcompte`, service `src/services/acomptes.ts`.
 
+### 5.10 Conditions de paiement et escompte pour paiement rapide
+
+Plan de parité fripv2, phase 1.5 : les conditions de paiement de fripv2 (« Net 30 », « 2/10 Net 30 », « 30 jours fin de mois ») appliquées aux clients et aux factures. Les conditions se définissent dans **Référentiels → Conditions de paiement** :
+- délai en jours ;
+- fin de mois ;
+- taux et jours d'escompte ;
+- une condition par défaut.
+
+**Client :**
+- la fiche client (liste des clients → Modifier) choisit sa **condition de paiement** ;
+- sans choix, c'est la condition par défaut de l'entreprise qui s'applique.
+
+**Facture :**
+- **Sa condition** est celle choisie à la création. Sinon, c'est celle du client, puis la condition par défaut de l'entreprise.
+- **Sans échéance saisie**, l'échéance est la date de la facture plus le délai.
+- Pour une condition **fin de mois**, l'échéance tombe le dernier jour du mois atteint. Par exemple, 30 jours fin de mois depuis le 16/10 donne le 30/11.
+- **Facture créée depuis une commande**, quand le client n'a pas d'échéancier propre (§5.6) : son échéance unique est celle de la condition, sinon 30 jours comme avant.
+- **Sans condition** (ni choisie, ni du client, ni par défaut), rien ne change.
+
+**Escompte pour paiement rapide**, par exemple 2 % si le client paie dans les 10 jours :
+- **Quand il est proposé** : comme dans fripv2, au **premier paiement** de la facture, fait au plus tard à sa date plus les jours d'escompte.
+- **Ce qu'il donne** : le taux appliqué à ce qui reste dû, notes de crédit déduites, arrondi au centime.
+- **À une condition** : le paiement doit régler tout le reste (montant = reste − escompte).
+- **Dans la fenêtre de paiement**, une case « Escompte » apparaît avec le montant et la date limite. Cochée, elle remplit le montant à payer ; au-delà de la date limite, elle est grisée.
+- **À l'enregistrement**, le paiement porte son `escompte` et la facture cumule `montant_escompte`. Le reste à payer, le statut, les échéances et l'encours en tiennent compte.
+- **Refus (422)** :
+  - paiement en retard : « Escompte impossible : le paiement doit être fait au plus tard le … » ;
+  - paiement partiel : « Avec l'escompte, le paiement règle tout le reste : … » ;
+  - facture qui a déjà reçu un paiement : « Aucun escompte possible sur cette facture. »
+
+**Ailleurs :**
+- **Détail de la facture** : condition de paiement et ligne « Escompte ».
+- **PDF de la facture** :
+  - « Conditions de paiement » parmi les informations ;
+  - lignes « Escompte » et « Crédité » au règlement quand elles existent.
+- **Comptes clients** :
+  - au relevé, l'escompte est une ligne au crédit, après le paiement qu'il accompagne ;
+  - le reste dû d'une facture à une date déduit les escomptes accordés jusqu'à ce jour.
+
+| Route | Rôle |
+|---|---|
+| `GET /factures/{id}/escompte?date=` | Escompte possible pour un paiement à cette date : `applicable`, `condition`, `pourcentage`, `jours`, `date_limite`, `escompte`, `a_payer` |
+| `POST /factures/{id}/paiement` (`escompte: true`) | Paiement avec escompte |
+| `POST /factures` (`condition_paiement_id`) | Condition d'une nouvelle facture |
+| `PUT /clients/{id}` (`condition_paiement_id`) | Condition du client |
+
+**Données :**
+- `clients.condition_paiement_id` ;
+- `factures.condition_paiement_id`, `factures.montant_escompte` ;
+- `facture_paiements.escompte`.
+
+Le code est dans le service `App\Services\ConditionsPaiement` et la migration `2026_10_16_100032_conditions_paiement_et_escompte`.
+
 ---
 
 ## 6. Bons de Livraison
@@ -907,7 +963,8 @@ Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'e
   - au débit : les factures et les remboursements au client ;
   - au crédit : les paiements, les notes de crédit et les acomptes reçus ;
   - un paiement fait avec un acompte n'est pas un mouvement de plus : l'acompte est déjà au crédit ;
-  - solde progressif ; le même jour, l'ordre est : facture, note de crédit, acompte, paiement, remboursement ;
+  - un escompte accordé avec un paiement est au crédit, après ce paiement ;
+  - solde progressif ; le même jour, l'ordre est : facture, note de crédit, acompte, paiement, escompte, remboursement ;
   - solde final ;
   - factures encore dues au dernier jour, avec leur retard ;
   - crédits des notes de crédit et acomptes encore disponibles au dernier jour ;

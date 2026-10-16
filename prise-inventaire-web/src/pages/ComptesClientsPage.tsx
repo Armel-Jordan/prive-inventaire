@@ -215,7 +215,7 @@ export default function ComptesClientsPage() {
                       {releve.donnees.lignes.map((ligne, index) => (
                         <tr key={index} className="border-t dark:border-gray-700">
                           <td className="py-1.5 pr-3 whitespace-nowrap text-gray-700 dark:text-gray-300">{jour(ligne.date)}</td>
-                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{(ligne.type === 'paiement' || ligne.type === 'remboursement' || ligne.type === 'acompte') && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
+                          <td className="py-1.5 pr-3 text-gray-800 dark:text-gray-200">{ligne.libelle}{['paiement', 'escompte', 'remboursement', 'acompte'].includes(ligne.type) && ligne.piece && <span className="text-xs text-gray-500"> · {ligne.piece}</span>}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-gray-900 dark:text-white">{montant(ligne.debit)}</td>
                           <td className="py-1.5 pr-3 text-right whitespace-nowrap text-green-700">{montant(ligne.credit)}</td>
                           <td className="py-1.5 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">{solde(ligne.solde)}</td>

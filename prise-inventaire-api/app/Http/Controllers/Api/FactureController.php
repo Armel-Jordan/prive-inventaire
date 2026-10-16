@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BonLivraison;
 use App\Models\BonLivraisonLigne;
+use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\Configuration;
 use App\Models\Facture;
@@ -12,17 +13,19 @@ use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
 use App\Services\Acomptes;
+use App\Services\ConditionsPaiement;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class FactureController extends Controller
 {
-    public function __construct(private readonly TaxesDocument $taxes) {}
+    public function __construct(private readonly TaxesDocument $taxes, private readonly ConditionsPaiement $conditions) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -63,7 +66,7 @@ class FactureController extends Controller
         // Produit de chaque ligne (même retiré du catalogue) : le détail affichait « Produit #12 ».
         // Notes de crédit établies sur la facture et crédits imputés (de ses notes ou d'autres notes du client).
         $facture = Facture::with([
-            'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison',
+            'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison', 'conditionPaiement:id,code,libelle,delai_jours,fin_de_mois,escompte_pourcentage,escompte_jours',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
@@ -81,6 +84,8 @@ class FactureController extends Controller
             'client_id' => ['required', TenantRule::exists('clients')],
             'date_facture' => 'required|date',
             'date_echeance' => 'nullable|date',
+            // Condition de paiement (référentiel) ; par défaut, celle du client, sinon celle de l'entreprise.
+            'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             // Produit de l'entreprise : un id quelconque (0, ou celui d'une autre entreprise) était accepté.
@@ -97,7 +102,8 @@ class FactureController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $facture = DB::transaction(function () use ($validated, $tenantId) {
+        $condition = $this->conditions->pourFacture($validated['condition_paiement_id'] ?? null, Client::find($validated['client_id']));
+        $facture = DB::transaction(function () use ($validated, $tenantId, $condition) {
             $numero = Configuration::consommerNumero('facture', $tenantId);
 
             $montantHt = 0;
@@ -128,7 +134,9 @@ class FactureController extends Controller
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
                 'date_facture' => $validated['date_facture'],
-                'date_echeance' => $validated['date_echeance'] ?? null,
+                // Sans échéance saisie, celle de la condition de paiement.
+                'date_echeance' => $validated['date_echeance'] ?? ($condition ? $this->conditions->echeance($condition, $validated['date_facture']) : null),
+                'condition_paiement_id' => $condition?->id,
                 'statut' => 'brouillon',
                 'montant_ht' => $montantHt,
                 'montant_tva' => $montantTva,
@@ -176,7 +184,8 @@ class FactureController extends Controller
         if (! $configFacture || ! $configFacture->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $facture = DB::transaction(function () use ($commande, $tenantId) {
+        $condition = $this->conditions->pourFacture(null, $commande->client);
+        $facture = DB::transaction(function () use ($commande, $tenantId, $condition) {
             $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
 
             $facture = Facture::create([
@@ -185,6 +194,7 @@ class FactureController extends Controller
                 'commande_id' => $commande->id,
                 'client_id' => $commande->client_id,
                 'date_facture' => now(),
+                'condition_paiement_id' => $condition?->id,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
                 'montant_tva' => $commande->montant_tva,
@@ -211,13 +221,15 @@ class FactureController extends Controller
 
             $conditions = $commande->client->conditionsPaiement;
             if ($conditions->isEmpty()) {
+                // Échéance de la condition de paiement, sinon 30 jours.
+                $echeance = $condition ? $this->conditions->echeance($condition, now()) : now()->addDays(30);
                 FactureEcheance::create([
                     'facture_id' => $facture->id,
-                    'date_echeance' => now()->addDays(30),
+                    'date_echeance' => $echeance,
                     'montant' => $facture->montant_ttc,
                     'ordre' => 1,
                 ]);
-                $facture->date_echeance = now()->addDays(30);
+                $facture->date_echeance = $echeance;
             } else {
                 foreach ($conditions as $condition) {
                     FactureEcheance::create([
@@ -267,6 +279,8 @@ class FactureController extends Controller
             'notes' => 'nullable|string',
             // Échéance de cette facture uniquement.
             'echeance_id' => ['nullable', Rule::exists('facture_echeances', 'id')->where('facture_id', $id)],
+            // Escompte pour paiement rapide (condition de paiement) : le paiement règle alors tout le reste.
+            'escompte' => 'sometimes|boolean',
         ]);
 
         try {
@@ -282,12 +296,26 @@ class FactureController extends Controller
                 if ($validated['montant'] > $facture->reste_a_payer) {
                     throw new \DomainException('Le montant dépasse le reste à payer');
                 }
+                $escompte = 0.0;
+                if ($validated['escompte'] ?? false) {
+                    $propose = $this->conditions->escompte($facture, Carbon::parse($validated['date_paiement'])->toDateString());
+                    if (! $propose || ! $propose['applicable']) {
+                        throw new \DomainException($propose
+                            ? 'Escompte impossible : le paiement doit être fait au plus tard le '.Carbon::parse($propose['date_limite'])->format('d/m/Y').'.'
+                            : 'Aucun escompte possible sur cette facture.');
+                    }
+                    if (abs((float) $validated['montant'] - $propose['a_payer']) > 0.01) {
+                        throw new \DomainException('Avec l\'escompte, le paiement règle tout le reste : '.number_format($propose['a_payer'], 2, ',', ' ').'.');
+                    }
+                    $escompte = $propose['escompte'];
+                }
 
                 FacturePaiement::create([
                     'facture_id' => $facture->id,
                     'echeance_id' => $validated['echeance_id'] ?? null,
                     'date_paiement' => $validated['date_paiement'],
                     'montant' => $validated['montant'],
+                    'escompte' => $escompte,
                     'mode_paiement' => $validated['mode_paiement'],
                     'reference' => $validated['reference'] ?? null,
                     'notes' => $validated['notes'] ?? null,
@@ -304,6 +332,14 @@ class FactureController extends Controller
         }
 
         return response()->json($facture->fresh(['paiements']));
+    }
+
+    /** Escompte possible pour un paiement de la facture à une date (aujourd'hui par défaut). */
+    public function escompte(Request $request, int $id): JsonResponse
+    {
+        $date = Carbon::parse($request->validate(['date' => 'nullable|date'])['date'] ?? today())->toDateString();
+
+        return response()->json($this->conditions->escompte(Facture::findOrFail($id), $date) ?? ['applicable' => false]);
     }
 
     public function creerBonLivraison(Request $request, int $id): JsonResponse

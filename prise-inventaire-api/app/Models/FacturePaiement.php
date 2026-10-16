@@ -13,13 +13,14 @@ class FacturePaiement extends Model
     protected $table = 'facture_paiements';
 
     protected $fillable = [
-        'facture_id', 'echeance_id', 'acompte_id', 'date_paiement', 'montant',
+        'facture_id', 'echeance_id', 'acompte_id', 'date_paiement', 'montant', 'escompte',
         'mode_paiement', 'reference', 'notes', 'enregistre_par',
     ];
 
     protected $casts = [
         'date_paiement' => 'date',
         'montant' => 'decimal:2',
+        'escompte' => 'decimal:2',
     ];
 
     public function facture(): BelongsTo

@@ -36,7 +36,7 @@ class ComptesClients
     private const MODES = ['especes' => 'espèces', 'cheque' => 'chèque', 'virement' => 'virement', 'carte' => 'carte', 'autre' => 'autre'];
 
     /** Mouvements d'un même jour : la facture, puis ce qui la crédite, la règle ou rembourse le client. */
-    private const ORDRE = ['facture' => 0, 'avoir' => 1, 'acompte' => 2, 'paiement' => 3, 'remboursement' => 4];
+    private const ORDRE = ['facture' => 0, 'avoir' => 1, 'acompte' => 2, 'paiement' => 3, 'escompte' => 4, 'remboursement' => 5];
 
     /**
      * Sommes dues par client à une date, réparties par ancienneté du retard ; crédits encore disponibles des notes
@@ -88,7 +88,7 @@ class ComptesClients
             ->whereDate('date_facture', '<=', $au)->get(['id', 'numero', 'date_facture', 'date_echeance', 'montant_ttc']);
         // Les paiements faits avec un acompte ne sont pas de nouveaux mouvements : l'acompte est déjà au crédit.
         $paiements = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereNull('acompte_id')->whereDate('date_paiement', '<=', $au)
-            ->get(['facture_id', 'date_paiement', 'montant', 'mode_paiement', 'reference']);
+            ->get(['facture_id', 'date_paiement', 'montant', 'escompte', 'mode_paiement', 'reference']);
         $avoirs = Avoir::with('facture:id,numero')->where('client_id', $client->id)->whereIn('statut', Avoir::EMISES)
             ->whereDate('date_avoir', '<=', $au)->get(['id', 'numero', 'facture_id', 'date_avoir', 'montant_ttc']);
         $remboursements = AvoirRemboursement::whereIn('avoir_id', $avoirs->pluck('id'))->whereDate('date_remboursement', '<=', $au)
@@ -108,6 +108,9 @@ class ComptesClients
                 'libelle' => trim('Paiement '.$this->mode($p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant, 2)]))
             ->concat($remboursements->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $numerosAvoirs[$r->avoir_id] ?? null,
                 'libelle' => trim('Remboursement '.$this->mode($r->mode).($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant, 2), 'credit' => 0.0]))
+            // Escompte accordé avec un paiement : au crédit, comme le paiement qui l'accompagne.
+            ->concat($paiements->filter(fn ($p) => (float) $p->escompte > 0)->map(fn ($p) => ['date' => $p->date_paiement->toDateString(), 'type' => 'escompte', 'piece' => $numeros[$p->facture_id] ?? null,
+                'libelle' => 'Escompte', 'debit' => 0.0, 'credit' => round((float) $p->escompte, 2)])->values())
             ->concat($acomptes->map(fn ($a) => ['date' => $a->date_acompte->toDateString(), 'type' => 'acompte', 'piece' => $a->reference,
                 'libelle' => trim('Acompte '.$this->mode($a->mode)), 'debit' => 0.0, 'credit' => round((float) $a->montant, 2)]))
             ->concat($remboursementsAcomptes->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $r->reference,
@@ -156,8 +159,9 @@ class ComptesClients
             ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
             ->orderBy('date_facture')->orderBy('id')
             ->get(['id', 'numero', 'client_id', 'date_facture', 'date_echeance', 'montant_ttc']);
+        // Paiements et escomptes accordés avec eux.
         $payes = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereDate('date_paiement', '<=', $date)
-            ->groupBy('facture_id')->selectRaw('facture_id, SUM(montant) AS total')->pluck('total', 'facture_id');
+            ->groupBy('facture_id')->selectRaw('facture_id, SUM(montant + escompte) AS total')->pluck('total', 'facture_id');
         $credites = AvoirImputation::whereIn('facture_id', $factures->pluck('id'))->whereDate('date_imputation', '<=', $date)
             ->groupBy('facture_id')->selectRaw('facture_id, SUM(montant) AS total')->pluck('total', 'facture_id');
         $jour = Carbon::parse($date)->startOfDay();

@@ -604,7 +604,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Catégories | Classement hiérarchique des produits | Parent de la même entreprise, pas de boucle, nom unique entre catégories sœurs. Une catégorie qui a des sous-catégories ne peut pas être supprimée |
 | Fabricants | Fabricants et marques | Nom et code uniques |
 | Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
-| Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé | Une seule condition « par défaut » |
+| Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé ; choisies sur les clients et les factures (échéance, escompte : FLOW-VENTES §5.10) | Une seule condition « par défaut » |
 | Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
 | Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé |
 | Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |

@@ -1120,6 +1120,8 @@ export interface Client {
   encours_max?: number;
   encours_actuel: number;
   taux_remise_global: number;
+  /** Condition de paiement (référentiel), reprise par les factures du client. */
+  condition_paiement_id?: number | null;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
   categorie_id?: number | null;
@@ -1191,6 +1193,10 @@ export interface Facture {
   montant_paye: number;
   /** Crédits des notes de crédit imputés sur la facture. */
   montant_credite?: number | string;
+  /** Escomptes pour paiement rapide accordés à ses paiements. */
+  montant_escompte?: number | string;
+  condition_paiement_id?: number | null;
+  condition_paiement?: { id: number; libelle: string; escompte_pourcentage: string | null; escompte_jours: number | null } | null;
   reste_a_payer: number;
   lignes?: FactureLigne[];
   echeances?: FactureEcheance[];
@@ -1560,8 +1566,25 @@ export async function enregistrerPaiement(id: number, data: {
   date_paiement: string;
   mode_paiement: string;
   reference?: string;
+  /** Escompte pour paiement rapide : le paiement règle alors tout le reste. */
+  escompte?: boolean;
 }): Promise<Facture> {
   return fetchApi(`/factures/${id}/paiement`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+/** Escompte pour paiement rapide possible pour un paiement de la facture à une date. */
+export interface PropositionEscompte {
+  applicable: boolean;
+  condition?: string;
+  pourcentage?: number;
+  jours?: number;
+  date_limite?: string;
+  escompte?: number;
+  a_payer?: number;
+}
+
+export async function getEscompteFacture(id: number, date: string): Promise<PropositionEscompte> {
+  return fetchApi(`/factures/${id}/escompte?date=${encodeURIComponent(date)}`);
 }
 
 export async function creerBonLivraison(factureId: number): Promise<BonLivraison> {
@@ -1571,6 +1594,7 @@ export async function creerBonLivraison(factureId: number): Promise<BonLivraison
 export async function createFacture(data: {
   client_id: number;
   date_facture: string;
+  condition_paiement_id?: number | null;
   date_echeance?: string;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];

@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,8 @@ class ClientController extends Controller
             'contact_telephone' => 'nullable|string|max:20',
             'encours_max' => 'nullable|numeric|min:0',
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
+            // Condition de paiement du référentiel : reprise par les factures du client.
+            'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
@@ -106,6 +109,7 @@ class ClientController extends Controller
             'contact_telephone' => 'nullable|string|max:20',
             'encours_max' => 'nullable|numeric|min:0',
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
+            'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             'actif' => 'sometimes|boolean',
         ]);
 
