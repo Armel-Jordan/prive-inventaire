@@ -447,7 +447,9 @@ class ReferentielsTest extends TestCase
     public function test_migration_des_permissions_avec_des_roles_existants(): void
     {
         foreach (['admin', 'manager', 'user'] as $nom) {
-            DB::table('roles_custom')->insertOrIgnore(['nom' => $nom, 'is_system' => true, 'created_at' => now(), 'updated_at' => now()]);
+            if (! DB::table('roles_custom')->whereNull('tenant_id')->where('nom', $nom)->exists()) {
+                DB::table('roles_custom')->insert(['nom' => $nom, 'is_system' => true, 'created_at' => now(), 'updated_at' => now()]);
+            }
         }
         $migration = require database_path('migrations/2026_10_15_100002_add_referentiels_permissions.php');
 

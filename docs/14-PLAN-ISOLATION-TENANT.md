@@ -138,6 +138,29 @@ Appliquer `BelongsToTenant` (fail-closed) à `AdminUser` **casse toute l'authent
 - ⏸ Lot 2b (5 modèles couplés `/mobile`) : reporté en Livraison 2 (auth mobile réelle).
 - ⏸ AdminUser : scoping explicite + C6 (pas de trait).
 
+### Chantier C7 — fait (2026-10-16)
+
+**Arbitrage :**
+- Le web lit les permissions **par module** (`/permissions/me`, menus, écran « Rôles »), c'est-à-dire le schéma `000016`. Le schéma `000012` (`role`/`permission`) n'était utilisé que par `CheckPermission`, branché sur aucune route, et par `RoleController`.
+- La migration `2026_10_16_100019_isoler_roles_par_entreprise` :
+  - renomme l'ancienne table en `role_permissions_anciennes`, toujours lue par `CheckPermission`/`RoleController` via `App\Support\PermissionsAnciennes` ;
+  - crée la table par module ;
+  - recrée les 4 rôles système avec leur matrice, sans toucher aux lignes existantes ;
+  - rend le nom de rôle unique par entreprise.
+- Sur une base créée dans l'ordre, un manager ou un utilisateur voyait jusque-là un menu vide. Sur MySQL, `/permissions/me` répondait 500.
+
+**`RolePermissionController` :**
+- Chaque entreprise voit les rôles système et les siens.
+- Elle ne crée, modifie ou supprime que ses propres rôles personnalisés : 403 sur un rôle système, 404 sur le rôle d'une autre entreprise.
+- Les noms des rôles système sont réservés.
+- Les anciens rôles personnalisés sans entreprise restent masqués.
+
+**Faille trouvée pendant la campagne de tests du 2026-10-16 :**
+- `POST/PUT/DELETE /employes` n'avaient aucune garde de rôle. N'importe quel compte pouvait se donner le rôle admin ou retirer l'accès de l'administrateur.
+- Les écritures sont désormais réservées aux rôles admin et manager.
+- Un manager n'attribue que le rôle `user` et ne touche pas aux comptes admin ou manager (rôle, mot de passe, adresse).
+- Le dernier administrateur actif garde son accès, y compris via `PUT /users/{id}`.
+
 ---
 
 *Plan consolidé à partir de : spec architecte + revue adversariale sécurité (8 failles) + revue adversariale régressions (5 régressions, 3 affirmations corrigées). Détail brut disponible dans le transcript du workflow `design-global-scope-tenant`.*

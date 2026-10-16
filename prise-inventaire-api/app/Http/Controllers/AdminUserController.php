@@ -59,6 +59,12 @@ class AdminUserController extends Controller
             'actif' => 'sometimes|boolean',
         ]);
 
+        $retrograde = isset($validated['role']) && $validated['role'] !== 'admin';
+        $desactive = array_key_exists('actif', $validated) && ! $validated['actif'];
+        if (($retrograde || $desactive) && $userToUpdate->estDernierAdministrateur()) {
+            return response()->json(['message' => "L'entreprise doit garder au moins un administrateur actif."], 422);
+        }
+
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
