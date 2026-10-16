@@ -14,7 +14,7 @@ const classeChamp = 'w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:
 export default function ActivationPortail() {
   const { t } = useLanguage();
   const tp = t.portal;
-  const { slug, base, infos, connecter } = usePortail();
+  const { slug, infos, connecter } = usePortail();
   const navigate = useNavigate();
   const [parametres] = useSearchParams();
   const jeton = parametres.get('jeton') ?? '';
@@ -36,8 +36,8 @@ export default function ActivationPortail() {
         methode: 'POST',
         corps: { jeton, ...form },
       });
-      connecter({ token: reponse.token, compte: reponse.compte });
-      navigate(base, { replace: true });
+      connecter({ slug, token: reponse.token, compte: reponse.compte });
+      navigate('/', { replace: true });
     } catch (err) {
       // 422 sans détail de champ : lien expiré, déjà utilisé ou remplacé par un plus récent.
       if (err instanceof ApiError && err.status === 422 && !(err.data as { errors?: unknown } | null)?.errors) setLienInvalide(true);
@@ -51,8 +51,8 @@ export default function ActivationPortail() {
       {lienInvalide ? (
         <div className="space-y-4">
           <Message type="erreur">{tp.invalidLink}</Message>
-          <Link to={`${base}/connexion?oubli=1`} className="block w-full py-2.5 text-center bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">{tp.requestNewLink}</Link>
-          <Link to={`${base}/connexion`} className="block text-center text-sm text-blue-600 hover:underline">{tp.backToLogin}</Link>
+          <Link to={`/connexion?entreprise=${slug}&oubli=1`} className="block w-full py-2.5 text-center bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">{tp.requestNewLink}</Link>
+          <Link to={`/connexion?entreprise=${slug}`} className="block text-center text-sm text-blue-600 hover:underline">{tp.backToLogin}</Link>
         </div>
       ) : (
         <form onSubmit={activer} className="space-y-4">

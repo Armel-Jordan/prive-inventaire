@@ -15,9 +15,10 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Portail client, côté entreprise : ouverture et réglages du portail, accès des clients (invitation par
- * courriel, lien à transmettre si le courriel ne part pas, suspension, suppression). Lecture pour le module
- * Ventes ; modifications par les administrateurs et responsables (routes).
+ * Espace client, côté entreprise : ouverture et réglages, accès des clients (invitation par courriel, lien à
+ * transmettre si le courriel ne part pas, suspension, suppression). Le back-office transmet l'adresse du site de
+ * l'espace client (« origine »), retenue pour les liens des courriels. Lecture pour le module Ventes ;
+ * modifications par les administrateurs et responsables (routes).
  */
 class PortailClientController extends Controller
 {
@@ -46,6 +47,7 @@ class PortailClientController extends Controller
             'message_accueil' => ['nullable', 'string', 'max:2000'],
             'categories' => ['nullable', 'array', 'max:500'],
             'categories.*' => ['string', 'max:100'],
+            'origine' => ['nullable', 'string', 'max:255'],
         ]);
         $parametres = PortailParametres::courants();
         $parametres->fill([
@@ -53,6 +55,7 @@ class PortailClientController extends Controller
             'message_accueil' => trim((string) ($donnees['message_accueil'] ?? '')) ?: null,
             // Aucune catégorie choisie : tous les produits actifs.
             'categories' => array_values(array_unique($donnees['categories'] ?? [])) ?: null,
+            'url_espace_client' => AccesPortail::normaliserAdresse($donnees['origine'] ?? null) ?? $parametres->url_espace_client,
         ])->save();
 
         return response()->json(['message' => $parametres->actif ? 'Portail ouvert.' : 'Portail fermé.']);
@@ -119,7 +122,8 @@ class PortailClientController extends Controller
     private function inviter(Request $request, PortailCompte $compte, array $donnees): array
     {
         $tenant = $request->attributes->get('tenant');
-        $lien = $this->acces->lien($tenant, $this->acces->nouvelleInvitation($compte), $donnees['origine'] ?? null);
+        $this->acces->memoriserAdresse($donnees['origine'] ?? null);
+        $lien = $this->acces->lien($tenant, $this->acces->nouvelleInvitation($compte));
         $envoye = $this->acces->envoyer($compte, $tenant, $lien, $donnees['langue'] ?? 'fr', $compte->estActive());
 
         return [

@@ -12,7 +12,7 @@ import { montant, remplir } from '../format';
 export default function CataloguePortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
-  const { base, appel, moi, panier, ajouterAuPanier } = usePortail();
+  const { appel, moi, panier, ajouterAuPanier } = usePortail();
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
   const [categorie, setCategorie] = useState('');
@@ -130,7 +130,7 @@ export default function CataloguePortail() {
         <div className="fixed bottom-0 inset-x-0 z-20 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
           <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             <span className="text-sm text-gray-700">{remplir(tp.cartBar, { n: panier.length })}</span>
-            <Link to={`${base}/panier`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <Link to="/panier" className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
               <ShoppingCart size={16} /> {tp.viewCart}
             </Link>
           </div>

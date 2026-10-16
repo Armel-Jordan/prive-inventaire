@@ -6,6 +6,7 @@ use App\Mail\InvitationPortail;
 use App\Models\CourrielParametres;
 use App\Models\PortailCompte;
 use App\Models\PortailJeton;
+use App\Models\PortailParametres;
 use App\Models\Tenant;
 use App\Models\TenantParametres;
 use App\Services\Courriels\MailerTenant;
@@ -62,10 +63,45 @@ class AccesPortail
             ->first();
     }
 
-    /** Adresse du lien d'invitation, sur le site de l'entreprise. */
-    public function lien(Tenant $tenant, string $jeton, ?string $origine): string
+    /** Lien d'invitation ou de nouveau mot de passe, sur le site de l'espace client. */
+    public function lien(Tenant $tenant, string $jeton): string
     {
-        return $this->urlFront($origine).'/portail/'.$tenant->slug.'/activation?jeton='.$jeton;
+        return $this->urlEspaceClient().'/activation?'.http_build_query(['entreprise' => $tenant->slug, 'jeton' => $jeton]);
+    }
+
+    /**
+     * Adresse du site de l'espace client : ESPACE_CLIENT_URL, sinon celle que le back-office de l'entreprise a
+     * transmise (réglages, invitations), sinon FRONTEND_URL, puis APP_URL. Une adresse envoyée par un visiteur
+     * anonyme (mot de passe oublié) n'est jamais reprise : elle permettrait d'envoyer un lien piégé vers un
+     * autre site.
+     */
+    public function urlEspaceClient(): string
+    {
+        $adresse = config('portail.url') ?: PortailParametres::courants()->url_espace_client ?: config('comptes.url_front') ?: config('app.url');
+
+        return rtrim((string) $adresse, '/');
+    }
+
+    /** Retient l'adresse du site de l'espace client transmise par le back-office (utilisateur connecté). */
+    public function memoriserAdresse(?string $adresse): void
+    {
+        $adresse = self::normaliserAdresse($adresse);
+        $parametres = PortailParametres::courants();
+        if ($adresse !== null && $parametres->url_espace_client !== $adresse) {
+            $parametres->fill(['url_espace_client' => $adresse])->save();
+        }
+    }
+
+    /** Adresse http(s) sans requête ni ancre, sans / final ; null si elle n'est pas valable. */
+    public static function normaliserAdresse(?string $adresse): ?string
+    {
+        $parties = parse_url(trim((string) $adresse));
+        if (! is_array($parties) || ! in_array($parties['scheme'] ?? null, ['http', 'https'], true) || empty($parties['host'])) {
+            return null;
+        }
+        $normalisee = $parties['scheme'].'://'.$parties['host'].(isset($parties['port']) ? ':'.$parties['port'] : '').rtrim($parties['path'] ?? '', '/');
+
+        return strlen($normalisee) <= 255 ? $normalisee : null;
     }
 
     /**
@@ -91,19 +127,5 @@ class AccesPortail
 
             return false;
         }
-    }
-
-    /**
-     * Adresse du site : l'origine envoyée par le front si elle fait partie des origines CORS autorisées (jamais
-     * « * »), sinon FRONTEND_URL, sinon APP_URL. Une origine arbitraire n'est jamais reprise.
-     */
-    private function urlFront(?string $origine): string
-    {
-        $autorisees = array_map(fn ($o) => rtrim((string) $o, '/'), array_filter((array) config('cors.allowed_origins', []), fn ($o) => $o !== '*'));
-        if ($origine && in_array(rtrim($origine, '/'), $autorisees, true)) {
-            return rtrim($origine, '/');
-        }
-
-        return rtrim((string) (config('comptes.url_front') ?: config('app.url')), '/');
     }
 }

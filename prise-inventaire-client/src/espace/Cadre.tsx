@@ -6,15 +6,15 @@ import { usePortail } from './contexte';
 import { Message } from './composants';
 
 /** Cadre des écrans du client connecté : entreprise, navigation, panier, coordonnées. */
-export default function PortailLayout() {
+export default function Cadre() {
   const { t } = useLanguage();
   const tp = t.portal;
-  const { base, infos, moi, panier, erreurMoi, rechargerMoi, deconnecter } = usePortail();
+  const { infos, moi, panier, erreurMoi, rechargerMoi, deconnecter } = usePortail();
   const onglets = [
-    { vers: base, libelle: tp.nav.catalogue, Icone: Store, fin: true },
-    { vers: `${base}/commandes`, libelle: tp.nav.orders, Icone: ClipboardList, fin: false },
-    { vers: `${base}/factures`, libelle: tp.nav.invoices, Icone: FileText, fin: false },
-    { vers: `${base}/profil`, libelle: tp.nav.profile, Icone: UserRound, fin: false },
+    { vers: '/', libelle: tp.nav.catalogue, Icone: Store, fin: true },
+    { vers: '/commandes', libelle: tp.nav.orders, Icone: ClipboardList, fin: false },
+    { vers: '/factures', libelle: tp.nav.invoices, Icone: FileText, fin: false },
+    { vers: '/profil', libelle: tp.nav.profile, Icone: UserRound, fin: false },
   ];
   const articles = panier.length;
   const classeOnglet = ({ isActive }: { isActive: boolean }) =>
@@ -24,7 +24,7 @@ export default function PortailLayout() {
     <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link to={base} className="flex items-center gap-2 min-w-0">
+          <Link to="/" className="flex items-center gap-2 min-w-0">
             {infos.logo_url
               ? <img src={infos.logo_url} alt="" className="h-8 w-8 object-contain shrink-0" />
               : <Store className="text-blue-600 shrink-0" size={24} />}
@@ -38,7 +38,7 @@ export default function PortailLayout() {
           <div className="ml-auto flex items-center gap-1">
             {moi && <span className="hidden lg:block text-sm text-gray-500 mr-2 truncate max-w-56">{moi.client.raison_sociale}</span>}
             <LanguageSelector />
-            <NavLink to={`${base}/panier`} className={({ isActive }) => `relative p-2 rounded-lg ${isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+            <NavLink to="/panier" className={({ isActive }) => `relative p-2 rounded-lg ${isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
               aria-label={`${tp.nav.cart} (${articles})`} title={tp.nav.cart}>
               <ShoppingCart size={20} />
               {articles > 0 && (

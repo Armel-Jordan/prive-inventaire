@@ -12,7 +12,7 @@ import { jour, montant, remplir } from '../format';
 export default function CommandesPortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
-  const { base, appel, moi } = usePortail();
+  const { appel, moi } = usePortail();
   const [page, setPage] = useState(1);
   const charger = useCallback(() => appel<Page<CommandeResume>>(`/espace-client/commandes?page=${page}`), [appel, page]);
   const { donnees, erreur, chargement } = useDonnees(charger);
@@ -28,14 +28,14 @@ export default function CommandesPortail() {
         <div className="text-center py-16 text-gray-500">
           <ClipboardList size={40} className="mx-auto mb-3 text-gray-300" />
           <p>{tp.noOrders}</p>
-          <Link to={base} className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">{tp.browseCatalogue}</Link>
+          <Link to="/" className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">{tp.browseCatalogue}</Link>
         </div>
       ) : (
         <>
           <ul className={`bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 ${chargement ? 'opacity-60' : ''}`}>
             {donnees.data.map(commande => (
               <li key={commande.id}>
-                <Link to={`${base}/commandes/${commande.id}`} className="flex items-center gap-3 p-4 hover:bg-gray-50">
+                <Link to={`/commandes/${commande.id}`} className="flex items-center gap-3 p-4 hover:bg-gray-50">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium flex items-center gap-1.5">
                       {commande.numero}

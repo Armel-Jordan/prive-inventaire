@@ -14,7 +14,7 @@ const classeChamp = 'w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:
 export default function ConnexionPortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
-  const { slug, infos, avis, connecter } = usePortail();
+  const { slug, infos, avis, connecter, changerEntreprise } = usePortail();
   const [parametres] = useSearchParams();
   const [oubli, setOubli] = useState(parametres.has('oubli'));
   const [email, setEmail] = useState('');
@@ -39,7 +39,7 @@ export default function ConnexionPortail() {
         methode: 'POST',
         corps: { email: email.trim(), password: motDePasse },
       });
-      connecter({ token: reponse.token, compte: reponse.compte });
+      connecter({ slug, token: reponse.token, compte: reponse.compte });
     } catch (err) {
       setErreur(erreurConnexion(err));
       setOccupe(false);
@@ -53,7 +53,7 @@ export default function ConnexionPortail() {
     try {
       await appelPortail(`/portail/${slug}/mot-de-passe-oublie`, {
         methode: 'POST',
-        corps: { email: email.trim(), origine: window.location.origin, langue: language },
+        corps: { email: email.trim(), langue: language },
       });
       setEnvoye(true);
     } catch (err) {
@@ -111,6 +111,7 @@ export default function ConnexionPortail() {
           </form>
           <button type="button" onClick={() => changerMode(true)} className="block mx-auto text-sm text-blue-600 hover:underline">{tp.forgotPassword}</button>
           <p className="text-xs text-center text-gray-500">{remplir(tp.noAccount, { entreprise: infos.entreprise })}</p>
+          <button type="button" onClick={changerEntreprise} className="block mx-auto text-xs text-gray-500 hover:text-gray-800 hover:underline">{tp.changeCompany}</button>
         </div>
       )}
     </CadrePublic>

@@ -1,8 +1,8 @@
 import { API_BASE_URL, ApiError, NetworkError } from '@/services/http';
 
 /**
- * Appels du portail client. La session est propre au portail (un jeton par entreprise, gardé sous sa propre
- * clé) : aucun en-tête du back-office (jeton d'employé, code d'entreprise) n'est envoyé d'ici.
+ * Appels de l'espace client à l'API. La session est propre à l'espace client (jeton du client, sans rapport
+ * avec les comptes des employés) et désigne l'entreprise ; le panier est gardé par accès.
  */
 
 export interface InfosPortail {
@@ -22,6 +22,8 @@ export interface ComptePortail {
 }
 
 export interface SessionPortail {
+  /** Code de l'entreprise. */
+  slug: string;
   token: string;
   compte: ComptePortail;
 }
@@ -135,9 +137,10 @@ export interface FacturePortail {
   commande_id: number | null;
 }
 
-// --- Session et panier, gardés dans le navigateur, par entreprise -------------------------------------------
-const cleSession = (slug: string) => `portail_session_${slug}`;
-const clePanier = (slug: string, compte: number) => `portail_panier_${slug}_${compte}`;
+// --- Session, dernière entreprise et panier, gardés dans le navigateur -----------------------------------
+const CLE_SESSION = 'espace_client_session';
+const CLE_ENTREPRISE = 'espace_client_entreprise';
+const clePanier = (slug: string, compte: number) => `espace_client_panier_${slug}_${compte}`;
 
 function lire<T>(cle: string): T | null {
   try {
@@ -157,12 +160,20 @@ function ecrire(cle: string, valeur: unknown): void {
   }
 }
 
-export function lireSession(slug: string): SessionPortail | null {
-  const session = lire<SessionPortail>(cleSession(slug));
-  return session?.token && session.compte ? session : null;
+export function lireSession(): SessionPortail | null {
+  const session = lire<SessionPortail>(CLE_SESSION);
+  return session?.token && session.compte && session.slug ? session : null;
 }
 
-export const ecrireSession = (slug: string, session: SessionPortail | null) => ecrire(cleSession(slug), session);
+export const ecrireSession = (session: SessionPortail | null) => ecrire(CLE_SESSION, session);
+
+/** Code de la dernière entreprise ouverte : le client retrouve sa page de connexion sans ressaisir le code. */
+export function lireDerniereEntreprise(): string | null {
+  const code = lire<string>(CLE_ENTREPRISE);
+  return typeof code === 'string' && code !== '' ? code : null;
+}
+
+export const ecrireDerniereEntreprise = (code: string | null) => ecrire(CLE_ENTREPRISE, code);
 
 export interface ArticlePanier extends LignePanier {
   numero: string;

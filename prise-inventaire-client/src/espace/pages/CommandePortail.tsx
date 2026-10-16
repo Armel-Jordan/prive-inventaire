@@ -15,7 +15,7 @@ export default function CommandePortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
   const { id } = useParams();
-  const { base, infos, appel, moi, ajouterAuPanier } = usePortail();
+  const { infos, appel, moi, ajouterAuPanier } = usePortail();
   const navigate = useNavigate();
   const nouvelle = (useLocation().state as { nouvelle?: string } | null)?.nouvelle;
   const charger = useCallback(() => appel<DetailCommande>(`/espace-client/commandes/${id}`), [appel, id]);
@@ -48,7 +48,7 @@ export default function CommandePortail() {
   }
 
   const retour = (
-    <Link to={`${base}/commandes`} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"><ArrowLeft size={16} /> {tp.backToOrders}</Link>
+    <Link to="/commandes" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"><ArrowLeft size={16} /> {tp.backToOrders}</Link>
   );
   if (!donnees) {
     return erreur !== undefined
@@ -64,7 +64,7 @@ export default function CommandePortail() {
         ajouterAuPanier({ produit_id: ligne.produit_id, numero: ligne.produit.numero, description: ligne.produit.description, mesure: ligne.produit.mesure, prix: null }, ligne.quantite);
       }
     });
-    navigate(`${base}/panier`);
+    navigate('/panier');
   };
 
   return (

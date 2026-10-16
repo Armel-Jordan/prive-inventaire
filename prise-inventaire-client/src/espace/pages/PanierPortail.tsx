@@ -17,7 +17,7 @@ const classeChamp = 'w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg bg-
 export default function PanierPortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
-  const { base, infos, appel, moi, panier, changerQuantite, retirerDuPanier, viderPanier } = usePortail();
+  const { infos, appel, moi, panier, changerQuantite, retirerDuPanier, viderPanier } = usePortail();
   const navigate = useNavigate();
   const lignes = useMemo(() => panier.map(({ produit_id, quantite }) => ({ produit_id, quantite })), [panier]);
   const cle = JSON.stringify(lignes);
@@ -78,7 +78,7 @@ export default function PanierPortail() {
         },
       });
       viderPanier();
-      navigate(`${base}/commandes/${commande.id}`, { state: { nouvelle: commande.numero } });
+      navigate(`/commandes/${commande.id}`, { state: { nouvelle: commande.numero } });
     } catch (e) {
       setErreur(messageErreur(e, tp.error));
       setEnvoi(false);
@@ -92,7 +92,7 @@ export default function PanierPortail() {
       <div className="text-center py-16">
         <ShoppingCart size={40} className="mx-auto mb-3 text-gray-300" />
         <p className="text-gray-600">{tp.emptyCart}</p>
-        <Link to={base} className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">{tp.browseCatalogue}</Link>
+        <Link to="/" className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">{tp.browseCatalogue}</Link>
       </div>
     );
   }
