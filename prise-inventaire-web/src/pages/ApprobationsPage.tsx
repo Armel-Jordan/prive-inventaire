@@ -107,8 +107,8 @@ export default function ApprobationsPage() {
         {
           method: 'POST',
           responseType: 'void',
+          // L'approbateur est le compte connecté, fixé par l'API.
           body: JSON.stringify({
-            approbateur: 'Admin Web',
             commentaire: commentaire || null,
           }),
         }

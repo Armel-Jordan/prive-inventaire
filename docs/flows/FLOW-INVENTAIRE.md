@@ -190,9 +190,29 @@ Le système d'**approbations** est un workflow de validation pour les mouvements
 
 ### 4.2 Paramétrage des seuils
 
-Les seuils sont configurables par tenant :
-- `seuil_quantite` : quantité à partir de laquelle une approbation est requise
-- `seuil_valeur` : valeur monétaire à partir de laquelle une approbation est requise
+Les seuils se règlent par entreprise et par type de mouvement (arrivage, transfert, sortie) dans
+**Approbations › Paramètres** :
+- `seuil_quantite` : quantité à partir de laquelle une approbation est requise ;
+- `actif` : le seuil ne s'applique que s'il est actif.
+
+Les seuils proposés à la première ouverture (100, 50, 50) sont **inactifs** : l'entreprise choisit de les
+activer. Un ajustement n'est jamais soumis à approbation.
+
+**Où les seuils s'appliquent :** à tout mouvement enregistré, depuis l'écran Relocalisation (mouvement simple
+ou lot) comme depuis l'application mobile (`POST /relocalisation`, `/relocalisation/par-secteur`,
+`/relocalisation/arrivage-lot`, `/mobile/relocalisation`).
+- Une quantité qui atteint le seuil de son type devient une demande d'approbation, et le mouvement n'est créé
+  qu'à l'approbation.
+- Un mouvement simple répond alors **202**, avec `requires_approval: true` et un message.
+- Un lot enregistre les autres lignes et liste celles mises en attente.
+- Les seuils n'étaient appliqués auparavant que par `POST /approbations`, que ni l'écran ni l'application
+  n'appellent : un transfert de 5 000 unités passait sans approbation.
+
+**Auteurs :**
+- l'auteur d'un mouvement saisi sur le web est l'utilisateur connecté ; c'était « Admin Web » pour tout le
+  monde ;
+- l'approbateur est toujours le compte connecté qui décide. Le nom envoyé par l'écran était libre, donc
+  usurpable ; il est désormais ignoré.
 
 Endpoint de configuration :
 ```
