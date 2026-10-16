@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\TenantParametres;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -33,6 +34,8 @@ class PortailClientTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
+        // Limites de débit : en cache fichier (CI), les compteurs survivraient d'un test à l'autre.
+        Cache::flush();
         $this->tenant = Tenant::factory()->create(['slug' => 'quincaillerie', 'modules' => ['ventes']]);
         $this->admin = AdminUser::factory()->for($this->tenant)->create(['role' => 'admin']);
         $this->employe();
@@ -51,12 +54,17 @@ class PortailClientTest extends TestCase
         $this->withHeader('X-Tenant-Slug', $this->tenant->slug);
     }
 
+    /** Adresse du site de l'espace client, transmise par le back-office. */
+    private const ESPACE_CLIENT = 'http://143.110.210.158:8081';
+
     /** Ouvre le portail et crée un accès ; renvoie le jeton du lien d'invitation. */
     private function inviter(string $email = 'achats@littoral.test'): string
     {
-        $this->putJson('/api/portail-clients/parametres', ['actif' => true, 'message_accueil' => 'Bienvenue !'])->assertOk();
-        $lien = $this->postJson('/api/portail-clients/comptes', ['client_id' => $this->client, 'nom' => 'Awa Mbappé', 'email' => $email])
+        $this->putJson('/api/portail-clients/parametres', ['actif' => true, 'message_accueil' => 'Bienvenue !', 'origine' => self::ESPACE_CLIENT])->assertOk();
+        $lien = $this->postJson('/api/portail-clients/comptes', ['client_id' => $this->client, 'nom' => 'Awa Mbappé', 'email' => $email, 'origine' => self::ESPACE_CLIENT])
             ->assertCreated()->json('lien');
+        // Le lien mène au site de l'espace client, avec le code de l'entreprise.
+        $this->assertStringStartsWith(self::ESPACE_CLIENT.'/activation?entreprise=quincaillerie&jeton=', $lien);
         parse_str((string) parse_url($lien, PHP_URL_QUERY), $parametres);
 
         return $parametres['jeton'];
@@ -144,6 +152,27 @@ class PortailClientTest extends TestCase
         $compte = $this->getJson('/api/portail-clients')->json('comptes.0.id');
         $this->putJson("/api/portail-clients/comptes/{$compte}", ['nom' => 'Awa Mbappé', 'email' => 'achats@littoral.test', 'actif' => false])->assertOk()->assertJsonPath('etat', 'suspendu');
         $this->portail('GET', '/api/espace-client/moi', $jeton)->assertUnauthorized();
+    }
+
+    public function test_liens_vers_le_site_de_l_espace_client(): void
+    {
+        $this->inviter();
+        $this->withoutDefer();
+
+        // Une adresse invalide envoyée par le back-office ne remplace pas l'adresse retenue.
+        $this->putJson('/api/portail-clients/parametres', ['actif' => true, 'origine' => 'javascript:alert(1)'])->assertOk();
+        // Mot de passe oublié : l'adresse envoyée par un visiteur anonyme n'est jamais reprise.
+        $this->postJson('/api/portail/quincaillerie/mot-de-passe-oublie', ['email' => 'achats@littoral.test', 'origine' => 'https://piege.test'])->assertOk();
+        // Deux courriels (invitation, puis lien redemandé) : tous deux vers l'adresse retenue.
+        $liens = Mail::sent(InvitationPortail::class)->map(fn (InvitationPortail $m) => $m->lien);
+        $this->assertCount(2, $liens);
+        $liens->each(fn (string $lien) => $this->assertStringStartsWith(self::ESPACE_CLIENT.'/activation?entreprise=quincaillerie&jeton=', $lien));
+
+        // ESPACE_CLIENT_URL l'emporte (site de l'espace client sur son propre domaine).
+        config(['portail.url' => 'https://clients.exemple.com/']);
+        $compte = $this->getJson('/api/portail-clients')->json('comptes.0.id');
+        $this->postJson("/api/portail-clients/comptes/{$compte}/invitation", ['origine' => self::ESPACE_CLIENT])->assertOk()
+            ->assertJsonPath('lien', fn (string $lien) => str_starts_with($lien, 'https://clients.exemple.com/activation?entreprise=quincaillerie&jeton='));
     }
 
     public function test_mot_de_passe_oublie_et_profil(): void

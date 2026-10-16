@@ -9,6 +9,8 @@ Système de gestion d'inventaire complet.
 | `prise-inventaire-api/` | API Laravel |
 | `prise-inventaire-android/` | Application mobile Android |
 | `prise-inventaire-web/` | Application web admin gestion|
+| `prise-inventaire-client/` | Espace client : le site des clients des entreprises (commandes, suivi, factures) |
+| `prise-inventaire-marketing/` | Site marketing |
 
 ## Installation
 

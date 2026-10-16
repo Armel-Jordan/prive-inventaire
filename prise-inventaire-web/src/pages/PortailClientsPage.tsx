@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { getClientsActifs, type Client } from '@/services/api';
 import {
-  creerAccesPortail, enregistrerReglagesPortail, getPortailClients, modifierAccesPortail, renvoyerLienPortail, supprimerAccesPortail,
+  creerAccesPortail, enregistrerReglagesPortail, getPortailClients, modifierAccesPortail, renvoyerLienPortail, supprimerAccesPortail, URL_ESPACE_CLIENT,
   type AccesPortail, type EtatPortailClients, type Langue, type ReglagesPortail, type ResultatInvitation,
 } from '@/services/portailClients';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -33,8 +33,8 @@ function BoutonCopier({ texte, libelle, copie }: { texte: string; libelle: strin
 }
 
 /**
- * Portail client, côté entreprise : ouverture et réglages (message d'accueil, produits proposés), lien à
- * donner aux clients, accès des contacts (invitation, lien renvoyé, suspension, suppression).
+ * Espace client, côté entreprise : ouverture et réglages (message d'accueil, produits proposés), adresse du site
+ * de l'espace client à donner aux clients, accès des contacts (invitation, lien renvoyé, suspension, suppression).
  */
 export default function PortailClientsPage() {
   const { t, language } = useLanguage();
@@ -62,7 +62,8 @@ export default function PortailClientsPage() {
 
   const recharger = () => setVersion(v => v + 1);
   const valeurs = reglages ?? etat?.parametres ?? null;
-  const urlPortail = tenant ? `${window.location.origin}/portail/${tenant.slug}` : '';
+  // Lien de l'entreprise sur le site de l'espace client : il ouvre directement sa page de connexion.
+  const urlPortail = tenant ? `${URL_ESPACE_CLIENT}/${tenant.slug}` : '';
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
   const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 

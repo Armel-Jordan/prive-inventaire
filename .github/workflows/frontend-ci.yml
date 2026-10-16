@@ -6,11 +6,13 @@ on:
     paths:
       - 'prise-inventaire-web/**'
       - 'prise-inventaire-marketing/**'
+      - 'prise-inventaire-client/**'
   pull_request:
     branches: [main, develop]
     paths:
       - 'prise-inventaire-web/**'
       - 'prise-inventaire-marketing/**'
+      - 'prise-inventaire-client/**'
 
 jobs:
   web-ci:
@@ -57,6 +59,32 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: prise-inventaire-marketing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Type check + Build
+        run: npm run build
+
+  client-ci:
+    name: Espace client — Lint + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prise-inventaire-client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: prise-inventaire-client/package-lock.json
 
       - name: Install dependencies
         run: npm ci

@@ -90,7 +90,6 @@ class PortailAuthController extends Controller
     {
         $donnees = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'origine' => ['nullable', 'string', 'max:255'],
             'langue' => ['nullable', Rule::in(['fr', 'en'])],
         ]);
         if (! $tenant = $this->tenantOuvert($slug)) {
@@ -98,7 +97,8 @@ class PortailAuthController extends Controller
         }
         $compte = PortailCompte::where('email', mb_strtolower(trim($donnees['email'])))->where('actif', true)->first();
         if ($compte) {
-            $lien = $this->acces->lien($tenant, $this->acces->nouvelleInvitation($compte), $donnees['origine'] ?? null);
+            // Le lien pointe vers l'adresse connue de l'espace client, jamais vers une adresse envoyée ici.
+            $lien = $this->acces->lien($tenant, $this->acces->nouvelleInvitation($compte));
             // Après la réponse : un temps de réponse plus long ne trahit pas l'existence du compte.
             defer(fn () => $this->acces->envoyer($compte, $tenant, $lien, $donnees['langue'] ?? 'fr', $compte->estActive()));
         }

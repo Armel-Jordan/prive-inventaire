@@ -1,0 +1,96 @@
+name: Espace client CD — Deploy DigitalOcean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prise-inventaire-client/**'
+      - 'deploy/nginx-espace-client.conf'
+      - '.github/workflows/client-cd.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: production-client-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & deploy espace client (droplet, port 8081)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prise-inventaire-client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: prise-inventaire-client/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (mode production -> VITE_API_URL=/api, même origine via nginx)
+        run: npm run build
+
+      - name: Copier le build sur le droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "prise-inventaire-client/dist/*"
+          target: "/var/www/prise-client-tmp"
+          strip_components: 2
+
+      - name: Copier la config nginx sur le droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "deploy/nginx-espace-client.conf"
+          target: "/var/www/prise-client-conf"
+          strip_components: 1
+
+      - name: Publier, installer le site nginx (port 8081) et recharger
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -e
+            rm -rf /var/www/prise-client
+            mv /var/www/prise-client-tmp /var/www/prise-client
+            chown -R www-data:www-data /var/www/prise-client
+
+            # Site nginx de l'espace client, installé ou mis à jour depuis le dépôt. Une config refusée par
+            # « nginx -t » est retirée (ou la précédente remise) : le back-office et le marketing n'en pâtissent pas.
+            CONF=/etc/nginx/sites-available/prise-espace-client
+            NOUVELLE=/var/www/prise-client-conf/nginx-espace-client.conf
+            if ! cmp -s "$NOUVELLE" "$CONF"; then
+              if [ -f "$CONF" ]; then cp "$CONF" "$CONF.precedente"; fi
+              cp "$NOUVELLE" "$CONF"
+              ln -sf "$CONF" /etc/nginx/sites-enabled/prise-espace-client
+              if ! nginx -t; then
+                if [ -f "$CONF.precedente" ]; then mv "$CONF.precedente" "$CONF"; else rm -f /etc/nginx/sites-enabled/prise-espace-client "$CONF"; fi
+                rm -rf /var/www/prise-client-conf
+                echo "❌ Config nginx de l'espace client refusée : site inchangé"
+                exit 1
+              fi
+              rm -f "$CONF.precedente"
+            fi
+            rm -rf /var/www/prise-client-conf
+
+            # Port 8081 ouvert si le pare-feu ufw est actif (un pare-feu DigitalOcean se règle dans le panneau).
+            if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+              ufw allow 8081/tcp
+            fi
+
+            nginx -t && systemctl reload nginx
+            echo "✅ Espace client déployé (port 8081)"

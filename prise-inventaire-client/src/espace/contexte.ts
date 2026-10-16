@@ -1,11 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ArticlePanier, InfosPortail, MoiPortail, OptionsAppel, SessionPortail } from './api';
 
-/** État partagé par les écrans du portail d'une entreprise : session, client connecté, panier. */
+/** État partagé par les écrans de l'espace client d'une entreprise : session, client connecté, panier. */
 export interface EtatPortail {
+  /** Code de l'entreprise. */
   slug: string;
-  /** Adresse de base des écrans : /portail/<code de l'entreprise>. */
-  base: string;
   infos: InfosPortail;
   session: SessionPortail | null;
   moi: MoiPortail | null;
@@ -14,6 +13,8 @@ export interface EtatPortail {
   avis: string;
   connecter: (session: SessionPortail) => void;
   deconnecter: () => Promise<void>;
+  /** Revient à la saisie du code de l'entreprise. */
+  changerEntreprise: () => void;
   /** Requête de l'espace client, avec la session ; une session expirée renvoie à la connexion. */
   appel: <T>(chemin: string, options?: Omit<OptionsAppel, 'jeton'>) => Promise<T>;
   /** Le compte n'a pas pu être chargé (réseau) : l'écran propose de réessayer. */
@@ -30,7 +31,7 @@ export const ContextePortail = createContext<EtatPortail | null>(null);
 
 export function usePortail(): EtatPortail {
   const contexte = useContext(ContextePortail);
-  if (!contexte) throw new Error('usePortail : hors du portail client');
+  if (!contexte) throw new Error("usePortail : hors de l'espace client");
   return contexte;
 }
 

@@ -102,7 +102,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: HandCoins,
     items: [
       { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
-      { path: '/portail-clients', label: t.portalAdmin.nav, icon: Globe, module: 'clients' },
+      { path: '/espace-client', label: t.portalAdmin.nav, icon: Globe, module: 'clients' },
       { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },

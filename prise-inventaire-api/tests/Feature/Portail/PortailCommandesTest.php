@@ -17,6 +17,7 @@ use App\Models\TenantParametres;
 use App\Services\Portail\AccesPortail;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -37,6 +38,8 @@ class PortailCommandesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Limites de débit : en cache fichier (CI), les compteurs survivraient d'un test à l'autre.
+        Cache::flush();
         $this->travelTo('2026-10-16 10:00:00');
         $this->tenant = Tenant::factory()->create(['slug' => 'quincaillerie', 'modules' => ['ventes']]);
         $this->ids = $this->chez(function () {

@@ -74,6 +74,19 @@ Accès : `http://<IP-droplet>:8080`. Avec un domaine, préférer un sous-domaine
 > versions et causait des bugs — a été **retiré** (plus d'enregistrement dans
 > `index.html`, fichier supprimé).
 
+## Espace client (site des clients)
+
+`prise-inventaire-client` (le site où les clients des entreprises commandent et suivent leurs commandes) est servi par le **même nginx sur le port 8081**, avec `/api` transmis à Laravel (même origine, pas de CORS). Détail du fonctionnement : [FLOW-ESPACE-CLIENT.md](flows/FLOW-ESPACE-CLIENT.md).
+
+Déploiement continu : `.github/workflows/client-cd.yml`, déclenché sur push touchant `prise-inventaire-client/**`. Le workflow :
+- construit le site et copie le `dist` dans `/var/www/prise-client` ;
+- installe ou met à jour le site nginx `deploy/nginx-espace-client.conf` (`/etc/nginx/sites-available/prise-espace-client`). Une configuration refusée par `nginx -t` est retirée, sans toucher au back-office ;
+- ouvre le port 8081 si `ufw` est actif.
+
+À faire à la main seulement si un pare-feu DigitalOcean (panneau) filtre les ports : y autoriser 8081.
+
+Accès : `http://<IP-droplet>:8081`, et `http://<IP-droplet>:8081/<code-entreprise>` pour la page de connexion d'une entreprise. Avec un domaine, préférer un sous-domaine (`clients.domaine`), puis régler `ESPACE_CLIENT_URL` (API) et `VITE_ESPACE_CLIENT_URL` (build du back-office).
+
 ## HTTPS (recommandé)
 
 Installer un certificat Let's Encrypt sur le droplet :
