@@ -115,12 +115,10 @@ class SecteurController extends Controller
     public function validateQrCode(Request $request): JsonResponse
     {
         $request->validate([
-            'qr_code' => 'required|string',
+            'qr_code' => 'required|string|max:500',
         ]);
 
-        $secteur = Secteur::where('qr_code', $request->qr_code)
-            ->where('actif', true)
-            ->first();
+        $secteur = $this->secteurDuQr(trim($request->qr_code));
 
         if (! $secteur) {
             return response()->json([
@@ -133,6 +131,25 @@ class SecteurController extends Controller
             'valide' => true,
             'secteur' => $secteur,
         ]);
+    }
+
+    /**
+     * Secteur actif désigné par le contenu d'un QR code, quelle qu'en soit la forme : code du secteur (étiquettes
+     * imprimées par l'écran Secteurs), JSON {"code", "nom", "id"} des anciennes étiquettes, QR attribué
+     * (« SECT-A1-… »), ou nom du secteur.
+     */
+    private function secteurDuQr(string $contenu): ?Secteur
+    {
+        $actifs = fn () => Secteur::query()->where('actif', true);
+
+        $json = json_decode($contenu, true);
+        if (is_array($json) && filled($json['code'] ?? null)) {
+            $contenu = (string) $json['code'];
+        }
+
+        return $actifs()->where('qr_code', $contenu)->first()
+            ?? $actifs()->whereRaw('LOWER(code) = ?', [mb_strtolower($contenu)])->first()
+            ?? $actifs()->whereRaw('LOWER(nom) = ?', [mb_strtolower($contenu)])->first();
     }
 
     /**

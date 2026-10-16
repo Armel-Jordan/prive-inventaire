@@ -146,13 +146,15 @@ Les secteurs servent à deux choses :
 
 ### 3.4 QR Code
 
-Chaque secteur peut avoir un QR code unique :
-- Généré via le bouton "Générer QR" sur la fiche secteur
-- À imprimer et coller physiquement dans l'entrepôt
-- Scannable avec l'application mobile
-- Le QR code contient l'identifiant du secteur → permet de savoir où on est quand on scanne
-
-**Endpoint :** `POST /secteurs/{id}/generate-qr`
+Chaque secteur a une étiquette QR (bouton QR de la liste des secteurs), à imprimer et coller dans l'entrepôt :
+- **Contenu :** le **code** du secteur (« A1 »). L'application mobile compare le contenu scanné au code (ou au
+  nom) du secteur. Les étiquettes imprimées auparavant contenaient un JSON `{"code","nom","id"}` que
+  l'application ne reconnaissait pas : il faut les **réimprimer**.
+- **Validation** (`POST /secteurs/validate-qr`, aussi sous `/mobile`) : un secteur actif est reconnu par :
+  - son code, sans tenir compte des majuscules ;
+  - le JSON des anciennes étiquettes ;
+  - un QR attribué (`SECT-A1-…`, `POST /secteurs/{id}/generate-qr`) ;
+  - son nom.
 
 ### 3.5 Relation avec les autres modules
 
