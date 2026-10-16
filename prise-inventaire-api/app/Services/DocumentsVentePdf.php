@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
+use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
 use App\Support\EntreprisePdf;
@@ -24,7 +25,7 @@ class DocumentsVentePdf
         'brouillon' => 'Brouillon', 'envoye' => 'Envoyé', 'accepte' => 'Accepté', 'refuse' => 'Refusé', 'expire' => 'Expiré',
         'soumise' => 'Soumise', 'acceptee' => 'Acceptée', 'refusee' => 'Refusée', 'facturee' => 'Facturée',
         'emise' => 'Émise', 'partiellement_payee' => 'Partiellement payée', 'payee' => 'Payée', 'annulee' => 'Annulée',
-        'creditee' => 'Créditée', 'emis' => 'Émise', 'solde' => 'Soldée',
+        'creditee' => 'Créditée', 'emis' => 'Émise', 'solde' => 'Soldée', 'envoyee' => 'Envoyée',
         'cree' => 'Créé', 'en_preparation' => 'En préparation', 'pret' => 'Prêt', 'livre' => 'Livré', 'annule' => 'Annulé',
     ];
 
@@ -117,6 +118,30 @@ class DocumentsVentePdf
         ]);
     }
 
+    /** Demande d'acompte : une ligne (sa description) et le montant demandé, sans taxe. */
+    public function demandeAcompte(DemandeAcompte $demande): array
+    {
+        $demande->loadMissing(['client', 'devis:id,numero', 'commande:id,numero']);
+
+        return $this->document("DEMANDE D'ACOMPTE", $demande, [
+            'Date' => $this->date($demande->date_demande),
+            'Devis' => $demande->devis?->numero,
+            'Commande' => $demande->commande?->numero,
+        ], [
+            'destinataire' => $this->client($demande->client),
+            'lignes' => [[
+                'reference' => '-',
+                'designation' => $demande->description,
+                'quantite' => 1,
+                'prix_unitaire' => (float) $demande->montant,
+                'remise' => 0.0,
+                'total' => (float) $demande->montant,
+            ]],
+            'totaux' => [['Acompte demandé', (float) $demande->montant, true]],
+            'mention' => "Aucune taxe : ce document n'est pas une facture.",
+        ]);
+    }
+
     public function bonLivraison(BonLivraison $bon): array
     {
         $bon->loadMissing(['facture.client', 'lignes.produit']);
@@ -157,6 +182,7 @@ class DocumentsVentePdf
             'totaux' => $contenu['totaux'] ?? [],
             'reglement' => $contenu['reglement'] ?? [],
             'mention' => $contenu['mention'] ?? null,
+            'notes' => $contenu['notes'] ?? null,
             'signatures' => $contenu['signatures'] ?? [],
         ];
     }

@@ -3,7 +3,7 @@ import { apiFetch } from '@/services/http';
 /** Recherche globale : fiches et documents de l'entreprise, regroupés par type. */
 
 export const TYPES_RECHERCHE = [
-  'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs',
+  'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'demandes_acompte',
   'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
 ] as const;
 
@@ -18,6 +18,7 @@ export const MODULE_DU_TYPE: Record<TypeRecherche, string> = {
   commandes_client: 'commandes_client',
   factures: 'factures',
   avoirs: 'avoirs',
+  demandes_acompte: 'demandes_acompte',
   bons_livraison: 'bons_livraison',
   commandes_fournisseur: 'commandes_fournisseur',
   secteurs: 'secteurs',

@@ -24,6 +24,15 @@ export interface AnalyseComptesClients {
   totaux: Record<Tranche | 'total' | 'credits' | 'solde', number>;
 }
 
+export interface AcompteDisponible {
+  acompte_id: number;
+  date_acompte: string;
+  mode: string;
+  reference: string | null;
+  montant: number;
+  disponible: number;
+}
+
 export interface CreditDisponible {
   avoir_id: number;
   numero: string;
@@ -48,12 +57,13 @@ export interface ReleveClient {
   du: string;
   au: string;
   solde_ouverture: number;
-  lignes: { date: string; type: 'facture' | 'avoir' | 'paiement' | 'remboursement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
+  lignes: { date: string; type: 'facture' | 'avoir' | 'acompte' | 'paiement' | 'remboursement'; piece: string | null; libelle: string; debit: number; credit: number; solde: number }[];
   total_debit: number;
   total_credit: number;
   solde_final: number;
   factures_dues: FactureDue[];
   credits_disponibles: CreditDisponible[];
+  acomptes_disponibles: AcompteDisponible[];
 }
 
 function requete(parametres: Record<string, string | undefined>): string {

@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { BookOpen, BookText, CalendarRange, FileSpreadsheet, ReceiptText, Scale, ScrollText } from 'lucide-react';
+import { BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -109,6 +109,8 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
       { path: '/notes-credit', label: t.creditNotes.nav, icon: ReceiptText, module: 'avoirs' },
+      { path: '/acomptes', label: t.deposits.nav, icon: Wallet, module: 'acomptes' },
+      { path: '/demandes-acompte', label: t.depositRequests.nav, icon: FileClock, module: 'demandes_acompte' },
       { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'comptes_clients' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
       { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },

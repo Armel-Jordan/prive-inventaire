@@ -106,7 +106,7 @@
                 @foreach($lignes as $ligne)
                     <tr>
                         <td>{{ $ligne['reference'] }}</td>
-                        <td>{{ $ligne['designation'] }}</td>
+                        <td>{!! nl2br(e($ligne['designation'])) !!}</td>
                         @if($colonnes === 'livraison')
                             <td class="right">{{ $quantite($ligne['a_livrer']) }}</td>
                             <td class="right">{{ $quantite($ligne['preparee']) }}</td>

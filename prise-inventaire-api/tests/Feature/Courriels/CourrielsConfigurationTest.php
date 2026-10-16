@@ -69,7 +69,7 @@ class CourrielsConfigurationTest extends TestCase
     {
         $types = collect($this->getJson('/api/courriels/catalogue')->assertOk()->assertJsonPath('langues', ['fr', 'en'])->json('types'))->keyBy('type');
 
-        $this->assertEqualsCanonicalizing(['devis', 'commande_client', 'facture', 'avoir', 'bon_livraison', 'commande_fournisseur', 'general'], $types->keys()->all());
+        $this->assertEqualsCanonicalizing(['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'bon_livraison', 'commande_fournisseur', 'general'], $types->keys()->all());
         $this->assertContains('credit_disponible', $types['avoir']['variables']);
         $this->assertTrue($types['avoir']['piece_jointe']);
         $this->assertContains('montant_ttc', $types['facture']['variables']);

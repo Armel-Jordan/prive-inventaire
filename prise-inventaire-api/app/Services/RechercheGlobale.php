@@ -7,6 +7,7 @@ use App\Models\BonLivraison;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
+use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
 use App\Models\Facture;
@@ -27,7 +28,7 @@ final class RechercheGlobale
 {
     /** Types disponibles, dans l'ordre d'affichage. */
     public const TYPES = [
-        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs',
+        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'demandes_acompte',
         'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
     ];
 
@@ -173,6 +174,20 @@ final class RechercheGlobale
                     'sous_titre' => $a->client?->raison_sociale,
                     'details' => ['client' => $a->client?->raison_sociale, 'facture' => $a->facture?->numero, 'date' => $date($a->date_avoir), 'statut' => $a->statut, 'montant' => (float) $a->montant_ttc, 'disponible' => $a->credit_disponible],
                     'lien' => $lien('/notes-credit', $a->numero),
+                ],
+            ],
+            'demandes_acompte' => [
+                'module' => 'ventes',
+                'cle' => 'numero',
+                'requete' => fn (string $motif) => DemandeAcompte::query()->with('client:id,raison_sociale')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('description', 'like', $motif)
+                        ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
+                'resultat' => fn (DemandeAcompte $d) => [
+                    'id' => $d->id,
+                    'titre' => $d->numero,
+                    'sous_titre' => $d->client?->raison_sociale,
+                    'details' => ['client' => $d->client?->raison_sociale, 'date' => $date($d->date_demande), 'statut' => $d->statut, 'montant' => (float) $d->montant],
+                    'lien' => $lien('/demandes-acompte', $d->numero),
                 ],
             ],
             'bons_livraison' => [

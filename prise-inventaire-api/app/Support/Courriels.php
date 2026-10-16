@@ -6,6 +6,7 @@ use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
+use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
 
@@ -24,6 +25,7 @@ final class Courriels
         'commande_client' => ['numero', 'date', 'date_livraison_souhaitee', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc'],
         'facture' => ['numero', 'date', 'date_echeance', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'montant_paye', 'reste_a_payer'],
         'avoir' => ['numero', 'date', 'numero_facture', 'motif', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'credit_disponible'],
+        'demande_acompte' => ['numero', 'date', 'client_nom', 'client_code', 'contact_nom', 'montant', 'description'],
         'bon_livraison' => ['numero', 'date_livraison', 'numero_facture', 'client_nom', 'client_code', 'contact_nom'],
         'commande_fournisseur' => ['numero', 'date', 'date_livraison_prevue', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant_total'],
         'general' => [],
@@ -39,6 +41,7 @@ final class Courriels
         'commande_client' => ComClientEntete::class,
         'facture' => Facture::class,
         'avoir' => Avoir::class,
+        'demande_acompte' => DemandeAcompte::class,
         'bon_livraison' => BonLivraison::class,
         'commande_fournisseur' => ComFourEntete::class,
     ];
@@ -49,6 +52,7 @@ final class Courriels
         'commande_client' => 'ventes',
         'facture' => 'ventes',
         'avoir' => 'ventes',
+        'demande_acompte' => 'ventes',
         'bon_livraison' => 'ventes',
         'commande_fournisseur' => 'achats',
     ];
@@ -59,6 +63,7 @@ final class Courriels
         'commande_client' => 'commande',
         'facture' => 'facture',
         'avoir' => 'note-credit',
+        'demande_acompte' => 'demande-acompte',
         'bon_livraison' => 'bon-livraison',
         'commande_fournisseur' => 'bon-commande',
     ];
@@ -69,6 +74,7 @@ final class Courriels
             'commande_client' => ['Confirmation de commande {numero} — {entreprise_nom}', "Bonjour,\n\nNous vous confirmons votre commande {numero} du {date}, d'un montant de {montant_ttc}. Vous en trouverez le détail en pièce jointe.\n\nCordialement,\n{entreprise_nom}"],
             'facture' => ['Facture {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint la facture {numero} du {date}, d'un montant de {montant_ttc}.\n\nCordialement,\n{entreprise_nom}"],
             'avoir' => ['Note de crédit {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint la note de crédit {numero} du {date}, d'un montant de {montant_ttc}, établie sur la facture {numero_facture}.\n\nCordialement,\n{entreprise_nom}"],
+            'demande_acompte' => ["Demande d'acompte {numero} — {entreprise_nom}", "Bonjour,\n\nVeuillez trouver ci-joint notre demande d'acompte {numero} d'un montant de {montant}.\n\nNous restons à votre disposition pour toute question.\n\nCordialement,\n{entreprise_nom}"],
             'bon_livraison' => ['Bon de livraison {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint le bon de livraison {numero}.\n\nCordialement,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Bon de commande {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint notre bon de commande {numero} du {date}. Merci de nous en confirmer la réception et la date de livraison prévue.\n\nCordialement,\n{entreprise_nom}"],
             'general' => ['Message de {entreprise_nom}', "Bonjour,\n\n\n\nCordialement,\n{entreprise_nom}"],
@@ -78,6 +84,7 @@ final class Courriels
             'commande_client' => ['Order confirmation {numero} — {entreprise_nom}', "Hello,\n\nWe confirm your order {numero} of {date}, for a total of {montant_ttc}. Please find the details attached.\n\nBest regards,\n{entreprise_nom}"],
             'facture' => ['Invoice {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached invoice {numero} of {date}, for {montant_ttc}.\n\nBest regards,\n{entreprise_nom}"],
             'avoir' => ['Credit note {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached credit note {numero} of {date}, for {montant_ttc}, issued on invoice {numero_facture}.\n\nBest regards,\n{entreprise_nom}"],
+            'demande_acompte' => ['Deposit request {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our deposit request {numero} for {montant}.\n\nDo not hesitate to contact us with any questions.\n\nBest regards,\n{entreprise_nom}"],
             'bon_livraison' => ['Delivery note {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached delivery note {numero}.\n\nBest regards,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Purchase order {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our purchase order {numero} of {date}. Kindly confirm receipt and the expected delivery date.\n\nBest regards,\n{entreprise_nom}"],
             'general' => ['Message from {entreprise_nom}', "Hello,\n\n\n\nBest regards,\n{entreprise_nom}"],

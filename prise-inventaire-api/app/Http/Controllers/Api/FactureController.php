@@ -11,6 +11,7 @@ use App\Models\Facture;
 use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
+use App\Services\Acomptes;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -65,6 +66,7 @@ class FactureController extends Controller
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
+            'paiements.acompte:id,date_acompte,reference',
             'imputations.avoir:id,numero',
         ])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
@@ -249,8 +251,10 @@ class FactureController extends Controller
         $facture->statut = 'emise';
         $facture->save();
         $facture->client->updateEncours();
+        // Acomptes réservés à la commande de la facture : appliqués d'eux-mêmes à son paiement.
+        app(Acomptes::class)->appliquerReserves($facture, auth()->id());
 
-        return response()->json($facture);
+        return response()->json($facture->fresh());
     }
 
     public function enregistrerPaiement(Request $request, int $id): JsonResponse

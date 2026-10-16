@@ -7,6 +7,7 @@ use App\Models\CourrielEnvoi;
 use App\Models\CourrielModele;
 use App\Models\CourrielParametres;
 use App\Services\BonCommandePdf;
+use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
 use App\Support\Courriels;
 use Illuminate\Database\Eloquent\Model;
@@ -134,6 +135,10 @@ class EnvoiCourriel
                 ));
 
             $envoi->fill(['statut' => CourrielEnvoi::ENVOYE, 'envoye_le' => now(), 'erreur' => null]);
+            // Une demande d'acompte envoyée au client passe « envoyée », comme dans fripv2.
+            if ($envoi->type === 'demande_acompte') {
+                app(DemandesAcompte::class)->apresEnvoiCourriel((int) $envoi->document_id);
+            }
         } catch (ModelNotFoundException) {
             $envoi->fill(['statut' => CourrielEnvoi::ECHEC, 'erreur' => 'Le document à joindre est introuvable (supprimé ?).']);
         } catch (Throwable $erreur) {
@@ -188,6 +193,7 @@ class EnvoiCourriel
             'commande_client' => $this->documents->commande($document),
             'facture' => $this->documents->facture($document),
             'avoir' => $this->documents->avoir($document),
+            'demande_acompte' => $this->documents->demandeAcompte($document),
             'bon_livraison' => $this->documents->bonLivraison($document),
         };
 

@@ -27,6 +27,7 @@ import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
 import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
+import { appliquerAcompte, getAcomptes, type Acompte } from '@/services/acomptes';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -41,6 +42,8 @@ export default function FacturesPage() {
   const { toasts, toast, dismiss } = useToast();
   // Facture en cours de crédit (note de crédit).
   const [aCrediter, setACrediter] = useState<number | null>(null);
+  // Acomptes disponibles du client de la facture à payer.
+  const [acomptesClient, setAcomptesClient] = useState<Acompte[]>([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -150,6 +153,32 @@ export default function FacturesPage() {
       loadFactures();
     } catch (error) {
       signaler(error, 'Erreur lors de la création de la facture');
+    }
+  };
+
+  const ouvrirPaiement = (facture: Facture) => {
+    setSelectedFacture(facture);
+    setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') });
+    setShowPaiementModal(true);
+    setAcomptesClient([]);
+    if (peut('acomptes', 'appliquer')) {
+      // Un acompte réservé à une autre commande n'est pas proposé (il appartient à cette commande).
+      getAcomptes({ client_id: facture.client_id, disponibilite: 'avec_solde', per_page: 20 })
+        .then(r => setAcomptesClient((r.data ?? []).filter(a => !a.commande_id || a.commande_id === facture.commande_id)), () => {});
+    }
+  };
+
+  // Paie la facture avec un acompte du client, au plus ce qui en reste et ce qui reste dû.
+  const appliquerDepuisPaiement = async (acompte: Acompte) => {
+    if (!selectedFacture) return;
+    try {
+      await appliquerAcompte(acompte.id, { facture_id: selectedFacture.id, montant: Math.min(acompte.disponible, Number(selectedFacture.reste_a_payer)), date: aujourdhui() });
+      toast(t.deposits.applyDone.replace('{numero}', selectedFacture.numero));
+      setShowPaiementModal(false);
+      setSelectedFacture(null);
+      loadFactures();
+    } catch (error) {
+      signaler(error, t.deposits.error);
     }
   };
 
@@ -302,7 +331,7 @@ export default function FacturesPage() {
                       {(facture.statut === 'emise' || facture.statut === 'partiellement_payee') && (
                         <>{peut('factures', 'encaisser') && (
                           <button
-                            onClick={() => { setSelectedFacture(facture); setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') }); setShowPaiementModal(true); }}
+                            onClick={() => ouvrirPaiement(facture)}
                             className="p-1 text-green-600 hover:bg-green-50 rounded"
                             title="Enregistrer paiement"
                           >
@@ -604,6 +633,24 @@ export default function FacturesPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Facture {selectedFacture.numero} - Reste à payer: {montant(Number(selectedFacture.reste_a_payer ?? 0))}
             </p>
+            {acomptesClient.length > 0 && (
+              <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/60 dark:border-indigo-800 dark:bg-indigo-900/20 p-3">
+                <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200 mb-1">{t.deposits.customerDeposits}</p>
+                <ul className="space-y-1">
+                  {acomptesClient.map(acompte => (
+                    <li key={acompte.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {formatDateDocument(acompte.date_acompte)} · {t.deposits.modes[acompte.mode] ?? acompte.mode}{acompte.reference && ` · ${acompte.reference}`}
+                      </span>
+                      <button type="button" onClick={() => { void appliquerDepuisPaiement(acompte); }}
+                        className="px-2 py-1 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700 whitespace-nowrap">
+                        {t.deposits.applyToInvoice.replace('{montant}', montant(Math.min(acompte.disponible, Number(selectedFacture.reste_a_payer))))}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Montant *</label>
