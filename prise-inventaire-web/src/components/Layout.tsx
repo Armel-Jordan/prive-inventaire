@@ -11,6 +11,7 @@ import {
   LogOut,
   Building2,
   ArrowRightLeft,
+  Coins,
   Timer,
   BarChart3,
   Bell,
@@ -69,6 +70,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     items: [
       { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
       { path: '/prises-inventaire', label: t.stocktake.nav, icon: ClipboardCheck, module: 'inventaires' },
+      { path: '/valorisation-inventaire', label: t.valuation.nav, icon: Coins, module: 'inventaires' },
       { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
       { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
       { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },

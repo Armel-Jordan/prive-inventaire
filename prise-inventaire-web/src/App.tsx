@@ -10,6 +10,7 @@ import Dashboard from '@/pages/Dashboard';
 import ScansPage from '@/pages/ScansPage';
 import PrisesInventairePage from '@/pages/PrisesInventairePage';
 import PriseInventairePage from '@/pages/PriseInventairePage';
+import ValorisationInventairePage from '@/pages/ValorisationInventairePage';
 import ProduitsPage from '@/pages/ProduitsPage';
 import SecteursPage from '@/pages/SecteursPage';
 import EmployesPage from '@/pages/EmployesPage';
@@ -97,6 +98,7 @@ function AppRoutes() {
         <Route path="scans" element={<ScansPage />} />
         <Route path="prises-inventaire" element={<PrisesInventairePage />} />
         <Route path="prises-inventaire/:id" element={<PriseInventairePage />} />
+        <Route path="valorisation-inventaire" element={<ValorisationInventairePage />} />
         <Route path="produits" element={<ProduitsPage />} />
         <Route path="secteurs" element={<SecteursPage />} />
         <Route path="employes" element={<EmployesPage />} />
