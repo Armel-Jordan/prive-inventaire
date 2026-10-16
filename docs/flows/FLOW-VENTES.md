@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — documents PDF (devis, commande, facture, bon de livraison)
+> Dernière mise à jour : 2026-10-16 — notes de crédit (§5.8)
 
 ---
 
@@ -133,6 +133,7 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Supprimer | ✅ | Statut `brouillon` |
 | Émettre | ✅ | Statut `brouillon` |
 | Enregistrer paiement | ✅ | Statuts `emise` ou `partiellement_payee` |
+| Créditer (note de crédit) | ✅ | Statuts `emise`, `partiellement_payee` ou `payee` (§5.8) |
 | Créer BL | ✅ | Statut `emise`, si aucun BL existant |
 
 ### Bons de Livraison
@@ -409,16 +410,18 @@ La **Facture** est le document officiel de demande de paiement envoyé au client
 | `montant_tva` | Total TVA |
 | `montant_ttc` | Total TTC |
 | `montant_paye` | Somme des paiements reçus (calculé) |
-| `reste_a_payer` | `montant_ttc - montant_paye` |
+| `montant_credite` | Somme des crédits de notes de crédit imputés sur la facture (calculé, §5.8) |
+| `reste_a_payer` | `montant_ttc - montant_paye - montant_credite` |
 
 ### 5.3 Statuts de la facture
 
 | Statut | Signification | Actions disponibles |
 |--------|---------------|---------------------|
 | `brouillon` | Créée mais pas encore envoyée | Émettre 📤, Supprimer 🗑️ |
-| `emise` | Envoyée au client | Enregistrer paiement 💵, Créer BL 📦 |
-| `partiellement_payee` | Paiement partiel reçu | Enregistrer paiement 💵 |
-| `payee` | Intégralement payée | Lecture seule |
+| `emise` | Envoyée au client | Enregistrer paiement 💵, Créer BL 📦, Créditer |
+| `partiellement_payee` | Paiement partiel reçu | Enregistrer paiement 💵, Créditer |
+| `payee` | Intégralement payée, ou soldée par des paiements et des notes de crédit | Créditer |
+| `creditee` | Soldée par des notes de crédit, sans aucun paiement | Lecture seule |
 
 ### 5.4 Création manuelle d'une facture
 
@@ -503,6 +506,109 @@ Quand un BL est livré partiellement, le système génère automatiquement une *
 - Repart en statut `brouillon`
 
 Une livraison **complète** passe le BL en `livre_complet` et ne crée aucune facture. (Avant le 2026-10-16, les quantités livrées étaient lues avant leur enregistrement : toute livraison était vue comme partielle et une facture de reliquat reprenait la totalité du bon.)
+
+### 5.8 Notes de crédit (Ventes → Notes de crédit)
+
+Plan de parité fripv2, phase 1.5 : le « Créditer » d'une facture. Une note de crédit annule tout ou partie d'une facture émise, payée ou non : retour de marchandise, erreur de prix, geste commercial.
+
+**Créer une note :**
+- bouton **Créditer** d'une facture émise, partiellement payée ou payée (liste des factures) ;
+- ou **Nouvelle note de crédit** (écran Notes de crédit), puis le choix de la facture, par numéro ou par client.
+
+**L'éditeur** reprend les lignes de la facture :
+- pour chaque ligne : ce qui a été facturé, ce qui a déjà été crédité et ce qui reste à créditer ;
+- par défaut, tout ce qui reste ; « Tout effacer » remet les quantités à zéro ;
+- la **quantité** et le **prix unitaire HT** se modifient, au plus ceux de la facture (un prix réduit sert au geste commercial) ;
+- la remise de la ligne est celle de la facture ;
+- les **taxes** sont celles calculées sur la facture, au prorata du montant crédité : même nom et même taux, même si le groupe de taxes a changé depuis ;
+- l'écran affiche une estimation ; l'API calcule les montants définitifs ;
+- « Enregistrer le brouillon », ou « Enregistrer et émettre ».
+
+**Limites :**
+- sur chaque ligne, le montant HT crédité par toutes les notes émises ne dépasse jamais celui facturé (422 sinon) ;
+- la note qui crédite tout ce qui restait reprend exactement les totaux restants de la facture : pas d'écart d'arrondi ;
+- un brouillon est de nouveau contrôlé à son émission : une autre note a pu être émise entre-temps ;
+- la date de la note ne précède pas celle de la facture.
+
+**Statuts de la note :**
+
+| Statut | Signification | Actions |
+|---|---|---|
+| `brouillon` | Sans numéro, sans effet sur la facture | Modifier, Émettre, Supprimer, PDF |
+| `emis` | Émise ; il reste du crédit disponible | Imputer sur une facture, Rembourser, PDF, Courriel |
+| `solde` | Émise ; tout le crédit a été imputé ou remboursé | PDF, Courriel |
+
+**À l'émission :**
+1. la note reçoit son numéro (numérotation `avoir`, `AV-00001` par défaut, voir FLOW-PARAMETRES §7) ;
+2. elle s'**impute** sur ce qui reste dû de sa facture, au plus son montant ;
+3. la facture recalcule `montant_credite`, `reste_a_payer`, ses échéances et l'encours du client ;
+4. soldée sans aucun paiement, la facture passe **`creditee`** ; soldée avec des paiements, **`payee`** ;
+5. un paiement ne peut plus dépasser le reste dû, crédits déduits.
+
+**Crédit disponible** (facture déjà payée, ou crédit plus grand que le reste dû) :
+- **Imputer sur une facture** : une facture due du même client. Le montant ne dépasse ni le crédit disponible ni le reste de la facture, et la date ne précède ni la note ni la facture.
+- **Rembourser** : montant, date, mode (virement, chèque, espèces, carte, autre) et référence.
+- Entièrement utilisée, la note passe `solde`.
+
+**Ailleurs dans l'application :**
+- **Détail d'une facture** : ligne « Crédité » et liste de ses notes de crédit.
+- **Comptes clients** (§7 bis) :
+  - la note est au crédit du relevé, un remboursement au débit ;
+  - le crédit disponible est dû au client.
+- **PDF** « Note de crédit » : facture créditée, motif, totaux, imputé, remboursé et crédit disponible.
+- **Courriel** : type `avoir` avec les variables `{numero_facture}`, `{motif}` et `{credit_disponible}`.
+- **Recherche globale** : notes émises, par numéro, client ou facture.
+- **Journal des modifications** : création, modification et suppression des notes.
+- **Espace client** : une facture `creditee` s'affiche comme soldée.
+
+**Hors périmètre :** une note de crédit est **financière seulement** : elle ne remet rien en stock. Les retours avec remise en stock relèvent des retours clients (plan, phase 1.7).
+
+**Permissions** (module `avoirs`, onglet Ventes) :
+
+| Permission | Code | Ce qu'elle ouvre |
+|---|---|---|
+| Consulter | `avoirs.voir` | Écran Notes de crédit, détail, PDF |
+| Créer | `avoirs.creer` | « Créditer », nouveau brouillon |
+| Modifier | `avoirs.modifier` | Modifier un brouillon |
+| Supprimer | `avoirs.supprimer` | Supprimer un brouillon |
+| Émettre une note de crédit | `avoirs.emettre` | Émission (numéro, imputation sur la facture) |
+| Rembourser ou imputer un crédit | `avoirs.regler` | Imputer le crédit disponible, ou le rembourser |
+
+À la mise en place, chaque groupe reçoit sur les notes de crédit ses droits sur les factures :
+- « Émettre une note de crédit » suit « Émettre une facture » ;
+- « Rembourser ou imputer un crédit » suit « Enregistrer un paiement ».
+
+Pour les rôles système, cela donne :
+- administrateur et responsable : tout ;
+- utilisateur et lecture seule : consultation.
+
+| Route | Rôle |
+|---|---|
+| `GET /avoirs?statut=&recherche=&client_id=&facture_id=` | Liste paginée |
+| `GET /avoirs/{id}` | Détail : lignes, détail des taxes, imputations, remboursements |
+| `GET /factures/{id}/avoir` | Ce qui reste à créditer sur une facture, ligne par ligne |
+| `POST /avoirs` | Nouveau brouillon (`facture_id`, `date_avoir`, `motif`, `notes`, `lignes[]` : `facture_ligne_id`, `quantite`, `prix_unitaire_ht`) |
+| `PUT /avoirs/{id}` | Modifier un brouillon |
+| `DELETE /avoirs/{id}` | Supprimer un brouillon (422 une fois émise) |
+| `POST /avoirs/{id}/emettre` | Émettre |
+| `GET /avoirs/{id}/factures-imputables` | Factures dues du client |
+| `POST /avoirs/{id}/imputer` | Imputer (`facture_id`, `montant`, `date`) |
+| `POST /avoirs/{id}/rembourser` | Rembourser (`montant`, `date_remboursement`, `mode`, `reference`) |
+| `GET /avoirs/{id}/pdf` | PDF |
+
+**Données :**
+
+| Table | Contenu |
+|---|---|
+| `avoirs` | En-tête : numéro, facture, client, date, statut, motif, totaux, `montant_impute`, `montant_rembourse` |
+| `avoir_lignes` | Lignes : ligne de facture créditée, quantité, prix, remise, taux, montants ; détail des taxes dans `document_taxes` (`document = avoir`) |
+| `avoir_imputations` | Part d'une note imputée sur une facture, datée |
+| `avoir_remboursements` | Remboursements au client |
+| `factures.montant_credite` | Total des crédits imputés sur la facture |
+
+Code :
+- API : service `App\Services\NotesCredit`, contrôleur `App\Http\Controllers\Api\AvoirController`, migration `2026_10_16_100030_creer_notes_de_credit` ;
+- web : écran `NotesCreditPage`, éditeur `components/avoirs/EditeurNoteCredit`, fenêtre `components/avoirs/ReglerCredit`, service `src/services/avoirs.ts`.
 
 ---
 
@@ -664,19 +770,24 @@ Un **Camion** est un véhicule de livraison. Il est associé à une tournée et 
 
 Plan de parité fripv2, phase 4.4 : ce que les clients doivent, à une date. C'est un état ; rien n'est enregistré.
 
-- **Factures prises en compte** : les factures émises, partiellement payées ou payées, datées au plus tard ce jour. Les brouillons et les factures annulées sont exclus.
-- **Reste dû à une date** : le montant TTC, moins les paiements datés jusqu'à ce jour. Une facture payée depuis compte donc encore comme due à une date antérieure.
+- **Factures prises en compte** : les factures émises, partiellement payées, payées ou créditées, datées au plus tard ce jour. Les brouillons et les factures annulées sont exclus.
+- **Reste dû à une date** : le montant TTC, moins les paiements et les crédits de notes de crédit imputés jusqu'à ce jour. Une facture payée depuis compte donc encore comme due à une date antérieure.
+- **Crédits** : le crédit des notes de crédit qui n'est ni imputé ni remboursé à cette date est dû au client (§5.8).
 - **Analyse chronologique** :
   - le retard se compte depuis l'échéance, ou depuis la date de facture si la facture n'a pas d'échéance ;
   - tranches : non échu, 1 à 30 jours, 31 à 60, 61 à 90, plus de 90 ;
   - par client : total, tranches, nombre de factures, retard maximal ;
   - les clients sont triés par montant dû, avec les totaux, le montant en retard et le montant à plus de 90 jours ;
-  - les cases se colorent selon l'ancienneté ; export CSV.
+  - les cases se colorent selon l'ancienneté ; export CSV ;
+  - quand des crédits existent, deux colonnes de plus : les crédits et le solde net (total dû moins crédits), aussi dans l'export.
 - **Relevé de compte d'un client** (bouton de la ligne, du 1er janvier à la date choisie par défaut) :
-  - solde d'ouverture (factures moins paiements antérieurs) ;
-  - factures au débit et paiements au crédit, avec le solde progressif ; le même jour, les factures passent avant les paiements ;
+  - solde d'ouverture (mouvements antérieurs) ;
+  - au débit : les factures et les remboursements au client ;
+  - au crédit : les paiements et les notes de crédit ;
+  - solde progressif ; le même jour, l'ordre est : facture, note de crédit, paiement, remboursement ;
   - solde final ;
   - factures encore dues au dernier jour, avec leur retard ;
+  - crédits encore disponibles au dernier jour ;
   - export CSV.
 
 | Route | Rôle |
@@ -916,6 +1027,7 @@ Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dan
 | Devis | `GET /devis/{id}/pdf` | Total HT, mention « Montants hors taxes », zone « Bon pour accord » |
 | Commande client | `GET /commandes-client/{id}/pdf` | Sous-total HT, taxes, total TTC |
 | Facture | `GET /factures/{id}/pdf` | Sous-total HT, taxes, total TTC, payé, reste à payer |
+| Note de crédit | `GET /avoirs/{id}/pdf` | Facture créditée, motif, taxes au prorata de la facture, imputé, remboursé, crédit disponible |
 | Bon de livraison | `GET /bons-livraison/{id}/pdf` | Adresse de livraison, quantités à livrer / préparées / livrées, signatures |
 
 **Communs à tous :**

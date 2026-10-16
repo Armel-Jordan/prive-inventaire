@@ -124,7 +124,7 @@ export interface DetailCommande {
   facture: { id: number; numero: string; statut: string } | null;
 }
 
-export type StatutFacture = 'emise' | 'partiellement_payee' | 'payee';
+export type StatutFacture = 'emise' | 'partiellement_payee' | 'payee' | 'creditee';
 
 export interface FacturePortail {
   id: number;

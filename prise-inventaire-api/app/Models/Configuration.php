@@ -86,6 +86,7 @@ class Configuration extends Model
         'commande' => ['prefixe' => 'CMD', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'commande_fournisseur' => ['prefixe' => 'BC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'facture' => ['prefixe' => 'FAC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'avoir' => ['prefixe' => 'AV', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'bon_livraison' => ['prefixe' => 'BL', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
     ];

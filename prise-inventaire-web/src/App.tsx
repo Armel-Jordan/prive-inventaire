@@ -39,6 +39,7 @@ import BalisesPage from '@/pages/BalisesPage';
 import CamionsPage from '@/pages/CamionsPage';
 import CommandesClientPage from '@/pages/CommandesClientPage';
 import FacturesPage from '@/pages/FacturesPage';
+import NotesCreditPage from '@/pages/NotesCreditPage';
 import ComptesClientsPage from '@/pages/ComptesClientsPage';
 import BonsLivraisonPage from '@/pages/BonsLivraisonPage';
 import TourneesPage from '@/pages/TourneesPage';
@@ -143,6 +144,7 @@ function AppRoutes() {
         <Route path="camions" element={<CamionsPage />} />
         <Route path="commandes-client" element={<CommandesClientPage />} />
         <Route path="factures" element={<FacturesPage />} />
+        <Route path="notes-credit" element={<NotesCreditPage />} />
         <Route path="comptes-clients" element={<ComptesClientsPage />} />
         <Route path="bons-livraison" element={<BonsLivraisonPage />} />
         <Route path="espace-client" element={<PortailClientsPage />} />

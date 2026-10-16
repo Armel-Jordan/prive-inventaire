@@ -32,6 +32,16 @@ class FactureController extends Controller
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
         }
+        // Plusieurs statuts (« emise,payee ») : factures à créditer, par exemple.
+        if ($request->filled('statuts')) {
+            $query->whereIn('statut', explode(',', (string) $request->statuts));
+        }
+        // Numéro de facture, nom ou code du client.
+        if ($request->filled('recherche')) {
+            $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)
+                ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif)));
+        }
         if ($request->has('client_id')) {
             $query->where('client_id', $request->client_id);
         }
@@ -50,9 +60,12 @@ class FactureController extends Controller
     public function show(int $id): JsonResponse
     {
         // Produit de chaque ligne (même retiré du catalogue) : le détail affichait « Produit #12 ».
+        // Notes de crédit établies sur la facture et crédits imputés (de ses notes ou d'autres notes du client).
         $facture = Facture::with([
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
+            'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
+            'imputations.avoir:id,numero',
         ])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $facture->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('facture', $facture->lignes->pluck('id')));

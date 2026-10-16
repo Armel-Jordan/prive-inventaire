@@ -17,7 +17,7 @@ class Facture extends Model
         'tenant_id', 'numero', 'commande_id', 'client_id', 'facture_mere_id',
         'date_facture', 'date_echeance', 'statut',
         'montant_ht', 'montant_tva', 'montant_ttc',
-        'montant_paye', 'reste_a_payer', 'notes',
+        'montant_paye', 'montant_credite', 'reste_a_payer', 'notes',
     ];
 
     protected $casts = [
@@ -27,6 +27,7 @@ class Facture extends Model
         'montant_tva' => 'decimal:2',
         'montant_ttc' => 'decimal:2',
         'montant_paye' => 'decimal:2',
+        'montant_credite' => 'decimal:2',
         'reste_a_payer' => 'decimal:2',
     ];
 
@@ -74,18 +75,35 @@ class Facture extends Model
         return $this->hasMany(FacturePaiement::class);
     }
 
+    /** Notes de crédit (avoirs) établies sur la facture. */
+    public function avoirs(): HasMany
+    {
+        return $this->hasMany(Avoir::class);
+    }
+
+    /** Crédits imputés sur la facture (de ses propres notes de crédit ou d'autres notes du client). */
+    public function imputations(): HasMany
+    {
+        return $this->hasMany(AvoirImputation::class);
+    }
+
     /** Bon de livraison en cours de la facture : le plus récent qui n'est pas annulé. */
     public function bonLivraison(): HasOne
     {
         return $this->hasOne(BonLivraison::class)->where('statut', '!=', 'annule')->latest('id');
     }
 
+    /**
+     * Recalcule ce qui est payé et ce qui reste dû. Les crédits imputés sur la facture (montant_credite) réduisent
+     * le reste à payer. Une facture soldée sans aucun paiement est « creditee » ; soldée avec des paiements, « payee ».
+     */
     public function updateMontantPaye(): void
     {
         $this->montant_paye = $this->paiements()->sum('montant');
-        $this->reste_a_payer = $this->montant_ttc - $this->montant_paye;
+        $this->montant_credite = $this->imputations()->sum('montant');
+        $this->reste_a_payer = round((float) $this->montant_ttc - (float) $this->montant_paye - (float) $this->montant_credite, 2);
         if ($this->reste_a_payer <= 0) {
-            $this->statut = 'payee';
+            $this->statut = (float) $this->montant_paye > 0 || (float) $this->montant_credite <= 0 ? 'payee' : 'creditee';
         } elseif ($this->montant_paye > 0) {
             $this->statut = 'partiellement_payee';
         }
@@ -95,12 +113,13 @@ class Facture extends Model
     }
 
     /**
-     * Répartit le montant payé sur les échéances, dans leur ordre : chacune passe payée, en partie payée
-     * ou en attente. Elles restaient « en attente » même une fois la facture entièrement payée.
+     * Répartit le montant réglé (paiements et notes de crédit imputées) sur les échéances, dans leur ordre :
+     * chacune passe payée, en partie payée ou en attente. Elles restaient « en attente » même une fois la facture
+     * entièrement payée.
      */
     private function repartirSurEcheances(): void
     {
-        $reste = (float) $this->montant_paye;
+        $reste = (float) $this->montant_paye + (float) $this->montant_credite;
         foreach ($this->echeances()->get() as $echeance) {
             $paye = round(min((float) $echeance->montant, max(0.0, $reste)), 2);
             $reste -= $paye;

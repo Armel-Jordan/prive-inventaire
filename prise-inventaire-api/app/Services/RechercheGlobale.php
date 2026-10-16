@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Avoir;
 use App\Models\BonLivraison;
 use App\Models\Client;
 use App\Models\ComClientEntete;
@@ -26,7 +27,7 @@ final class RechercheGlobale
 {
     /** Types disponibles, dans l'ordre d'affichage. */
     public const TYPES = [
-        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures',
+        'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs',
         'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
     ];
 
@@ -156,6 +157,22 @@ final class RechercheGlobale
                     'sous_titre' => $f->client?->raison_sociale,
                     'details' => ['client' => $f->client?->raison_sociale, 'date' => $date($f->date_facture), 'echeance' => $date($f->date_echeance), 'statut' => $f->statut, 'montant' => (float) $f->montant_ttc, 'reste' => (float) $f->reste_a_payer],
                     'lien' => $lien('/factures', $f->numero),
+                ],
+            ],
+            // Notes de crédit émises (un brouillon n'a pas encore de numéro).
+            'avoirs' => [
+                'module' => 'ventes',
+                'cle' => 'numero',
+                'requete' => fn (string $motif) => Avoir::query()->with('client:id,raison_sociale', 'facture:id,numero')->whereNotNull('numero')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)
+                        ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))
+                        ->orWhereHas('facture', fn ($f) => $f->where('numero', 'like', $motif))),
+                'resultat' => fn (Avoir $a) => [
+                    'id' => $a->id,
+                    'titre' => $a->numero,
+                    'sous_titre' => $a->client?->raison_sociale,
+                    'details' => ['client' => $a->client?->raison_sociale, 'facture' => $a->facture?->numero, 'date' => $date($a->date_avoir), 'statut' => $a->statut, 'montant' => (float) $a->montant_ttc, 'disponible' => $a->credit_disponible],
+                    'lien' => $lien('/notes-credit', $a->numero),
                 ],
             ],
             'bons_livraison' => [

@@ -58,10 +58,12 @@ export function BadgeCommande({ statut }: { statut: StatutCommande }) {
 
 export function BadgeFacture({ statut, enRetard }: { statut: StatutFacture; enRetard: boolean }) {
   const { t } = useLanguage();
-  const couleur = statut === 'payee' ? 'bg-green-100 text-green-800' : enRetard ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+  // Soldée : payée, ou entièrement créditée par des notes de crédit.
+  const soldee = statut === 'payee' || statut === 'creditee';
+  const couleur = soldee ? 'bg-green-100 text-green-800' : enRetard ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${couleur}`}>
-      {statut !== 'payee' && enRetard ? t.portal.overdue : t.portal.invoiceStatus[statut] ?? statut}
+      {!soldee && enRetard ? t.portal.overdue : t.portal.invoiceStatus[statut] ?? statut}
     </span>
   );
 }
