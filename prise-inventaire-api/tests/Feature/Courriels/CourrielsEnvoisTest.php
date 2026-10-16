@@ -15,6 +15,7 @@ use App\Models\TenantParametres;
 use App\Support\TenantContext;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -271,6 +272,20 @@ class CourrielsEnvoisTest extends TestCase
 
         Mail::assertSent(CourrielSimple::class, fn (CourrielSimple $c) => $c->fichiers[0]['nom'] === 'bon-commande-BC-0001.pdf'
             && str_starts_with($c->fichiers[0]['contenu'], '%PDF'));
+    }
+
+    public function test_les_envois_ne_consomment_pas_la_limite_du_courriel_de_test(): void
+    {
+        // Chaque route limitée a son propre compteur : sans préfixe, toutes les limites « throttle:N,M »
+        // partageaient celui de l'utilisateur. Cache vidé : la CI garde un cache fichier d'un test à l'autre.
+        Cache::flush();
+        Mail::fake();
+        $id = $this->facture();
+        foreach (range(1, 5) as $envoi) {
+            $this->postJson('/api/courriels/envois', $this->courriel($id))->assertCreated();
+        }
+
+        $this->postJson('/api/courriels/parametres/test', ['destinataire' => 'moi@exemple.com'])->assertOk();
     }
 
     public function test_module_requis_et_adresses_validees(): void
