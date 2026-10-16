@@ -16,6 +16,8 @@
 
 ---
 
+Recherche globale (en-tête, Ctrl+K) : [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md).
+
 ## Le flow global de l'application
 
 ```
