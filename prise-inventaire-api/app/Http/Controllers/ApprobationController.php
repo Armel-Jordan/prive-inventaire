@@ -65,17 +65,20 @@ class ApprobationController extends Controller
             ], 201);
         }
 
+        // Champs facultatifs absents de la requête : ils ne figurent pas dans $validated (l'accès direct échouait).
         $mouvement = MouvementTenant::create([
             'tenant_id' => $tenantId,
             'type' => $validated['type_mouvement'],
             'produit_numero' => $validated['produit_numero'],
-            'produit_nom' => $validated['produit_nom'],
-            'secteur_source' => $validated['secteur_source'],
-            'secteur_destination' => $validated['secteur_destination'],
+            'produit_nom' => $validated['produit_nom'] ?? null,
+            'secteur_source' => $validated['secteur_source'] ?? null,
+            'secteur_destination' => $validated['secteur_destination'] ?? null,
             'quantite' => $validated['quantite'],
-            'unite_mesure' => $validated['unite_mesure'],
-            'motif' => $validated['motif'],
+            'unite_mesure' => $validated['unite_mesure'] ?? null,
+            'motif' => $validated['motif'] ?? null,
             'employe' => $validated['demandeur'],
+            // Colonne obligatoire : sans elle, l'insertion échouait.
+            'date_mouvement' => now(),
         ]);
 
         return response()->json([
@@ -117,6 +120,8 @@ class ApprobationController extends Controller
             'unite_mesure' => $approbation->unite_mesure,
             'motif' => $approbation->motif,
             'employe' => $approbation->demandeur,
+            // Colonne obligatoire : sans elle, l'approbation échouait.
+            'date_mouvement' => now(),
         ]);
 
         $approbation->update([

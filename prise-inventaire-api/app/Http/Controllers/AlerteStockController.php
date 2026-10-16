@@ -189,11 +189,12 @@ class AlerteStockController extends Controller
                 ->whereNull('deleted_at')
                 ->sum('quantite');
 
-            // Consommation : mouvements de type sortie sur 30 jours
+            // Consommation : mouvements de type sortie sur 30 jours. Les colonnes interrogées ici
+            // (numero, action) n'existaient pas dans mouvement_relocalisation : l'écran échouait.
             $consommation30j = (float) MouvementTenant::where('tenant_id', $tenantId)
-                ->where('numero', $produit->numero)
-                ->where('action', 'sortie')
-                ->where('created_at', '>=', $depuis)
+                ->where('produit_numero', $produit->numero)
+                ->where('type', MouvementTenant::TYPE_SORTIE)
+                ->where('date_mouvement', '>=', $depuis)
                 ->whereNull('deleted_at')
                 ->sum('quantite');
 
