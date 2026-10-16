@@ -23,6 +23,8 @@ export interface Produit {
   type: string;
   secteur_id?: number;
   secteur?: Secteur;
+  /** Prix de vente du catalogue (chaîne décimale renvoyée par l'API), proposé sur les lignes de documents. */
+  prix_unitaire?: number | string | null;
 }
 
 export interface Secteur {

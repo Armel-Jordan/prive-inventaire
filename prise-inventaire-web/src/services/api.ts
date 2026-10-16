@@ -37,6 +37,28 @@ async function fetchApi<T>(endpoint: string, options?: ApiOptions): Promise<T> {
   return apiFetch<T>(endpoint, options);
 }
 
+/** Page de résultats renvoyée par l'API (pagination Laravel). */
+export interface PageResultats<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+/**
+ * Tous les éléments d'une liste paginée (totaux, journaux, exports), page après page, dans la limite de
+ * `maxPages` pages pour ne pas emballer le navigateur sur un très gros volume.
+ */
+export async function toutesLesPages<T>(charger: (page: number) => Promise<PageResultats<T>>, maxPages = 50): Promise<T[]> {
+  const premiere = await charger(1);
+  const elements = [...(premiere.data || [])];
+  const derniere = Math.min(premiere.last_page ?? 1, maxPages);
+  for (let page = 2; page <= derniere; page++) {
+    elements.push(...((await charger(page)).data || []));
+  }
+  return elements;
+}
+
 // === EMPLOYES ===
 export async function getEmployes(): Promise<Employe[]> {
   if (MOCK_MODE) return mockEmployes;
@@ -569,10 +591,11 @@ export interface Fournisseur {
   updated_at?: string;
 }
 
-export async function getFournisseurs(params?: { search?: string; actif?: boolean }): Promise<{ data: Fournisseur[]; total: number }> {
+export async function getFournisseurs(params?: { search?: string; actif?: boolean; page?: number }): Promise<PageResultats<Fournisseur>> {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.append('search', params.search);
   if (params?.actif !== undefined) searchParams.append('actif', params.actif.toString());
+  if (params?.page) searchParams.append('page', String(params.page));
   return fetchApi(`/fournisseurs?${searchParams}`);
 }
 
@@ -751,6 +774,8 @@ export interface ComFourLigne {
   qte_par_unite_achat?: number;
   prix_unitaire: number;
   montant_ligne: number;
+  /** Commande de la ligne (chargée avec les réceptions : numéro, fournisseur, devise et taux). */
+  commande?: ComFourEntete;
 }
 
 export interface ComFourEntete {
@@ -771,15 +796,17 @@ export interface ComFourEntete {
   updated_at?: string;
 }
 
-export async function getCommandesFournisseur(params?: { 
-  statut?: string; 
+export async function getCommandesFournisseur(params?: {
+  statut?: string;
   fournisseur_id?: number;
   search?: string;
-}): Promise<{ data: ComFourEntete[]; total: number }> {
+  page?: number;
+}): Promise<PageResultats<ComFourEntete>> {
   const searchParams = new URLSearchParams();
   if (params?.statut) searchParams.append('statut', params.statut);
   if (params?.fournisseur_id) searchParams.append('fournisseur_id', params.fournisseur_id.toString());
   if (params?.search) searchParams.append('search', params.search);
+  if (params?.page) searchParams.append('page', String(params.page));
   return fetchApi(`/commandes-fournisseur?${searchParams}`);
 }
 
@@ -936,15 +963,19 @@ export interface ReceptionLigne {
   secteur?: Secteur;
 }
 
-export async function getReceptions(params?: { 
+export async function getReceptions(params?: {
   commande_id?: number;
   date_debut?: string;
   date_fin?: string;
-}): Promise<{ data: ReceptionLigne[]; total: number }> {
+  page?: number;
+  per_page?: number;
+}): Promise<PageResultats<ReceptionLigne>> {
   const searchParams = new URLSearchParams();
   if (params?.commande_id) searchParams.append('commande_id', params.commande_id.toString());
   if (params?.date_debut) searchParams.append('date_debut', params.date_debut);
   if (params?.date_fin) searchParams.append('date_fin', params.date_fin);
+  if (params?.page) searchParams.append('page', String(params.page));
+  if (params?.per_page) searchParams.append('per_page', String(params.per_page));
   return fetchApi(`/receptions?${searchParams}`);
 }
 
@@ -1084,10 +1115,19 @@ export interface Facture {
   bon_livraison?: BonLivraison;
 }
 
+/** Produit d'une ligne de document, tel que renvoyé par le détail (même s'il a été retiré du catalogue). */
+export interface ProduitLigne {
+  id: number;
+  numero?: string;
+  description: string;
+  mesure?: string;
+}
+
 export interface FactureLigne {
   id: number;
   facture_id: number;
   produit_id: number;
+  produit?: ProduitLigne;
   quantite: number;
   prix_unitaire_ht: number;
   taux_tva: number;
@@ -1123,6 +1163,7 @@ export interface BonLivraisonLigne {
   id: number;
   bon_id: number;
   produit_id: number;
+  produit?: ProduitLigne;
   quantite_a_livrer: number;
   quantite_preparee: number;
   quantite_livree: number;
@@ -1174,12 +1215,13 @@ export interface ZonePreparation {
 }
 
 // Clients API
-export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean }): Promise<{ data: Client[] }> {
+export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean; page?: number }): Promise<PageResultats<Client>> {
   const queryParams = new URLSearchParams();
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
   if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
   if (params?.favoris) queryParams.append('favoris', '1');
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/clients?${queryParams.toString()}`);
 }
 
@@ -1360,10 +1402,11 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number }): Promise<{ data: ComClientEntete[] }> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/commandes-client?${queryParams.toString()}`);
 }
 
@@ -1403,10 +1446,14 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; client_id?: number }): Promise<{ data: Facture[] }> {
+export async function getFactures(params?: { statut?: string; client_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
+  if (params?.date_debut) queryParams.append('date_debut', params.date_debut);
+  if (params?.date_fin) queryParams.append('date_fin', params.date_fin);
+  if (params?.page) queryParams.append('page', String(params.page));
+  if (params?.per_page) queryParams.append('per_page', String(params.per_page));
   return fetchApi(`/factures?${queryParams.toString()}`);
 }
 
@@ -1450,9 +1497,12 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string }): Promise<{ data: BonLivraison[] }> {
+export async function getBonsLivraison(params?: { statut?: string; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.page) queryParams.append('page', String(params.page));
+  if (params?.per_page) queryParams.append('per_page', String(params.per_page));
+  if (params?.sans_tournee) queryParams.append('sans_tournee', '1');
   return fetchApi(`/bons-livraison?${queryParams.toString()}`);
 }
 
@@ -1512,10 +1562,11 @@ export async function deleteCamion(id: number): Promise<void> {
 }
 
 // Tournées API
-export async function getTournees(params?: { statut?: string; date?: string }): Promise<{ data: Tournee[] }> {
+export async function getTournees(params?: { statut?: string; date?: string; page?: number }): Promise<PageResultats<Tournee>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.date) queryParams.append('date', params.date);
+  if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/tournees?${queryParams.toString()}`);
 }
 
@@ -2069,7 +2120,7 @@ export async function updateParametres(data: TenantParametres): Promise<{ messag
   return fetchApi('/parametres', { method: 'PUT', body: JSON.stringify(data) });
 }
 
-export async function getTauxChange(from: string, to: string): Promise<{ from: string; to: string; taux: number; date: string }> {
+export async function getTauxChange(from: string, to: string): Promise<{ from: string; to: string; taux: number; date: string; source?: 'identique' | 'entreprise' | 'frankfurter' }> {
   return fetchApi(`/taux-change?from=${from}&to=${to}`);
 }
 
@@ -2105,10 +2156,11 @@ export interface DevisRecord {
   commande?: { id: number; numero: string } | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string }): Promise<{ data: DevisRecord[] }> {
+export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
   if (params?.statut) qs.append('statut', params.statut);
   if (params?.search) qs.append('search', params.search);
+  if (params?.page) qs.append('page', String(params.page));
   return fetchApi(`/devis?${qs.toString()}`);
 }
 

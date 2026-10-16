@@ -14,13 +14,23 @@ import {
   getConfiguration,
 } from '../services/api';
 import type { Tournee, Camion, BonLivraison } from '../services/api';
+import Pagination from '@/components/Pagination';
+import { signaler } from '@/lib/erreurs';
+import { aujourdhui, formatDateDocument } from '@/lib/documents';
+
+const modesLivraison: Record<string, string> = { entreprise: 'Livraison', retrait_client: 'Retrait client' };
+
+/** Bons prêts et pas encore placés dans une tournée : les seuls qu'on peut ajouter. */
+const bonsAjoutables = () => getBonsLivraison({ statut: 'pret', sans_tournee: true, per_page: 100 });
 
 export default function TourneesPage() {
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [tournees, setTournees] = useState<Tournee[]>([]);
   const [camions, setCamions] = useState<Camion[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState(aujourdhui());
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAjouterBLModal, setShowAjouterBLModal] = useState(false);
@@ -28,7 +38,7 @@ export default function TourneesPage() {
   const [bonsDisponibles, setBonsDisponibles] = useState<BonLivraison[]>([]);
 
   const [formData, setFormData] = useState({
-    date_tournee: new Date().toISOString().split('T')[0],
+    date_tournee: aujourdhui(),
     camion_id: '',
     zone: '',
   });
@@ -40,19 +50,24 @@ export default function TourneesPage() {
       const response = await getTournees({
         statut: filterStatut || undefined,
         date: filterDate || undefined,
+        page,
       });
       setTournees(response.data || []);
+      setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, filterDate]);
+  }, [filterStatut, filterDate, page]);
 
   useEffect(() => {
     loadTournees();
-    getConfiguration('tournee').then(setConfigNumero).catch(() => {});
   }, [loadTournees]);
+
+  useEffect(() => {
+    getConfiguration('tournee').then(setConfigNumero).catch(() => {});
+  }, []);
 
   const loadCamionsDisponibles = async (date: string) => {
     try {
@@ -65,11 +80,11 @@ export default function TourneesPage() {
 
   const handleOpenModal = () => {
     setFormData({
-      date_tournee: new Date().toISOString().split('T')[0],
+      date_tournee: aujourdhui(),
       camion_id: '',
       zone: '',
     });
-    loadCamionsDisponibles(new Date().toISOString().split('T')[0]);
+    loadCamionsDisponibles(aujourdhui());
     setShowModal(true);
   };
 
@@ -84,7 +99,7 @@ export default function TourneesPage() {
       setShowModal(false);
       loadTournees();
     } catch (error) {
-      console.error('Erreur création:', error);
+      signaler(error, 'Erreur lors de la création de la tournée');
     }
   };
 
@@ -94,31 +109,29 @@ export default function TourneesPage() {
       setSelectedTournee(tournee);
       setShowDetailModal(true);
     } catch (error) {
-      console.error('Erreur chargement détail:', error);
+      signaler(error, 'Impossible de charger la tournée');
     }
   };
 
   const handleOuvrirAjouterBL = async (tournee: Tournee) => {
     try {
-      const response = await getBonsLivraison({ statut: 'pret' });
+      const response = await bonsAjoutables();
       setBonsDisponibles(response.data || []);
       setSelectedTournee(tournee);
       setShowAjouterBLModal(true);
-    } catch {
-      alert('Erreur chargement des bons de livraison');
+    } catch (error) {
+      signaler(error, 'Erreur lors du chargement des bons de livraison');
     }
   };
 
   const handleAjouterBL = async (bonId: number) => {
     if (!selectedTournee) return;
     try {
-      await ajouterBonATournee(selectedTournee.id, bonId);
-      const updated = await getTournee(selectedTournee.id);
-      setSelectedTournee(updated);
-      const response = await getBonsLivraison({ statut: 'pret' });
-      setBonsDisponibles(response.data || []);
-    } catch {
-      alert('Erreur lors de l\'ajout du bon');
+      setSelectedTournee(await ajouterBonATournee(selectedTournee.id, bonId));
+      setBonsDisponibles(bons => bons.filter(b => b.id !== bonId));
+      loadTournees();
+    } catch (error) {
+      signaler(error, 'Erreur lors de l\'ajout du bon');
     }
   };
 
@@ -127,18 +140,18 @@ export default function TourneesPage() {
     try {
       await deleteTournee(id);
       loadTournees();
-    } catch {
-      alert('Impossible de supprimer cette tournée.');
+    } catch (error) {
+      signaler(error, 'Impossible de supprimer cette tournée.');
     }
   };
 
   const handleRetirerBL = async (bonId: number) => {
     if (!selectedTournee) return;
     try {
-      const updated = await retirerBonDeTournee(selectedTournee.id, bonId);
-      setSelectedTournee(updated);
-    } catch {
-      alert('Erreur lors du retrait du bon.');
+      setSelectedTournee(await retirerBonDeTournee(selectedTournee.id, bonId));
+      loadTournees();
+    } catch (error) {
+      signaler(error, 'Erreur lors du retrait du bon.');
     }
   };
 
@@ -146,9 +159,8 @@ export default function TourneesPage() {
     try {
       await demarrerTournee(id);
       loadTournees();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      alert(error?.message || 'Erreur démarrage — ajoutez au moins un bon de livraison.');
+    } catch (error) {
+      signaler(error, 'Erreur au démarrage : ajoutez au moins un bon de livraison.');
     }
   };
 
@@ -157,7 +169,7 @@ export default function TourneesPage() {
       await terminerTournee(id);
       loadTournees();
     } catch (error) {
-      console.error('Erreur terminaison:', error);
+      signaler(error, 'Erreur lors de la clôture de la tournée');
     }
   };
 
@@ -199,12 +211,23 @@ export default function TourneesPage() {
           <input
             type="date"
             value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
+            onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
+            aria-label="Date des tournées"
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
+          {filterDate && (
+            <button
+              type="button"
+              onClick={() => { setFilterDate(''); setPage(1); }}
+              className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
+            >
+              Toutes les dates
+            </button>
+          )}
           <select
             value={filterStatut}
-            onChange={(e) => setFilterStatut(e.target.value)}
+            onChange={(e) => { setFilterStatut(e.target.value); setPage(1); }}
+            aria-label="Filtrer par statut"
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
             <option value="">Tous les statuts</option>
@@ -237,7 +260,7 @@ export default function TourneesPage() {
               {tournees.map((tournee) => (
                 <tr key={tournee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{tournee.numero}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{new Date(tournee.date_tournee).toLocaleDateString('fr-FR')}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(tournee.date_tournee)}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
                       <Truck size={16} className="text-gray-400" />
@@ -299,11 +322,12 @@ export default function TourneesPage() {
             </tbody>
           </table>
         )}
+        <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
 
       {/* Modal création */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="mb-4">
               <h2 className="text-xl font-bold dark:text-white">Nouvelle tournée</h2>
@@ -372,7 +396,7 @@ export default function TourneesPage() {
 
       {/* Modal ajouter BL */}
       {showAjouterBLModal && selectedTournee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold dark:text-white">
@@ -400,7 +424,7 @@ export default function TourneesPage() {
                     <div>
                       <p className="font-mono font-medium dark:text-white">{bon.numero}</p>
                       <p className="text-sm text-gray-500">
-                        {bon.facture?.client?.raison_sociale || 'Client inconnu'} — {bon.mode_livraison}
+                        {bon.facture?.client?.raison_sociale || 'Client inconnu'} — {modesLivraison[bon.mode_livraison] ?? bon.mode_livraison}
                       </p>
                     </div>
                     <button
@@ -427,7 +451,7 @@ export default function TourneesPage() {
 
       {/* Modal détail */}
       {showDetailModal && selectedTournee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               Tournée {selectedTournee.numero}
@@ -436,7 +460,7 @@ export default function TourneesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-sm text-gray-500">Date:</span>
-                  <p className="font-medium dark:text-white">{new Date(selectedTournee.date_tournee).toLocaleDateString('fr-FR')}</p>
+                  <p className="font-medium dark:text-white">{formatDateDocument(selectedTournee.date_tournee)}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Statut:</span>
@@ -474,6 +498,9 @@ export default function TourneesPage() {
                           <span className="font-mono text-sm dark:text-white">
                             #{tb.ordre_livraison} - {tb.bon_livraison?.numero}
                           </span>
+                          {tb.bon_livraison?.facture?.client?.raison_sociale && (
+                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">{tb.bon_livraison.facture.client.raison_sociale}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2 py-1 rounded ${

@@ -26,6 +26,10 @@ class BonLivraisonController extends Controller
         if ($request->has('mode_livraison')) {
             $query->where('mode_livraison', $request->mode_livraison);
         }
+        // Bons pas encore placés dans une tournée (liste « Ajouter » d'une tournée).
+        if ($request->boolean('sans_tournee')) {
+            $query->whereDoesntHave('tourneeBon');
+        }
 
         $bons = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
 
@@ -34,7 +38,10 @@ class BonLivraisonController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $bon = BonLivraison::with(['facture.client', 'lignes', 'tourneeBon.tournee'])->findOrFail($id);
+        $bon = BonLivraison::with([
+            'facture.client', 'lignes', 'tourneeBon.tournee',
+            'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
+        ])->findOrFail($id);
 
         return response()->json($bon);
     }

@@ -60,7 +60,7 @@ class CommandeFournisseurController extends Controller
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'devise' => 'nullable|string|max:10',
-            'taux_change' => 'nullable|numeric|min:0',
+            'taux_change' => 'nullable|numeric|gt:0',
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',

@@ -1,69 +1,68 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Download, FileSpreadsheet, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getFactures, getReceptions } from '../services/api';
-import type { Facture } from '../services/api';
+import { getFactures, getReceptions, toutesLesPages } from '../services/api';
+import type { Facture, ReceptionLigne } from '../services/api';
+import { aujourdhui, formatDateDocument, formatMontant, useDevise } from '@/lib/documents';
+import { signaler } from '@/lib/erreurs';
 
-interface ReceptionLigne {
-  id: number;
-  date_reception: string;
-  quantite_recue: number;
-  ligne_commande?: {
-    prix_unitaire?: number;
-    commande?: {
-      numero: string;
-      fournisseur?: {
-        raison_sociale: string;
-      };
-    };
-  };
-}
+const fmtDate = (d: string) => formatDateDocument(d);
 
-function fmtDate(d: string): string {
-  return new Date(d).toLocaleDateString('fr-FR');
-}
-
+/**
+ * Montant d'une réception dans la devise de l'entreprise : le prix de la commande est dans la devise du
+ * fournisseur, converti au taux de la commande. Les montants de l'API sont des chaînes (« 12.50 ») : sans
+ * conversion en nombre, les totaux étaient concaténés au lieu d'être additionnés.
+ */
 function getMontantReception(r: ReceptionLigne): number {
-  return (r.quantite_recue || 0) * (r.ligne_commande?.prix_unitaire || 0);
+  const taux = Number(r.ligne_commande?.commande?.taux_change) || 1;
+  return (Number(r.quantite_recue) || 0) * (Number(r.ligne_commande?.prix_unitaire) || 0) * taux;
+}
+
+/** Champ texte du CSV : entre guillemets s'il contient le séparateur, un guillemet ou un retour à la ligne. */
+function champCsv(valeur: string | null | undefined): string {
+  const texte = valeur ?? '';
+  return /[;"\n\r]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte;
+}
+
+/** Nombre du CSV avec une virgule décimale : le séparateur « ; » est celui d'Excel en français. */
+const decimalCsv = (n: number) => n.toFixed(2).replace('.', ',');
+
+/** Ventes du journal : les factures émises (ni brouillons ni annulées), hors taxes. */
+const montantVente = (f: Facture) => Number(f.montant_ht) || 0;
+
+/** Date du jour moins un mois, au format AAAA-MM-JJ local. */
+function ilYaUnMois(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function ComptabilitePage() {
+  const devise = useDevise();
+  const montant = (v: number | string | null | undefined) => formatMontant(v, devise);
   const [activeTab, setActiveTab] = useState<'ventes' | 'achats'>('ventes');
   const [factures, setFactures] = useState<Facture[]>([]);
   const [receptions, setReceptions] = useState<ReceptionLigne[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterFournisseur, setFilterFournisseur] = useState('');
   const [groupByCommande, setGroupByCommande] = useState(false);
-  const [dateDebut, setDateDebut] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().split('T')[0];
-  });
-  const [dateFin, setDateFin] = useState(new Date().toISOString().split('T')[0]);
+  const [dateDebut, setDateDebut] = useState(ilYaUnMois);
+  const [dateFin, setDateFin] = useState(aujourdhui());
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [facturesResponse, receptionsResponse] = await Promise.all([
-        getFactures({}),
-        getReceptions(),
+      // La période est filtrée par l'API, sur toutes les pages : le journal ne portait que sur les
+      // 20 dernières factures et les 15 dernières réceptions, filtrées ensuite dans le navigateur.
+      const periode = { date_debut: dateDebut || undefined, date_fin: dateFin || undefined, per_page: 100 };
+      const [toutesFactures, toutesReceptions] = await Promise.all([
+        toutesLesPages(page => getFactures({ ...periode, page })),
+        toutesLesPages(page => getReceptions({ ...periode, page })),
       ]);
-
-      const filteredFactures = (facturesResponse.data || []).filter((f: Facture) => {
-        if (f.statut === 'brouillon') return false;
-        const date = new Date(f.date_facture);
-        return date >= new Date(dateDebut) && date <= new Date(dateFin);
-      });
-      setFactures(filteredFactures);
-
-      const receptionsData = Array.isArray(receptionsResponse) ? receptionsResponse : (receptionsResponse?.data || []);
-      const filteredReceptions = receptionsData.filter((r: ReceptionLigne) => {
-        const date = new Date(r.date_reception);
-        return date >= new Date(dateDebut) && date <= new Date(dateFin);
-      });
-      setReceptions(filteredReceptions);
+      setFactures(toutesFactures.filter(f => f.statut !== 'brouillon' && f.statut !== 'annulee'));
+      setReceptions(toutesReceptions);
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      signaler(error, 'Impossible de charger le journal');
     } finally {
       setLoading(false);
     }
@@ -73,7 +72,7 @@ export default function ComptabilitePage() {
     loadData();
   }, [loadData]);
 
-  const totalVentes = factures.reduce((sum, f) => sum + (f.montant_ht || 0), 0);
+  const totalVentes = factures.reduce((sum, f) => sum + montantVente(f), 0);
   const totalAchats = receptions.reduce((sum, r) => sum + getMontantReception(r), 0);
   const marge = totalVentes - totalAchats;
 
@@ -95,6 +94,8 @@ export default function ComptabilitePage() {
     );
   }, [receptions, filterFournisseur]);
 
+  const totalAchatsFiltres = receptionsFiltrees.reduce((sum, r) => sum + getMontantReception(r), 0);
+
   // Regroupement par commande
   const achatsGroupes = useMemo(() => {
     if (!groupByCommande) return null;
@@ -102,16 +103,16 @@ export default function ComptabilitePage() {
     receptionsFiltrees.forEach(r => {
       const numero = r.ligne_commande?.commande?.numero || '—';
       const existing = map.get(numero);
-      const montant = getMontantReception(r);
+      const montantLigne = getMontantReception(r);
       if (existing) {
-        existing.total += montant;
+        existing.total += montantLigne;
         existing.lignes += 1;
       } else {
         map.set(numero, {
           numero,
           fournisseur: r.ligne_commande?.commande?.fournisseur?.raison_sociale || '—',
           date: r.date_reception,
-          total: montant,
+          total: montantLigne,
           lignes: 1,
         });
       }
@@ -123,19 +124,23 @@ export default function ComptabilitePage() {
   const chartData = useMemo(() => {
     const map = new Map<string, { mois: string; ventes: number; achats: number }>();
 
+    // Mois lu dans la date du document (AAAA-MM), sans passer par un instant UTC qui décalait d'un jour.
+    const mois = (date: string) => {
+      const key = date.slice(0, 7);
+      const [annee, numero] = key.split('-').map(Number);
+      const label = new Date(annee, numero - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      return { key, label };
+    };
+
     factures.forEach(f => {
-      const d = new Date(f.date_facture);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      const { key, label } = mois(f.date_facture);
       const existing = map.get(key) || { mois: label, ventes: 0, achats: 0 };
-      existing.ventes += f.montant_ht || 0;
+      existing.ventes += montantVente(f);
       map.set(key, existing);
     });
 
     receptions.forEach(r => {
-      const d = new Date(r.date_reception);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      const { key, label } = mois(r.date_reception);
       const existing = map.get(key) || { mois: label, ventes: 0, achats: 0 };
       existing.achats += getMontantReception(r);
       map.set(key, existing);
@@ -149,19 +154,19 @@ export default function ComptabilitePage() {
   const exportCSV = () => {
     let csv = '';
     if (activeTab === 'ventes') {
-      csv = 'Date;Numéro;Client;Montant\n';
+      csv = 'Date;Numéro;Client;Montant HT\n';
       factures.forEach(f => {
-        csv += `${f.date_facture};${f.numero};${f.client?.raison_sociale || ''};${f.montant_ht?.toFixed(2)}\n`;
+        csv += `${f.date_facture.slice(0, 10)};${f.numero};${champCsv(f.client?.raison_sociale)};${decimalCsv(montantVente(f))}\n`;
       });
     } else {
       csv = 'Date;Commande;Fournisseur;Quantité;Montant\n';
       receptionsFiltrees.forEach(r => {
-        const montant = getMontantReception(r);
-        csv += `${r.date_reception};${r.ligne_commande?.commande?.numero || ''};${r.ligne_commande?.commande?.fournisseur?.raison_sociale || ''};${r.quantite_recue};${montant.toFixed(2)}\n`;
+        csv += `${r.date_reception.slice(0, 10)};${r.ligne_commande?.commande?.numero || ''};${champCsv(r.ligne_commande?.commande?.fournisseur?.raison_sociale)};${r.quantite_recue};${decimalCsv(getMontantReception(r))}\n`;
       });
     }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // BOM : sans lui, Excel lit le fichier en ANSI et abîme les accents (« Numéro », raisons sociales).
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `journal_${activeTab}_${dateDebut}_${dateFin}.csv`;
@@ -189,8 +194,8 @@ export default function ComptabilitePage() {
               <TrendingUp className="text-green-600 dark:text-green-400" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Ventes</p>
-              <p className="text-2xl font-bold text-green-600">{totalVentes.toFixed(2)} €</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total Ventes HT</p>
+              <p className="text-2xl font-bold text-green-600">{montant(totalVentes)}</p>
             </div>
           </div>
         </div>
@@ -201,7 +206,7 @@ export default function ComptabilitePage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Achats</p>
-              <p className="text-2xl font-bold text-red-600">{totalAchats.toFixed(2)} €</p>
+              <p className="text-2xl font-bold text-red-600">{montant(totalAchats)}</p>
             </div>
           </div>
         </div>
@@ -213,7 +218,7 @@ export default function ComptabilitePage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Marge Brute</p>
               <p className={`text-2xl font-bold ${marge >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                {marge >= 0 ? '+' : ''}{marge.toFixed(2)} €
+                {marge >= 0 ? '+' : ''}{montant(marge)}
               </p>
             </div>
           </div>
@@ -228,8 +233,8 @@ export default function ComptabilitePage() {
             <BarChart data={chartData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="mois" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}€`} />
-              <Tooltip formatter={(value) => `${Number(value).toFixed(2)} €`} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}${devise ? ` ${devise}` : ''}`} />
+              <Tooltip formatter={(value) => montant(Number(value))} />
               <Legend />
               <Bar dataKey="ventes" name="Ventes" fill="#16a34a" radius={[4, 4, 0, 0]} />
               <Bar dataKey="achats" name="Achats" fill="#dc2626" radius={[4, 4, 0, 0]} />
@@ -271,6 +276,7 @@ export default function ComptabilitePage() {
               <select
                 value={filterFournisseur}
                 onChange={(e) => setFilterFournisseur(e.target.value)}
+                aria-label="Filtrer par fournisseur"
                 className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="">Tous les fournisseurs</option>
@@ -291,15 +297,17 @@ export default function ComptabilitePage() {
           )}
 
           <div className="flex gap-2 items-center ml-auto">
-            <label className="text-sm text-gray-500">Du:</label>
+            <label htmlFor="compta-date-debut" className="text-sm text-gray-500">Du:</label>
             <input
+              id="compta-date-debut"
               type="date"
               value={dateDebut}
               onChange={(e) => setDateDebut(e.target.value)}
               className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
-            <label className="text-sm text-gray-500">Au:</label>
+            <label htmlFor="compta-date-fin" className="text-sm text-gray-500">Au:</label>
             <input
+              id="compta-date-fin"
               type="date"
               value={dateFin}
               onChange={(e) => setDateFin(e.target.value)}
@@ -323,7 +331,7 @@ export default function ComptabilitePage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">N° Facture</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Client</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Montant</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600 dark:text-gray-300">Montant HT</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -333,13 +341,13 @@ export default function ComptabilitePage() {
                     <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{facture.numero}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
                     <td className="px-4 py-3 text-right text-sm font-medium text-green-600">
-                      +{facture.montant_ht?.toFixed(2)} €
+                      +{montant(montantVente(facture))}
                     </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-50 dark:bg-gray-700 font-bold">
                   <td colSpan={3} className="px-4 py-3 text-right text-gray-900 dark:text-white">Total:</td>
-                  <td className="px-4 py-3 text-right text-green-600">{totalVentes.toFixed(2)} €</td>
+                  <td className="px-4 py-3 text-right text-green-600">{montant(totalVentes)}</td>
                 </tr>
               </tbody>
             </table>
@@ -362,13 +370,13 @@ export default function ComptabilitePage() {
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">{g.numero}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{g.fournisseur}</td>
                   <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300">{g.lignes}</td>
-                  <td className="px-4 py-3 text-right text-sm font-medium text-red-600">{g.total.toFixed(2)} €</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-red-600">{montant(g.total)}</td>
                 </tr>
               ))}
               <tr className="bg-gray-50 dark:bg-gray-700 font-bold">
                 <td colSpan={3} className="px-4 py-3 text-right text-gray-900 dark:text-white">Total:</td>
                 <td className="px-4 py-3 text-right text-red-600">
-                  {achatsGroupes.reduce((s, g) => s + g.total, 0).toFixed(2)} €
+                  {montant(totalAchatsFiltres)}
                 </td>
               </tr>
             </tbody>
@@ -386,7 +394,7 @@ export default function ComptabilitePage() {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {receptionsFiltrees.map((reception) => {
-                const montant = getMontantReception(reception);
+                const montantLigne = getMontantReception(reception);
                 return (
                   <tr key={reception.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{fmtDate(reception.date_reception)}</td>
@@ -394,14 +402,14 @@ export default function ComptabilitePage() {
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{reception.ligne_commande?.commande?.fournisseur?.raison_sociale}</td>
                     <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300">{reception.quantite_recue}</td>
                     <td className="px-4 py-3 text-right text-sm font-medium text-red-600">
-                      {montant.toFixed(2)} €
+                      {montant(montantLigne)}
                     </td>
                   </tr>
                 );
               })}
               <tr className="bg-gray-50 dark:bg-gray-700 font-bold">
                 <td colSpan={4} className="px-4 py-3 text-right text-gray-900 dark:text-white">Total:</td>
-                <td className="px-4 py-3 text-right text-red-600">{totalAchats.toFixed(2)} €</td>
+                <td className="px-4 py-3 text-right text-red-600">{montant(totalAchatsFiltres)}</td>
               </tr>
             </tbody>
           </table>
