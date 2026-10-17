@@ -302,8 +302,8 @@ class ReliquatsClients
         }
     }
 
-    /** Fournisseur principal actif d'un produit (fiche produit, sinon catalogue du fournisseur). */
-    private function fournisseurPrincipal(int $produitId): ?int
+    /** Fournisseur principal actif d'un produit (fiche produit, sinon catalogue du fournisseur) ; sert aussi aux suggestions d'achat. */
+    public function fournisseurPrincipal(int $produitId): ?int
     {
         $candidats = collect([ProduitTenant::withTrashed()->whereKey($produitId)->value('fournisseur_principal_id')])
             ->merge(DB::table('produit_fournisseur')->where('produit_id', $produitId)->where('fournisseur_principal', true)->pluck('fournisseur_id'))
@@ -312,8 +312,8 @@ class ReliquatsClients
         return Fournisseur::whereIn('id', $candidats)->where('actif', true)->value('id');
     }
 
-    /** Dernier prix payé au fournisseur pour ce produit, sinon son prix d'achat convenu, sinon 0. */
-    private function dernierPrix(int $produitId, int $fournisseurId): float
+    /** Dernier prix payé au fournisseur pour ce produit, sinon son prix d'achat convenu, sinon 0 ; sert aussi aux suggestions d'achat. */
+    public function dernierPrix(int $produitId, int $fournisseurId): float
     {
         $dernier = ComFourLigne::query()->join('com_four_entete', 'com_four_entete.id', '=', 'com_four_ligne.com_four_entete_id')
             ->where('com_four_entete.fournisseur_id', $fournisseurId)->where('com_four_ligne.produit_id', $produitId)

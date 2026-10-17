@@ -44,6 +44,7 @@ class Droits
         'employes' => 'employes',
         'fournisseurs' => 'fournisseurs',
         'commandes-fournisseur' => 'commandes_fournisseur',
+        'suggestions-achat' => 'suggestions_achat',
         'receptions' => 'receptions',
         'retours-fournisseurs' => 'retours_fournisseurs',
         'devis' => 'devis',
@@ -168,6 +169,14 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        // Suggestions d'achat : en signaler une (depuis un produit) ; calculer, accepter, modifier, retirer et commander (les
+        // droits des commandes fournisseur sont contrôlés aussi pour commander).
+        'POST api/suggestions-achat' => ['suggestions_achat', 'suggerer'],
+        'POST api/suggestions-achat/generer' => ['suggestions_achat', 'gerer'],
+        'POST api/suggestions-achat/accepter' => ['suggestions_achat', 'gerer'],
+        'POST api/suggestions-achat/commander' => ['suggestions_achat', 'gerer'],
+        'PUT api/suggestions-achat/{id}' => ['suggestions_achat', 'gerer'],
+        'DELETE api/suggestions-achat/{id}' => ['suggestions_achat', 'gerer'],
         // Cartes cadeaux : recharger (modifier) ; rembourser le solde (le droit de modifier est contrôlé aussi).
         'POST api/cartes-cadeaux/{id}/recharger' => ['cartes_cadeaux', 'modifier'],
         'POST api/cartes-cadeaux/{id}/rembourser' => ['cartes_cadeaux', 'rembourser'],

@@ -16,6 +16,7 @@
 7. [Impact sur le stock](#7-impact-sur-le-stock)
 8. [Multi-devise](#8-multi-devise)
 9. [Retours fournisseurs et avoirs](#9-retours-fournisseurs-et-avoirs-achats--retours-fournisseurs)
+10. [Suggestions d'achat](#10-suggestions-dachat-achats--suggestions-dachat)
 
 ---
 
@@ -515,6 +516,52 @@ Plan de parité fripv2, phase 3.4. Dans fripv2, un retour au fournisseur est une
 Code :
 - API : service `App\Services\RetoursFournisseurs`, PDF `App\Services\RetourFournisseurPdf`, migration `2026_10_16_100036_creer_retours_fournisseurs` ;
 - web : page `RetoursFournisseursPage`, composants `retoursFournisseurs/EditeurRetourFournisseur` et `retoursFournisseurs/CloturerRetourFournisseur`.
+
+---
+
+## 10. Suggestions d'achat (Achats → Suggestions d'achat)
+
+Plan de parité fripv2, phase 3.2 (« Suggestion de commandes aux fournisseurs ») : PI propose ce qu'il faut commander, par fournisseur, et les suggestions retenues deviennent des commandes fournisseur.
+
+**Origines d'une suggestion :**
+- **Inventaire.** Un produit actif dont le disponible passe sous son **seuil d'alerte** (le minimum) est proposé.
+  - Le disponible est le stock compté (les scans) moins ce que réservent les commandes client acceptées. On peut y ajouter ce qui est **déjà en commande** : commandes envoyées, reçues en partie, et commandes en préparation.
+  - La quantité suggérée remonte le stock jusqu'au **maximum** du produit, ou jusqu'au seuil s'il n'a pas de maximum.
+  - Le minimum et le maximum se règlent dans Inventaire → Alertes de stock → Configurer seuils (`produits.stock_maximum`) ; le maximum ne peut pas être sous le seuil.
+- **Reliquat client.** Ce qu'un client attend (reliquat inscrit, FLOW-VENTES §5.14) et qui n'est pas encore commandé au fournisseur. La quantité est celle du reliquat ; le client, la commande et la date requise sont rappelés.
+- **Manuelle.** Un besoin signalé depuis la liste des produits (« Suggérer l'achat ») : quantité et remarque, en attente de la décision de l'acheteur. Une suggestion ouverte du même produit est signalée ; on peut tout de même en créer une seconde.
+
+**Calculer les suggestions :** sources choisies (inventaire, reliquats clients, en tenant compte ou non des commandes en cours), éventuellement pour un seul fournisseur.
+- Un nouveau calcul remplace les suggestions en attente qui venaient d'un calcul ; les acceptées et les manuelles restent.
+- Un produit qui a déjà une suggestion ouverte n'est pas proposé une seconde fois.
+
+**Liste, regroupée par fournisseur :**
+- **Colonnes :** produit, origine, disponible, minimum et maximum, en commande, quantité vendue sur 12 mois, quantité suggérée, **quantité à commander** (modifiable), dernier coûtant (dernier prix payé au fournisseur, sinon le prix d'achat convenu), fournisseur (modifiable), remarque, commis.
+- **Fournisseur :** c'est le fournisseur principal du produit. Un produit sans fournisseur principal doit en recevoir un avant d'être commandé.
+- **Accepter** une suggestion retient sa quantité (la suggérée par défaut) et le nom de qui accepte. « Tout accepter » et « Tout remettre en attente » agissent sur toutes les lignes.
+- Une suggestion en attente ou acceptée se retire ; une commandée, non.
+
+**Générer les commandes :** les suggestions acceptées deviennent des commandes fournisseur **brouillons** (en préparation).
+- Une commande par fournisseur, une ligne par produit, au dernier prix payé. Avec « Ajouter aux commandes en préparation du fournisseur », les lignes vont dans la commande brouillon la plus récente du fournisseur ; une ligne du même produit y est augmentée.
+- Un reliquat commandé est rattaché à sa ligne et passe « commandé ». Si la commande est annulée, il redevient inscrit et réapparaît dans les suggestions.
+- L'onglet « Commandées (30 jours) » montre chaque suggestion avec le numéro de sa commande.
+
+**Droits :** module **Suggestions d'achat** (`suggestions_achat`), copié des commandes fournisseur à sa création.
+- **Gérer les suggestions d'achat** (`suggestions_achat.gerer`) : calculer, accepter, modifier, retirer, commander. Il suit le droit de créer une commande fournisseur, droit que commander demande aussi (le contrôleur le vérifie).
+- **Créer une suggestion d'achat** (`suggestions_achat.suggerer`) : signaler un besoin depuis un produit, sans pouvoir commander soi-même. Il est accordé à qui voit les produits.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/suggestions-achat?statut=ouvertes\|commandees` | Suggestions avec disponible, en commande, vendu 12 mois, dernier coûtant |
+| POST | `/suggestions-achat/generer` | Calcul (`inventaire`, `reliquats`, `avec_commandes`, `fournisseur_id`, `produit_id`) |
+| POST | `/suggestions-achat` | Suggestion manuelle (`produit_id`, `quantite`, `remarque`, `forcer`) |
+| POST | `/suggestions-achat/accepter` | Accepter ou remettre en attente (`ids`, `accepte`) |
+| PUT / DELETE | `/suggestions-achat/{id}` | Quantité, fournisseur, remarque ; retirer |
+| POST | `/suggestions-achat/commander` | Commandes fournisseur des suggestions acceptées (`fusionner`) |
+
+Code :
+- API : service `App\Services\SuggestionsAchat` (le fournisseur principal et le dernier prix viennent de `ReliquatsClients`), `SuggestionAchatController`, migration `2026_10_17_100055_creer_suggestions_achat` (`produits.stock_maximum`, table `suggestions_achat`, droits du module) ;
+- web : page `SuggestionsAchatPage`, composant `achats/SuggererAchat` (liste des produits), colonne Maximum dans les seuils des alertes.
 
 ---
 

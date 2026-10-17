@@ -77,6 +77,7 @@ use App\Http\Controllers\Api\ReliquatClientController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\RetourClientController;
 use App\Http\Controllers\Api\RetourFournisseurController;
+use App\Http\Controllers\Api\SuggestionAchatController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -756,6 +757,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/recharger', [CarteCadeauController::class, 'recharger'])->whereNumber('id');
         Route::post('/{id}/rembourser', [CarteCadeauController::class, 'rembourser'])->whereNumber('id');
         Route::get('/{id}/certificat', [CarteCadeauController::class, 'certificat'])->whereNumber('id');
+    });
+
+    // Suggestions d'achat : stock sous le minimum et reliquats clients à commander, puis commandes fournisseur par fournisseur.
+    Route::prefix('suggestions-achat')->middleware('module:achats')->group(function () {
+        Route::get('/', [SuggestionAchatController::class, 'index']);
+        Route::post('/', [SuggestionAchatController::class, 'store']);
+        Route::post('/generer', [SuggestionAchatController::class, 'generer']);
+        Route::post('/accepter', [SuggestionAchatController::class, 'accepter']);
+        Route::post('/commander', [SuggestionAchatController::class, 'commander']);
+        Route::put('/{id}', [SuggestionAchatController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [SuggestionAchatController::class, 'destroy'])->whereNumber('id');
     });
 
     // Gestion de caisse : ouverture avec le fond, entrées et sorties d'argent, fermeture (tiroir compté), sommaire.

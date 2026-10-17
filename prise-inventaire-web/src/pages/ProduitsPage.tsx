@@ -1,7 +1,8 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart } from 'lucide-react';
+import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
@@ -65,7 +66,9 @@ export default function ProduitsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toasts, toast, dismiss } = useToast();
   // Boutons selon les droits du rôle sur les produits (l'API refuse de toute façon les autres écritures).
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit, canDelete, peut } = usePermissions();
+  // Produit pour lequel on signale un besoin d'achat (suggestion d'achat).
+  const [aSuggerer, setASuggerer] = useState<Produit | null>(null);
 
   async function loadData() {
     try {
@@ -361,6 +364,12 @@ export default function ProduitsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
+                      {produit.actif !== false && peut('suggestions_achat', 'suggerer') && (
+                        <button onClick={() => setASuggerer(produit)} className="p-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded mr-2"
+                          title={t.purchaseSuggestions.suggestTitle} aria-label={`${t.purchaseSuggestions.suggestTitle} — ${produit.numero}`}>
+                          <ShoppingCart size={16} />
+                        </button>
+                      )}
                       {canEdit('produits') && (
                         <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                           <Edit2 size={16} />
@@ -526,6 +535,10 @@ export default function ProduitsPage() {
         onCancel={() => setConfirmId(null)}
       />
 
+      {aSuggerer && (
+        <SuggererAchat produit={{ id: aSuggerer.id!, numero: aSuggerer.numero, description: aSuggerer.description }}
+          onClose={() => setASuggerer(null)} onFait={() => { setASuggerer(null); toast(t.purchaseSuggestions.suggested_, 'success'); }} />
+      )}
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
