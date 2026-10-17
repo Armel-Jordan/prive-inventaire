@@ -30,6 +30,12 @@ use Illuminate\Validation\ValidationException;
  */
 class LotsSeries
 {
+    /** Quantité lisible dans un message : « 4 », « 2,5 » (MySQL rend les décimales en texte : « 4.0000 »). */
+    private function quantite(float|int|string|null $valeur): string
+    {
+        return rtrim(rtrim(number_format((float) $valeur, 4, ',', ' '), '0'), ',');
+    }
+
     /** Quantité reçue en unités de stock (une caisse de 12 : 12). */
     public function unitesStock(ComFourLigne $ligne, int $quantite): int
     {
@@ -155,7 +161,7 @@ class LotsSeries
             $lot = Lot::query()->lockForUpdate()->findOrFail($ligne->lot_id);
             $solde = (float) LotMouvement::query()->where('lot_id', $lot->id)->sum('quantite');
             if ($solde + 1e-6 < $entree) {
-                throw new DomainException("Le lot {$lot->numero} a déjà été entamé ({$solde} sur {$entree} reçus) : la réception ne peut plus être annulée.");
+                throw new DomainException("Le lot {$lot->numero} a déjà été entamé ({$this->quantite($solde)} sur {$this->quantite($entree)} reçus) : la réception ne peut plus être annulée.");
             }
             LotMouvement::create(['lot_id' => $lot->id, 'type' => LotMouvement::ANNULATION_RECEPTION, 'quantite' => -$entree,
                 'reception_ligne_id' => $ligne->id, 'date_mouvement' => today(), 'cree_par' => $auteur?->id]);
@@ -253,13 +259,13 @@ class LotsSeries
                 throw ValidationException::withMessages(["{$champ}.lots.{$index}.lot_id" => "Ce lot n'a plus de stock ou n'est pas un lot de {$produit->numero}."]);
             }
             if ($quantite > (float) $lot->solde + 1e-6) {
-                throw ValidationException::withMessages(["{$champ}.lots.{$index}.quantite" => "Il ne reste que {$lot->solde} du lot {$lot->numero}."]);
+                throw ValidationException::withMessages(["{$champ}.lots.{$index}.quantite" => "Il ne reste que {$this->quantite($lot->solde)} du lot {$lot->numero}."]);
             }
             $allocations[] = [$lot->id, $quantite];
             $total += $quantite;
         }
         if ($total > $unites + 1e-6) {
-            throw ValidationException::withMessages(["{$champ}.lots" => "Les lots de {$produit->numero} dépassent la quantité livrée ({$total} pour {$unites})."]);
+            throw ValidationException::withMessages(["{$champ}.lots" => "Les lots de {$produit->numero} dépassent la quantité livrée ({$this->quantite($total)} pour {$this->quantite($unites)})."]);
         }
 
         return $allocations;
@@ -275,7 +281,7 @@ class LotsSeries
     {
         $numeros = array_values(array_unique(array_filter(array_map(fn ($n) => trim((string) $n), $numeros), fn (string $n) => $n !== '')));
         if (count($numeros) > $unites) {
-            throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$unites} unité(s) livrée(s)."]);
+            throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$this->quantite($unites)} unité(s) livrée(s)."]);
         }
         $series = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->lockForUpdate()->get();
         $parNumero = $series->keyBy(fn (NumeroSerie $s) => mb_strtolower($s->numero));
@@ -365,7 +371,7 @@ class LotsSeries
                 $champ = "lignes.{$index}.numeros_serie";
                 $numeros = $this->numeros(['numeros_serie' => $ligne->numeros_serie]);
                 if (count($numeros) > $unites) {
-                    throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$unites} unité(s) retournée(s)."]);
+                    throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$this->quantite($unites)} unité(s) retournée(s)."]);
                 }
                 $series = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->lockForUpdate()->get()
                     ->keyBy(fn (NumeroSerie $s) => mb_strtolower($s->numero));
