@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
 use App\Models\Configuration;
 use App\Models\Debourse;
@@ -39,7 +40,7 @@ class Debourses
         return [
             'fournisseur:id,code,raison_sociale,devise',
             'lignes.facture:id,numero,numero_fournisseur,date_facture,date_echeance,montant_ttc,montant_paye,statut,devise,taux_change',
-            'auteur:id,nom', 'auteurAnnulation:id,nom',
+            'compteBancaire:id,nom,banque', 'auteur:id,nom', 'auteurAnnulation:id,nom',
         ];
     }
 
@@ -106,6 +107,7 @@ class Debourses
     {
         $fournisseur = Fournisseur::query()->findOrFail((int) $donnees['fournisseur_id']);
         $devise = $this->devise(array_key_exists('devise', $donnees) ? $donnees['devise'] : $fournisseur->devise);
+        $compteBancaire = $this->compteBancaire($donnees['compte_bancaire_id'] ?? null);
         $date = Carbon::parse($donnees['date_debourse'])->toDateString();
         // Les lignes sans rien à payer ne comptent pas (factures proposées, rien porté dessus).
         $lignes = collect($donnees['lignes'] ?? [])
@@ -122,7 +124,7 @@ class Debourses
             throw ValidationException::withMessages(['lignes' => 'Le déboursé doit verser de l\'argent : un escompte seul ne fait pas un paiement.']);
         }
 
-        return DB::transaction(function () use ($donnees, $tenantId, $auteur, $fournisseur, $devise, $date, $lignes, $montant) {
+        return DB::transaction(function () use ($donnees, $tenantId, $auteur, $fournisseur, $devise, $date, $lignes, $montant, $compteBancaire) {
             // Verrous sur les factures, dans l'ordre : deux déboursés simultanés ne paient pas deux fois le même reste.
             $factures = FactureFournisseur::query()->whereIn('id', $lignes->pluck('facture_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             foreach ($lignes as $ligne) {
@@ -144,6 +146,7 @@ class Debourses
                 'montant' => $montant,
                 'montant_applique' => round($lignes->sum(fn ($l) => $l['argent'] + $l['escompte']), 2),
                 'escompte' => round($lignes->sum('escompte'), 2),
+                'compte_bancaire_id' => $compteBancaire?->id,
                 'notes' => $this->texte($donnees['notes'] ?? null),
                 'statut' => Debourse::VALIDE,
                 'enregistre_par' => $auteur,
@@ -211,6 +214,7 @@ class Debourses
                     'date_debourse' => $date,
                     'mode' => $donnees['mode'],
                     'reference' => $donnees['reference'] ?? null,
+                    'compte_bancaire_id' => $donnees['compte_bancaire_id'] ?? null,
                     'devise' => $groupe->first()->devise,
                     'notes' => $donnees['notes'] ?? null,
                     'lignes' => $lignes,
@@ -297,6 +301,17 @@ class Debourses
         if ($date < $facture->date_facture->toDateString()) {
             throw ValidationException::withMessages(['date_debourse' => "Le déboursé ne peut pas précéder la facture {$facture->numero} ({$facture->date_facture->format('d/m/Y')})."]);
         }
+    }
+
+    /** Compte bancaire choisi : actif, sinon refusé ; vide : aucun (le compte de banque des réglages en comptabilité). */
+    private function compteBancaire(mixed $id): ?CompteBancaire
+    {
+        if (empty($id)) {
+            return null;
+        }
+
+        return CompteBancaire::query()->where('actif', true)->find((int) $id)
+            ?? throw ValidationException::withMessages(['compte_bancaire_id' => 'Choisissez un compte bancaire actif.']);
     }
 
     private function numero(int $tenantId): string

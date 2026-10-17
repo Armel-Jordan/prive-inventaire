@@ -26,7 +26,7 @@ class Debourse extends Model
 
     protected $fillable = [
         'tenant_id', 'numero', 'fournisseur_id', 'date_debourse', 'mode', 'reference', 'devise', 'taux_change', 'montant',
-        'montant_applique', 'escompte', 'notes', 'statut', 'enregistre_par', 'annule_le', 'annule_par', 'motif_annulation',
+        'montant_applique', 'escompte', 'compte_bancaire_id', 'notes', 'statut', 'enregistre_par', 'annule_le', 'annule_par', 'motif_annulation',
     ];
 
     protected $casts = [
@@ -46,6 +46,12 @@ class Debourse extends Model
     public function lignes(): HasMany
     {
         return $this->hasMany(DebourseLigne::class)->orderBy('id');
+    }
+
+    /** Compte bancaire par lequel passe l'argent (vide : le compte de banque des réglages de comptabilisation). */
+    public function compteBancaire(): BelongsTo
+    {
+        return $this->belongsTo(CompteBancaire::class)->withTrashed();
     }
 
     public function auteur(): BelongsTo

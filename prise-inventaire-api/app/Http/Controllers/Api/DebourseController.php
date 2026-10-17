@@ -118,6 +118,7 @@ class DebourseController extends Controller
             'mode' => ['required', Rule::in(Debourse::MODES)],
             'reference' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:2000',
+            'compte_bancaire_id' => 'nullable|integer',
             // Appliquer l'escompte encore offert à la date du paiement (oui par défaut).
             'escompte' => 'sometimes|boolean',
         ]);
@@ -142,6 +143,8 @@ class DebourseController extends Controller
             'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
             'taux_change' => 'nullable|numeric|gt:0',
             'notes' => 'nullable|string|max:2000',
+            // Compte bancaire d'où sort l'argent.
+            'compte_bancaire_id' => 'nullable|integer',
             'lignes' => 'required|array|min:1|max:200',
             'lignes.*.facture_fournisseur_id' => 'required|integer',
             'lignes.*.montant' => 'required|numeric|min:0|max:9999999999',

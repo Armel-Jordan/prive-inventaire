@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Eraser, X } from 'lucide-react';
+import ChampCompteBancaire from '@/components/banque/ChampCompteBancaire';
 import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, formatDateDocument, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
@@ -43,6 +44,7 @@ export default function FenetreDebourse({ fournisseurId, onClose, onEnregistre }
     date: aujourdhui(),
     mode: 'cheque' as ModeDebourse,
     reference: '',
+    compteBancaire: '',
     notes: '',
     // Vide : la devise de l'entreprise.
     devise: '',
@@ -103,6 +105,7 @@ export default function FenetreDebourse({ fournisseurId, onClose, onEnregistre }
         mode: saisie.mode,
         reference: saisie.reference.trim() || null,
         devise: saisie.devise || deviseEntreprise,
+        compte_bancaire_id: saisie.mode !== 'especes' && saisie.compteBancaire ? Number(saisie.compteBancaire) : undefined,
         notes: saisie.notes.trim() || null,
         lignes: factures
           .filter(f => centimes(parts[f.id]?.argent ?? '') + centimes(parts[f.id]?.escompte ?? '') > 0)
@@ -155,6 +158,9 @@ export default function FenetreDebourse({ fournisseurId, onClose, onEnregistre }
           <label className="block text-xs text-gray-500 dark:text-gray-400">{td.reference}
             <input value={saisie.reference} maxLength={100} placeholder={td.referenceHelp} onChange={e => setSaisie({ ...saisie, reference: e.target.value })} className={classeChamp} />
           </label>
+          {saisie.mode !== 'especes' && (
+            <ChampCompteBancaire valeur={saisie.compteBancaire} onChange={v => setSaisie(s => ({ ...s, compteBancaire: v }))} />
+          )}
           {saisie.fournisseur_id && (
             // Pas de taux à saisir : chaque facture se règle à son propre taux de change.
             <label className="block text-xs text-gray-500 dark:text-gray-400 sm:col-span-2">{td.currency}

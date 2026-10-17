@@ -49,6 +49,7 @@ class Droits
         'retours-fournisseurs' => 'retours_fournisseurs',
         'factures-fournisseurs' => 'factures_fournisseurs',
         'debourses' => 'debourses',
+        'banque' => 'banque',
         'devis' => 'devis',
         'clients' => 'clients',
         'commandes-client' => 'commandes_client',
@@ -93,6 +94,8 @@ class Droits
     /** Lectures contrôlées (données sensibles) : préfixe => module ; il faut le droit de le consulter. */
     private const LECTURES = [
         'comptabilite' => 'comptabilite',
+        // Banque : soldes, mouvements et transactions des comptes bancaires.
+        'banque' => 'banque',
         'comptes-clients' => 'comptes_clients',
         // Encaissements des clients : l'argent reçu et sa répartition ; déboursés : l'argent versé aux fournisseurs.
         'encaissements' => 'encaissements',
@@ -227,6 +230,10 @@ class Droits
         'DELETE api/factures-fournisseurs/{id}/paiements/{paiement}' => ['factures_fournisseurs', 'payer'],
         'POST api/factures-fournisseurs/{id}/annuler' => ['factures_fournisseurs', 'annuler'],
         'POST api/debourses/{id}/annuler' => ['debourses', 'annuler'],
+        // Banque : relier un compte bancaire à son compte comptable ; saisir et annuler une transaction bancaire.
+        'PUT api/banque/comptes/{id}' => ['banque', 'configurer'],
+        'POST api/banque/transactions' => ['banque', 'saisir'],
+        'POST api/banque/transactions/{id}/annuler' => ['banque', 'annuler'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],

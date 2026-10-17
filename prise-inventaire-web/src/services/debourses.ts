@@ -35,6 +35,8 @@ export interface Debourse {
   montant: string;
   montant_applique: string;
   escompte: string;
+  compte_bancaire_id?: number | null;
+  compte_bancaire?: { id: number; nom: string; banque: string } | null;
   notes: string | null;
   statut: StatutDebourse;
   auteur?: { id: number; nom: string } | null;
@@ -96,6 +98,8 @@ export interface SaisieDebourse {
   reference?: string | null;
   devise?: string;
   taux_change?: number;
+  /** Compte bancaire d'où sort l'argent (chèque, virement, carte). */
+  compte_bancaire_id?: number;
   notes?: string | null;
   /** Par facture : l'argent versé et l'escompte obtenu. */
   lignes: { facture_fournisseur_id: number; montant: number; escompte: number }[];
@@ -222,6 +226,7 @@ export function payerSelection(donnees: {
   mode: ModeDebourse;
   reference?: string | null;
   notes?: string | null;
+  compte_bancaire_id?: number;
   /** Appliquer l'escompte encore offert à la date du paiement. */
   escompte?: boolean;
 }): Promise<{ message: string; debourses: Debourse[] }> {

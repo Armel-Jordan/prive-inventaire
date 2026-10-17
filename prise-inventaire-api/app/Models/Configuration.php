@@ -94,6 +94,7 @@ class Configuration extends Model
         'reception' => ['prefixe' => 'REC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'facture_fournisseur' => ['prefixe' => 'FF', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'debourse' => ['prefixe' => 'DEB', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'transaction_bancaire' => ['prefixe' => 'TB', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'bon_livraison' => ['prefixe' => 'BL', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
         'contrat_location' => ['prefixe' => 'CT', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],

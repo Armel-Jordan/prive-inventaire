@@ -80,6 +80,7 @@ export default function DetailDebourse({ id, onClose, onModifie }: { id: number;
               <div>
                 <p className="text-xs text-gray-500">{td.mode}</p>
                 <p className="font-medium">{td.modes[debourse.mode] ?? debourse.mode}{debourse.reference ? ` — ${debourse.reference}` : ''}</p>
+                {debourse.compte_bancaire && <p className="text-xs text-gray-500">{debourse.compte_bancaire.nom}</p>}
                 {debourse.auteur && <p className="text-xs text-gray-500">{td.recordedBy.replace('{nom}', debourse.auteur.nom)}</p>}
               </div>
             </div>

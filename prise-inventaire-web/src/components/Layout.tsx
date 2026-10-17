@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -144,6 +144,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
       { path: '/ecritures-recurrentes', label: t.accounting.recurringNav, icon: Repeat, module: 'comptabilite' },
       { path: '/comptabilisation', label: t.accounting.autoPostingNav, icon: Calculator, module: 'comptabilite' },
+      { path: '/banque', label: t.bank.nav, icon: Landmark, module: 'banque' },
       { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite', action: 'etats' },
       { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite', action: 'etats' },
       { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite', action: 'etats' },

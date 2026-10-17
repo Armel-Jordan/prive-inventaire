@@ -224,6 +224,7 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
 | Facture fournisseur | Achats | Achats par catégorie (HT), taxes déductibles par taxe | Fournisseurs (TTC) |
 | Paiement d'un fournisseur | Caisse ou banque | Fournisseurs | Caisse ou banque |
 | Déboursé réparti sur plusieurs factures | Caisse ou banque selon le mode | Fournisseurs (une ligne par facture, escompte compris) | Caisse ou banque (argent versé) ; escompte obtenu |
+| Transaction bancaire (dépôt, retrait, virement) | Compte du compte bancaire | Voir « Banque » | |
 
 **Règles :**
 - Une écriture générée porte le type de son document en source (filtre « Origine » du journal) et le numéro du document en référence.
@@ -235,6 +236,62 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
 - **Aperçu** : nombre et montant des documents à comptabiliser par type sur la période, écritures à contre-passer, réglages manquants.
 - Une seule comptabilisation à la fois par entreprise.
 - **Droits** : consulter avec le droit de voir la comptabilité ; régler et lancer avec celui de saisir des écritures.
+
+### Banque (Finance → Banque)
+
+Plan de parité fripv2, phase 4.6 (« Transactions bancaires ») : les comptes bancaires de l'entreprise côté comptabilité, leurs mouvements et les transactions bancaires sans facture.
+
+**Comptes** (onglet Comptes) :
+- Les comptes bancaires se créent dans Paramètres → Référentiels → Comptes bancaires (nom, banque, IBAN, devise, par défaut, actif).
+- Chacun se relie à **son propre compte comptable de trésorerie** : un compte de détail, actif, que nul autre compte bancaire n'utilise (par exemple 5211 Afriland, 5212 SGBC sous 52 Banques). Il se relie aussi, au besoin, à son **journal** (vide : le journal de banque des réglages de comptabilisation).
+- Le **solde** affiché est celui de ce compte comptable à la date du jour.
+
+**Compte bancaire des documents** :
+- Un **encaissement** et un **déboursé** payés autrement qu'en espèces choisissent le compte bancaire par lequel passe l'argent. Le compte « par défaut » est proposé.
+- La comptabilisation automatique les passe au compte comptable et au journal de ce compte bancaire.
+- Les documents sans compte bancaire relié (paiements simples, acomptes…) passent au compte « Banque » et au journal de banque des réglages.
+
+**Mouvements** (onglet Mouvements) :
+- Ce sont les lignes du compte comptable du compte bancaire, **quelle qu'en soit l'origine** : encaissements, déboursés, paiements, transactions bancaires, écritures saisies.
+- Ils sont donnés pour une période, avec le solde d'ouverture, le solde progressif et le solde final.
+- Un document y figure une fois passé au journal.
+
+**Transactions bancaires** (onglet Transactions) : l'argent qui entre ou sort sans facture.
+- **Dépôt** : intérêts créditeurs, apport, recette diverse. Il se répartit sur des comptes de contrepartie (produits…).
+- **Retrait** : frais de tenue de compte, commission, prélèvement, dépense payée par chèque ou par Internet. Il se répartit sur des comptes de contrepartie (charges…).
+- **Virement entre comptes** : d'un compte bancaire de l'entreprise vers un autre, de la même devise.
+
+**Saisie** :
+- compte, date (au plus demain), libellé, référence (n° de chèque, de prélèvement), notes ;
+- lignes : compte comptable, libellé et montant. Une ligne négative passe de l'autre côté, par exemple une commission retenue sur un dépôt ;
+- le total doit être positif. Un montant saisi à part doit égaler le total des lignes.
+
+**Contrôles** :
+- les comptes de contrepartie sont actifs, de détail et ouverts à la saisie manuelle ;
+- le compte du compte bancaire lui-même n'en est pas un ;
+- un compte bancaire en devise étrangère demande son taux (sinon celui du référentiel des devises) ;
+- les deux comptes d'un virement doivent être reliés à leur compte comptable pour passer au journal.
+
+**Numéro** : `TB-00001` (Configuration → Numérotation).
+
+**Annuler** (avec un motif) : la transaction reste dans la liste, barrée ; son écriture est contre-passée à la date de l'annulation. Une transaction annulée avant d'être comptabilisée ne passe pas au journal.
+
+**Écritures** (comptabilisation automatique, journal du compte bancaire) :
+
+| Transaction | Débit | Crédit |
+|---|---|---|
+| Dépôt | Compte bancaire (total) | Contreparties (une ligne négative : au débit) |
+| Retrait | Contreparties (une ligne négative : au crédit) | Compte bancaire (total) |
+| Virement | Compte bancaire qui reçoit | Compte bancaire qui envoie |
+
+**Droits** : module **Banque** (`banque`), réglé pour chaque groupe d'après ses droits de comptabilité.
+- **Consulter** : comptes, soldes, mouvements, transactions. Les lectures de `/banque` sont contrôlées.
+- **Saisir une transaction bancaire** (`saisir`, comme « Saisir des écritures »).
+- **Annuler une transaction bancaire** (`annuler`, même réglage).
+- **Faire le rapprochement bancaire** (`rapprocher`, même réglage ; pour le rapprochement à venir).
+- **Relier les comptes bancaires à la comptabilité** (`configurer`, comme la modification du plan comptable).
+
+À venir (4.6) : le rapprochement bancaire avec les relevés (pointage des mouvements, solde du relevé), puis l'import des relevés (CSV, OFX) et leur rapprochement avec les mouvements.
 
 ### Protections du plan et des exercices
 
@@ -327,6 +384,11 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET` et `PUT /comptabilite/comptabilisation/parametres` | Réglages de la comptabilisation automatique (avec les propositions, les journaux, comptes, taxes et catégories) |
 | `GET /comptabilite/comptabilisation/apercu?du=&au=` | Documents à comptabiliser par type, contre-passations, réglages manquants |
 | `POST /comptabilite/comptabilisation` | `{du, au}` : comptabiliser ; `creees`, `par_type`, `contre_passations`, `erreurs` |
+| `GET /banque/comptes?date=` | Comptes bancaires avec leur compte comptable, leur journal et leur solde |
+| `PUT /banque/comptes/{id}` | Relier au compte comptable et au journal (`compte_comptable_id`, `journal_id`) |
+| `GET /banque/comptes/{id}/mouvements?du=&au=&recherche=` | Mouvements (lignes du compte comptable) avec le solde progressif et l'origine |
+| `GET` / `POST /banque/transactions` | Liste (`compte_bancaire_id`, `type`, `statut`, `date_debut`, `date_fin`, `recherche`) ; saisie (`compte_bancaire_id`, `date_transaction`, `type`, `compte_bancaire_destination_id`, `libelle`, `reference`, `montant`, `taux_change`, `notes`, `lignes[]` : `compte_comptable_id`, `libelle`, `montant`) |
+| `GET /banque/transactions/{id}`, `POST /banque/transactions/{id}/annuler` | Détail ; annulation (`motif`) |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -335,9 +397,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`.
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne` (et `CompteBancaire`, relié à son compte comptable).
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires}`, contrôleurs `App\Http\Controllers\Banque\*`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`.

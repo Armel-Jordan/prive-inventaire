@@ -68,6 +68,7 @@ import ExercicesComptablesPage from '@/pages/ExercicesComptablesPage';
 import JournalComptablePage from '@/pages/JournalComptablePage';
 import EcrituresRecurrentesPage from '@/pages/EcrituresRecurrentesPage';
 import ComptabilisationPage from '@/pages/ComptabilisationPage';
+import BanquePage from '@/pages/BanquePage';
 import GrandLivrePage from '@/pages/GrandLivrePage';
 import BalanceComptablePage from '@/pages/BalanceComptablePage';
 import SoldesOuverturePage from '@/pages/SoldesOuverturePage';
@@ -195,6 +196,7 @@ function AppRoutes() {
         <Route path="journal-comptable" element={<JournalComptablePage />} />
         <Route path="ecritures-recurrentes" element={<EcrituresRecurrentesPage />} />
         <Route path="comptabilisation" element={<ComptabilisationPage />} />
+        <Route path="banque" element={<BanquePage />} />
         <Route path="grand-livre" element={<GrandLivrePage />} />
         <Route path="balance-comptable" element={<BalanceComptablePage />} />
         <Route path="soldes-ouverture" element={<SoldesOuverturePage />} />

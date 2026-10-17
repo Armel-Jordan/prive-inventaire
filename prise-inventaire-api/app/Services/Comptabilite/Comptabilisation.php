@@ -6,6 +6,7 @@ use App\Models\Acompte;
 use App\Models\AcompteRemboursement;
 use App\Models\Avoir;
 use App\Models\AvoirRemboursement;
+use App\Models\CompteBancaire;
 use App\Models\CompteComptable;
 use App\Models\Debourse;
 use App\Models\DocumentTaxe;
@@ -17,6 +18,7 @@ use App\Models\FactureFournisseurPaiement;
 use App\Models\FacturePaiement;
 use App\Models\JournalComptable;
 use App\Models\ParametreComptable;
+use App\Models\TransactionBancaire;
 use App\Support\TenantContext;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,10 +42,15 @@ use Illuminate\Validation\ValidationException;
  *  - facture fournisseur : achats (HT, par catégorie) et taxes déductibles au débit, fournisseur au crédit ; paiement
  *    d'un fournisseur ; déboursé réparti sur plusieurs factures (phase 4.5) : une écriture, chaque facture réglée au
  *    débit du fournisseur, l'argent versé et l'escompte obtenu au crédit ;
+ *  - transaction bancaire sans facture (phase 4.6) : dépôt, retrait réparti sur ses comptes de contrepartie, virement
+ *    entre deux comptes bancaires ;
+ *  - un encaissement, un déboursé ou une transaction passe par le compte comptable et le journal de son compte bancaire
+ *    (Finance → Banque) ; sans compte bancaire relié, par le compte « Banque » et le journal de banque des réglages ;
  *  - montants dans la devise de l'entreprise, au taux du document ; le compte du tiers prend la somme des contreparties
  *    arrondies (pas d'écart d'arrondi) ;
  *  - un document se comptabilise une fois (source et source_id de l'écriture) ; annulé ou supprimé ensuite (facture
- *    fournisseur, paiement fournisseur, acompte, encaissement, déboursé), son écriture est contre-passée ;
+ *    fournisseur, paiement fournisseur, acompte, encaissement, déboursé, transaction bancaire), son écriture est
+ *    contre-passée ;
  *  - seuls les documents datés à partir de la date de début réglée se comptabilisent ; un document refusé (période
  *    fermée, compte non réglé) reste à comptabiliser et son motif est rapporté.
  *
@@ -63,6 +70,7 @@ class Comptabilisation
         'facture_fournisseur' => 'Factures fournisseurs',
         'paiement_fournisseur' => 'Paiements aux fournisseurs',
         'debourse' => 'Déboursés aux fournisseurs',
+        'transaction_bancaire' => 'Transactions bancaires',
     ];
 
     public const MODES = ['especes', 'cheque', 'virement', 'carte', 'autre'];
@@ -240,7 +248,7 @@ class Comptabilisation
             'avoir' => [Avoir::query()->whereIn('statut', Avoir::EMISES)->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_avoir'],
             'paiement_client' => [FacturePaiement::query()->whereHas('facture')->whereNull('encaissement_id')
                 ->where(fn ($q) => $q->where('montant', '>', 0)->orWhere('escompte', '>', 0))->with('facture.client'), 'date_paiement'],
-            'encaissement' => [Encaissement::query()->where('statut', Encaissement::VALIDE)->with(['client', 'lignes.facture']), 'date_encaissement'],
+            'encaissement' => [Encaissement::query()->where('statut', Encaissement::VALIDE)->with(['client', 'lignes.facture', 'compteBancaire']), 'date_encaissement'],
             'acompte' => [Acompte::query()->where('montant', '>', 0)
                 ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('encaissements')->whereColumn('encaissements.acompte_id', 'acomptes.id'))
                 ->with('client'), 'date_acompte'],
@@ -248,7 +256,8 @@ class Comptabilisation
             'remboursement_avoir' => [AvoirRemboursement::query()->whereHas('avoir')->where('montant', '>', 0)->with('avoir.client'), 'date_remboursement'],
             'facture_fournisseur' => [FactureFournisseur::query()->where('statut', FactureFournisseur::ENREGISTREE)->where('montant_ttc', '!=', 0)->with(['fournisseur', 'lignes.produit']), 'date_facture'],
             'paiement_fournisseur' => [FactureFournisseurPaiement::query()->where('montant', '>', 0)->whereNull('debourse_id')->whereHas('facture')->with('facture.fournisseur'), 'date_paiement'],
-            'debourse' => [Debourse::query()->where('statut', Debourse::VALIDE)->with(['fournisseur', 'lignes.facture']), 'date_debourse'],
+            'debourse' => [Debourse::query()->where('statut', Debourse::VALIDE)->with(['fournisseur', 'lignes.facture', 'compteBancaire']), 'date_debourse'],
+            'transaction_bancaire' => [TransactionBancaire::query()->where('statut', TransactionBancaire::VALIDE)->with(['compteBancaire', 'destination', 'lignes']), 'date_transaction'],
         };
         $table = $requete->getModel()->getTable();
 
@@ -262,15 +271,15 @@ class Comptabilisation
     }
 
     /**
-     * Écritures dont le document a été annulé (facture fournisseur, encaissement, déboursé) ou supprimé (paiement
-     * fournisseur, acompte), pas encore contre-passées, avec la date de leur contre-passation (celle de l'annulation,
-     * sinon aujourd'hui).
+     * Écritures dont le document a été annulé (facture fournisseur, encaissement, déboursé, transaction bancaire) ou
+     * supprimé (paiement fournisseur, acompte), pas encore contre-passées, avec la date de leur contre-passation (celle
+     * de l'annulation, sinon aujourd'hui).
      *
      * @return Collection<int, array{0: EcritureComptable, 1: string}>
      */
     private function aContrePasser(): Collection
     {
-        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte', 'encaissement', 'debourse'])
+        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte', 'encaissement', 'debourse', 'transaction_bancaire'])
             ->whereNull('contrepassation_de')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ecritures_comptables as inverses')
                 ->whereColumn('inverses.contrepassation_de', 'ecritures_comptables.id'))
@@ -281,6 +290,7 @@ class Comptabilisation
             'acompte' => Acompte::query()->whereIn('id', $ecritures->where('source', 'acompte')->pluck('source_id'))->pluck('id', 'id'),
             'encaissement' => Encaissement::query()->whereIn('id', $ecritures->where('source', 'encaissement')->pluck('source_id'))->get()->keyBy('id'),
             'debourse' => Debourse::query()->whereIn('id', $ecritures->where('source', 'debourse')->pluck('source_id'))->get()->keyBy('id'),
+            'transaction_bancaire' => TransactionBancaire::query()->whereIn('id', $ecritures->where('source', 'transaction_bancaire')->pluck('source_id'))->get()->keyBy('id'),
         ];
         $aujourdhui = today()->toDateString();
 
@@ -294,6 +304,9 @@ class Comptabilisation
             }
             if ($ecriture->source === 'debourse' && $document) {
                 return $document->statut === Debourse::ANNULE ? [$ecriture, $document->annule_le?->toDateString() ?? $aujourdhui] : null;
+            }
+            if ($ecriture->source === 'transaction_bancaire' && $document) {
+                return $document->statut === TransactionBancaire::ANNULE ? [$ecriture, $document->annule_le?->toDateString() ?? $aujourdhui] : null;
             }
 
             return $document ? null : [$ecriture, $aujourdhui];
@@ -321,6 +334,7 @@ class Comptabilisation
                 $this->montant($document->montant, $document->facture?->taux_change), $this->compte($p, 'compte_fournisseurs_id'), false,
                 "Paiement de {$document->facture?->numero} à ".($document->facture?->fournisseur?->raison_sociale ?? ''), $document->facture?->numero),
             'debourse' => $this->ecritureDebourse($document, $p),
+            'transaction_bancaire' => $this->ecritureTransactionBancaire($document, $p),
         };
     }
 
@@ -413,7 +427,7 @@ class Comptabilisation
      */
     private function ecritureEncaissement(Encaissement $encaissement, ParametreComptable $p): array
     {
-        [$tresorerie, $journal] = $this->tresorerie($p, $encaissement->mode);
+        [$tresorerie, $journal] = $this->tresorerie($p, $encaissement->mode, $encaissement->compteBancaire);
         $argent = 0.0;
         $escompte = 0.0;
         $credits = [];
@@ -451,7 +465,7 @@ class Comptabilisation
      */
     private function ecritureDebourse(Debourse $debourse, ParametreComptable $p): array
     {
-        [$tresorerie, $journal] = $this->tresorerie($p, $debourse->mode);
+        [$tresorerie, $journal] = $this->tresorerie($p, $debourse->mode, $debourse->compteBancaire);
         $argent = 0.0;
         $escompte = 0.0;
         $debits = [];
@@ -475,6 +489,42 @@ class Comptabilisation
             'libelle' => mb_substr("Déboursé {$debourse->numero} — ".($debourse->fournisseur?->raison_sociale ?? ''), 0, 255),
             'reference' => $debourse->reference ?: $debourse->numero,
             'lignes' => [...$debits, ...$credits],
+        ];
+    }
+
+    /**
+     * Transaction bancaire : un dépôt débite la banque et crédite ses contreparties ; un retrait l'inverse ; un virement
+     * débite le compte bancaire qui reçoit et crédite celui qui envoie. Montants au taux de la transaction.
+     */
+    private function ecritureTransactionBancaire(TransactionBancaire $transaction, ParametreComptable $p): array
+    {
+        [$banque, $journal] = $this->banque($p, $transaction->compteBancaire);
+        $taux = (float) $transaction->taux_change;
+        if ($transaction->type === TransactionBancaire::VIREMENT) {
+            if (! $transaction->compteBancaire?->compte_comptable_id || ! $transaction->destination?->compte_comptable_id) {
+                throw new DomainException('Reliez les deux comptes bancaires du virement à leur compte comptable (Finance → Banque).');
+            }
+            $montant = $this->montant($transaction->montant, $taux);
+            $lignes = [
+                $this->ligne($transaction->destination->compte_comptable_id, $montant, false, 'Virement reçu'),
+                $this->ligne($banque, $montant, true, null),
+            ];
+        } else {
+            $depot = $transaction->type === TransactionBancaire::DEPOT;
+            // Contreparties au crédit d'un dépôt, au débit d'un retrait ; la banque prend leur somme.
+            $contreparties = $transaction->lignes->map(fn ($l) => $this->ligne($l->compte_comptable_id, $this->montant($l->montant, $taux), $depot, $l->libelle))->all();
+            $total = round(array_sum(array_map(fn (array $l) => $depot ? $l['credit'] - $l['debit'] : $l['debit'] - $l['credit'], $contreparties)), 2);
+            $mouvement = $this->ligne($banque, $total, ! $depot, null);
+            // Le débit d'abord : la banque pour un dépôt, les contreparties pour un retrait.
+            $lignes = $depot ? [$mouvement, ...$contreparties] : [...$contreparties, $mouvement];
+        }
+
+        return [
+            'journal_id' => $journal,
+            'date' => $transaction->date_transaction->toDateString(),
+            'libelle' => mb_substr("Transaction {$transaction->numero} — {$transaction->libelle}", 0, 255),
+            'reference' => $transaction->reference ?: $transaction->numero,
+            'lignes' => $lignes,
         ];
     }
 
@@ -542,14 +592,26 @@ class Comptabilisation
         return ['compte_id' => $compte, 'libelle' => $libelle, 'debit' => $credit ? 0 : abs($montant), 'credit' => $credit ? abs($montant) : 0];
     }
 
-    /** Compte de trésorerie et son journal selon le mode de paiement (espèces : caisse ; sinon : banque, ou la correspondance réglée). */
-    private function tresorerie(ParametreComptable $p, ?string $mode): array
+    /**
+     * Compte de trésorerie et son journal selon le mode de paiement (espèces : caisse ; sinon : banque, ou la
+     * correspondance réglée) ; en banque, celui du compte bancaire du document s'il est relié.
+     */
+    private function tresorerie(ParametreComptable $p, ?string $mode, ?CompteBancaire $compteBancaire = null): array
     {
         $choix = $p->correspondance('modes', (string) $mode) ?? ($mode === 'especes' ? 'caisse' : 'banque');
 
         return $choix === 'caisse'
             ? [$this->compte($p, 'compte_caisse_id'), $this->journal($p, 'journal_caisse_id')]
-            : [$this->compte($p, 'compte_banque_id'), $this->journal($p, 'journal_banque_id')];
+            : $this->banque($p, $compteBancaire);
+    }
+
+    /** Compte comptable et journal d'un compte bancaire : les siens s'il est relié, sinon ceux des réglages. */
+    private function banque(ParametreComptable $p, ?CompteBancaire $compteBancaire): array
+    {
+        return [
+            $compteBancaire?->compte_comptable_id ?: $this->compte($p, 'compte_banque_id'),
+            $compteBancaire?->journal_id ?: $this->journal($p, 'journal_banque_id'),
+        ];
     }
 
     private function compteCategorie(ParametreComptable $p, ?string $categorie, string $sens): ?int
@@ -594,6 +656,7 @@ class Comptabilisation
             'remboursement_avoir' => $this->montant($document->montant, $document->avoir?->taux_change),
             'paiement_fournisseur' => $this->montant($document->montant, $document->facture?->taux_change),
             'debourse' => $this->montant((float) $document->montant + (float) $document->escompte, $document->taux_change),
+            'transaction_bancaire' => $this->montant($document->montant, $document->taux_change),
         };
     }
 
@@ -609,6 +672,7 @@ class Comptabilisation
             'remboursement_avoir' => 'Remboursement de '.$document->avoir?->numero,
             'paiement_fournisseur' => 'Paiement de '.$document->facture?->numero,
             'debourse' => 'Déboursé '.$document->numero,
+            'transaction_bancaire' => 'Transaction bancaire '.$document->numero,
         };
     }
 

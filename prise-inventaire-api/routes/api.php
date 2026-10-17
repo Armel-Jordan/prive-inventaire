@@ -90,6 +90,8 @@ use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Banque\CompteBancaireController;
+use App\Http\Controllers\Banque\TransactionBancaireController;
 use App\Http\Controllers\Comptabilite\ComptabilisationController;
 use App\Http\Controllers\Comptabilite\CompteComptableController;
 use App\Http\Controllers\Comptabilite\EcritureComptableController;
@@ -993,6 +995,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/periodes/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrirPeriode'])->whereNumber('id');
         Route::post('/exercices/{id}/cloturer', [ExerciceComptableController::class, 'cloturer'])->whereNumber('id');
         Route::post('/exercices/{id}/rouvrir', [ExerciceComptableController::class, 'rouvrir'])->whereNumber('id');
+    });
+
+    // Banque : comptes bancaires reliés à leur compte comptable, mouvements, transactions bancaires sans facture.
+    Route::prefix('banque')->middleware('module:finance')->group(function () {
+        Route::get('/comptes', [CompteBancaireController::class, 'index']);
+        Route::put('/comptes/{id}', [CompteBancaireController::class, 'update'])->whereNumber('id');
+        Route::get('/comptes/{id}/mouvements', [CompteBancaireController::class, 'mouvements'])->whereNumber('id');
+        Route::get('/transactions', [TransactionBancaireController::class, 'index']);
+        Route::post('/transactions', [TransactionBancaireController::class, 'store']);
+        Route::get('/transactions/{id}', [TransactionBancaireController::class, 'show'])->whereNumber('id');
+        Route::post('/transactions/{id}/annuler', [TransactionBancaireController::class, 'annuler'])->whereNumber('id');
     });
 
     // Mouvements d'inventaire et Localisations
