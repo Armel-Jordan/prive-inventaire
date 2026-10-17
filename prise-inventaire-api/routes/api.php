@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\CarteCadeauController;
 use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ChargementTourneeController;
+use App\Http\Controllers\Api\ChequeController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ClientFicheAdresseController;
 use App\Http\Controllers\Api\ClientFicheCategorieController;
@@ -561,6 +562,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/a-payer', [DebourseController::class, 'aPayer']);
         Route::get('/paiements-dus', [DebourseController::class, 'paiementsDus']);
         Route::post('/lot', [DebourseController::class, 'payerLot']);
+        // Chèques : numérotés sur le chéquier du compte bancaire, puis imprimés (un par page).
+        Route::post('/cheques/numeroter', [ChequeController::class, 'numeroter']);
+        Route::get('/cheques/pdf', [ChequeController::class, 'pdf']);
         Route::post('/', [DebourseController::class, 'store']);
         Route::get('/{id}', [DebourseController::class, 'show'])->whereNumber('id');
         Route::put('/{id}', [DebourseController::class, 'update'])->whereNumber('id');

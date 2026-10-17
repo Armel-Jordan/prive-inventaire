@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BanknoteArrowUp, Plus, Search } from 'lucide-react';
+import { BanknoteArrowUp, Plus, Printer, Search } from 'lucide-react';
 import Pagination from '@/components/Pagination';
 import DetailDebourse from '@/components/debourses/DetailDebourse';
 import FenetreDebourse from '@/components/debourses/FenetreDebourse';
@@ -8,7 +8,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
 import {
-  getDebourses, MODES_DEBOURSE, type Debourse, type ModeDebourse, type ResumeDebourses, type StatutDebourse,
+  getDebourses, imprimerCheques, MODES_DEBOURSE, type Debourse, type ModeDebourse, type ResumeDebourses, type StatutDebourse,
 } from '@/services/debourses';
 
 const classeChamp = 'px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
@@ -16,7 +16,8 @@ const classeChamp = 'px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:b
 /**
  * Déboursés (Achats → Déboursés) : l'argent versé aux fournisseurs, réparti sur leurs factures ; liste filtrable par
  * recherche (numéro, référence, fournisseur, facture), mode, statut et période, avec ses totaux ; chaque déboursé
- * s'ouvre sur son détail (factures réglées, avis de paiement, annulation).
+ * s'ouvre sur son détail (factures réglées, avis de paiement, annulation). Les chèques à imprimer se choisissent et
+ * s'impriment d'un geste, numérotés sur le chéquier de leur compte bancaire.
  */
 export default function DeboursesPage() {
   const { t, language } = useLanguage();
@@ -27,6 +28,9 @@ export default function DeboursesPage() {
   const [recherche, setRecherche] = useState('');
   const [mode, setMode] = useState<ModeDebourse | ''>('');
   const [statut, setStatut] = useState<StatutDebourse | ''>('');
+  const [cheque, setCheque] = useState<'a_imprimer' | 'imprimes' | ''>('');
+  const [choisis, setChoisis] = useState<number[]>([]);
+  const [impression, setImpression] = useState(false);
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
   const [page, setPage] = useState(1);
@@ -47,7 +51,7 @@ export default function DeboursesPage() {
   const charger = useCallback(async () => {
     setChargement(true);
     try {
-      const resultat = await getDebourses({ recherche, mode, statut, date_debut: debut, date_fin: fin, page });
+      const resultat = await getDebourses({ recherche, mode, statut, cheque, date_debut: debut, date_fin: fin, page });
       setDebourses(resultat.data ?? []);
       setResume(resultat.resume);
       setPagination({ dernierePage: resultat.last_page ?? 1, total: resultat.total ?? 0 });
@@ -57,9 +61,27 @@ export default function DeboursesPage() {
     } finally {
       setChargement(false);
     }
-  }, [recherche, mode, statut, debut, fin, page, td.error]);
+  }, [recherche, mode, statut, cheque, debut, fin, page, td.error]);
 
   useEffect(() => { charger(); }, [charger]);
+
+  const aImprimer = cheque === 'a_imprimer' && peut('debourses', 'cheques');
+
+  async function imprimer() {
+    setImpression(true);
+    setErreur('');
+    setMessage('');
+    try {
+      const cheques = await imprimerCheques(choisis, language);
+      setMessage(td.chequesPrinted.replace('{n}', String(cheques.length)).replace('{numeros}', cheques.map(c => c.cheque).join(', ')));
+      setChoisis([]);
+      charger();
+    } catch (e) {
+      setErreur(messageErreur(e, td.error));
+    } finally {
+      setImpression(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -92,6 +114,11 @@ export default function DeboursesPage() {
             <option value="valide">{td.statuses.valide}</option>
             <option value="annule">{td.statuses.annule}</option>
           </select>
+          <select value={cheque} onChange={e => { setCheque(e.target.value as 'a_imprimer' | 'imprimes' | ''); setChoisis([]); setPage(1); }} aria-label={td.chequeFilter} className={classeChamp}>
+            <option value="">{td.allCheques}</option>
+            <option value="a_imprimer">{td.chequesToPrint}</option>
+            <option value="imprimes">{td.chequesPrintedFilter}</option>
+          </select>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
             {td.from} <input type="date" value={debut} onChange={e => { setDebut(e.target.value); setPage(1); }} className={classeChamp} />
           </label>
@@ -105,6 +132,15 @@ export default function DeboursesPage() {
             {td.totals.replace('{n}', String(resume.nombre)).replace('{montant}', montant(resume.montant)).replace('{escompte}', montant(resume.escompte))}
           </p>
         )}
+        {aImprimer && debourses.length > 0 && (
+          <div className="px-4 pt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-500">{td.chequesHelp}</span>
+            <button type="button" disabled={choisis.length === 0 || impression} onClick={imprimer}
+              className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40">
+              <Printer size={16} /> {td.printCheques.replace('{n}', String(choisis.length))}
+            </button>
+          </div>
+        )}
         {erreur && <p className="px-4 py-3 text-sm text-red-700 dark:text-red-300">{erreur}</p>}
         {chargement && debourses.length === 0 ? (
           <p className="p-4 text-sm text-gray-500">{td.loading}</p>
@@ -115,6 +151,12 @@ export default function DeboursesPage() {
             <table className="w-full text-sm" aria-label={td.title}>
               <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-600 dark:text-gray-300">
                 <tr>
+                  {aImprimer && (
+                    <th className="px-4 py-3">
+                      <input type="checkbox" aria-label={td.selectAll} checked={debourses.length > 0 && debourses.every(d => choisis.includes(d.id))}
+                        onChange={e => setChoisis(e.target.checked ? debourses.map(d => d.id) : [])} />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left">{td.number}</th>
                   <th className="px-4 py-3 text-left">{td.date}</th>
                   <th className="px-4 py-3 text-left">{td.supplier}</th>
@@ -128,6 +170,12 @@ export default function DeboursesPage() {
               <tbody className="divide-y dark:divide-gray-700 dark:text-gray-200">
                 {debourses.map(d => (
                   <tr key={d.id} onClick={() => setOuvert(d.id)} className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 ${d.statut === 'annule' ? 'text-gray-400' : ''}`}>
+                    {aImprimer && (
+                      <td className="px-4 py-3" onClick={ev => ev.stopPropagation()}>
+                        <input type="checkbox" aria-label={`${td.printCheque} ${d.numero}`} checked={choisis.includes(d.id)}
+                          onChange={e => setChoisis(e.target.checked ? [...choisis, d.id] : choisis.filter(id => id !== d.id))} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 font-mono">
                       <button type="button" onClick={ev => { ev.stopPropagation(); setOuvert(d.id); }} className="text-blue-700 dark:text-blue-300 hover:underline">{d.numero}</button>
                     </td>

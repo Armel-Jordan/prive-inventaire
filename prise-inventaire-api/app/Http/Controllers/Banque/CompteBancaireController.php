@@ -29,6 +29,7 @@ class CompteBancaireController extends Controller
         $donnees = $request->validate([
             'compte_comptable_id' => 'nullable|integer',
             'journal_id' => 'nullable|integer',
+            'prochain_cheque' => 'nullable|integer|min:1|max:999999999999',
         ]);
 
         return response()->json($this->comptes->configurer($compte, $donnees));

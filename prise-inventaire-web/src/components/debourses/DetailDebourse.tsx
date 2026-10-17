@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Ban, Pencil, X } from 'lucide-react';
+import { Ban, Pencil, Printer, X } from 'lucide-react';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { formatDateDocument, formatDateHeure, useMontantDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
-import { annulerDebourse, getDebourse, modifierDebourse, type Debourse } from '@/services/debourses';
+import { annulerDebourse, getDebourse, imprimerCheques, modifierDebourse, type Debourse } from '@/services/debourses';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
 
 /**
  * Détail d'un déboursé : factures réglées (escomptes obtenus), avis de paiement imprimable, pièces jointes (copie du
- * chèque, avis de virement) ; correction de la référence et des notes ; annulation avec son motif.
+ * chèque, avis de virement) ; correction de la référence et des notes ; annulation avec son motif ; impression du
+ * chèque d'un déboursé payé par chèque (numéroté sur le chéquier de son compte bancaire à la première impression).
  */
 export default function DetailDebourse({ id, onClose, onModifie }: { id: number; onClose: () => void; onModifie: () => void }) {
   const { t, language } = useLanguage();
@@ -45,6 +46,22 @@ export default function DetailDebourse({ id, onClose, onModifie }: { id: number;
 
   const devise = debourse?.devise ?? null;
   const valide = debourse?.statut === 'valide';
+  const chequeImprimable = valide && debourse?.mode === 'cheque' && Number(debourse?.montant) > 0 && peut('debourses', 'cheques');
+
+  async function imprimerCheque() {
+    if (!debourse) return;
+    setEnCours(true);
+    setErreur('');
+    try {
+      await imprimerCheques([debourse.id], language);
+      setDebourse(await getDebourse(debourse.id));
+      onModifie();
+    } catch (e) {
+      setErreur(messageErreur(e, td.error));
+    } finally {
+      setEnCours(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -160,6 +177,12 @@ export default function DetailDebourse({ id, onClose, onModifie }: { id: number;
                 </>
               ) : (
                 <>
+                  {chequeImprimable && (
+                    <button type="button" disabled={enCours} onClick={imprimerCheque} title={debourse.cheque_imprime_le ? td.reprintHelp : td.printHelp}
+                      className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                      <Printer size={14} /> {debourse.cheque_imprime_le ? td.reprintCheque : td.printCheque}
+                    </button>
+                  )}
                   {valide && peut('debourses', 'modifier') && (
                     <button type="button" onClick={() => setCorrection({ reference: debourse.reference ?? '', notes: debourse.notes ?? '' })}
                       className="flex items-center gap-1 px-4 py-2 text-sm border border-blue-600 text-blue-700 rounded-lg hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30"><Pencil size={14} /> {td.edit}</button>

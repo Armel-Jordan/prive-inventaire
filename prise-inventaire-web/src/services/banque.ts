@@ -24,6 +24,8 @@ export interface CompteBanque {
   journal: { id: number; code: string; libelle: string } | null;
   /** Solde comptable à la date demandée ; null sans compte comptable relié. */
   solde: number | null;
+  /** Prochain numéro du chéquier (chèques des déboursés). */
+  prochain_cheque?: number | null;
 }
 
 export interface MouvementBanque {
@@ -115,7 +117,8 @@ export function getComptesBanque(date?: string): Promise<{ date: string; comptes
   return apiFetch(`/banque/comptes?${parametres({ date })}`);
 }
 
-export function relierCompteBancaire(id: number, donnees: { compte_comptable_id: number | null; journal_id: number | null }): Promise<CompteBanque> {
+/** Réglages d'un compte bancaire : seuls ceux envoyés changent. */
+export function relierCompteBancaire(id: number, donnees: { compte_comptable_id?: number | null; journal_id?: number | null; prochain_cheque?: number | null }): Promise<CompteBanque> {
   return apiFetch(`/banque/comptes/${id}`, { method: 'PUT', body: JSON.stringify(donnees), retries: 0 });
 }
 

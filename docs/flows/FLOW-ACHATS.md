@@ -793,6 +793,7 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
 - **Saisir** : créer.
 - **Corriger** : modifier.
 - **Annuler un déboursé** : `debourses.annuler`.
+- **Imprimer les chèques** : `debourses.cheques` (réglé comme la saisie d'un déboursé).
 
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -802,8 +803,44 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
 | GET / PUT | `/debourses/{id}` | Détail ; correction (`reference`, `notes`) |
 | POST | `/debourses/{id}/annuler` | Annulation (`motif`) |
 | GET | `/debourses/{id}/pdf` | Avis de paiement |
+| POST | `/debourses/cheques/numeroter` | `{debourses: [ids]}` : numéroter les chèques (prochain numéro du chéquier, ou la référence) ; `cheques[]` : `id`, `numero`, `cheque`, `nouveau` |
+| GET | `/debourses/cheques/pdf?debourses=1,2&langue=fr\|en` | Les chèques numérotés, un par page |
 
 Code : services `App\Services\Debourses` et `AvisPaiementPdf`, `DebourseController`, vue `pdf/avis-paiement` ; web : page `DeboursesPage`, composants `debourses/FenetreDebourse` et `debourses/DetailDebourse`, service `src/services/debourses.ts` ; migration `2026_10_17_100064_creer_debourses` (tables `debourses`, `debourse_lignes`, colonnes `facture_fournisseur_paiements.escompte` et `.debourse_id`, `parametres_comptables.compte_escomptes_obtenus_id`, droits du module).
+
+### Chèques des déboursés
+
+Comme le « Rapport d'impression de chèque » de fripv2 : le chèque d'un déboursé payé par chèque, prêt à signer.
+
+**Le chéquier** : chaque compte bancaire a son **prochain numéro de chèque** (Finance → Banque → Comptes, avec le droit de relier les comptes bancaires).
+
+**Numérotation**, à la première impression :
+- le déboursé sans référence prend le prochain numéro du chéquier de son compte bancaire, qui avance ;
+- un numéro déjà porté par un chèque de ce compte (saisi à la main) est sauté ;
+- une référence existante est gardée : une réimpression sort toujours le même numéro ;
+- la première impression est notée (date, auteur).
+- Refusé pour un déboursé annulé, payé autrement que par chèque, sans montant, sans compte bancaire ou sans chéquier réglé.
+
+**Le chèque**, une page par déboursé :
+- en haut, le chèque :
+  - l'entreprise et le compte tiré, le numéro, la date ;
+  - le **montant en lettres** entre astérisques, en français (« MILLE QUATRE CENT QUATRE-VINGT-DIX FRANCS CFA ») ou en anglais selon la langue de l'écran, et en chiffres ;
+  - le bénéficiaire et son adresse principale ;
+- dessous, deux **talons** (fournisseur, entreprise) :
+  - les factures payées, regroupées par facture et par date (20 au plus) : date, numéro du fournisseur, escompte, net ;
+  - les totaux des escomptes et du net, et le montant du chèque.
+
+**Imprimer** :
+- depuis le détail du déboursé : **Imprimer le chèque**, ou **Réimprimer le chèque** ;
+- depuis la liste : le filtre **Chèques à imprimer** (par chèque, valides, pas encore imprimés) permet de cocher plusieurs chèques et de les imprimer d'un geste, dans l'ordre de leurs dates ;
+- le filtre **Chèques imprimés** les retrouve.
+
+**Montant en lettres** (`App\Support\MontantEnLettres`) :
+- en français, orthographe traditionnelle : « vingt et un », « soixante et onze », « quatre-vingts », « deux cents », invariables devant mille, « deux millions de francs CFA » ;
+- en anglais ;
+- les centimes en chiffres ; le franc CFA sans centimes.
+
+Code : service `App\Services\Cheques`, `ChequeController`, vue `pdf/cheque` ; migration `2026_10_17_100069_cheques_debourses` (`comptes_bancaires.prochain_cheque`, `debourses.cheque_imprime_le` et `cheque_imprime_par`, action `debourses.cheques`).
 
 ### Paiements dus (Achats → Paiements dus)
 

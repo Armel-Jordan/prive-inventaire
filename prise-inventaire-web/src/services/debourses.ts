@@ -1,3 +1,4 @@
+import { ouvrirPdf } from '@/services/api';
 import { apiFetch } from '@/services/http';
 import type { PageResultats } from '@/services/api';
 
@@ -43,6 +44,8 @@ export interface Debourse {
   annule_le: string | null;
   auteur_annulation?: { id: number; nom: string } | null;
   motif_annulation: string | null;
+  /** Première impression du chèque (sa référence est alors son numéro). */
+  cheque_imprime_le?: string | null;
   lignes?: LigneDebourse[];
 }
 
@@ -59,6 +62,8 @@ export interface FiltresDebourses {
   statut?: StatutDebourse | '';
   date_debut?: string;
   date_fin?: string;
+  /** Chèques à imprimer (par chèque, valides, pas encore imprimés) ou déjà imprimés. */
+  cheque?: 'a_imprimer' | 'imprimes' | '';
   page?: number;
 }
 
@@ -231,4 +236,19 @@ export function payerSelection(donnees: {
   escompte?: boolean;
 }): Promise<{ message: string; debourses: Debourse[] }> {
   return apiFetch('/debourses/lot', { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
+}
+
+// === Chèques ===
+
+/** Numérote les chèques de déboursés : le prochain numéro du chéquier de leur compte bancaire, ou leur référence. */
+export function numeroterCheques(ids: number[]): Promise<{ cheques: { id: number; numero: string; cheque: string; nouveau: boolean }[] }> {
+  return apiFetch('/debourses/cheques/numeroter', { method: 'POST', body: JSON.stringify({ debourses: ids }), retries: 0 });
+}
+
+/** Numérote puis ouvre les chèques (un par page), le montant en lettres dans la langue de l'écran. */
+export async function imprimerCheques(ids: number[], langue: string): Promise<{ id: number; numero: string; cheque: string; nouveau: boolean }[]> {
+  const { cheques } = await numeroterCheques(ids);
+  const chemin = `/debourses/cheques/pdf?debourses=${ids.join(',')}&langue=${langue === 'en' ? 'en' : 'fr'}`;
+  await ouvrirPdf(chemin, ids.length === 1 ? `cheque-${cheques[0]?.cheque ?? ''}.pdf` : 'cheques.pdf');
+  return cheques;
 }
