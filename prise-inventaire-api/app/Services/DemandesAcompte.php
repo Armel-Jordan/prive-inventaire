@@ -78,7 +78,7 @@ class DemandesAcompte
      * Dépôt reçu : la demande passe payée et l'acompte est enregistré au dossier du client (réservé à la commande de
      * la demande, si elle est toujours en cours).
      *
-     * @param  array{date: string, mode: string, reference?: ?string}  $paiement
+     * @param  array{date: string, mode: string, reference?: ?string, caisse_id?: ?int}  $paiement
      */
     public function encaisser(DemandeAcompte $demande, array $paiement, ?int $auteur = null): DemandeAcompte
     {
@@ -103,6 +103,7 @@ class DemandesAcompte
                 'devise' => $demande->devise,
                 'taux_change' => (float) ($demande->taux_change ?: 1),
                 'notes' => "Demande d'acompte {$demande->numero}",
+                'caisse_id' => $paiement['caisse_id'] ?? null,
             ], $auteur);
             $demande->update(['statut' => DemandeAcompte::PAYEE, 'payee_le' => now(), 'acompte_id' => $acompte->id]);
 

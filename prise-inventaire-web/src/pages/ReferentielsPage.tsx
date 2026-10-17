@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Pencil, Trash2, History, X, Search,
   Ruler, ArrowLeftRight, FolderTree, Factory, Wallet, CalendarClock, Landmark, Coins,
-  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags, KeyRound,
+  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags, KeyRound, Store,
 } from 'lucide-react';
 import {
   getReferentiel, createReferentiel, updateReferentiel, deleteReferentiel, getHistoriqueDevise,
@@ -91,6 +91,14 @@ const ONGLETS: Onglet[] = [
       { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 30 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'type', type: 'liste', options: TYPES_PAIEMENT, requis: true, colonne: true, defaut: 'autre' },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    // Caisses : tiroirs-caisses ou points d'encaissement (Gestion de caisse).
+    type: 'caisses', groupe: 'paiement', icone: Store, champs: [
+      { cle: 'code', type: 'texte', requis: true, colonne: true, majuscules: true, longueurMax: 10 },
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },

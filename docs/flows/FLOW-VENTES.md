@@ -1348,6 +1348,52 @@ Plan de parité fripv2, phase 1.9 (« Relevé de consignation », « Consignatio
 
 Code : services `App\Services\Consignations` et `ConsignationsPdf`, `ConsignationController`, vues `pdf/consignation-depot` et `pdf/consignations-rapport` ; web : page `ConsignationsPage` ; migration `2026_10_17_100051_creer_consignations` (tables `consignations`, `consignation_lignes`, `consignation_mouvements`).
 
+### 5.19 Gestion de caisse (Ventes → Gestion de caisse)
+
+Plan de parité fripv2, phase 1.10a (« Caisses », « Gestion de caisse », « Fermeture de caisse », « Sommaire de caisse ») : l'argent d'une caisse se suit du début à la fin de la journée.
+
+**Caisses** : référentiel **Caisses** (Paramètres → Référentiels), un tiroir-caisse ou point d'encaissement par fiche (code court unique, en majuscules, et nom). Une caisse qui a déjà servi ne se supprime pas : on la désactive.
+
+**Poste de caisse** : sur l'écran Gestion de caisse, « Caisse de ce poste » fait du navigateur un poste de caisse (réglage du navigateur, par entreprise, comme la configuration de démarrage d'un poste dans fripv2).
+- Les **paiements de factures**, les **acomptes reçus** (aussi par une demande d'acompte payée) et les **remboursements d'acompte** saisis sur ce poste entrent dans la session ouverte de sa caisse ; la fenêtre le rappelle et propose les espèces.
+- Caisse fermée, l'encaissement est refusé (422 sur `caisse_id`). Avec le droit de gérer la caisse, une fenêtre propose de l'ouvrir sur-le-champ (fond initial) et l'encaissement reprend.
+- Un poste qui n'est pas une caisse encaisse comme avant, hors caisse.
+- Appliquer un acompte sur une facture n'apporte pas d'argent : ce paiement-là n'entre dans aucune caisse.
+
+**Session** : de l'ouverture à la fermeture ; une seule session ouverte par caisse.
+- **Ouvrir** avec un fond initial (il peut être nul), en espèces par défaut.
+- **Entrée** et **sortie d'argent** en cours de session ; la raison d'une sortie est obligatoire. Un remboursement d'acompte fait avec le bouton Rembourser sort déjà du tiroir : il ne se saisit pas en sortie.
+- **Attendu**, par mode de paiement et par devise : fond + encaissements + acomptes − remboursements + entrées − sorties. Une facture ou un acompte en devise étrangère payé en espèces fait une ligne à part (« Espèces (USD) ») avec son propre total.
+- **Fermer** : le montant compté de chaque mode (vide = 0) et l'écart en direct, en rouge s'il n'est pas nul ; une note de fermeture. L'attendu, le compté et l'écart sont alors **figés** : une transaction corrigée après coup ne change plus le sommaire. Un message confirme la fermeture et rappelle l'écart.
+- Une session restée ouverte (depuis la veille) se ferme en tout temps : l'attendu couvre toute la période.
+
+**Écran** : la caisse et sa session en cours (attendu dans le tiroir), l'historique des sessions d'une période (7 derniers jours par défaut, plus celles encore ouvertes) avec attendu, compté et écart, puis le détail de la session choisie :
+- sommaire par mode de paiement (et par devise) ;
+- chaque opération : date et heure, type (fond, encaissement, acompte reçu, remboursement d'acompte, entrée, sortie), document (numéro de facture, acompte), client, mode, montant (sorties et remboursements en négatif), employé, note ; filtre sur le document, le client ou la note, tri par montant ;
+- encaissements par employé (acomptes compris, moins leurs remboursements) ;
+- encaissements faits **hors caisse** pendant la session (postes qui ne sont pas des caisses).
+
+**Sommaire de caisse** (PDF paysage, session fermée seulement : « Fermer et imprimer » ou « Imprimer le sommaire ») : en-tête (caisse, ouverture et fermeture, employés, note), sommaire par mode avec les totaux, détail des opérations, encaissements par employé et hors caisse. Les heures sont celles du fuseau de l'utilisateur.
+
+**Droits :** module **Gestion de caisse** (`caisses`), copié des factures à sa création.
+- Consulter (écran, sessions, sommaire) : `caisses.voir` ; les lectures de `/caisses` sont contrôlées.
+- **Gérer les sessions de caisse** (`caisses.gerer`) : ouvrir, entrées et sorties d'argent, fermer ; à sa création, réglé comme le droit d'enregistrer un paiement.
+- Encaisser sur un poste de caisse ne demande que le droit d'encaisser du document (paiement de facture, acompte, remboursement, demande d'acompte).
+- Les caisses elles-mêmes se gèrent avec les droits des référentiels.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/caisses` | Caisses actives (et encore ouvertes) avec leur session en cours et son attendu |
+| POST | `/caisses/{id}/ouvrir` | Ouvrir (`fond`, `mode`, `devise`, `note`) |
+| GET | `/caisses/sessions?caisse_id=&du=&au=&fuseau=` | Sessions de la période et sessions ouvertes, avec leurs totaux |
+| GET | `/caisses/sessions/{id}` | Sommaire : lignes par mode et devise, totaux, opérations, par employé, hors caisse |
+| POST | `/caisses/sessions/{id}/mouvements` | Entrée ou sortie (`type`, `mode`, `devise`, `montant`, `note` obligatoire en sortie) |
+| POST | `/caisses/sessions/{id}/fermer` | Fermer (`comptes[]` : `mode`, `devise`, `montant` ; `note`) |
+| GET | `/caisses/sessions/{id}/pdf?fuseau=` | Sommaire imprimé (session fermée) |
+| POST | `/factures/{id}/paiement`, `/acomptes`, `/acomptes/{id}/rembourser`, `/demandes-acompte/{id}/encaisser` | Paramètre `caisse_id` facultatif : la caisse du poste |
+
+Code : services `App\Services\Caisses` et `SommaireCaissePdf`, `CaisseController`, vue `pdf/sommaire-caisse` ; web : page `CaissesPage`, `hooks/useCaissePoste` (caisse du poste), `hooks/useEncaissementCaisse` (encaisser, ouvrir la caisse fermée) et `components/caisse/*` ; migration `2026_10_17_100052_creer_caisses` (référentiel `caisses`, tables `caisse_sessions`, `caisse_mouvements`, colonne `caisse_session_id` sur `facture_paiements`, `acomptes` et `acompte_remboursements`).
+
 ---
 
 ## 6. Bons de Livraison

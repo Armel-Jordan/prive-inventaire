@@ -16,6 +16,8 @@ import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
+import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm disabled:opacity-60';
 const COULEURS: Record<string, string> = {
@@ -369,7 +371,9 @@ function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAc
   const { t } = useLanguage();
   const tr = t.depositRequests;
   const montantDoc = useMontantDocument();
-  const [saisie, setSaisie] = useState({ date: aujourdhui(), mode: 'virement' as ModeAcompte, reference: '' });
+  // Poste de caisse : le dépôt entre dans la session ouverte de sa caisse ; l'argent comptant est proposé.
+  const encaissement = useEncaissementCaisse();
+  const [saisie, setSaisie] = useState({ date: aujourdhui(), mode: (encaissement.caisse ? 'especes' : 'virement') as ModeAcompte, reference: '' });
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
 
@@ -378,7 +382,7 @@ function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAc
     setOccupe(true);
     setErreur('');
     try {
-      await encaisserDemandeAcompte(demande.id, { date: saisie.date, mode: saisie.mode, reference: saisie.reference.trim() || undefined });
+      await encaissement.encaisser(caisse_id => encaisserDemandeAcompte(demande.id, { date: saisie.date, mode: saisie.mode, reference: saisie.reference.trim() || undefined, caisse_id }));
       onEncaisse();
     } catch (err) {
       setErreur(messageErreur(err, tr.error));
@@ -397,6 +401,7 @@ function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAc
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={tr.close}><X size={18} /></button>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-300">{tr.payHelp.replace('{montant}', montantDoc(demande.montant, demande.devise)).replace('{commande}', commande)}</p>
+        <CaisseDuPoste caisse={encaissement.caisse} />
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs text-gray-500 dark:text-gray-400">{tr.date}
             <input type="date" required value={saisie.date} min={dateSaisie(demande.date_demande)} onChange={e => setSaisie({ ...saisie, date: e.target.value })} className={classeChamp} />
@@ -416,6 +421,7 @@ function EncaisserDemande({ demande, onClose, onEncaisse }: { demande: DemandeAc
           <button type="submit" disabled={occupe} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50">{tr.markPaid}</button>
         </div>
       </form>
+      {encaissement.dialogue}
     </div>
   );
 }

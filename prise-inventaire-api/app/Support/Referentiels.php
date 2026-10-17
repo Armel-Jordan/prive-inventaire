@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Caisse;
+use App\Models\CaisseSession;
 use App\Models\Categorie;
 use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
@@ -123,6 +125,20 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => ['libelle', 'asc'],
+            ],
+
+            // Caisses : tiroirs-caisses ou points d'encaissement, auxquels se rattachent les sessions de caisse.
+            'caisses' => [
+                'modele' => Caisse::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['required', 'string', 'max:10', TenantRule::unique('caisses', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:100'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['code', 'asc'],
+                'majuscules' => ['code'],
+                'suppression' => fn (Model $caisse) => CaisseSession::where('caisse_id', $caisse->getKey())->exists()
+                    ? 'Cette caisse a déjà servi : désactivez-la plutôt que de la supprimer.' : null,
             ],
 
             'conditions_paiement' => [

@@ -95,6 +95,8 @@ class DemandeAcompteController extends Controller
             'date' => 'required|date_format:Y-m-d',
             'mode' => ['required', Rule::in(Acomptes::MODES)],
             'reference' => 'nullable|string|max:100',
+            // Caisse du poste : l'acompte entre dans sa session ouverte (refusé si elle est fermée).
+            'caisse_id' => 'nullable|integer',
         ]);
 
         return $this->executer(fn () => response()->json($this->demandes->encaisser($demande, $paiement, $request->user()?->id)->load('acompte')));

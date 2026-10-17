@@ -12,6 +12,7 @@ use App\Models\Facture;
 use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
+use App\Services\Caisses;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
@@ -30,6 +31,7 @@ class FactureController extends Controller
         private readonly TaxesDocument $taxes,
         private readonly ConditionsPaiement $conditions,
         private readonly FacturesVente $factures,
+        private readonly Caisses $caisses,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -230,6 +232,8 @@ class FactureController extends Controller
             'echeance_id' => ['nullable', Rule::exists('facture_echeances', 'id')->where('facture_id', $id)],
             // Escompte pour paiement rapide (condition de paiement) : le paiement règle alors tout le reste.
             'escompte' => 'sometimes|boolean',
+            // Caisse du poste : le paiement entre dans sa session ouverte (refusé si elle est fermée).
+            'caisse_id' => 'nullable|integer',
         ]);
 
         try {
@@ -258,6 +262,7 @@ class FactureController extends Controller
                     }
                     $escompte = $propose['escompte'];
                 }
+                $sessionCaisse = $this->caisses->sessionPourEncaissement($validated['caisse_id'] ?? null);
 
                 FacturePaiement::create([
                     'facture_id' => $facture->id,
@@ -269,6 +274,7 @@ class FactureController extends Controller
                     'reference' => $validated['reference'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                     'enregistre_par' => $request->user()?->id,
+                    'caisse_session_id' => $sessionCaisse,
                 ]);
 
                 // Recalcul autoritatif : montant_paye, reste_a_payer, statut, encours client.

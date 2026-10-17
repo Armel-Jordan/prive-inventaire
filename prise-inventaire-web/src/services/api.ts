@@ -1622,6 +1622,8 @@ export async function enregistrerPaiement(id: number, data: {
   reference?: string;
   /** Escompte pour paiement rapide : le paiement règle alors tout le reste. */
   escompte?: boolean;
+  /** Caisse du poste : le paiement entre dans sa session ouverte. */
+  caisse_id?: number;
 }): Promise<Facture> {
   return fetchApi(`/factures/${id}/paiement`, { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2012,6 +2014,7 @@ export type TypeReferentiel =
   | 'territoires'
   | 'itineraires'
   | 'types_location'
+  | 'caisses'
   | 'representants'
   | 'transporteurs'
   | 'raisons'

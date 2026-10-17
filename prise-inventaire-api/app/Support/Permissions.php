@@ -168,6 +168,11 @@ class Permissions
                 'aide_fr' => "Enregistrer le dépôt reçu (date, mode, référence) : l'acompte est créé au dossier du client.",
                 'aide_en' => "Record the deposit received (date, method, reference): the deposit is added to the customer's account."],
         ]],
+        'caisses' => ['onglet' => 'ventes', 'fr' => 'Gestion de caisse', 'en' => 'Cash management', 'crud' => ['voir'], 'actions' => [
+            'gerer' => ['base' => 'modifier', 'fr' => 'Gérer les sessions de caisse', 'en' => 'Manage register sessions',
+                'aide_fr' => "Ouvrir une caisse avec son fond, enregistrer les entrées et sorties d'argent, fermer la caisse en comptant le tiroir.",
+                'aide_en' => 'Open a register with its float, record cash in and out, close the register by counting the drawer.'],
+        ]],
         'comptes_clients' => ['onglet' => 'ventes', 'fr' => 'Comptes clients', 'en' => 'Receivables', 'crud' => ['voir']],
         'relances' => ['onglet' => 'ventes', 'fr' => 'Relances de paiement', 'en' => 'Payment reminders', 'crud' => ['voir', 'creer']],
         'bons_livraison' => ['onglet' => 'ventes', 'fr' => 'Bons de livraison', 'en' => 'Delivery notes', 'actions' => [
