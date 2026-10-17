@@ -6,6 +6,7 @@ use App\Models\BonLivraison;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
+use App\Models\Debourse;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
 use App\Models\Encaissement;
@@ -36,6 +37,8 @@ final class PiecesJointes
         'commande_fournisseur' => [ComFourEntete::class, 'achats'],
         // La facture reçue du fournisseur (PDF, photo) se joint à sa saisie.
         'facture_fournisseur' => [FactureFournisseur::class, 'achats'],
+        // Déboursé : la copie du chèque, l'avis de virement.
+        'debourse' => [Debourse::class, 'achats'],
     ];
 
     /** Types que le navigateur peut afficher sans risque ; les autres sont toujours téléchargés. */

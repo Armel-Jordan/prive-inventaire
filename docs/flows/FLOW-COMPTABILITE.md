@@ -202,7 +202,7 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
   - clients, fournisseurs, ventes, achats ;
   - taxes collectées, taxes déductibles ;
   - caisse, banque ;
-  - acomptes clients, escomptes accordés, cartes cadeaux ;
+  - acomptes clients, escomptes accordés, cartes cadeaux, escomptes obtenus ;
 - **« Proposer d'après le plan comptable »** remplit les réglages vides : journaux par défaut, comptes trouvés par leur type (clients, fournisseurs), puis par les numéros usuels des plans OHADA (411, 401, 701, 601, 443, 445, 571, 521, 419), français et canadien ;
 - **correspondances** :
   - mode de paiement → caisse ou banque (espèces : caisse ; les autres : banque, par défaut) ;
@@ -223,11 +223,13 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
 | Remboursement de note de crédit | Caisse ou banque | Clients | Caisse ou banque |
 | Facture fournisseur | Achats | Achats par catégorie (HT), taxes déductibles par taxe | Fournisseurs (TTC) |
 | Paiement d'un fournisseur | Caisse ou banque | Fournisseurs | Caisse ou banque |
+| Déboursé réparti sur plusieurs factures | Caisse ou banque selon le mode | Fournisseurs (une ligne par facture, escompte compris) | Caisse ou banque (argent versé) ; escompte obtenu |
 
 **Règles :**
 - Une écriture générée porte le type de son document en source (filtre « Origine » du journal) et le numéro du document en référence.
 - Elle ne se modifie pas depuis le journal : le document se corrige, ou l'écriture se contre-passe.
-- **Un document se comptabilise une fois.** Une facture fournisseur annulée, un paiement fournisseur annulé, un acompte supprimé ou un encaissement annulé après coup font **contre-passer** leur écriture, à la date de l'annulation (aujourd'hui pour une suppression).
+- **Un document se comptabilise une fois.** Une facture fournisseur annulée, un paiement fournisseur annulé, un acompte supprimé, un encaissement ou un déboursé annulé après coup font **contre-passer** leur écriture, à la date de l'annulation (aujourd'hui pour une suppression).
+- **Déboursé** : ses paiements de factures passent avec lui, en une seule écriture ; ils ne passent pas aussi comme paiements fournisseurs. L'escompte obtenu va au compte « Escomptes obtenus » des réglages (proposé : 773 OHADA, 765 français, 50300 canadien).
 - **Encaissement** : ses paiements de factures et son surplus passent avec lui, en une seule écriture ; ils ne passent pas aussi comme paiements ou acomptes. Un encaissement annulé avant d'être comptabilisé ne passe pas au journal.
 - **Refus** : un document dans une période fermée, ou qui demande un compte non réglé, reste à comptabiliser, et son motif est rapporté (« Compte « Taxes collectées » non réglé »). Les autres passent.
 - **Aperçu** : nombre et montant des documents à comptabiliser par type sur la période, écritures à contre-passer, réglages manquants.

@@ -53,6 +53,7 @@ use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
 use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Http\Controllers\Api\DebourseController;
 use App\Http\Controllers\Api\DemandeAcompteController;
 use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DisponibiliteController;
@@ -546,6 +547,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/paiements', [FactureFournisseurController::class, 'payer'])->whereNumber('id');
         Route::delete('/{id}/paiements/{paiement}', [FactureFournisseurController::class, 'annulerPaiement'])->whereNumber(['id', 'paiement']);
         Route::post('/{id}/annuler', [FactureFournisseurController::class, 'annuler'])->whereNumber('id');
+    });
+
+    // Déboursés : l'argent versé à un fournisseur en une fois, réparti sur plusieurs de ses factures (escomptes compris).
+    Route::prefix('debourses')->middleware('module:achats')->group(function () {
+        Route::get('/', [DebourseController::class, 'index']);
+        Route::get('/a-payer', [DebourseController::class, 'aPayer']);
+        Route::post('/', [DebourseController::class, 'store']);
+        Route::get('/{id}', [DebourseController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [DebourseController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/annuler', [DebourseController::class, 'annuler'])->whereNumber('id');
+        Route::get('/{id}/pdf', [DebourseController::class, 'pdf'])->whereNumber('id');
     });
 
     // Retours fournisseurs : marchandise renvoyée (reçue d'une commande, rapportée par un client, ou sans origine),

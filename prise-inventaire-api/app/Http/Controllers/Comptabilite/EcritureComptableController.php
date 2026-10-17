@@ -25,7 +25,7 @@ class EcritureComptableController extends Controller
     private const SOURCES = [
         EcritureComptable::MANUELLE, EcritureComptable::OUVERTURE, EcritureComptable::CLOTURE, EcritureComptable::RECURRENTE,
         // Écritures de la comptabilisation automatique, par type de document.
-        'facture', 'avoir', 'paiement_client', 'encaissement', 'acompte', 'remboursement_acompte', 'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur',
+        'facture', 'avoir', 'paiement_client', 'encaissement', 'acompte', 'remboursement_acompte', 'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur', 'debourse',
     ];
 
     public function __construct(private Ecritures $ecritures) {}

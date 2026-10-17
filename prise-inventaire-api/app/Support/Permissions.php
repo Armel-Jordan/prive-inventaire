@@ -96,6 +96,11 @@ class Permissions
                 'aide_fr' => 'Annuler une facture fournisseur saisie par erreur, sans paiement : ses réceptions redeviennent à facturer.',
                 'aide_en' => 'Cancel a supplier invoice entered by mistake, without payments: its receipts are to be invoiced again.'],
         ]],
+        'debourses' => ['onglet' => 'achats', 'fr' => 'Déboursés', 'en' => 'Disbursements', 'crud' => ['voir', 'creer', 'modifier'], 'actions' => [
+            'annuler' => ['base' => 'modifier', 'fr' => 'Annuler un déboursé', 'en' => 'Cancel a disbursement',
+                'aide_fr' => 'Annuler un déboursé saisi par erreur : ses paiements et ses escomptes sont retirés des factures fournisseurs, qui redeviennent dues.',
+                'aide_en' => 'Cancel a disbursement entered by mistake: its payments and discounts are removed from the supplier invoices, which become due again.'],
+        ]],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',
                 'aide_fr' => 'Expédier un retour brouillon : il reçoit son numéro, et ce qui était en stock sort de son secteur.',

@@ -7,6 +7,7 @@ use App\Models\Avoir;
 use App\Models\AvoirLigne;
 use App\Models\Client;
 use App\Models\CompteComptable;
+use App\Models\ConditionPaiement;
 use App\Models\Configuration;
 use App\Models\EcritureComptable;
 use App\Models\Facture;
@@ -219,6 +220,36 @@ class ComptabilisationTest extends TestCase
         $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 0)->assertJsonPath('contre_passations', 1);
         $this->assertSame(['BQ', [['521', 0.0, 1500.0], ['411', 1192.5, 0.0], ['411', 200.0, 0.0], ['419', 107.5, 0.0]], '2026-10-16'], $this->ecriture('encaissement', $cheque['id'], true));
         $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('contre_passations', 0);
+    }
+
+    public function test_debourse_comptabilise_en_une_ecriture_puis_contre_passe(): void
+    {
+        $this->regler();
+        $deuxDix = $this->chez(fn () => ConditionPaiement::create([
+            'code' => '2-10', 'libelle' => '2/10 Net 30', 'delai_jours' => 30, 'escompte_pourcentage' => 2, 'escompte_jours' => 10, 'actif' => true,
+        ])->id);
+        $achat = fn (string $date, float $prix, float $taxe, ?int $condition) => $this->postJson('/api/factures-fournisseurs', array_filter([
+            'fournisseur_id' => $this->fournisseur, 'date_facture' => $date, 'condition_paiement_id' => $condition,
+            'lignes' => [['produit_id' => $this->produit, 'description' => 'Ciment', 'quantite' => 1, 'prix_unitaire' => $prix, 'taux_tva' => $taxe]],
+        ], fn ($v) => $v !== null))->assertCreated()->json('id');
+        $premiere = $achat('2026-10-08', 2000, 19.25, null);
+        $seconde = $achat('2026-10-09', 1000, 0, $deuxDix);
+        // Un virement : la première en entier (2 385), la seconde avec ses 2 % d'escompte (980 + 20).
+        $debourse = $this->postJson('/api/debourses', [
+            'fournisseur_id' => $this->fournisseur, 'date_debourse' => '2026-10-15', 'mode' => 'virement', 'reference' => 'VIR-77',
+            'lignes' => [['facture_fournisseur_id' => $premiere, 'montant' => 2385], ['facture_fournisseur_id' => $seconde, 'montant' => 980, 'escompte' => 20]],
+        ])->assertCreated()->json('id');
+
+        // Ses paiements passent avec lui, en une écriture : rien comme paiements fournisseurs.
+        $apercu = collect($this->getJson('/api/comptabilite/comptabilisation/apercu')->assertOk()->json('types'))->keyBy('type');
+        $this->assertEquals([0, 1, 3385], [$apercu['paiement_fournisseur']['nombre'], $apercu['debourse']['nombre'], $apercu['debourse']['montant']]);
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 3)->assertJsonPath('par_type.debourse', 1);
+        $this->assertSame(['BQ', [['401', 2385.0, 0.0], ['401', 1000.0, 0.0], ['521', 0.0, 3365.0], ['773', 0.0, 20.0]], '2026-10-15'], $this->ecriture('debourse', $debourse));
+
+        // Annulé ensuite : son écriture est contre-passée à la date de l'annulation.
+        $this->postJson("/api/debourses/{$debourse}/annuler")->assertOk();
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 0)->assertJsonPath('contre_passations', 1);
+        $this->assertSame(['BQ', [['401', 0.0, 2385.0], ['401', 0.0, 1000.0], ['521', 3365.0, 0.0], ['773', 20.0, 0.0]], '2026-10-16'], $this->ecriture('debourse', $debourse, true));
     }
 
     public function test_refus_tache_droits_et_isolation(): void

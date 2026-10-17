@@ -191,9 +191,14 @@ export default function DetailFactureFournisseur({ id, onClose, onModifiee }: { 
                     <li key={p.id} className="flex flex-wrap items-center gap-2">
                       <span className="w-24">{formatDateDocument(p.date_paiement, language)}</span>
                       <span className="w-24">{tf.modes[p.mode] ?? p.mode}</span>
-                      <span className="flex-1 text-gray-500">{p.reference ?? ''}{p.auteur ? ` — ${p.auteur.nom}` : ''}</span>
+                      <span className="flex-1 text-gray-500">
+                        {p.reference ?? ''}{p.auteur ? ` — ${p.auteur.nom}` : ''}
+                        {p.debourse && <span className="ml-1 font-mono">({tf.disbursement.replace('{numero}', p.debourse.numero)})</span>}
+                      </span>
+                      {Number(p.escompte ?? 0) > 0 && <span className="text-xs text-green-700 dark:text-green-300">{tf.discountTaken.replace('{montant}', montant(p.escompte, devise))}</span>}
                       <strong>{montant(p.montant, devise)}</strong>
-                      {ouverte && peut('factures_fournisseurs', 'payer') && (
+                      {/* Une part de déboursé s'annule avec son déboursé. */}
+                      {ouverte && !p.debourse && peut('factures_fournisseurs', 'payer') && (
                         <button type="button" disabled={enCours} title={tf.cancelPayment} aria-label={tf.cancelPayment}
                           onClick={() => confirm(tf.confirmCancelPayment) && executer(() => annulerPaiementFournisseur(facture.id, p.id))}
                           className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={14} /></button>
