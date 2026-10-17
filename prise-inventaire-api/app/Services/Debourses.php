@@ -13,6 +13,7 @@ use App\Models\TenantParametres;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -171,6 +172,52 @@ class Debourses
             }
 
             return $debourse->fresh($this->relations());
+        });
+    }
+
+    /**
+     * Paie une sélection de factures en un geste (rapport des paiements dus) : un déboursé par fournisseur et par
+     * devise, qui règle le reste de chaque facture, moins l'escompte encore offert à la date du paiement (si demandé).
+     * Tout ou rien : un refus n'en crée aucun.
+     *
+     * @param  array{factures: list<int>, date_debourse: string, mode: string, reference?: ?string, notes?: ?string, escompte?: bool}  $donnees
+     * @return Collection<int, Debourse>
+     */
+    public function payerLot(array $donnees, int $tenantId, ?int $auteur): Collection
+    {
+        $ids = array_values(array_unique(array_map('intval', $donnees['factures'])));
+        $date = Carbon::parse($donnees['date_debourse'])->toDateString();
+
+        return DB::transaction(function () use ($ids, $date, $donnees, $tenantId, $auteur) {
+            $factures = FactureFournisseur::query()->whereIn('id', $ids)->orderBy('id')->get();
+            if ($factures->count() !== count($ids)) {
+                throw ValidationException::withMessages(['factures' => "Choisissez des factures fournisseurs de l'entreprise."]);
+            }
+            foreach ($factures as $facture) {
+                if ($facture->statut !== FactureFournisseur::ENREGISTREE || $facture->reste_a_payer <= 0) {
+                    throw ValidationException::withMessages(['factures' => "La facture {$facture->numero} ne reste pas à payer."]);
+                }
+            }
+            $creees = collect();
+            foreach ($factures->groupBy(fn (FactureFournisseur $f) => $f->fournisseur_id.'|'.($f->devise ?? '')) as $groupe) {
+                $lignes = $groupe->map(function (FactureFournisseur $f) use ($date, $donnees) {
+                    $offre = ($donnees['escompte'] ?? true) ? $this->escompte($f, $date) : null;
+                    $escompte = $offre && $offre['applicable'] ? $offre['escompte'] : 0.0;
+
+                    return ['facture_fournisseur_id' => $f->id, 'montant' => round($f->reste_a_payer - $escompte, 2), 'escompte' => $escompte];
+                })->values()->all();
+                $creees->push($this->enregistrer([
+                    'fournisseur_id' => $groupe->first()->fournisseur_id,
+                    'date_debourse' => $date,
+                    'mode' => $donnees['mode'],
+                    'reference' => $donnees['reference'] ?? null,
+                    'devise' => $groupe->first()->devise,
+                    'notes' => $donnees['notes'] ?? null,
+                    'lignes' => $lignes,
+                ], $tenantId, $auteur));
+            }
+
+            return $creees;
         });
     }
 

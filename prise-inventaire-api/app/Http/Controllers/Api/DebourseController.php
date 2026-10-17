@@ -7,6 +7,8 @@ use App\Models\Debourse;
 use App\Models\Fournisseur;
 use App\Services\AvisPaiementPdf;
 use App\Services\Debourses;
+use App\Services\PaiementsDus;
+use App\Support\FichierCsv;
 use App\Support\TenantRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -66,6 +68,68 @@ class DebourseController extends Controller
         return response()->json($this->debourses->aPayer(
             Fournisseur::query()->findOrFail($donnees['fournisseur_id']), $donnees['devise'] ?? null, $donnees['date'] ?? today()->toDateString(),
         ));
+    }
+
+    /**
+     * Paiements dus : chaque facture encore due, son échéance, l'escompte encore offert à la date « payer le » et le net
+     * à payer, par fournisseur et par devise ; en CSV avec `format=csv`.
+     */
+    public function paiementsDus(Request $request, PaiementsDus $paiements): JsonResponse|Response
+    {
+        $filtres = $request->validate([
+            'date' => 'nullable|date',
+            'payer_le' => 'nullable|date',
+            'echeance_au' => 'nullable|date',
+            'fournisseur_id' => 'nullable|integer',
+            'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
+            'echus' => 'nullable|boolean',
+            'escompte_seulement' => 'nullable|boolean',
+            'inclure_soldees' => 'nullable|boolean',
+        ]);
+        foreach (['echus', 'escompte_seulement', 'inclure_soldees'] as $case) {
+            $filtres[$case] = $request->boolean($case);
+        }
+        $rapport = $paiements->rapport($filtres);
+        if ($request->query('format') !== 'csv') {
+            return response()->json($rapport);
+        }
+
+        $lignes = [];
+        foreach ($rapport['groupes'] as $groupe) {
+            foreach ($groupe['factures'] as $f) {
+                $lignes[] = [$groupe['code_fournisseur'], $groupe['fournisseur'], $f['numero'], $f['numero_fournisseur'], $f['date_facture'], $f['date_echeance'],
+                    $f['jours'], $f['montant'], $f['regle'], $f['solde'], $f['limite_escompte'], $f['escompte'], $f['net'], $f['devise'] ?? ''];
+            }
+            $t = $groupe['totaux'];
+            $lignes[] = ['', "Sous-total {$groupe['fournisseur']}", '', '', '', '', '', $t['montant'], $t['regle'], $t['solde'], '', $t['escompte'], $t['net'], $groupe['devise'] ?? ''];
+        }
+
+        return FichierCsv::reponse("paiements-dus-{$rapport['date']}.csv",
+            ['code', 'fournisseur', 'document', 'numero_fournisseur', 'date', 'echeance', 'jours', 'montant', 'regle', 'solde', 'limite_escompte', 'escompte', 'net_a_payer', 'devise'], $lignes);
+    }
+
+    /** Paie une sélection de factures en un geste : un déboursé par fournisseur et par devise. */
+    public function payerLot(Request $request): JsonResponse
+    {
+        $donnees = $request->validate([
+            'factures' => 'required|array|min:1|max:200',
+            'factures.*' => 'integer',
+            'date_debourse' => 'required|date|before_or_equal:tomorrow',
+            'mode' => ['required', Rule::in(Debourse::MODES)],
+            'reference' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:2000',
+            // Appliquer l'escompte encore offert à la date du paiement (oui par défaut).
+            'escompte' => 'sometimes|boolean',
+        ]);
+
+        return $this->executer(function () use ($donnees, $request) {
+            $debourses = $this->debourses->payerLot($donnees, $request->attributes->get('tenant')->id, $request->user()?->id);
+
+            return response()->json([
+                'message' => count($debourses).' déboursé(s) enregistré(s) : '.$debourses->pluck('numero')->join(', ').'.',
+                'debourses' => $debourses->values(),
+            ], 201);
+        });
     }
 
     public function store(Request $request): JsonResponse

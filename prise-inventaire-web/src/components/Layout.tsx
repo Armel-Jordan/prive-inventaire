@@ -100,6 +100,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/retours-fournisseurs', label: t.supplierReturns.nav, icon: PackageMinus, module: 'retours_fournisseurs' },
       { path: '/factures-fournisseurs', label: t.supplierInvoices.nav, icon: FileInput, module: 'factures_fournisseurs' },
       { path: '/debourses', label: t.supplierPayments.nav, icon: BanknoteArrowUp, module: 'debourses' },
+      { path: '/paiements-dus', label: t.paymentsDue.nav, icon: CalendarClock, module: 'debourses' },
     ],
   },
   {
