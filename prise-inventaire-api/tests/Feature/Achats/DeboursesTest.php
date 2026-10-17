@@ -195,10 +195,10 @@ class DeboursesTest extends TestCase
         $this->postJson("/api/debourses/{$debourse['id']}/annuler")->assertForbidden()
             ->assertJsonPath('message', 'Droit insuffisant : votre rôle ne permet pas de faire « Annuler un déboursé » (Déboursés).');
 
-        // Catalogue : le module et son action.
+        // Catalogue : le module et ses actions.
         $this->agir($this->admin);
         $modules = collect(collect($this->getJson('/api/permissions/catalogue')->assertOk()->json('onglets'))->firstWhere('cle', 'achats')['modules'])->keyBy('cle');
-        $this->assertSame(['debourses.voir', 'debourses.creer', 'debourses.modifier', 'debourses.annuler'], array_column($modules['debourses']['permissions'], 'code'));
+        $this->assertSame(['debourses.voir', 'debourses.creer', 'debourses.modifier', 'debourses.annuler', 'debourses.cheques'], array_column($modules['debourses']['permissions'], 'code'));
 
         // Une autre entreprise ne voit ni n'annule ces déboursés.
         $autre = Tenant::factory()->create(['modules' => ['achats']]);

@@ -61,6 +61,19 @@ export default function BanquePage() {
     }
   }
 
+  async function prochainCheque(compte: CompteBanque, valeur: string) {
+    setErreur('');
+    setMessage('');
+    try {
+      const numero = Number(valeur) || null;
+      await relierCompteBancaire(compte.id, { prochain_cheque: numero });
+      setMessage(tb.nextChequeSaved.replace('{nom}', compte.nom).replace('{numero}', numero ? String(numero) : '—'));
+      await chargerComptes();
+    } catch (e) {
+      setErreur(messageErreur(e, tb.error));
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -88,6 +101,7 @@ export default function BanquePage() {
                   <th className="px-4 py-3 text-left">{tb.bankName}</th>
                   <th className="px-4 py-3 text-left">{tb.ledgerAccount}</th>
                   <th className="px-4 py-3 text-left">{tb.journal}</th>
+                  <th className="px-4 py-3 text-right" title={tb.nextChequeHelp}>{tb.nextCheque}</th>
                   <th className="px-4 py-3 text-right">{tb.balance}</th>
                 </tr>
               </thead>
@@ -114,6 +128,12 @@ export default function BanquePage() {
                           {journaux.map(j => <option key={j.id} value={j.id}>{j.code} — {j.libelle}</option>)}
                         </select>
                       ) : (c.journal ? `${c.journal.code} — ${c.journal.libelle}` : tb.defaultJournal)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {peut('banque', 'configurer') ? (
+                        <input key={`${c.id}-${c.prochain_cheque ?? ''}`} type="number" min={1} defaultValue={c.prochain_cheque ?? ''} aria-label={`${tb.nextCheque} ${c.nom}`}
+                          onBlur={e => { if (e.target.value !== String(c.prochain_cheque ?? '')) prochainCheque(c, e.target.value); }} className={`${classeChamp} w-32 text-right`} />
+                      ) : (c.prochain_cheque ?? '—')}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{c.solde === null ? '—' : montant(c.solde)}</td>
                   </tr>

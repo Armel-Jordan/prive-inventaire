@@ -100,6 +100,9 @@ class Permissions
             'annuler' => ['base' => 'modifier', 'fr' => 'Annuler un déboursé', 'en' => 'Cancel a disbursement',
                 'aide_fr' => 'Annuler un déboursé saisi par erreur : ses paiements et ses escomptes sont retirés des factures fournisseurs, qui redeviennent dues.',
                 'aide_en' => 'Cancel a disbursement entered by mistake: its payments and discounts are removed from the supplier invoices, which become due again.'],
+            'cheques' => ['base' => 'creer', 'fr' => 'Imprimer les chèques', 'en' => 'Print cheques',
+                'aide_fr' => 'Numéroter et imprimer les chèques des déboursés payés par chèque, sur le chéquier de leur compte bancaire.',
+                'aide_en' => 'Number and print the cheques of disbursements paid by cheque, from the chequebook of their bank account.'],
         ]],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',

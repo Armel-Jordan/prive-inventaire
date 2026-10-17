@@ -27,7 +27,7 @@ class ComptesBancaires
         $soldes = $this->soldes->mouvements(null, $date, $comptes->pluck('compte_comptable_id')->filter()->values()->all());
 
         return $comptes->map(fn (CompteBancaire $c) => $c->only([
-            'id', 'nom', 'banque', 'numero_compte', 'iban', 'devise_code', 'par_defaut', 'actif', 'compte_comptable_id', 'journal_id',
+            'id', 'nom', 'banque', 'numero_compte', 'iban', 'devise_code', 'par_defaut', 'actif', 'compte_comptable_id', 'journal_id', 'prochain_cheque',
         ]) + [
             'compte_comptable' => $c->compteComptable?->only(['id', 'numero', 'libelle']),
             'journal' => $c->journal?->only(['id', 'code', 'libelle']),
@@ -58,10 +58,12 @@ class ComptesBancaires
         if (! empty($donnees['journal_id']) && ! JournalComptable::query()->where('actif', true)->whereKey($donnees['journal_id'])->exists()) {
             throw ValidationException::withMessages(['journal_id' => 'Choisissez un journal actif.']);
         }
-        $compte->update([
+        // Seuls les réglages envoyés changent : le compte comptable, le journal, le prochain numéro de chèque.
+        $compte->update(array_intersect_key([
             'compte_comptable_id' => $compteComptable?->id,
             'journal_id' => $donnees['journal_id'] ?? null,
-        ]);
+            'prochain_cheque' => $donnees['prochain_cheque'] ?? null,
+        ], $donnees));
 
         return $compte->load(['compteComptable:id,numero,libelle', 'journal:id,code,libelle']);
     }

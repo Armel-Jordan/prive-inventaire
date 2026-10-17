@@ -32,6 +32,8 @@ class DebourseController extends Controller
             'fournisseur_id' => 'nullable|integer',
             'mode' => ['nullable', Rule::in(Debourse::MODES)],
             'statut' => ['nullable', Rule::in([Debourse::VALIDE, Debourse::ANNULE])],
+            // Chèques à imprimer (payés par chèque, valides, pas encore imprimés) ou déjà imprimés.
+            'cheque' => ['nullable', Rule::in(['a_imprimer', 'imprimes'])],
             'date_debut' => 'nullable|date',
             'date_fin' => 'nullable|date',
             'per_page' => 'nullable|integer|between:1,100',
@@ -46,7 +48,10 @@ class DebourseController extends Controller
             ->when($filtres['fournisseur_id'] ?? null, fn ($q, $id) => $q->where('fournisseur_id', $id))
             ->when($filtres['mode'] ?? null, fn ($q, $mode) => $q->where('mode', $mode))
             ->when($filtres['date_debut'] ?? null, fn ($q, $date) => $q->whereDate('date_debourse', '>=', $date))
-            ->when($filtres['date_fin'] ?? null, fn ($q, $date) => $q->whereDate('date_debourse', '<=', $date));
+            ->when($filtres['date_fin'] ?? null, fn ($q, $date) => $q->whereDate('date_debourse', '<=', $date))
+            ->when(($filtres['cheque'] ?? null) === 'a_imprimer', fn ($q) => $q->where('mode', 'cheque')->where('statut', Debourse::VALIDE)
+                ->where('montant', '>', 0)->whereNull('cheque_imprime_le'))
+            ->when(($filtres['cheque'] ?? null) === 'imprimes', fn ($q) => $q->whereNotNull('cheque_imprime_le'));
         $resume = $this->debourses->resume(clone $requete);
         $page = $requete->when($filtres['statut'] ?? null, fn ($q, $statut) => $q->where('statut', $statut))
             ->with(['fournisseur:id,code,raison_sociale', 'lignes.facture:id,numero,numero_fournisseur'])

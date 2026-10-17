@@ -250,6 +250,7 @@ class Droits
         // transaction bancaire.
         'POST api/banque/comptes/{id}/releves' => ['banque', 'rapprocher'],
         'DELETE api/banque/releves/{releve}' => ['banque', 'rapprocher'],
+        'POST api/debourses/cheques/numeroter' => ['debourses', 'cheques'],
         'POST api/banque/comptes/{id}/releve/relier-suggestions' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/relier' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/delier' => ['banque', 'rapprocher'],

@@ -27,10 +27,12 @@ class Debourse extends Model
     protected $fillable = [
         'tenant_id', 'numero', 'fournisseur_id', 'date_debourse', 'mode', 'reference', 'devise', 'taux_change', 'montant',
         'montant_applique', 'escompte', 'compte_bancaire_id', 'notes', 'statut', 'enregistre_par', 'annule_le', 'annule_par', 'motif_annulation',
+        'cheque_imprime_le', 'cheque_imprime_par',
     ];
 
     protected $casts = [
         'date_debourse' => 'date',
+        'cheque_imprime_le' => 'datetime',
         'taux_change' => 'decimal:6',
         'montant' => 'decimal:2',
         'montant_applique' => 'decimal:2',
