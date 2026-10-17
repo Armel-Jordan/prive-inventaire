@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, PackageMinus, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, PackageMinus, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -155,6 +155,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
       { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
+      { path: '/frais', label: t.fees.nav, icon: BadgePercent, module: 'configuration' },
       { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
     ],
   },

@@ -21,6 +21,8 @@ class Client extends Model
         'condition_paiement_id',
         // Devise du client (null : celle de l'entreprise), reprise par ses documents de vente.
         'devise',
+        // Frais de livraison proposé sur ses devis, commandes et factures.
+        'frais_livraison_id',
         'adresse_facturation',
         'adresse_livraison',
         'ville',

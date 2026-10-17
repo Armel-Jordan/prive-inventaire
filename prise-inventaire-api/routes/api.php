@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\FournisseurFicheCompteController;
 use App\Http\Controllers\Api\FournisseurFicheContactController;
 use App\Http\Controllers\Api\FournisseurFicheController;
 use App\Http\Controllers\Api\FournisseurFicheRemarqueController;
+use App\Http\Controllers\Api\FraisController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
@@ -831,6 +832,15 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}', [GroupeTaxeController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [GroupeTaxeController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/calculer', [GroupeTaxeController::class, 'calculer'])->whereNumber('id');
+    });
+
+    // Frais additionnels et de livraison : réglage, et lignes de frais proposées pendant la saisie d'un document de vente.
+    Route::prefix('frais')->middleware('module:ventes')->group(function () {
+        Route::get('/', [FraisController::class, 'index']);
+        Route::post('/calculer', [FraisController::class, 'calculer']);
+        Route::post('/', [FraisController::class, 'store']);
+        Route::put('/{id}', [FraisController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [FraisController::class, 'destroy'])->whereNumber('id');
     });
 
     // Courriels : paramètres d'envoi (serveur réservé aux administrateurs) et modèles par type et par langue.

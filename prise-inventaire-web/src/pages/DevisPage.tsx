@@ -19,6 +19,8 @@ import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import ChampDevise from '@/components/ChampDevise';
+import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
+import FraisDocument from '@/components/FraisDocument';
 import { useLanguage } from '@/i18n/useLanguage';
 
 export default function DevisPage() {
@@ -49,6 +51,14 @@ export default function DevisPage() {
     taux: '1',
   });
   const [lignes, setLignes] = useState<{ id?: number; produit_id: number; quantite: number; prix_unitaire: number }[]>([]);
+  // Frais additionnels et de livraison proposés pour le devis en cours de saisie.
+  const frais = useFraisAutomatiques({
+    document: 'devis',
+    clientId: formData.client_id ? Number(formData.client_id) : null,
+    lignes: lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire })),
+    taux: formData.devise ? Number(formData.taux) || 1 : 1,
+    actif: showModal,
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -89,7 +99,7 @@ export default function DevisPage() {
         // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
         devise: formData.devise || deviseEntreprise,
         taux_change: formData.devise ? Number(formData.taux) : undefined,
-        lignes,
+        lignes: [...lignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire: f.prix_unitaire_ht }))],
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -192,6 +202,7 @@ export default function DevisPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    frais.reinitialiser();
     setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
     setLignes([]);
   };
@@ -385,7 +396,8 @@ export default function DevisPage() {
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500" aria-label="Retirer la ligne" title="Retirer la ligne"><X size={16} /></button>
                       </div>
                     ))}
-                    <div className="text-right font-medium">Total HT : {montant(totalLignes, formData.devise || null)}</div>
+                    <FraisDocument frais={frais} montant={v => montant(v, formData.devise || null)} />
+                    <div className="text-right font-medium">Total HT : {montant(totalLignes + frais.total, formData.devise || null)}</div>
                   </div>
                 )}
               </div>

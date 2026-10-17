@@ -16,6 +16,8 @@ import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/c
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
+import { getFrais, type Frais } from '@/services/frais';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -53,11 +55,14 @@ export default function ClientsPage() {
     taux_remise_global: '0',
     condition_paiement_id: '',
     devise: '',
+    frais_livraison_id: '',
   });
-  // Conditions de paiement et devises du référentiel.
+  // Conditions de paiement et devises du référentiel, frais de livraison.
+  const [fraisLivraison, setFraisLivraison] = useState<Frais[]>([]);
   const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
   const [devises, setDevises] = useState<string[]>([]);
   const deviseEntreprise = useCodeDevise();
+  const { t } = useLanguage();
 
   async function loadConfig() {
     try {
@@ -73,6 +78,7 @@ export default function ClientsPage() {
     loadConfig();
     getReferentiel('conditions_paiement', true).then(setConditions, () => {});
     getReferentiel('devises', true).then(liste => setDevises(liste.map(d => String(d.code ?? '').toUpperCase()).filter(Boolean)), () => {});
+    getFrais({ application: 'livraison' }).then(setFraisLivraison, () => {});
   }, []);
 
   const loadClients = async () => {
@@ -105,6 +111,7 @@ export default function ClientsPage() {
         condition_paiement_id: formData.condition_paiement_id ? Number(formData.condition_paiement_id) : null,
         // Vide : la devise de l'entreprise.
         devise: formData.devise || null,
+        frais_livraison_id: formData.frais_livraison_id ? Number(formData.frais_livraison_id) : null,
       };
 
       if (editingClient) {
@@ -137,6 +144,7 @@ export default function ClientsPage() {
       taux_remise_global: client.taux_remise_global?.toString() || '0',
       condition_paiement_id: client.condition_paiement_id ? String(client.condition_paiement_id) : '',
       devise: client.devise ?? '',
+      frais_livraison_id: client.frais_livraison_id ? String(client.frais_livraison_id) : '',
     });
     setShowModal(true);
   };
@@ -168,6 +176,7 @@ export default function ClientsPage() {
       taux_remise_global: '0',
       condition_paiement_id: '',
       devise: '',
+      frais_livraison_id: '',
     });
   };
 
@@ -460,6 +469,18 @@ export default function ClientsPage() {
                     {[...new Set([...devises, formData.devise].filter(c => c && c !== deviseEntreprise))].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <span className="text-xs text-gray-500">Reprise par ses devis, commandes et factures.</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-300">{t.fees.clientDeliveryFee}</label>
+                  <select
+                    value={formData.frais_livraison_id}
+                    onChange={(e) => setFormData({ ...formData, frais_livraison_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">{t.fees.noDeliveryFee}</option>
+                    {fraisLivraison.filter(f => f.actif || String(f.id) === formData.frais_livraison_id).map(f => <option key={f.id} value={f.id}>{f.libelle}</option>)}
+                  </select>
+                  <span className="text-xs text-gray-500">{t.fees.clientDeliveryFeeHelp}</span>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">

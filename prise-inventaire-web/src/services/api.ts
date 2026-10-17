@@ -1124,6 +1124,8 @@ export interface Client {
   taux_remise_global: number;
   /** Condition de paiement (référentiel), reprise par les factures du client. */
   condition_paiement_id?: number | null;
+  /** Frais de livraison proposé sur ses documents de vente. */
+  frais_livraison_id?: number | null;
   /** Devise du client (null : celle de l'entreprise), reprise par ses documents de vente. */
   devise?: string | null;
   actif: boolean;

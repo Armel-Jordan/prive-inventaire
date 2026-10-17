@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — retours clients (§5.12)
+> Dernière mise à jour : 2026-10-17 — frais additionnels et de livraison (§5.13)
 
 ---
 
@@ -928,6 +928,51 @@ Plan de parité fripv2, phase 1.7 : la marchandise qu'un client rapporte, avec l
 Code :
 - API : service `App\Services\RetoursClients`, migration `2026_10_16_100035_creer_retours_clients` ;
 - web : page `RetoursClientsPage`, composant `retours/EditeurRetour`.
+
+### 5.13 Frais additionnels et de livraison (Paramètres → Frais additionnels)
+
+Plan de parité fripv2, phase 1.4 : les frais que fripv2 ajoute d'eux-mêmes aux devis, commandes et factures (manutention, matière dangereuse, frais de livraison d'un client).
+
+**Un frais :**
+- **libellé** et **produit de la ligne** (de préférence un service : il porte la ligne ajoutée au document, avec ses taxes) ;
+- **calcul** :
+  - **montant fixe** dans la devise de l'entreprise ;
+  - ou **pourcentage** du montant HT des lignes concernées, remises de ligne déduites ;
+- **application** :
+  - **sur tout document** : dès qu'il contient une ligne de marchandise ;
+  - **sur certains produits** : seulement si le document contient un des produits choisis ; un pourcentage porte sur leur montant ;
+  - **frais de livraison** : pour les clients qui l'ont dans leur fiche (Clients → Modifier → « Frais de livraison ») ;
+- **répétition** (montant fixe) : une fois par document, ou une fois par ligne concernée. Un pourcentage donne toujours une seule ligne ;
+- **documents** : devis, commandes, factures (au moins un) ;
+- **actif**.
+
+**Pendant la saisie** d'un devis, d'une commande ou d'une facture :
+- les frais applicables s'affichent sous les lignes, avec leur montant ; le total HT les compte ;
+- ils sont **recalculés** quand le client ou les lignes changent ;
+- l'utilisateur peut en **retirer** : un frais retiré ne revient pas pour ce document ;
+- à l'enregistrement, ils deviennent des **lignes ordinaires** du document : PDF, taxes, conversions devis → commande → facture, notes de crédit.
+
+**Règles :**
+- les lignes d'un produit de frais n'en déclenchent pas d'autre ;
+- un frais dont le produit est déjà sur le document n'est pas proposé de nouveau (brouillon modifié, ligne saisie à la main) ;
+- dans un document en devise étrangère, un montant fixe est converti au taux du document ; un frais qui tombe à 0,00 n'est pas proposé ;
+- un frais inactif, ou dont le produit est supprimé ou désactivé, n'est pas proposé ;
+- rien n'est ajouté sans l'écran : un document créé par l'API ou par l'espace client ne reçoit pas de frais.
+
+**Suppression d'un frais :**
+- les clients qui l'avaient comme frais de livraison n'en ont plus ;
+- de même quand un frais de livraison change d'application ;
+- les documents déjà faits gardent leurs lignes.
+
+| Route | Rôle |
+|---|---|
+| `GET /frais` | Liste (`application`, `actifs=1`) |
+| `POST /frais`, `PUT /frais/{id}`, `DELETE /frais/{id}` | Réglage (droit de modifier la configuration) |
+| `POST /frais/calculer` | Lignes de frais d'un document en cours : `document` (devis, commande, facture), `client_id`, `taux_change`, `lignes[]` (`produit_id`, `quantite`, `prix_unitaire_ht`, `remise_ligne`) |
+
+**Données :** tables `frais` et `frais_produits` ; `clients.frais_livraison_id`.
+
+Code : service `App\Services\FraisDocuments`, migration `2026_10_16_100037_creer_frais_additionnels` ; web : page `FraisPage`, crochet `useFraisAutomatiques`, composant `FraisDocument`.
 
 ---
 

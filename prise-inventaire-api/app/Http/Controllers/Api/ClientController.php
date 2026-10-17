@@ -78,6 +78,8 @@ class ClientController extends Controller
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             // Devise du client (code ISO) : reprise par ses documents de vente.
             'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
+            // Frais de livraison (frais « livraison ») proposé sur ses documents de vente.
+            'frais_livraison_id' => ['nullable', 'integer', TenantRule::exists('frais')->where('application', 'livraison')->whereNull('deleted_at')],
         ]);
         $validated['devise'] = $this->devise($validated['devise'] ?? null);
 
@@ -115,6 +117,7 @@ class ClientController extends Controller
             'taux_remise_global' => 'nullable|numeric|min:0|max:100',
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             'devise' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
+            'frais_livraison_id' => ['nullable', 'integer', TenantRule::exists('frais')->where('application', 'livraison')->whereNull('deleted_at')],
             'actif' => 'sometimes|boolean',
         ]);
         if (array_key_exists('devise', $validated)) {
