@@ -240,6 +240,37 @@ class Comptabilisation
         }
     }
 
+    /**
+     * Passe tout de suite au journal un document qui n'y est pas encore (une transaction bancaire créée depuis une
+     * opération du relevé, par exemple), daté à partir de la date de début ; les mêmes règles que la comptabilisation.
+     */
+    public function comptabiliserDocument(string $type, int $id, ?int $auteur): EcritureComptable
+    {
+        $parametres = $this->parametres();
+        if (! $parametres->date_debut) {
+            throw new DomainException("Réglez d'abord la date à partir de laquelle les documents se comptabilisent.");
+        }
+        $document = $this->aComptabiliser($type, Carbon::parse($parametres->date_debut), Carbon::parse('2999-12-31'))->whereKey($id)->first();
+        if (! $document) {
+            throw new DomainException('Ce document est déjà au journal, ou antérieur à la date de début de la comptabilisation automatique.');
+        }
+        // La même exclusion que la comptabilisation : jamais deux écritures pour un document.
+        $verrou = Cache::lock('comptabilisation:'.$parametres->tenant_id, 300);
+        if (! $verrou->get()) {
+            throw new DomainException('Une comptabilisation est en cours : réessayez dans un instant.');
+        }
+        try {
+            return DB::transaction(function () use ($type, $document, $parametres, $auteur, $id) {
+                $ecriture = $this->ecritures->enregistrer($this->ecriture($type, $document, $parametres), $type, null, $auteur);
+                $ecriture->update(['source_id' => $id]);
+
+                return $ecriture;
+            });
+        } finally {
+            $verrou->release();
+        }
+    }
+
     /** Documents d'un type datés dans la période, sans écriture (hors contre-passations). */
     private function aComptabiliser(string $type, Carbon $du, Carbon $au): Builder
     {

@@ -4,6 +4,7 @@ import Pagination from '@/components/Pagination';
 import DetailTransactionBancaire from '@/components/banque/DetailTransactionBancaire';
 import FenetreTransactionBancaire from '@/components/banque/FenetreTransactionBancaire';
 import OngletRapprochement from '@/components/banque/OngletRapprochement';
+import OngletReleves from '@/components/banque/OngletReleves';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, formatDateDocument, useMontantDocument } from '@/lib/documents';
@@ -15,13 +16,14 @@ import {
 import { getComptes, getJournaux, type CompteComptable, type JournalComptable } from '@/services/comptabilite';
 
 const classeChamp = 'px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
-type Onglet = 'comptes' | 'mouvements' | 'transactions' | 'rapprochement';
+type Onglet = 'comptes' | 'mouvements' | 'transactions' | 'releves' | 'rapprochement';
 const debutMois = () => `${aujourdhui().slice(0, 8)}01`;
 
 /**
  * Banque (Finance → Banque) : les comptes bancaires de l'entreprise reliés à leur compte comptable et à leur journal,
  * avec leur solde ; les mouvements d'un compte (toutes les écritures de son compte comptable, quelle qu'en soit
- * l'origine) avec le solde progressif ; les transactions bancaires sans facture (dépôts, retraits, virements).
+ * l'origine) avec le solde progressif ; les transactions bancaires sans facture (dépôts, retraits, virements) ; les
+ * relevés importés de la banque reliés aux mouvements ; le rapprochement.
  */
 export default function BanquePage() {
   const { t } = useLanguage();
@@ -66,7 +68,7 @@ export default function BanquePage() {
         <p className="text-sm text-gray-500 max-w-3xl">{tb.subtitle}</p>
       </div>
       <div role="tablist" className="flex gap-1 border-b dark:border-gray-700">
-        {(['comptes', 'mouvements', 'transactions', 'rapprochement'] as Onglet[]).map(o => (
+        {(['comptes', 'mouvements', 'transactions', 'releves', 'rapprochement'] as Onglet[]).map(o => (
           <button key={o} role="tab" type="button" aria-selected={onglet === o} onClick={() => setOnglet(o)}
             className={`px-4 py-2 text-sm border-b-2 -mb-px ${onglet === o ? 'border-blue-600 text-blue-700 dark:text-blue-300 font-medium' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900'}`}>
             {tb.tabs[o]}
@@ -124,6 +126,7 @@ export default function BanquePage() {
       )}
 
       {onglet === 'mouvements' && <OngletMouvements comptes={comptes} />}
+      {onglet === 'releves' && <OngletReleves comptes={comptes} onComptesModifies={chargerComptes} />}
       {onglet === 'rapprochement' && <OngletRapprochement comptes={comptes} />}
       {onglet === 'transactions' && <OngletTransactions comptes={comptes} peutSaisir={peut('banque', 'saisir')} onMessage={setMessage} onComptesModifies={chargerComptes} />}
     </div>

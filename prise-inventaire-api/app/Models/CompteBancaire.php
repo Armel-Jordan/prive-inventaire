@@ -21,11 +21,14 @@ class CompteBancaire extends Model
     protected $fillable = [
         'tenant_id', 'nom', 'banque', 'agence', 'titulaire', 'numero_compte',
         'iban', 'bic', 'devise_code', 'par_defaut', 'actif', 'notes', 'compte_comptable_id', 'journal_id',
+        // Colonnes du CSV de la banque, mémorisées au dernier import de relevé.
+        'import_reglages',
     ];
 
     protected $casts = [
         'par_defaut' => 'boolean',
         'actif' => 'boolean',
+        'import_reglages' => 'array',
     ];
 
     /** Compte comptable de trésorerie qui porte les mouvements du compte bancaire. */

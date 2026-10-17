@@ -288,7 +288,7 @@ Plan de parité fripv2, phase 4.6 (« Transactions bancaires ») : les comptes b
 - **Consulter** : comptes, soldes, mouvements, transactions. Les lectures de `/banque` sont contrôlées.
 - **Saisir une transaction bancaire** (`saisir`, comme « Saisir des écritures »).
 - **Annuler une transaction bancaire** (`annuler`, même réglage).
-- **Faire le rapprochement bancaire** (`rapprocher`, même réglage ; pour le rapprochement à venir).
+- **Faire le rapprochement bancaire** (`rapprocher`, même réglage) : le rapprochement et les relevés importés.
 - **Relier les comptes bancaires à la comptabilité** (`configurer`, comme la modification du plan comptable).
 
 **Rapprochement bancaire** (onglet Rapprochement), comme la « Conciliation bancaire » de fripv2, avec en plus le solde du relevé :
@@ -315,10 +315,39 @@ Plan de parité fripv2, phase 4.6 (« Transactions bancaires ») : les comptes b
   - Les soldes d'ouverture pointés ne changent plus.
   - L'encaissement, le déboursé, la transaction bancaire, le paiement fournisseur ou l'acompte dont elle vient ne s'annule ni ne se supprime (« … : son mouvement est pointé dans le rapprochement bancaire du … »).
   - Il faut d'abord retirer la ligne du rapprochement (le rouvrir s'il est terminé).
+- **Pointer ce qui est relié au relevé** : d'un geste, les mouvements libres reliés à des opérations du relevé importé (ci-dessous) datées au plus tard du relevé.
 - **Droits** : consulter avec le droit de voir la banque ; commencer, pointer, terminer, rouvrir et supprimer avec **Faire le rapprochement bancaire** (`banque.rapprocher`).
 - **Limite** : les montants sont ceux de la comptabilité, dans la devise de l'entreprise. Un compte bancaire en devise étrangère se rapproche donc en équivalent.
 
-À venir (4.6) : l'import des relevés (CSV, OFX) et leur rapprochement avec les mouvements.
+**Relevés importés** (onglet Relevés), comme le « Flux bancaire » de fripv2, mais par fichier plutôt que par une connexion à la banque :
+- **Importer** le fichier de la banque pour un compte bancaire relié, tenu dans la devise de l'entreprise. Un compte en devise étrangère est refusé : ses montants ne se comparent pas au journal.
+  - **OFX** (1.x ou 2.x) : date, montant signé, identifiant FITID, nom et mémo, n° de chèque.
+  - **CAMT** (ISO 20022 : camt.053, camt.052, camt.054) : les opérations passées par la banque (statut BOOK), datées de leur comptabilisation, signées par leur sens. Le libellé reprend l'information de l'opération (sinon le tiers) et la communication ; la référence est l'identifiant de bout en bout. Un fichier avec une déclaration de type de document est refusé.
+  - **CSV** :
+    - les numéros des colonnes de la date, du libellé, de la référence, et du montant signé ou bien du débit et du crédit (vus par la banque : un débit sort du compte) ;
+    - la première ligne à lire et le format des dates ;
+    - le séparateur est détecté ; les montants « 1 234,56 », « -12.50 » et « (12,50) » sont lus ; un fichier en Windows-1252 est converti ;
+    - les colonnes sont mémorisées sur le compte au dernier import, et le début du fichier s'affiche pour les choisir.
+  - **Aperçu** avant d'importer : les opérations lues, nouvelles et déjà importées, les lignes écartées avec leur motif (date ou montant illisible, montant nul, opération en attente), le total des nouvelles.
+  - **Sans doublon** : chaque opération a un identifiant stable (FITID, référence de la banque, sinon une empreinte de la ligne qui distingue deux opérations identiques du même jour par leur rang). Un réimport, ou un relevé qui chevauche le précédent, n'ajoute que les nouvelles.
+  - Au plus 5 000 lignes et 5 Mo par fichier.
+  - **Fichiers importés** : la liste (période couverte, opérations, doublons, reliées, qui et quand). Un import sans opération reliée (mauvaises colonnes, mauvais compte) se supprime avec ses opérations.
+- **Relier** une opération à un ou plusieurs mouvements libres du compte comptable du compte bancaire, dans le même sens. Une remise de chèques règle plusieurs mouvements ; un mouvement n'est relié qu'à une opération.
+  - Statuts : **non reliée** ; **en partie** (montants différents, le reste est affiché) ; **reliée** (montants égaux au centime) ; **exclue**.
+  - **Meilleure correspondance**, proposée et jamais appliquée seule : un seul mouvement libre du même montant au centime, daté à 5 jours près, qu'aucune autre opération libre ne revendique. Deux chèques de 200 à deux jours d'écart ne se proposent donc pas. « Relier les correspondances proposées » les applique toutes d'un geste.
+  - **Chercher** : les mouvements libres du même sens à 30 jours près, les plus proches en montant puis en date. Une recherche (numéro, libellé, référence, montant) porte sur toutes les dates.
+  - **Délier** un mouvement, ou tous.
+- **Exclure** une opération sans mouvement, avec un motif (par exemple un prélèvement en double que la banque rembourse) ; la **rétablir**. Une opération reliée ne s'exclut pas.
+- **Créer la transaction** d'une opération sans mouvement (frais, intérêts, prélèvement) :
+  - un dépôt si l'argent entre, un retrait s'il sort, sur le compte de contrepartie choisi ;
+  - elle passe tout de suite au journal, avec les règles de la comptabilisation automatique, et se relie ;
+  - si elle ne peut pas encore y passer (période fermée, date antérieure au début de la comptabilisation), elle reste créée et le motif est donné. Elle se relie une fois passée au journal.
+- **Relier ne pointe rien** : dans le rapprochement en cours, « Pointer ce qui est relié au relevé » pointe le relié d'un geste.
+- **Droits** :
+  - consulter avec le droit de voir la banque ;
+  - importer, supprimer un import, relier, délier, exclure, rétablir et pointer depuis le relevé avec **Faire le rapprochement bancaire** (`banque.rapprocher`) ;
+  - créer la transaction avec **Saisir une transaction bancaire** (`banque.saisir`).
+- **Non repris de fripv2** : la connexion directe à la banque (Plaid). Les relevés passent par un fichier.
 
 ### Protections du plan et des exercices
 
@@ -420,6 +449,14 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET` / `PUT` / `DELETE /banque/rapprochements/{id}` | Détail (lignes, `pointee`, résumé : solde pointé, écart, en circulation, solde comptable) ; corriger le relevé ; supprimer (en cours) |
 | `POST /banque/rapprochements/{id}/pointer` | `{lignes: [ids], pointee}` : pointer ou retirer |
 | `POST /banque/rapprochements/{id}/terminer`, `/rouvrir` ; `GET …/pdf` | Terminer (écart nul) ; rouvrir le dernier terminé ; rapport |
+| `POST /banque/rapprochements/{id}/pointer-releve` | Pointer les mouvements reliés au relevé importé, datés au plus tard du relevé (`pointes`) |
+| `GET /banque/comptes/{id}/releve?du=&au=&statut=` | Opérations importées (90 derniers jours par défaut) : statut, mouvements reliés, meilleure correspondance ; `resume`, `import_reglages` |
+| `POST /banque/comptes/{id}/releves` | Import multipart : `fichier` (CSV, OFX, CAMT), `simulation`, colonnes du CSV (`colonne_date`, `colonne_libelle`, `colonne_montant` ou `colonne_debit` et `colonne_credit`, `colonne_reference`, `ligne_debut`, `format_date` : `jma`, `amj`, `mja`) ; rapport (`lues`, `nouvelles`, `doublons`, `ignorees`, `total`, `apercu`) |
+| `POST /banque/comptes/{id}/releve/relier-suggestions?du=&au=` | Appliquer les meilleures correspondances de la période |
+| `GET /banque/comptes/{id}/releves` ; `DELETE /banque/releves/{id}` | Fichiers importés (période, opérations, doublons, `reliees`) ; supprimer un import et ses opérations (aucune reliée) |
+| `GET /banque/releve-lignes/{id}/candidats?recherche=` | Mouvements libres qui peuvent correspondre à une opération |
+| `POST /banque/releve-lignes/{id}/relier`, `/delier`, `/exclure`, `/retablir` | `{lignes: [ids]}` ; `{ligne}` (sinon tous) ; `{motif}` |
+| `POST /banque/releve-lignes/{id}/classer` | `{compte_comptable_id, libelle}` : créer la transaction, la passer au journal et la relier (201) |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -428,9 +465,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire` (et `CompteBancaire`, relié à son compte comptable ; `EcritureComptableLigne.rapprochement_id`).
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf}`, contrôleurs `App\Http\Controllers\Banque\*`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire`, `ReleveBancaire`, `ReleveBancaireLigne`, `ReleveBancaireLien` (et `CompteBancaire`, relié à son compte comptable, avec `import_reglages` ; `EcritureComptableLigne.rapprochement_id`).
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf, RelevesBancaires, LecteurReleves}`, contrôleurs `App\Http\Controllers\Banque\*`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
 - **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`, `2026_10_17_100067_creer_releves_bancaires`.
