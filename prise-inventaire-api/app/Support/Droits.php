@@ -114,6 +114,7 @@ class Droits
     /** États comptables : il faut le droit de voir les états. */
     private const ETATS_COMPTABLES = [
         'api/comptabilite/balance', 'api/comptabilite/grand-livre', 'api/comptabilite/etats/bilan', 'api/comptabilite/etats/resultat',
+        'api/comptabilite/etats/taxes',
     ];
 
     /**
