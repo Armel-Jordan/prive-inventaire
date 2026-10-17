@@ -7,6 +7,7 @@ use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\Reception;
 use App\Models\ReceptionArrivagesLigne;
+use App\Models\ReceptionFrais;
 use App\Services\ReceptionPdf;
 use App\Services\ReceptionsFournisseur;
 use App\Support\TenantRule;
@@ -130,6 +131,7 @@ class ReceptionController extends Controller
             'receptions.*.notes' => 'nullable|string',
             'clotures' => 'nullable|array',
             'clotures.*' => 'integer',
+            ...$this->reglesFrais(),
         ]);
 
         if (isset($validated['commande_id'])) {
@@ -173,7 +175,7 @@ class ReceptionController extends Controller
         $recherche = trim($filtres['recherche'] ?? '');
 
         $receptions = Reception::query()
-            ->with(['fournisseur:id,code,raison_sociale', 'auteur:id,nom', 'lignes.ligneCommande.commande:id,numero,devise,taux_change'])
+            ->with(['fournisseur:id,code,raison_sociale', 'auteur:id,nom', 'frais', 'lignes.ligneCommande.commande:id,numero,devise,taux_change'])
             ->withCount('lignes')
             ->when($recherche !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('numero', 'like', "%{$recherche}%")
@@ -210,6 +212,7 @@ class ReceptionController extends Controller
             'lignes' => 'sometimes|array',
             'lignes.*.id' => 'required|integer',
             'lignes.*.cout_unitaire' => 'nullable|numeric|min:0',
+            ...$this->reglesFrais(),
         ]);
 
         return $this->executer(fn () => response()->json($this->presenter($this->receptions->modifier($reception, $donnees))));
@@ -266,9 +269,27 @@ class ReceptionController extends Controller
         return response()->json($lignes);
     }
 
+    /** Coûts annexes d'une réception (transport, douane…), répartis au prorata de la valeur, de la quantité, du poids ou du volume. */
+    private function reglesFrais(): array
+    {
+        return [
+            'frais' => 'nullable|array|max:20',
+            'frais.*.type' => ['required', Rule::in(ReceptionFrais::TYPES)],
+            'frais.*.libelle' => 'nullable|string|max:120',
+            'frais.*.fournisseur_id' => ['nullable', TenantRule::exists('fournisseurs')],
+            'frais.*.reference' => 'nullable|string|max:60',
+            'frais.*.montant' => 'required|numeric|gt:0',
+            'frais.*.devise' => 'nullable|string|max:10',
+            'frais.*.taux_change' => 'nullable|numeric|gt:0',
+            'frais.*.repartition' => ['required', Rule::in(ReceptionFrais::REPARTITIONS)],
+        ];
+    }
+
     /**
      * Réception telle qu'affichée : ses commandes, et sa valeur dans la devise de ses commandes (quantité × coût réel,
-     * sinon prix commandé) et dans celle de l'entreprise. Le détail ajoute, par ligne, le coût retenu et le montant.
+     * sinon prix commandé) et dans celle de l'entreprise ; ses coûts annexes et sa valeur de revient (marchandise et
+     * coûts annexes, devise de l'entreprise). Le détail ajoute, par ligne, le coût retenu, le montant et le coût de
+     * revient par unité de stock.
      */
     private function presenter(Reception $reception, bool $detail = true): array
     {
@@ -276,6 +297,9 @@ class ReceptionController extends Controller
         $cout = fn (ReceptionArrivagesLigne $l) => (float) ($l->cout_unitaire ?? $l->ligneCommande?->prix_unitaire ?? 0);
         $taux = fn (ReceptionArrivagesLigne $l) => (float) ($l->ligneCommande?->commande?->taux_change ?: 1);
         $devises = $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->ligneCommande?->commande?->devise)->unique()->values();
+        $frais = $reception->relationLoaded('frais') ? $reception->frais : $reception->frais()->get();
+        $montantFrais = round($frais->sum(fn (ReceptionFrais $f) => $f->montantReference()), 2);
+        $reference = round($lignes->sum(fn ($l) => $l->quantite_recue * $cout($l) * $taux($l)), 2);
         $donnees = $reception->toArray();
         unset($donnees['lignes']);
 
@@ -283,10 +307,14 @@ class ReceptionController extends Controller
             'commandes' => $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->ligneCommande?->commande?->numero)->filter()->unique()->values()->all(),
             'devise' => $devises->count() === 1 ? $devises->first() : null,
             'montant' => round($lignes->sum(fn ($l) => $l->quantite_recue * $cout($l)), 2),
-            'montant_reference' => round($lignes->sum(fn ($l) => $l->quantite_recue * $cout($l) * $taux($l)), 2),
+            'montant_reference' => $reference,
+            'montant_frais' => $montantFrais,
+            'valeur_revient' => round($reference + $montantFrais, 2),
         ] + ($detail ? ['lignes' => $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->toArray() + [
             'cout_retenu' => $cout($l),
             'montant' => round($l->quantite_recue * $cout($l), 2),
+            // Coût de revient d'une unité de stock (devise de l'entreprise) : coût converti, plus les coûts annexes.
+            'cout_revient_unitaire' => round($cout($l) * $taux($l) / max(1, (int) $l->ligneCommande?->qte_par_unite_achat) + (float) $l->frais_unitaire, 4),
         ])->all()] : ['lignes_count' => $reception->lignes_count ?? $lignes->count()]);
     }
 

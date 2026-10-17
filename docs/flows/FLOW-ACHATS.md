@@ -342,8 +342,38 @@ Dès qu'une réception est validée :
 - elle ne crée pas de mouvement de stock : la prise d'inventaire suivante la compte comme une **entrée** de ce secteur, **en unités de stock** (2 cartons de 12 comptent 24 unités), sans les réceptions annulées (FLOW-PRISE-INVENTAIRE) ;
 - la marchandise qui repart chez le fournisseur passe par un retour fournisseur (§9) ;
 - les **reliquats clients** de la ligne reçue se mettent à jour, du plus ancien au plus récent (FLOW-VENTES §5.14). Annuler, supprimer ou clore une commande, ou retirer une ligne d'un brouillon, met aussi à jour ses reliquats ;
-- la **valorisation de l'inventaire** prend, pour une ligne de commande, le coût réel de ses réceptions qui en portent un (moyenne pondérée par les quantités reçues), sinon le prix commandé ;
+- la **valorisation de l'inventaire** prend, pour une ligne de commande, le coût réel de ses réceptions qui en portent un (moyenne pondérée par les quantités reçues), sinon le prix commandé, plus les **coûts annexes** répartis sur ses réceptions (§4.8) ;
 - une **sur-réception** ne rend pas négatif ce qui reste en commande (disponibilité, suggestions d'achat).
+
+### 4.8 Coûts annexes répartis
+
+Transport, douane, assurance, manutention… : ce qu'il a fallu payer pour faire venir la marchandise s'ajoute à son **coût de revient** (plan de parité, phase 3.3 « coûts annexes répartis »).
+
+**Saisie** : avec la réception (section « Coûts annexes » de la fenêtre), ou plus tard en la corrigeant, par exemple quand la facture du transitaire arrive. Chaque coût porte :
+- sa nature (transport, douane, assurance, manutention, autre) et un libellé ;
+- son montant, dans la devise de l'entreprise ou dans celle d'une commande reçue, avec son taux (pré-rempli avec celui de la commande) ;
+- qui le facture (un fournisseur : transporteur, transitaire) et la référence de sa facture ;
+- sa **répartition** sur les lignes de la réception.
+
+**Répartition** (service `ReceptionsFournisseur::repartirFrais`), au prorata de :
+
+| Base | Calcul par ligne |
+|---|---|
+| Valeur | quantité × coût (réel, sinon commandé) × taux de la commande, dans la devise de l'entreprise |
+| Quantité | unités de stock reçues (2 cartons de 12 = 24) |
+| Poids | unités de stock × poids de la fiche produit |
+| Volume | unités de stock × volume de la fiche produit |
+
+- Chaque ligne retient ses coûts annexes **par unité de stock**, dans la devise de l'entreprise (`frais_unitaire`). Ils sont recalculés à chaque changement : coûts annexes modifiés, ou coût d'une ligne corrigé si la répartition est à la valeur.
+- Une base nulle est refusée, avec le motif : par exemple, aucun produit de la réception n'a de poids sur sa fiche.
+- Les coûts annexes ne s'enregistrent qu'avec une réception, pas avec une simple clôture de ligne.
+
+**Résultat :**
+- Le détail de la réception affiche, par ligne, les coûts annexes et le coût de revient par unité, et en pied la valeur de la marchandise, les coûts annexes et le **coût de revient** total.
+- Le bon de réception PDF les reprend.
+- La **valorisation de l'inventaire** ajoute à chaque ligne de commande la moyenne de ses coûts annexes par unité de stock reçue.
+
+Table `reception_frais` (migration `2026_10_17_100059_couts_annexes_receptions`) ; `reception_arrivages_ligne.frais_unitaire`. Les coûts annexes se saisissent avec le droit de créer une réception, et se corrigent avec celui de la modifier.
 
 ---
 

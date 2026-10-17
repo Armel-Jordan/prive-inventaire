@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, Pencil, X } from 'lucide-react';
 import BoutonPdf from '@/components/BoutonPdf';
+import CoutsAnnexes from '@/components/receptions/CoutsAnnexes';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
-import { dateSaisie, formatDateDocument, formatDateHeure, useMontantDocument } from '@/lib/documents';
+import { fraisEnSaisie, fraisPourApi, type FraisSaisi } from '@/lib/coutsAnnexes';
+import { dateSaisie, formatDateDocument, formatDateHeure, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
+import { getFournisseursActifs, type Fournisseur } from '@/services/api';
 import { annulerReception, getReceptionDocument, modifierReception, type ReceptionDocument } from '@/services/receptions';
 
 const classeChamp = 'w-full px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
@@ -19,15 +22,19 @@ export function BadgeStatutReception({ statut, libelle }: { statut: string; libe
 }
 
 /**
- * Détail d'une réception : fournisseur, références, lignes (commande, secteur, lot, quantité, coût), valeur, bon de
- * réception en PDF. Enregistrée, elle se corrige (date, références, coûts) ou s'annule, selon les droits.
+ * Détail d'une réception : fournisseur, références, lignes (commande, secteur, lot, quantité, coût, coût de revient),
+ * coûts annexes, valeur, bon de réception en PDF. Enregistrée, elle se corrige (date, références, coûts, coûts
+ * annexes) ou s'annule, selon les droits.
  */
 export default function DetailReception({ id, onClose, onModifiee }: { id: number; onClose: () => void; onModifiee: () => void }) {
   const { t, language } = useLanguage();
   const tr = t.receipts;
   const { peut } = usePermissions();
   const montant = useMontantDocument();
+  const codeEntreprise = useCodeDevise();
   const [reception, setReception] = useState<ReceptionDocument | null>(null);
+  const [fraisEdition, setFraisEdition] = useState<FraisSaisi[]>([]);
+  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [edition, setEdition] = useState<{ date: string; bonLivraison: string; connaissement: string; notes: string; couts: Record<number, string> } | null>(null);
@@ -36,8 +43,15 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
   const charger = useCallback(() => getReceptionDocument(id).then(setReception, e => setErreur(messageErreur(e, tr.error))), [id, tr.error]);
   useEffect(() => { charger(); }, [charger]);
 
+  // Devises des coûts annexes : celle de l'entreprise, puis celles des commandes reçues (avec leur taux).
+  const tauxParDevise = useMemo(() => Object.fromEntries((reception?.lignes ?? [])
+    .filter(l => l.ligne_commande?.commande?.devise && l.ligne_commande.commande.devise !== codeEntreprise)
+    .map(l => [l.ligne_commande?.commande?.devise as string, Number(l.ligne_commande?.commande?.taux_change) || 0])), [reception, codeEntreprise]);
+
   function corriger() {
     if (!reception) return;
+    setFraisEdition(fraisEnSaisie(reception.frais));
+    if (fournisseurs.length === 0) getFournisseursActifs().then(f => setFournisseurs(f ?? []), () => {});
     setEdition({
       date: dateSaisie(reception.date_reception),
       bonLivraison: reception.bon_livraison ?? '',
@@ -68,6 +82,7 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
     connaissement: edition.connaissement || null,
     notes: edition.notes || null,
     lignes: (reception.lignes ?? []).map(l => ({ id: l.id, cout_unitaire: edition.couts[l.id] === '' ? null : Number(edition.couts[l.id]) })),
+    frais: fraisPourApi(fraisEdition, codeEntreprise),
   }));
 
   function annuler() {
@@ -76,6 +91,7 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
   }
 
   const enregistree = reception?.statut === 'enregistree';
+  const avecFrais = (reception?.montant_frais ?? 0) > 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -141,6 +157,8 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
                     <th className="px-3 py-2 text-right">{tr.quantity}</th>
                     <th className="px-3 py-2 text-right w-40">{tr.unitCost}</th>
                     <th className="px-3 py-2 text-right">{tr.amount}</th>
+                    {avecFrais && <th className="px-3 py-2 text-right">{tr.costPerUnit}</th>}
+                    {avecFrais && <th className="px-3 py-2 text-right">{tr.landedPerUnit}</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-gray-700 dark:text-gray-200">
@@ -170,16 +188,59 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
                           ) : montant(l.cout_retenu, commande?.devise)}
                         </td>
                         <td className="px-3 py-2 text-right">{montant(l.montant, commande?.devise)}</td>
+                        {avecFrais && <td className="px-3 py-2 text-right">{montant(l.frais_unitaire ?? 0)}</td>}
+                        {avecFrais && <td className="px-3 py-2 text-right font-medium">{montant(l.cout_revient_unitaire ?? 0)}</td>}
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="text-right text-sm dark:text-gray-200">
-              <span className="text-gray-500">{tr.total} : </span>
-              <span className="font-semibold">{montant(reception.montant, reception.devise)}</span>
-              {reception.devise && <span className="text-xs text-gray-500"> ≈ {montant(reception.montant_reference)}</span>}
+            {edition ? (
+              <CoutsAnnexes frais={fraisEdition} onChange={setFraisEdition} devises={Object.keys(tauxParDevise)}
+                tauxParDevise={tauxParDevise} fournisseurs={fournisseurs} codeEntreprise={codeEntreprise} />
+            ) : (reception.frais ?? []).length > 0 && (
+              <div className="border dark:border-gray-700 rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm" aria-label={tr.extraCosts}>
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-600 dark:text-gray-300">
+                    <tr>
+                      <th className="px-3 py-2 text-left">{tr.extraCosts}</th>
+                      <th className="px-3 py-2 text-left">{tr.billedBy}</th>
+                      <th className="px-3 py-2 text-left">{tr.allocation}</th>
+                      <th className="px-3 py-2 text-right">{tr.amount}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-700 dark:text-gray-200">
+                    {(reception.frais ?? []).map(f => (
+                      <tr key={f.id}>
+                        <td className="px-3 py-2">
+                          {tr.costTypes[f.type] ?? f.type}{f.libelle ? ` — ${f.libelle}` : ''}
+                          {f.reference && <div className="text-xs text-gray-500">{tr.invoiceRef} {f.reference}</div>}
+                        </td>
+                        <td className="px-3 py-2">{f.fournisseur?.raison_sociale ?? '—'}</td>
+                        <td className="px-3 py-2">{tr.allocations[f.repartition] ?? f.repartition}</td>
+                        <td className="px-3 py-2 text-right">
+                          {montant(f.montant, f.devise)}
+                          {f.devise && <div className="text-xs text-gray-500">≈ {montant(Number(f.montant) * Number(f.taux_change))}</div>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="text-right text-sm dark:text-gray-200 space-y-0.5">
+              <div>
+                <span className="text-gray-500">{tr.total} : </span>
+                <span className="font-semibold">{montant(reception.montant, reception.devise)}</span>
+                {reception.devise && <span className="text-xs text-gray-500"> ≈ {montant(reception.montant_reference)}</span>}
+              </div>
+              {avecFrais && (
+                <>
+                  <div><span className="text-gray-500">{tr.extraCostsTotal} : </span>{montant(reception.montant_frais)}</div>
+                  <div><span className="text-gray-500">{tr.landedCost} : </span><span className="font-semibold">{montant(reception.valeur_revient)}</span></div>
+                </>
+              )}
             </div>
             {edition && <p className="text-xs text-gray-500">{tr.editHelp}</p>}
 

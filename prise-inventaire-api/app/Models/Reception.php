@@ -42,6 +42,12 @@ class Reception extends Model
         return $this->hasMany(ReceptionArrivagesLigne::class, 'reception_id');
     }
 
+    /** Coûts annexes (transport, douane…) répartis sur les lignes. */
+    public function frais(): HasMany
+    {
+        return $this->hasMany(ReceptionFrais::class)->orderBy('id');
+    }
+
     public function auteur(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'recue_par');

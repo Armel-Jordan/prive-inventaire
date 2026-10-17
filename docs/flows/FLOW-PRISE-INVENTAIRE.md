@@ -100,6 +100,7 @@ Phase 2.6 du plan de parité. La valeur de l'inventaire officiel vaut, pour chaq
 
 - **Commandes prises en compte** : les brouillons et les commandes annulées sont ignorés.
 - **Prix d'achat** : ils sont ramenés à l'unité de stock (un carton de 12 à 9 000 coûte 750 l'unité) et à la devise de l'entreprise, avec le taux de change figé sur la commande.
+- **Coût réel et coûts annexes** (phase 3.3) : le prix d'une ligne de commande est le coût facturé saisi à ses réceptions quand il y en a un (sinon le prix commandé), et les coûts annexes répartis sur ses réceptions (transport, douane…) s'y ajoutent par unité de stock (FLOW-ACHATS §4.8). Sans coût saisi ni coût annexe, les chiffres sont ceux du prix commandé.
 - **Produits sans coût** : ils sont comptés et signalés, sans valeur. Un produit est sans coût s'il n'a aucune commande fournisseur, ou pas de prix de vente pour la méthode « Prix de vente ».
 - **Écran** :
   - total, nombre de produits valorisés, produits sans coût ;

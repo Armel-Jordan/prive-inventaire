@@ -17,6 +17,7 @@ use App\Models\RetourFournisseur;
 use App\Models\RetourFournisseurLigne;
 use App\Models\Secteur;
 use App\Models\Tenant;
+use App\Models\TenantParametres;
 use App\Services\ValorisationInventaire;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -311,6 +312,51 @@ class ReceptionsFournisseurTest extends TestCase
         $this->assertEquals(4, $valeur());
         $this->putJson("/api/receptions/documents/{$reception['id']}", ['lignes' => [['id' => 999999, 'cout_unitaire' => 1]]])
             ->assertUnprocessable()->assertJsonValidationErrors('lignes.0.id');
+    }
+
+    public function test_couts_annexes_repartis_au_cout_de_revient(): void
+    {
+        $this->chez(function () {
+            TenantParametres::create(['nom_entreprise' => 'Quincaillerie Test', 'devise_symbole' => 'FCFA', 'devise_code' => 'XAF']);
+            ProduitTenant::whereKey($this->produits['CIM'])->update(['poids_kg' => 50]);
+            ProduitTenant::whereKey($this->produits['FER'])->update(['poids_kg' => 10]);
+        });
+        [, [$cim, $fer, $sab]] = $this->commande([['CIM', 10, 50, 1], ['FER', 5, 20, 1], ['SAB', 3, 10, 1]]);
+        $lignes = [['com_four_ligne_id' => $cim, 'quantite_recue' => 4], ['com_four_ligne_id' => $fer, 'quantite_recue' => 5]];
+
+        // Transport (300 FCFA) à la valeur : 200 / 100 ; douane (60 EUR à 2 = 120) au poids : 4 × 50 kg / 5 × 10 kg = 96 / 24.
+        $reception = $this->recevoir($lignes, ['frais' => [
+            ['type' => 'transport', 'libelle' => 'Camion Douala', 'montant' => 300, 'repartition' => 'valeur', 'reference' => 'TR-12'],
+            ['type' => 'douane', 'montant' => 60, 'devise' => 'eur', 'taux_change' => 2, 'repartition' => 'poids', 'fournisseur_id' => $this->fournisseur->id],
+        ]])->assertCreated()->json('reception');
+        $detail = $this->getJson("/api/receptions/documents/{$reception['id']}")->assertOk()
+            ->assertJsonPath('montant_frais', 420)->assertJsonPath('valeur_revient', 720)
+            ->assertJsonPath('frais.1.devise', 'EUR')->assertJsonPath('frais.1.fournisseur.code', 'F1')->json();
+        $this->assertEquals([[74, 124], [24.8, 44.8]], array_map(fn (array $l) => [(float) $l['frais_unitaire'], $l['cout_revient_unitaire']], $detail['lignes']));
+        $valeur = fn (string $produit) => $this->chez(fn () => app(ValorisationInventaire::class)
+            ->couts('dernier_achat', ProduitTenant::whereKey($this->produits[$produit])->get())[$produit]['cout']);
+        $this->assertEquals([124, 44.8], [$valeur('CIM'), $valeur('FER')]);
+        $this->getJson('/api/receptions/documents')->assertOk()->assertJsonPath('data.0.montant_frais', 420);
+        $this->assertStringStartsWith('%PDF', $this->get("/api/receptions/documents/{$reception['id']}/pdf")->assertOk()->getContent());
+
+        // Correction : coûts remplacés (assurance à la valeur), puis coût d'une ligne corrigé : la répartition suit.
+        $this->putJson("/api/receptions/documents/{$reception['id']}", ['frais' => [['type' => 'assurance', 'montant' => 30, 'repartition' => 'valeur']]])
+            ->assertOk()->assertJsonCount(1, 'frais')->assertJsonPath('montant_frais', 30);
+        $frais = fn () => $this->chez(fn () => Reception::find($reception['id'])->lignes()->orderBy('id')->pluck('frais_unitaire')->map(fn ($f) => $f === null ? null : (float) $f)->all());
+        $this->assertSame([5.0, 2.0], $frais());
+        $this->putJson("/api/receptions/documents/{$reception['id']}", ['lignes' => [['id' => $reception['lignes'][0]['id'], 'cout_unitaire' => 100]]])->assertOk();
+        $this->assertSame([6.0, 1.2], $frais());
+        $this->putJson("/api/receptions/documents/{$reception['id']}", ['frais' => []])->assertOk()->assertJsonPath('montant_frais', 0);
+        $this->assertSame([null, null], $frais());
+
+        // Refus : devise étrangère sans taux, poids absent des fiches, coûts sans réception.
+        $this->recevoir([['com_four_ligne_id' => $cim, 'quantite_recue' => 1]], ['frais' => [['type' => 'douane', 'montant' => 10, 'devise' => 'EUR', 'repartition' => 'valeur']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('frais.0.taux_change');
+        $this->recevoir([['com_four_ligne_id' => $sab, 'quantite_recue' => 1]], ['frais' => [['type' => 'transport', 'montant' => 10, 'repartition' => 'poids']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('frais.0.repartition');
+        $this->recevoir([], ['clotures' => [$sab], 'frais' => [['type' => 'transport', 'montant' => 10, 'repartition' => 'valeur']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('frais');
+        $this->assertSame([4, 0], [$this->ligne($cim)->quantite_recue, $this->ligne($sab)->quantite_recue]);
     }
 
     public function test_droits_numerotation_et_isolation(): void

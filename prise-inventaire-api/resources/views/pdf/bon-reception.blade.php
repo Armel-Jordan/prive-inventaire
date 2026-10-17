@@ -6,9 +6,15 @@
     // Un coût à plus de deux décimales (1,2345) s'imprime en entier.
     $decimales = fn ($valeur) => abs($valeur - round($valeur, 2)) < 0.00005 ? 2 : 4;
     $totaux = [];
+    $valeurReference = 0.0;
     foreach ($reception->lignes as $ligne) {
         $totaux[$symbole($ligne)] = ($totaux[$symbole($ligne)] ?? 0) + $ligne->quantite_recue * $cout($ligne);
+        $valeurReference += $ligne->quantite_recue * $cout($ligne) * ((float) $ligne->ligneCommande?->commande?->taux_change ?: 1);
     }
+    // Coûts annexes (transport, douane…) : dans la devise de l'entreprise, ils s'ajoutent au coût de revient.
+    $types = ['transport' => 'Transport', 'douane' => 'Douane', 'assurance' => 'Assurance', 'manutention' => 'Manutention', 'autre' => 'Autre'];
+    $repartitions = ['valeur' => 'À la valeur', 'quantite' => 'À la quantité', 'poids' => 'Au poids', 'volume' => 'Au volume'];
+    $fraisTotal = $reception->frais->sum(fn ($cout) => $cout->montantReference());
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -151,6 +157,35 @@
             </tbody>
         </table>
 
+        @if($reception->frais->isNotEmpty())
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Coût annexe</th>
+                        <th style="width: 25%;">Facturé par</th>
+                        <th style="width: 15%;">Répartition</th>
+                        <th class="right" style="width: 20%;">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($reception->frais as $coutAnnexe)
+                        <tr>
+                            <td>
+                                {{ $types[$coutAnnexe->type] ?? $coutAnnexe->type }}@if($coutAnnexe->libelle) — {{ $coutAnnexe->libelle }}@endif
+                                @if($coutAnnexe->reference)<div class="detail">Réf. {{ $coutAnnexe->reference }}</div>@endif
+                            </td>
+                            <td>{{ $coutAnnexe->fournisseur?->raison_sociale ?? '-' }}</td>
+                            <td>{{ $repartitions[$coutAnnexe->repartition] ?? $coutAnnexe->repartition }}</td>
+                            <td class="right">
+                                {{ $nombre($coutAnnexe->montant) }} {{ $coutAnnexe->devise ?: $devise }}
+                                @if($coutAnnexe->devise)<div class="detail">= {{ $nombre($coutAnnexe->montantReference()) }} {{ $devise }}</div>@endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
         <div class="totals-section">
             <table class="totals-table">
                 @foreach($totaux as $code => $total)
@@ -159,6 +194,16 @@
                         <td style="text-align: right;"><strong>{{ $nombre($total) }} {{ $code }}</strong></td>
                     </tr>
                 @endforeach
+                @if($reception->frais->isNotEmpty())
+                    <tr>
+                        <td>Coûts annexes</td>
+                        <td style="text-align: right;">{{ $nombre($fraisTotal) }} {{ $devise }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>COÛT DE REVIENT</strong></td>
+                        <td style="text-align: right;"><strong>{{ $nombre($valeurReference + $fraisTotal) }} {{ $devise }}</strong></td>
+                    </tr>
+                @endif
             </table>
         </div>
 

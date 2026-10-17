@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Plus, SplitSquareHorizontal, X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
-import { aujourdhui, useMontantDocument } from '@/lib/documents';
+import { aujourdhui, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import { fraisPourApi, type FraisSaisi } from '@/lib/coutsAnnexes';
 import { messageErreur } from '@/lib/erreurs';
-import { getLignesEnAttente, type ComFourEntete, type ComFourLigne } from '@/services/api';
+import { getFournisseursActifs, getLignesEnAttente, type ComFourEntete, type ComFourLigne, type Fournisseur } from '@/services/api';
 import { enregistrerReception, type ResultatReception, type SaisieReception } from '@/services/receptions';
+import CoutsAnnexes from '@/components/receptions/CoutsAnnexes';
 import type { Secteur } from '@/types';
 
 /** Ligne de commande attendue, avec sa commande (numéro, devise). */
@@ -40,7 +42,8 @@ function attendues(commande: ComFourEntete, lignes: ComFourLigne[]): LigneAttend
  * Réception d'une livraison : les lignes en attente d'une commande (et d'autres commandes du même fournisseur si la
  * livraison les couvre), avec le bon de livraison et le connaissement ; par ligne, la quantité reçue (répartie au
  * besoin sur plusieurs secteurs), le coût facturé, le lot, la péremption, et la clôture d'une ligne dont le reste ne
- * viendra pas. Recevoir plus que le reste demande une confirmation.
+ * viendra pas. Recevoir plus que le reste demande une confirmation. Les coûts annexes (transport, douane…) se
+ * répartissent sur les lignes.
  */
 export default function FenetreReception({ commande, lignes: lignesInitiales, secteurs, commandesEnAttente, onClose, onEnregistree }: {
   commande: ComFourEntete;
@@ -54,6 +57,7 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
   const { t } = useLanguage();
   const tr = t.receipts;
   const montant = useMontantDocument();
+  const codeEntreprise = useCodeDevise();
   const [lignes, setLignes] = useState<LigneAttendue[]>(() => attendues(commande, lignesInitiales));
   const [rangees, setRangees] = useState<Rangee[]>(() => attendues(commande, lignesInitiales).map(a => ({
     cle: nouvelleCle(), ligneId: a.ligne.id, quantite: a.restant, secteur_id: null, lot: '', peremption: '', note: '',
@@ -66,8 +70,20 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
   const [notes, setNotes] = useState('');
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
+  const [frais, setFrais] = useState<FraisSaisi[]>([]);
+  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
+
+  useEffect(() => {
+    let actif = true;
+    getFournisseursActifs().then(f => { if (actif) setFournisseurs(f ?? []); }, () => {});
+    return () => { actif = false; };
+  }, []);
 
   const parLigne = useMemo(() => new Map(lignes.map(a => [a.ligne.id, a])), [lignes]);
+  // Devises des coûts annexes : celle de l'entreprise, puis celles des commandes reçues (avec leur taux).
+  const tauxParDevise = useMemo(() => Object.fromEntries(lignes.filter(a => a.commande.devise && a.commande.devise !== codeEntreprise)
+    .map(a => [a.commande.devise as string, Number(a.commande.taux_change) || 0])), [lignes, codeEntreprise]);
+  const devises = Object.keys(tauxParDevise);
   const incluses = new Set(lignes.map(a => a.commande.id));
   const autresCommandes = commandesEnAttente.filter(c => c.fournisseur_id === commande.fournisseur_id && !incluses.has(c.id));
   const recuPar = (ligneId: number) => rangees.filter(r => r.ligneId === ligneId).reduce((s, r) => s + (r.quantite || 0), 0);
@@ -138,6 +154,7 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
         accepter_surplus: surplus.length > 0,
         receptions,
         clotures,
+        frais: fraisPourApi(frais, codeEntreprise),
       }));
     } catch (erreurApi) {
       setErreur(messageErreur(erreurApi, tr.error));
@@ -292,6 +309,8 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
             </table>
           </div>
           <p className="text-xs text-gray-500">{tr.closeHelp}</p>
+
+          <CoutsAnnexes frais={frais} onChange={setFrais} devises={devises} tauxParDevise={tauxParDevise} fournisseurs={fournisseurs} codeEntreprise={codeEntreprise} />
 
           {erreur && <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200 whitespace-pre-line">{erreur}</div>}
 
