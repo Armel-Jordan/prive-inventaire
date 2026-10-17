@@ -35,6 +35,9 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
+import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import OriginePrix from '@/components/OriginePrix';
+import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -84,7 +87,7 @@ export default function FacturesPage() {
   const [conditions, setConditions] = useState<FicheReferentiel[]>([]);
   const [escompte, setEscompte] = useState<PropositionEscompte | null>(null);
   const [avecEscompte, setAvecEscompte] = useState(false);
-  const [createLignes, setCreateLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+  const [createLignes, setCreateLignes] = useState<(LignePrix & { prix_unitaire_ht: number })[]>([]);
   // Coordonnées du client de passage, notées sur la facture.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(createForm.client_id))?.de_passage;
@@ -96,6 +99,17 @@ export default function FacturesPage() {
     taux: createForm.devise ? Number(createForm.taux) || 1 : 1,
     actif: showCreateModal,
   });
+  // Prix du client (liste, remise, règles) proposés sur les lignes dont le prix n'a pas été saisi.
+  usePrixAutomatiques({
+    clientId: createForm.client_id ? Number(createForm.client_id) : null,
+    date: createForm.date_facture,
+    taux: createForm.devise ? Number(createForm.taux) || 1 : 1,
+    lignes: createLignes,
+    actif: showCreateModal,
+    appliquer: prix => setCreateLignes(ls => appliquerPrix(ls, prix, 'prix_unitaire_ht', p => dansLaDevise(p, createForm.devise, Number(createForm.taux)), t.pricing.simulator.origins)),
+  });
+  const modifierLigne = (index: number, modification: (ligne: LignePrix & { prix_unitaire_ht: number }) => LignePrix & { prix_unitaire_ht: number }) =>
+    setCreateLignes(ls => ls.map((ligne, i) => (i === index ? modification(ligne) : ligne)));
 
   const loadMeta = async () => {
     const [c, p, conds] = await Promise.all([getClientsActifs(), getProduits(), getReferentiel('conditions_paiement', true).catch(() => [])]);
@@ -193,7 +207,7 @@ export default function FacturesPage() {
         devise: createForm.devise || deviseEntreprise,
         taux_change: createForm.devise ? Number(createForm.taux) : undefined,
         notes: createForm.notes || undefined,
-        lignes: [...createLignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire_ht: f.prix_unitaire_ht }))],
+        lignes: [...createLignes, ...frais.lignes].map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })),
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
       });
@@ -666,7 +680,7 @@ export default function FacturesPage() {
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium dark:text-gray-300">Lignes</label>
                   <button type="button"
-                    onClick={() => setCreateLignes([...createLignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0 }])}
+                    onClick={() => setCreateLignes([...createLignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0, auto: true }])}
                     className="text-sm text-purple-600 hover:underline">+ Ajouter ligne</button>
                 </div>
                 {createLignes.length === 0 ? (
@@ -677,14 +691,11 @@ export default function FacturesPage() {
                       <div key={idx} className="flex gap-2 items-center">
                         <select value={l.produit_id}
                           onChange={(e) => {
-                            const n = [...createLignes];
-                            n[idx].produit_id = parseInt(e.target.value);
-                            // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une facture en devise étrangère).
-                            const produit = produits.find(p => p.id === n[idx].produit_id);
-                            const taux = Number(createForm.taux);
-                            const prix = Number(produit?.prix_unitaire) || 0;
-                            if (produit && n[idx].prix_unitaire_ht === 0) n[idx].prix_unitaire_ht = createForm.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
-                            setCreateLignes(n);
+                            // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une facture en devise
+                            // étrangère), remplacé ensuite par celui du client.
+                            const produitId = parseInt(e.target.value);
+                            const produit = produits.find(p => p.id === produitId);
+                            modifierLigne(idx, ligne => choisirProduit(ligne, produitId, 'prix_unitaire_ht', dansLaDevise(Number(produit?.prix_unitaire) || 0, createForm.devise, Number(createForm.taux))));
                           }}
                           aria-label="Produit"
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
@@ -692,14 +703,15 @@ export default function FacturesPage() {
                           {produits.map(p => <option key={p.id} value={p.id}>{p.description}</option>)}
                         </select>
                         <input type="number" min="1" value={l.quantite}
-                          onChange={(e) => { const n = [...createLignes]; n[idx].quantite = parseInt(e.target.value) || 1; setCreateLignes(n); }}
+                          onChange={(e) => modifierLigne(idx, ligne => ({ ...ligne, quantite: parseInt(e.target.value) || 1 }))}
                           className="w-20 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Qté" />
                         <input type="number" step="0.01" value={l.prix_unitaire_ht}
-                          onChange={(e) => { const n = [...createLignes]; n[idx].prix_unitaire_ht = parseFloat(e.target.value) || 0; setCreateLignes(n); }}
+                          onChange={(e) => modifierLigne(idx, ligne => saisirPrix(ligne, 'prix_unitaire_ht', parseFloat(e.target.value) || 0))}
                           className="w-24 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Prix HT" />
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
                           {montant((l.quantite * l.prix_unitaire_ht), createForm.devise || null)}
                         </span>
+                        <OriginePrix info={l.info_prix} />
                         <button type="button" onClick={() => setCreateLignes(createLignes.filter((_, i) => i !== idx))}
                           className="text-red-500 hover:text-red-700"><X size={16} /></button>
                       </div>

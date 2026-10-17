@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — client de passage (§2.6)
+> Dernière mise à jour : 2026-10-17 — prix du client proposés sur les lignes (FLOW-PRIX §4.1)
 
 ---
 
@@ -274,7 +274,7 @@ Un devis accepté peut être **converti en commande client** directement — san
 |-------|-------------|
 | `produit_id` | Le produit proposé |
 | `quantite` | Quantité proposée |
-| `prix_unitaire` | Prix unitaire proposé |
+| `prix_unitaire` | Prix unitaire : celui du client est proposé (FLOW-PRIX §4.1), modifiable |
 | `montant_ligne` | `quantite × prix_unitaire` |
 
 ### 3.3 Statuts du devis
@@ -357,7 +357,7 @@ Une **Commande Client** est la confirmation d'achat du client. Elle engage les d
 |-------|-------------|
 | `produit_id` | Le produit |
 | `quantite` | Quantité commandée |
-| `prix_unitaire_ht` | Prix HT unitaire |
+| `prix_unitaire_ht` | Prix HT unitaire : celui du client est proposé (FLOW-PRIX §4.1), modifiable |
 | `taux_tva` | Taux TVA en % (ex: 20) |
 | `remise_ligne` | Remise sur cette ligne en % |
 | `montant_ht` | Calculé |

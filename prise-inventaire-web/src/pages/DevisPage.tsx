@@ -21,6 +21,9 @@ import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise,
 import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
+import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import OriginePrix from '@/components/OriginePrix';
+import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -55,7 +58,7 @@ export default function DevisPage() {
   // Coordonnées du client de passage, notées sur le devis.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
-  const [lignes, setLignes] = useState<{ id?: number; produit_id: number; quantite: number; prix_unitaire: number }[]>([]);
+  const [lignes, setLignes] = useState<(LignePrix & { id?: number; prix_unitaire: number })[]>([]);
   // Frais additionnels et de livraison proposés pour le devis en cours de saisie.
   const frais = useFraisAutomatiques({
     document: 'devis',
@@ -63,6 +66,15 @@ export default function DevisPage() {
     lignes: lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire })),
     taux: formData.devise ? Number(formData.taux) || 1 : 1,
     actif: showModal,
+  });
+  // Prix du client (liste, remise, règles) proposés sur les lignes dont le prix n'a pas été saisi.
+  usePrixAutomatiques({
+    clientId: formData.client_id ? Number(formData.client_id) : null,
+    date: formData.date_devis,
+    taux: formData.devise ? Number(formData.taux) || 1 : 1,
+    lignes,
+    actif: showModal,
+    appliquer: prix => setLignes(ls => appliquerPrix(ls, prix, 'prix_unitaire', p => dansLaDevise(p, formData.devise, Number(formData.taux)), t.pricing.simulator.origins)),
   });
 
   const loadData = useCallback(async () => {
@@ -104,7 +116,10 @@ export default function DevisPage() {
         // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
         devise: formData.devise || deviseEntreprise,
         taux_change: formData.devise ? Number(formData.taux) : undefined,
-        lignes: [...lignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire: f.prix_unitaire_ht }))],
+        lignes: [
+          ...lignes.map(({ id, produit_id, quantite, prix_unitaire }) => ({ id, produit_id, quantite, prix_unitaire })),
+          ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire: f.prix_unitaire_ht })),
+        ],
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
       };
@@ -188,22 +203,18 @@ export default function DevisPage() {
     setShowModal(true);
   };
 
-  const addLigne = () => setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire: 0 }]);
+  const addLigne = () => setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire: 0, auto: true }]);
 
-  const updateLigne = (index: number, field: string, value: number) => {
-    const newLignes = [...lignes];
-    (newLignes[index] as Record<string, number>)[field] = value;
-    if (field === 'produit_id') {
-      // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
+  const updateLigne = (index: number, field: 'produit_id' | 'quantite' | 'prix_unitaire', value: number) => {
+    setLignes(ls => ls.map((ligne, i) => {
+      if (i !== index) return ligne;
+      if (field === 'prix_unitaire') return saisirPrix(ligne, 'prix_unitaire', value);
+      if (field === 'quantite') return { ...ligne, quantite: value };
+      // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour un devis en devise étrangère),
+      // remplacé ensuite par celui du client.
       const produit = produits.find(p => p.id === value);
-      if (produit && newLignes[index].prix_unitaire === 0) {
-        // Converti pour un devis en devise étrangère.
-        const taux = Number(formData.taux);
-        const prix = Number(produit.prix_unitaire) || 0;
-        newLignes[index].prix_unitaire = formData.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
-      }
-    }
-    setLignes(newLignes);
+      return choisirProduit(ligne, value, 'prix_unitaire', dansLaDevise(Number(produit?.prix_unitaire) || 0, formData.devise, Number(formData.taux)));
+    }));
   };
 
   const removeLigne = (index: number) => setLignes(lignes.filter((_, i) => i !== index));
@@ -406,6 +417,7 @@ export default function DevisPage() {
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
                         <input type="number" step="0.01" value={ligne.prix_unitaire} onChange={(e) => updateLigne(idx, 'prix_unitaire', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 border rounded text-sm" placeholder="Prix" />
                         <span className="text-sm text-gray-600 w-28 text-right whitespace-nowrap">{montant(ligne.quantite * ligne.prix_unitaire, formData.devise || null)}</span>
+                        <OriginePrix info={ligne.info_prix} />
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500" aria-label="Retirer la ligne" title="Retirer la ligne"><X size={16} /></button>
                       </div>
                     ))}

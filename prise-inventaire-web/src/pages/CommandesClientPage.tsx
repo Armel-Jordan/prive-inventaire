@@ -36,6 +36,9 @@ import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise,
 import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
+import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import OriginePrix from '@/components/OriginePrix';
+import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 
@@ -81,7 +84,7 @@ export default function CommandesClientPage() {
   // Coordonnées du client de passage, notées sur la commande.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
-  const [lignes, setLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+  const [lignes, setLignes] = useState<(LignePrix & { prix_unitaire_ht: number })[]>([]);
   // Frais additionnels et de livraison proposés pour la commande en cours de saisie (ceux déjà sur un brouillon
   // modifié ne sont pas proposés de nouveau).
   const frais = useFraisAutomatiques({
@@ -90,6 +93,15 @@ export default function CommandesClientPage() {
     lignes,
     taux: formData.devise ? Number(formData.taux) || 1 : 1,
     actif: showModal,
+  });
+  // Prix du client (liste, remise, règles) proposés sur les lignes dont le prix n'a pas été saisi.
+  usePrixAutomatiques({
+    clientId: formData.client_id ? Number(formData.client_id) : null,
+    date: formData.date_commande,
+    taux: formData.devise ? Number(formData.taux) || 1 : 1,
+    lignes,
+    actif: showModal,
+    appliquer: prix => setLignes(ls => appliquerPrix(ls, prix, 'prix_unitaire_ht', p => dansLaDevise(p, formData.devise, Number(formData.taux)), t.pricing.simulator.origins)),
   });
 
   const loadData = useCallback(async () => {
@@ -237,21 +249,19 @@ export default function CommandesClientPage() {
   };
 
   const addLigne = () => {
-    setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0 }]);
+    setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire_ht: 0, auto: true }]);
   };
 
-  const updateLigne = (index: number, field: string, value: number) => {
-    const newLignes = [...lignes];
-    (newLignes[index] as Record<string, number>)[field] = value;
-    // Prix du produit proposé tant qu'aucun prix n'a été saisi (il restait à 0).
-    if (field === 'produit_id' && newLignes[index].prix_unitaire_ht === 0) {
+  const updateLigne = (index: number, field: 'produit_id' | 'quantite' | 'prix_unitaire_ht', value: number) => {
+    setLignes(ls => ls.map((ligne, i) => {
+      if (i !== index) return ligne;
+      if (field === 'prix_unitaire_ht') return saisirPrix(ligne, 'prix_unitaire_ht', value);
+      if (field === 'quantite') return { ...ligne, quantite: value };
+      // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une commande en devise étrangère),
+      // remplacé ensuite par celui du client.
       const produit = produits.find(p => p.id === value);
-      // Converti pour une commande en devise étrangère.
-      const taux = Number(formData.taux);
-      const prix = Number(produit?.prix_unitaire) || 0;
-      if (produit) newLignes[index].prix_unitaire_ht = formData.devise && taux > 0 ? Math.round((prix / taux) * 100) / 100 : prix;
-    }
-    setLignes(newLignes);
+      return choisirProduit(ligne, value, 'prix_unitaire_ht', dansLaDevise(Number(produit?.prix_unitaire) || 0, formData.devise, Number(formData.taux)));
+    }));
   };
 
   const removeLigne = (index: number) => {
@@ -592,6 +602,7 @@ export default function CommandesClientPage() {
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-20 text-right">
                           {montant((ligne.quantite * ligne.prix_unitaire_ht), formData.devise || null)}
                         </span>
+                        <OriginePrix info={ligne.info_prix} />
                         <button type="button" onClick={() => removeLigne(idx)} className="text-red-500 hover:text-red-700">
                           <X size={16} />
                         </button>
