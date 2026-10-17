@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\ClientFicheCategorieController;
 use App\Http\Controllers\Api\ClientFicheContactController;
 use App\Http\Controllers\Api\ClientFicheController;
 use App\Http\Controllers\Api\ClientFicheRemarqueController;
+use App\Http\Controllers\Api\ColisLivraisonController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\CompteClientController;
@@ -707,6 +708,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);
         Route::post('/{id}/livrer', [BonLivraisonController::class, 'enregistrerLivraison']);
         Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
+        // Colis du bon (préparation des boîtes) : liste, préparation, modification, suppression.
+        Route::get('/{id}/colis', [ColisLivraisonController::class, 'index'])->whereNumber('id');
+        Route::post('/{id}/colis', [ColisLivraisonController::class, 'store'])->whereNumber('id');
+        Route::put('/{id}/colis/{colisId}', [ColisLivraisonController::class, 'update'])->whereNumber(['id', 'colisId']);
+        Route::delete('/{id}/colis/{colisId}', [ColisLivraisonController::class, 'destroy'])->whereNumber(['id', 'colisId']);
     });
 
     // Espace client, côté entreprise : réglages et accès des clients (droits du module Espace client).

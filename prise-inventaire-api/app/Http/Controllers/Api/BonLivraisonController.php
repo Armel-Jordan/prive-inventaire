@@ -19,7 +19,7 @@ class BonLivraisonController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = BonLivraison::with(['facture.client'])->where('tenant_id', $tenantId);
+        $query = BonLivraison::with(['facture.client'])->withCount('colis')->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);

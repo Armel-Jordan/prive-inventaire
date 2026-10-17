@@ -59,6 +59,12 @@ class BonLivraison extends Model
         return $this->hasMany(BonLivraisonLigne::class, 'bon_id');
     }
 
+    /** Colis du bon (préparation des boîtes). */
+    public function colis(): HasMany
+    {
+        return $this->hasMany(ColisLivraison::class);
+    }
+
     public function tourneeBon(): HasOne
     {
         return $this->hasOne(TourneeBon::class, 'bon_livraison_id');
