@@ -70,6 +70,7 @@ import EcrituresRecurrentesPage from '@/pages/EcrituresRecurrentesPage';
 import ComptabilisationPage from '@/pages/ComptabilisationPage';
 import BanquePage from '@/pages/BanquePage';
 import BudgetsPage from '@/pages/BudgetsPage';
+import RapportTaxesPage from '@/pages/RapportTaxesPage';
 import GrandLivrePage from '@/pages/GrandLivrePage';
 import BalanceComptablePage from '@/pages/BalanceComptablePage';
 import SoldesOuverturePage from '@/pages/SoldesOuverturePage';
@@ -203,6 +204,7 @@ function AppRoutes() {
         <Route path="balance-comptable" element={<BalanceComptablePage />} />
         <Route path="soldes-ouverture" element={<SoldesOuverturePage />} />
         <Route path="etats-financiers" element={<EtatsFinanciersPage />} />
+        <Route path="rapport-taxes" element={<RapportTaxesPage />} />
         <Route path="previsions-stock" element={<PrevisionsStockPage />} />
         <Route path="devis" element={<DevisPage />} />
         <Route path="pieces-jointes" element={<PiecesJointesPage />} />

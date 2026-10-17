@@ -420,6 +420,29 @@ Les comptes sont regroupés sous leur en-tête le plus proche (60 Achats, 62 Ser
 - bénéfice ou perte ;
 - les écritures de clôture sont exclues : un exercice clôturé garde donc son compte de résultat.
 
+### Rapport des taxes (Finance → Rapport des taxes)
+
+Comme le « Rapport de taxes » de fripv2, pour préparer et justifier les déclarations, sur une période (le mois précédent par défaut ; raccourcis mois en cours et trimestre précédent) :
+- **Taxes collectées** sur les ventes : factures émises (y compris celles créditées en entier), diminuées des notes de crédit émises.
+- **Taxes déductibles** sur les achats : factures fournisseurs enregistrées.
+- Ni brouillon, ni document annulé, ni document hors période.
+- **Taxe par taxe** :
+  - une ligne taxée par un groupe garde le détail de chaque taxe (par exemple TVA 17,5 % et CAC 10 % de la TVA) ;
+  - une ligne au taux simple compte pour « TVA » à son taux.
+  - Montants dans la devise de l'entreprise, au taux du document.
+- **Trois présentations** : le détail (un document par ligne : date, type, numéro, référence du fournisseur, tiers, HT, taxes), le total par jour, ou le total de la période.
+- **Sommaire par taxe** : collectée, déductible, différence. Le total positif est la taxe à reverser, le négatif le crédit de taxe à récupérer.
+- **Comptes de taxes au journal**, la comptabilisation automatique étant réglée :
+  - les comptes de TVA collectée et déductible, et ceux de chaque taxe ;
+  - leurs débits, crédits et soldes sur la période, hors clôture ;
+  - la taxe nette au journal, avec l'écart éventuel au rapport (documents pas encore passés, taxes saisies à la main).
+- **Export** CSV et PDF (paysage).
+- **Droits** : **Voir les états comptables** (`comptabilite.etats`).
+- **Non repris de fripv2** :
+  - la limite de deux regroupements de taxes : toutes les taxes sont en colonnes ;
+  - l'envoi par courriel : on télécharge le PDF ;
+  - les filtres enregistrés.
+
 ---
 
 ## 7. Droits
@@ -488,11 +511,12 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET` et `PUT /comptabilite/soldes-ouverture` | Soldes d'ouverture du premier exercice, `{lignes: [{compte_id, debit, credit}]}` |
 | `GET /comptabilite/etats/bilan?date=[&format=csv]` | Bilan |
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
+| `GET /comptabilite/etats/taxes?du=&au=&niveau=detail\|jour\|periode[&format=csv\|pdf]` | Rapport des taxes : taxes, lignes (`collectee` et `deductible` par taxe), totaux, sommaire, `total`, `comptes` du journal (null sans comptabilisation réglée) |
 
 Code :
 - **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire`, `ReleveBancaire`, `ReleveBancaireLigne`, `ReleveBancaireLien`, `BudgetComptable` (et `CompteBancaire`, relié à son compte comptable, avec `import_reglages` ; `EcritureComptableLigne.rapprochement_id` ; `CompteComptable.budgetable`).
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation, Budgets}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf, RelevesBancaires, LecteurReleves}`, contrôleurs `App\Http\Controllers\Banque\*`.
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation, Budgets, RapportTaxes}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf, RelevesBancaires, LecteurReleves}`, contrôleurs `App\Http\Controllers\Banque\*`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `BudgetsPage` (composants `budgets/*`, service `src/services/budgets.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `BudgetsPage` (composants `budgets/*`, service `src/services/budgets.ts`), `RapportTaxesPage` (service `src/services/rapportTaxes.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
 - **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`, `2026_10_17_100067_creer_releves_bancaires`, `2026_10_17_100068_creer_budgets`.

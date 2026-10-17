@@ -101,6 +101,7 @@ use App\Http\Controllers\Comptabilite\EcritureComptableController;
 use App\Http\Controllers\Comptabilite\EtatComptableController;
 use App\Http\Controllers\Comptabilite\ExerciceComptableController;
 use App\Http\Controllers\Comptabilite\JournalComptableController;
+use App\Http\Controllers\Comptabilite\RapportTaxesController;
 use App\Http\Controllers\Comptabilite\RecurrenceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
@@ -963,6 +964,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/grand-livre', [EtatComptableController::class, 'grandLivre']);
         Route::get('/etats/bilan', [EtatComptableController::class, 'bilan']);
         Route::get('/etats/resultat', [EtatComptableController::class, 'compteResultat']);
+        // Rapport des taxes : collectées sur les ventes, déductibles sur les achats (détail, par jour, total ; CSV, PDF).
+        Route::get('/etats/taxes', RapportTaxesController::class);
         Route::get('/soldes-ouverture', [EtatComptableController::class, 'soldesOuverture']);
         Route::get('/recurrences', [RecurrenceComptableController::class, 'index']);
         Route::get('/comptabilisation/parametres', [ComptabilisationController::class, 'parametres']);

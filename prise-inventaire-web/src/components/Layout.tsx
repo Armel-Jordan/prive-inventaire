@@ -149,6 +149,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite', action: 'etats' },
       { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite', action: 'etats' },
       { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite', action: 'etats' },
+      { path: '/rapport-taxes', label: t.taxReport.nav, icon: BadgePercent, module: 'comptabilite', action: 'etats' },
       { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
       { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
     ],
