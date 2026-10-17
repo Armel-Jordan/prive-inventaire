@@ -28,11 +28,13 @@ class CompteComptable extends Model
 
     protected $table = 'comptes_comptables';
 
-    protected $fillable = ['numero', 'libelle', 'parent_id', 'nature', 'type', 'saisie_manuelle', 'actif', 'notes'];
+    protected $fillable = ['numero', 'libelle', 'parent_id', 'nature', 'type', 'saisie_manuelle', 'actif', 'notes', 'budgetable'];
 
     protected $casts = [
         'saisie_manuelle' => 'boolean',
         'actif' => 'boolean',
+        // Le compte paraît dans la feuille du budget.
+        'budgetable' => 'boolean',
     ];
 
     public function parent(): BelongsTo

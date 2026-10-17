@@ -2,6 +2,7 @@
 
 namespace App\Services\Comptabilite;
 
+use App\Models\BudgetComptable;
 use App\Models\CompteComptable;
 use App\Models\EcritureComptableLigne;
 use App\Support\PlansComptables;
@@ -46,6 +47,9 @@ class PlanComptable
         if ($compte && ($donnees['type'] ?? null) === CompteComptable::EN_TETE && $compte->type !== CompteComptable::EN_TETE && $this->aDesEcritures($compte)) {
             return ['type' => 'Ce compte a des écritures : il ne peut pas devenir un en-tête.'];
         }
+        if ($compte && ($donnees['type'] ?? null) === CompteComptable::EN_TETE && $compte->type !== CompteComptable::EN_TETE && $this->aUnBudget($compte)) {
+            return ['type' => 'Ce compte a un budget : il ne peut pas devenir un en-tête.'];
+        }
         if (($donnees['type'] ?? null) === CompteComptable::RESULTAT) {
             if ($donnees['nature'] !== 'capitaux_propres') {
                 return ['nature' => 'Le compte qui reçoit le résultat de l\'exercice doit être un compte de capitaux propres.'];
@@ -69,8 +73,16 @@ class PlanComptable
         if ($this->aDesEcritures($compte)) {
             return 'Ce compte a des écritures : désactivez-le plutôt.';
         }
+        if ($this->aUnBudget($compte)) {
+            return 'Ce compte a un budget : retirez ses montants, ou désactivez-le plutôt.';
+        }
 
         return null;
+    }
+
+    public function aUnBudget(CompteComptable $compte): bool
+    {
+        return BudgetComptable::where('compte_id', $compte->id)->exists();
     }
 
     public function aDesEcritures(CompteComptable $compte): bool

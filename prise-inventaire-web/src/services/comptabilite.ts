@@ -20,6 +20,8 @@ export interface CompteComptable {
   saisie_manuelle: boolean;
   actif: boolean;
   notes: string | null;
+  /** Le compte paraît dans la feuille du budget. */
+  budgetable?: boolean;
 }
 
 export type SaisieCompte = Omit<CompteComptable, 'id'>;

@@ -349,10 +349,30 @@ Plan de parité fripv2, phase 4.6 (« Transactions bancaires ») : les comptes b
   - créer la transaction avec **Saisir une transaction bancaire** (`banque.saisir`).
 - **Non repris de fripv2** : la connexion directe à la banque (Plaid). Les relevés passent par un fichier.
 
+### Budgets (Finance → Budgets)
+
+Comme le « Budget annuel par compte » de fripv2, avec en plus la copie d'un exercice et la comparaison au réel :
+- **Comptes du budget** : les comptes de détail cochés « budgétables » (en général les produits et les charges ; un geste les coche tous). Un compte retiré garde ses montants déjà saisis, encore visibles dans la feuille. Un en-tête ne reçoit pas de budget.
+- **Feuille d'un exercice** (par défaut celui du jour, sinon le plus récent) : les comptes en lignes, les périodes en colonnes.
+  - Chaque cellule s'enregistre quand on la quitte (Entrée passe à la suivante) ; une cellule vidée ou à zéro est retirée. Les montants s'écrivent dans le sens naturel du compte : un produit ou une charge en positif ; un négatif est accepté.
+  - Le total de chaque compte, et pour repère celui de l'exercice précédent.
+  - Produits, charges et résultat budgétés, par période et pour l'exercice.
+  - **Répartir** un total d'un compte également entre les périodes, au centime (le reste sur la dernière).
+  - **Copier d'un exercice**, ajusté d'un pourcentage. Les périodes se rapprochent par leurs dates, décalées du nombre de mois entre les débuts d'exercice : des mois s'additionnent dans leur trimestre, un trimestre se répartit sur ses mois. Sans « remplacer », seules les cellules vides sont remplies. fripv2 ne copie pas.
+- **Budget et réel** (onglet), sur une suite de périodes (par défaut jusqu'à la période du jour) :
+  - le réel est le mouvement du journal sur ces périodes, **hors écriture de clôture**, dans le sens naturel du compte (débit − crédit pour un actif ou une charge, l'inverse sinon) ;
+  - par compte : budget, réel, écart, taux de réalisation ; **favorable** quand une charge reste sous son budget ou qu'un produit le dépasse ;
+  - les produits et charges des comptes **hors budget** comptent dans le résultat réel, qui reste celui du compte de résultat ;
+  - export CSV. fripv2 n'a pas cette comparaison.
+- **Journal des modifications** : chaque cellule saisie, modifiée ou retirée y est inscrite (auteur, avant, après) ; une copie y est inscrite une fois.
+- **Exercice clôturé** : son budget ne se modifie plus.
+- **Droits** : consulter avec **Budgets** (voir) ; saisir, répartir, copier et choisir les comptes avec **Modifier les montants du budget** (`budgets.saisir`), réglé d'après « Saisir des écritures ». La comparaison au réel demande aussi **Voir les états comptables**.
+
 ### Protections du plan et des exercices
 
 - Un compte qui a des écritures ne se supprime pas (il se désactive) et ne devient pas un en-tête.
 - Un exercice qui a des écritures garde ses dates et son découpage, et ne se supprime pas.
+- De même pour un budget : un compte budgété ne se supprime pas et ne devient pas un en-tête ; un exercice qui a un budget garde ses dates et son découpage (ses périodes portent le budget) et ne se supprime pas.
 
 ---
 
@@ -457,6 +477,11 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /banque/releve-lignes/{id}/candidats?recherche=` | Mouvements libres qui peuvent correspondre à une opération |
 | `POST /banque/releve-lignes/{id}/relier`, `/delier`, `/exclure`, `/retablir` | `{lignes: [ids]}` ; `{ligne}` (sinon tous) ; `{motif}` |
 | `POST /banque/releve-lignes/{id}/classer` | `{compte_comptable_id, libelle}` : créer la transaction, la passer au journal et la relier (201) |
+| `GET /budgets?exercice_id=` | Feuille du budget : exercices, périodes, comptes (`montants` par période, `total`, `total_precedent`), totaux (`par_periode`), `modifiable` |
+| `PUT /budgets` | `{exercice_id, cellules: [{compte_id, periode_id, montant}]}` : enregistrer (vide ou nul : retirer) ; renvoie la feuille |
+| `POST /budgets/repartir` ; `POST /budgets/copier` | `{exercice_id, compte_id, total}` ; `{exercice_id, source_exercice_id, pourcentage, remplacer}` |
+| `PUT /budgets/comptes` | `{comptes: [ids], budgetable}` : comptes du budget |
+| `GET /budgets/comparaison?exercice_id=&periode_du=&periode_au=[&format=csv]` | Budget et réel (lignes, `hors_budget`, totaux) ; demande aussi `comptabilite.etats` |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -465,9 +490,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire`, `ReleveBancaire`, `ReleveBancaireLigne`, `ReleveBancaireLien` (et `CompteBancaire`, relié à son compte comptable, avec `import_reglages` ; `EcritureComptableLigne.rapprochement_id`).
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf, RelevesBancaires, LecteurReleves}`, contrôleurs `App\Http\Controllers\Banque\*`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire`, `ReleveBancaire`, `ReleveBancaireLigne`, `ReleveBancaireLien`, `BudgetComptable` (et `CompteBancaire`, relié à son compte comptable, avec `import_reglages` ; `EcritureComptableLigne.rapprochement_id` ; `CompteComptable.budgetable`).
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation, Budgets}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf, RelevesBancaires, LecteurReleves}`, contrôleurs `App\Http\Controllers\Banque\*`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`, `2026_10_17_100067_creer_releves_bancaires`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `BudgetsPage` (composants `budgets/*`, service `src/services/budgets.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`, `2026_10_17_100067_creer_releves_bancaires`, `2026_10_17_100068_creer_budgets`.

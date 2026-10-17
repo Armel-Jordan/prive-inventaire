@@ -50,6 +50,7 @@ class Droits
         'factures-fournisseurs' => 'factures_fournisseurs',
         'debourses' => 'debourses',
         'banque' => 'banque',
+        'budgets' => 'budgets',
         'devis' => 'devis',
         'clients' => 'clients',
         'commandes-client' => 'commandes_client',
@@ -96,6 +97,8 @@ class Droits
         'comptabilite' => 'comptabilite',
         // Banque : soldes, mouvements et transactions des comptes bancaires.
         'banque' => 'banque',
+        // Budgets : montants prévus par compte ; la comparaison au réel demande aussi de voir les états comptables.
+        'budgets' => 'budgets',
         'comptes-clients' => 'comptes_clients',
         // Encaissements des clients : l'argent reçu et sa répartition ; déboursés : l'argent versé aux fournisseurs.
         'encaissements' => 'encaissements',
@@ -252,6 +255,11 @@ class Droits
         'POST api/banque/releve-lignes/{ligne}/exclure' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/retablir' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/classer' => ['banque', 'saisir'],
+        // Budgets : saisir des cellules, répartir, copier, choisir les comptes budgétés.
+        'PUT api/budgets' => ['budgets', 'saisir'],
+        'POST api/budgets/repartir' => ['budgets', 'saisir'],
+        'POST api/budgets/copier' => ['budgets', 'saisir'],
+        'PUT api/budgets/comptes' => ['budgets', 'saisir'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],

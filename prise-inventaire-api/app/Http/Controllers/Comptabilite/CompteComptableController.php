@@ -126,6 +126,7 @@ class CompteComptableController extends Controller
             'type' => ['required', Rule::in(CompteComptable::TYPES)],
             'saisie_manuelle' => ['sometimes', 'boolean'],
             'actif' => ['sometimes', 'boolean'],
+            'budgetable' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [
             'numero.unique' => 'Ce numéro de compte existe déjà.',
@@ -138,6 +139,10 @@ class CompteComptableController extends Controller
     {
         $donnees['libelle'] = trim($donnees['libelle']);
         $donnees['saisie_manuelle'] = $donnees['type'] !== CompteComptable::EN_TETE && (bool) $donnees['saisie_manuelle'];
+        // Un en-tête ne reçoit pas de budget.
+        if ($donnees['type'] === CompteComptable::EN_TETE) {
+            $donnees['budgetable'] = false;
+        }
 
         return $donnees;
     }

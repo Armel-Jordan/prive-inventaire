@@ -94,6 +94,7 @@ use App\Http\Controllers\Banque\CompteBancaireController;
 use App\Http\Controllers\Banque\RapprochementBancaireController;
 use App\Http\Controllers\Banque\ReleveBancaireController;
 use App\Http\Controllers\Banque\TransactionBancaireController;
+use App\Http\Controllers\Comptabilite\BudgetController;
 use App\Http\Controllers\Comptabilite\ComptabilisationController;
 use App\Http\Controllers\Comptabilite\CompteComptableController;
 use App\Http\Controllers\Comptabilite\EcritureComptableController;
@@ -1031,6 +1032,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/releve-lignes/{ligne}/exclure', [ReleveBancaireController::class, 'exclure'])->whereNumber('ligne');
         Route::post('/releve-lignes/{ligne}/retablir', [ReleveBancaireController::class, 'retablir'])->whereNumber('ligne');
         Route::post('/releve-lignes/{ligne}/classer', [ReleveBancaireController::class, 'classer'])->whereNumber('ligne');
+    });
+
+    // Budgets : feuille d'un exercice (comptes budgétables × périodes), saisie, répartition, copie, budget et réel.
+    Route::prefix('budgets')->middleware('module:finance')->group(function () {
+        Route::get('/', [BudgetController::class, 'index']);
+        Route::put('/', [BudgetController::class, 'update']);
+        Route::post('/repartir', [BudgetController::class, 'repartir']);
+        Route::post('/copier', [BudgetController::class, 'copier']);
+        Route::put('/comptes', [BudgetController::class, 'comptes']);
+        Route::get('/comparaison', [BudgetController::class, 'comparaison']);
     });
 
     // Mouvements d'inventaire et Localisations
