@@ -32,6 +32,8 @@ import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import ChampDevise from '@/components/ChampDevise';
+import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
+import FraisDocument from '@/components/FraisDocument';
 
 
 export default function CommandesClientPage() {
@@ -70,6 +72,15 @@ export default function CommandesClientPage() {
     taux: '1',
   });
   const [lignes, setLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+  // Frais additionnels et de livraison proposés pour la commande en cours de saisie (ceux déjà sur un brouillon
+  // modifié ne sont pas proposés de nouveau).
+  const frais = useFraisAutomatiques({
+    document: 'commande',
+    clientId: formData.client_id ? Number(formData.client_id) : null,
+    lignes,
+    taux: formData.devise ? Number(formData.taux) || 1 : 1,
+    actif: showModal,
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -109,7 +120,7 @@ export default function CommandesClientPage() {
       // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
       devise: formData.devise || deviseEntreprise,
       taux_change: formData.devise ? Number(formData.taux) : undefined,
-      lignes: lignes.map(l => ({
+      lignes: [...lignes, ...frais.lignes].map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
         prix_unitaire_ht: l.prix_unitaire_ht,
@@ -229,6 +240,7 @@ export default function CommandesClientPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    frais.reinitialiser();
     setFormData({
       client_id: '',
       date_commande: aujourdhui(),
@@ -550,8 +562,9 @@ onChange={(e) => {
                         </button>
                       </div>
                     ))}
+                    <FraisDocument frais={frais} montant={v => montant(v, formData.devise || null)} />
                     <div className="text-right font-medium text-gray-900 dark:text-white">
-                      Total HT: {montant(totalLignes, formData.devise || null)}
+                      Total HT: {montant(totalLignes + frais.total, formData.devise || null)}
                     </div>
                   </div>
                 )}

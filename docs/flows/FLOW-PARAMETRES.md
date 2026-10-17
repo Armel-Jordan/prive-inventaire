@@ -727,6 +727,15 @@ Code : `App\Services\Courriels\EnvoiCourriel`, `App\Jobs\EnvoyerCourriel`, `App\
 
 ---
 
+## 12 bis. Frais additionnels et de livraison
+
+Écran **Paramètres → Frais additionnels** (droit de modifier la configuration) : les frais que les devis, commandes et factures proposent d'eux-mêmes, comme une ligne du produit qui les porte. Détail : FLOW-VENTES §5.13.
+
+- Créer d'abord le **produit** du frais (un service, avec sa taxe), puis le frais qui pointe vers lui.
+- Un frais **de livraison** se choisit ensuite dans la fiche de chaque client concerné.
+
+---
+
 ## 13. Ordre recommandé de configuration initiale
 
 Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'ordre optimal :

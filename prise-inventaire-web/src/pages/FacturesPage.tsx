@@ -33,6 +33,8 @@ import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
 import { appliquerAcompte, getAcomptes, type Acompte } from '@/services/acomptes';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
+import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
+import FraisDocument from '@/components/FraisDocument';
 import { useLanguage } from '@/i18n/useLanguage';
 
 
@@ -81,6 +83,14 @@ export default function FacturesPage() {
   const [escompte, setEscompte] = useState<PropositionEscompte | null>(null);
   const [avecEscompte, setAvecEscompte] = useState(false);
   const [createLignes, setCreateLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+  // Frais additionnels et de livraison proposés pour la facture en cours de saisie.
+  const frais = useFraisAutomatiques({
+    document: 'facture',
+    clientId: createForm.client_id ? Number(createForm.client_id) : null,
+    lignes: createLignes,
+    taux: createForm.devise ? Number(createForm.taux) || 1 : 1,
+    actif: showCreateModal,
+  });
 
   const loadMeta = async () => {
     const [c, p, conds] = await Promise.all([getClientsActifs(), getProduits(), getReferentiel('conditions_paiement', true).catch(() => [])]);
@@ -171,8 +181,9 @@ export default function FacturesPage() {
         devise: createForm.devise || deviseEntreprise,
         taux_change: createForm.devise ? Number(createForm.taux) : undefined,
         notes: createForm.notes || undefined,
-        lignes: createLignes,
+        lignes: [...createLignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire_ht: f.prix_unitaire_ht }))],
       });
+      frais.reinitialiser();
       setShowCreateModal(false);
       setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
       setCreateLignes([]);
@@ -680,8 +691,9 @@ export default function FacturesPage() {
                           className="text-red-500 hover:text-red-700"><X size={16} /></button>
                       </div>
                     ))}
+                    <FraisDocument frais={frais} montant={v => montant(v, createForm.devise || null)} />
                     <div className="text-right font-medium dark:text-white">
-                      Total HT: {montant(createLignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0), createForm.devise || null)}
+                      Total HT: {montant(createLignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0) + frais.total, createForm.devise || null)}
                     </div>
                   </div>
                 )}
