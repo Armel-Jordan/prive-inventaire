@@ -544,6 +544,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{devis}/accepter', [DevisController::class, 'accepter']);
         Route::post('/{devis}/refuser', [DevisController::class, 'refuser']);
         Route::post('/{devis}/convertir', [DevisController::class, 'convertirEnCommande']);
+        // Devis accepté facturé directement (sans commande), devis copié en nouveau brouillon.
+        Route::post('/{devis}/facturer', [DevisController::class, 'facturer']);
+        Route::post('/{devis}/copier', [DevisController::class, 'copier']);
         // Lien de réponse en ligne du devis (le partager revient à l'envoyer).
         Route::post('/{devis}/lien-reponse', [DevisController::class, 'lienReponse']);
         Route::delete('/{devis}', [DevisController::class, 'destroy']);

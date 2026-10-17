@@ -2300,6 +2300,9 @@ export interface DevisRecord extends CoordonneesPassage {
   /** Commande issue de la conversion : un devis ne se convertit qu'une fois. */
   commande_id?: number | null;
   commande?: { id: number; numero: string } | null;
+  /** Facture issue du devis facturé directement (sans commande). */
+  facture_id?: number | null;
+  facture?: { id: number; numero: string } | null;
   /** Devise du devis (null : celle de l'entreprise) et son taux. */
   devise?: string | null;
   taux_change?: number | string;
@@ -2358,6 +2361,16 @@ export async function refuserDevis(id: number): Promise<{ message: string; devis
 
 export async function convertirDevisEnCommande(id: number): Promise<{ message: string; commande: ComClientEntete }> {
   return fetchApi(`/devis/${id}/convertir`, { method: 'POST' });
+}
+
+/** Facture brouillon issue d'un devis accepté, sans commande (un devis ne se convertit qu'une fois). */
+export async function facturerDevis(id: number): Promise<{ message: string; facture: Facture }> {
+  return fetchApi(`/devis/${id}/facturer`, { method: 'POST' });
+}
+
+/** Nouveau devis brouillon repris de celui-ci, daté du jour. */
+export async function copierDevis(id: number): Promise<{ message: string; devis: DevisRecord }> {
+  return fetchApi(`/devis/${id}/copier`, { method: 'POST' });
 }
 
 /** Lien de réponse en ligne du devis (le client l'accepte ou le refuse sur le site de l'espace client). */

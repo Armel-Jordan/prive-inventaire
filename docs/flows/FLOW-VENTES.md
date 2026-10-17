@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — relances des devis (§3.8)
+> Dernière mise à jour : 2026-10-17 — devis facturé directement et copie de devis (§3.5, §3.9)
 
 ---
 
@@ -285,7 +285,7 @@ Un devis accepté peut être **converti en commande client** directement — san
 |--------|---------------|---------------------|
 | `brouillon` | En rédaction | Modifier ✏️, Envoyer ✉️, Supprimer 🗑️ |
 | `envoye` | Envoyé au client (bouton, courriel ou lien de réponse) | Accepter ✅, Refuser ❌ ; le client peut répondre en ligne (§3.7) |
-| `accepte` | Client a accepté | Convertir en commande 📄 |
+| `accepte` | Client a accepté | Convertir en commande 📄 ou facturer directement 🧾 (une seule fois) |
 | `refuse` | Client a refusé | Lecture seule |
 | `expire` | Date de validité dépassée | Lecture seule |
 
@@ -321,6 +321,8 @@ Quand on convertit un devis accepté :
 3. La commande est en statut `brouillon` : elle peut encore être modifiée.
 4. Le devis garde son statut `accepte` et pointe vers sa commande (`commande_id`), affichée dans la liste (« → CMD-… »).
 5. **Un devis ne se convertit qu'une fois.** Une seconde conversion répond 422 avec le numéro de la commande existante ; un verrou empêche deux conversions simultanées.
+
+**Facturer directement** (comme dans fripv2, bouton 🧾 de la liste, `POST /devis/{id}/facturer`) : une **facture brouillon** est créée sans commande, avec les mêmes lignes et prix, la devise et le taux du devis, ses notes et les coordonnées du client de passage. Les taxes et l'échéance sont calculées comme pour une facture saisie. Le devis pointe vers sa facture (`facture_id`, « → FAC-… » dans la liste). Un devis ne se convertit qu'une fois, en commande **ou** en facture. Il faut le droit de convertir un devis **et** celui de créer une facture.
 
 ### 3.6 Points d'attention
 
@@ -385,6 +387,18 @@ Plan de parité fripv2, phase 1.3 : relancer le client d'un devis envoyé resté
 **Modèle « Relance de devis » :** variables du devis, plus `jours_restants` (jours de validité restants) et `niveau` (numéro de la relance) ; personnalisable dans Paramètres → Courriels.
 
 Code : service `App\Services\RelancesDevis`, tâche `App\Taches\RelancerDevisSansReponse`, migration `2026_10_16_100041_relances_devis`.
+
+### 3.9 Copier un devis
+
+Comme dans fripv2 : le bouton **Copier** de la liste (`POST /devis/{id}/copier`, droit « Créer un devis ») crée un **nouveau devis brouillon** repris de celui-ci, quel que soit son statut :
+- même client (et coordonnées du client de passage), mêmes lignes et prix, mêmes notes ;
+- daté du jour, avec la même durée de validité que l'original ;
+- dans la même devise, au **taux du jour** (référentiel des devises) ;
+- nouveau numéro ; ni réponse, ni relance, ni conversion reprises.
+
+La copie s'ouvre aussitôt en modification.
+
+Code : `DevisController::facturer` (création par `App\Services\FacturesVente`) et `DevisController::copier`, migration `2026_10_16_100042_facture_issue_du_devis`.
 
 ---
 

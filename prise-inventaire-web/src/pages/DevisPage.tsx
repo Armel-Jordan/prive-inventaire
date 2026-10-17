@@ -2,13 +2,13 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy, BellRing } from 'lucide-react';
+import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy, BellRing, Receipt, CopyPlus } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
 import {
   getDevis, createDevis, updateDevis, deleteDevis,
-  envoyerDevis, accepterDevis, refuserDevis, convertirDevisEnCommande, lienReponseDevis,
+  envoyerDevis, accepterDevis, refuserDevis, convertirDevisEnCommande, lienReponseDevis, facturerDevis, copierDevis,
   getClientsActifs, getProduits, getConfiguration,
 } from '../services/api';
 import type { DevisRecord, Client } from '../services/api';
@@ -30,7 +30,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 
 export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
-  const { peut } = usePermissions();
+  const { peut, canCreate } = usePermissions();
   const deviseEntreprise = useCodeDevise();
   const { t, language } = useLanguage();
   const tr = t.quoteAnswer;
@@ -167,6 +167,25 @@ export default function DevisPage() {
       await refuserDevis(id);
       loadData();
     } catch (e) { signalerErreur(e, 'Erreur lors du refus'); }
+  };
+
+  // Facture brouillon du devis accepté, sans commande (un devis ne se convertit qu'une fois).
+  const handleFacturer = async (devis: DevisRecord) => {
+    if (!confirm(t.quoteActions.confirmInvoice.replace('{numero}', devis.numero))) return;
+    try {
+      const { message } = await facturerDevis(devis.id);
+      alert(message);
+      loadData();
+    } catch (e) { signalerErreur(e, 'Erreur lors de la facturation'); }
+  };
+
+  // Copie en nouveau brouillon, ouverte aussitôt pour être ajustée.
+  const handleCopier = async (devis: DevisRecord) => {
+    try {
+      const { devis: copie } = await copierDevis(devis.id);
+      loadData();
+      openEdit(copie);
+    } catch (e) { signalerErreur(e, 'Erreur lors de la copie'); }
   };
 
   const handleConvertir = async (devis: DevisRecord) => {
@@ -339,6 +358,7 @@ export default function DevisPage() {
                     {getStatutBadge(devis.statut)}
                     {devis.reponse_en_ligne && <span className="block mt-1 text-xs text-gray-500">{tr.online}</span>}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
+                    {devis.facture && <span className="block mt-1 text-xs text-gray-500" title={t.quoteActions.invoicedAs}>→ {devis.facture.numero}</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
@@ -371,10 +391,16 @@ export default function DevisPage() {
                           )}
                         </>
                       )}
-                      {devis.statut === 'accepte' && !devis.commande && (
-                        <>{peut('devis', 'convertir') && (
+                      {devis.statut === 'accepte' && !devis.commande && !devis.facture && peut('devis', 'convertir') && (
+                        <>
                           <button onClick={() => handleConvertir(devis)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Convertir en commande"><FileText size={16} /></button>
-                        )}</>
+                          {canCreate('factures') && (
+                            <button onClick={() => handleFacturer(devis)} className="p-1 text-purple-600 hover:bg-purple-50 rounded" title={t.quoteActions.invoiceHelp} aria-label={`${t.quoteActions.invoice} — ${devis.numero}`}><Receipt size={16} /></button>
+                          )}
+                        </>
+                      )}
+                      {canCreate('devis') && (
+                        <button onClick={() => handleCopier(devis)} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title={t.quoteActions.copyHelp} aria-label={`${t.quoteActions.copy} — ${devis.numero}`}><CopyPlus size={16} /></button>
                       )}
                       <BoutonChampsPersonnalises entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
                     </div>

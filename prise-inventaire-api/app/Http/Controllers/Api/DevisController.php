@@ -11,9 +11,11 @@ use App\Models\Devis;
 use App\Models\DevisLigne;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
+use App\Services\FacturesVente;
 use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
 use App\Services\TaxesDocument;
+use App\Support\Droits;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -30,7 +32,7 @@ class DevisController extends Controller
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
         Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
             ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero'])->where('tenant_id', $tenantId);
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -110,7 +112,7 @@ class DevisController extends Controller
 
     public function show(Devis $devis): JsonResponse
     {
-        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero']);
+        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero']);
 
         return response()->json($devis);
     }
@@ -251,7 +253,7 @@ class DevisController extends Controller
         $commande = DB::transaction(function () use ($devis, $request, $tenantId) {
             // Verrou sur le devis : deux conversions simultanées ne créent pas deux commandes.
             $verrouille = Devis::whereKey($devis->id)->lockForUpdate()->first();
-            if ($verrouille?->commande_id && $verrouille->commande()->exists()) {
+            if (($verrouille?->commande_id && $verrouille->commande()->exists()) || ($verrouille?->facture_id && $verrouille->facture()->exists())) {
                 return null;
             }
 
@@ -311,10 +313,109 @@ class DevisController extends Controller
     private function dejaConverti(Devis $devis): ?JsonResponse
     {
         $commande = $devis->commande_id ? $devis->commande()->first(['id', 'numero']) : null;
+        if ($commande) {
+            return response()->json(['message' => "Ce devis a déjà été converti en commande {$commande->numero}.", 'commande' => $commande], 422);
+        }
+        $facture = $devis->facture_id ? $devis->facture()->first(['id', 'numero']) : null;
 
-        return $commande
-            ? response()->json(['message' => "Ce devis a déjà été converti en commande {$commande->numero}.", 'commande' => $commande], 422)
+        return $facture
+            ? response()->json(['message' => "Ce devis a déjà été facturé : facture {$facture->numero}.", 'facture' => $facture], 422)
             : null;
+    }
+
+    /**
+     * Facture brouillon issue d'un devis accepté, sans passer par une commande (comme dans fripv2) : mêmes lignes, prix,
+     * devise et taux, coordonnées du client de passage. Un devis ne se convertit qu'une fois, en commande ou en facture.
+     */
+    public function facturer(Request $request, Devis $devis, FacturesVente $factures, Droits $droits): JsonResponse
+    {
+        // Créer une facture demande aussi ce droit.
+        if (! $droits->permet($request->user(), 'factures', 'creer')) {
+            return response()->json(['message' => $droits->messageRefus('factures', 'creer'), 'module' => 'factures', 'action' => 'creer'], 403);
+        }
+        if ($devis->statut !== Devis::STATUT_ACCEPTE) {
+            return response()->json(['message' => 'Seuls les devis acceptés peuvent être facturés.'], 422);
+        }
+        if ($deja = $this->dejaConverti($devis)) {
+            return $deja;
+        }
+        $config = Configuration::pourEntite('facture', $devis->tenant_id);
+        if (! $config || ! $config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Configuration numéro facture manquante'], 422);
+        }
+
+        $facture = DB::transaction(function () use ($devis, $factures) {
+            // Verrou sur le devis : deux conversions simultanées ne créent pas deux documents.
+            $verrouille = Devis::whereKey($devis->id)->lockForUpdate()->first();
+            if ($verrouille->commande_id || $verrouille->facture_id) {
+                return null;
+            }
+            $devis->load('lignes');
+            $facture = $factures->creer(app(ClientsDePassage::class)->copier($devis) + [
+                'client_id' => $devis->client_id,
+                'date_facture' => now()->toDateString(),
+                // La facture reste dans la devise du devis, à son taux : les montants acceptés ne changent pas.
+                'devise' => $devis->devise ?: app(DevisesVente::class)->reference(),
+                'taux_change' => $devis->taux_change ?? 1,
+                'notes' => $devis->notes,
+                'lignes' => $devis->lignes->map(fn (DevisLigne $ligne) => [
+                    'produit_id' => $ligne->produit_id,
+                    'quantite' => $ligne->quantite,
+                    'prix_unitaire_ht' => $ligne->prix_unitaire,
+                ])->all(),
+            ], $devis->tenant_id);
+            $verrouille->update(['facture_id' => $facture->id]);
+
+            return $facture;
+        });
+
+        if (! $facture) {
+            return $this->dejaConverti($devis->refresh()) ?? response()->json(['message' => "Conversion impossible pour l'instant : réessayez."], 409);
+        }
+
+        return response()->json(['message' => "Devis facturé : facture {$facture->numero} (brouillon).", 'facture' => $facture->load(['client', 'lignes'])], 201);
+    }
+
+    /**
+     * Nouveau devis brouillon repris d'un autre (comme dans fripv2) : mêmes client, lignes, prix et notes, daté du jour
+     * avec la même durée de validité, dans la même devise au taux du jour.
+     */
+    public function copier(Request $request, Devis $devis): JsonResponse
+    {
+        $config = Configuration::pourEntite('devis', $devis->tenant_id);
+        if (! $config || ! $config->auto_increment) {
+            return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
+        }
+        $devise = app(DevisesVente::class)->pourDocument($devis->devise ?: app(DevisesVente::class)->reference(), null, Client::find($devis->client_id));
+
+        $copie = DB::transaction(function () use ($devis, $request, $devise) {
+            $duree = $devis->date_devis && $devis->date_validite ? (int) $devis->date_devis->diffInDays($devis->date_validite) : 30;
+            $aujourdhui = now()->startOfDay();
+            $copie = Devis::create($devise + app(ClientsDePassage::class)->copier($devis) + [
+                'tenant_id' => $devis->tenant_id,
+                'numero' => Configuration::consommerNumero('devis', $devis->tenant_id),
+                'client_id' => $devis->client_id,
+                'date_devis' => $aujourdhui->toDateString(),
+                'date_validite' => $aujourdhui->copy()->addDays($duree)->toDateString(),
+                'notes' => $devis->notes,
+                'statut' => Devis::STATUT_BROUILLON,
+                'created_by' => $request->user()->id,
+            ]);
+            foreach ($devis->lignes as $ligne) {
+                DevisLigne::create([
+                    'devis_id' => $copie->id,
+                    'produit_id' => $ligne->produit_id,
+                    'quantite' => $ligne->quantite,
+                    'prix_unitaire' => $ligne->prix_unitaire,
+                    'montant_ligne' => $ligne->quantite * $ligne->prix_unitaire,
+                ]);
+            }
+            $copie->recalculerTotal();
+
+            return $copie;
+        });
+
+        return response()->json(['message' => "Devis copié : {$copie->numero}.", 'devis' => $copie->load(['client', 'lignes.produit'])], 201);
     }
 
     public function destroy(Devis $devis): JsonResponse
