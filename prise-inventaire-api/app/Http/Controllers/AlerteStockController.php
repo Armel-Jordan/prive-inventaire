@@ -83,11 +83,16 @@ class AlerteStockController extends Controller
     {
         $request->validate([
             'seuil_alerte' => 'required|numeric|min:0',
-        ]);
+            // Maximum visé par le réassort (suggestions d'achat) : au moins le seuil.
+            'stock_maximum' => 'sometimes|nullable|numeric|gte:seuil_alerte',
+        ], ['stock_maximum.gte' => 'Le maximum ne peut pas être inférieur au seuil d\'alerte.']);
 
         $tenantId = $this->tenantId();
         $produit = ProduitTenant::where('tenant_id', $tenantId)->findOrFail($produitId);
         $produit->seuil_alerte = $request->seuil_alerte;
+        if ($request->exists('stock_maximum')) {
+            $produit->stock_maximum = $request->stock_maximum;
+        }
         $produit->save();
 
         return response()->json([

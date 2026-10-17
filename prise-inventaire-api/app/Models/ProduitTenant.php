@@ -29,6 +29,8 @@ class ProduitTenant extends Model
         'prix_unitaire',
         'actif',
         'seuil_alerte',
+        // Quantité visée par le réassort (suggestions d'achat) ; le seuil d'alerte sert de minimum.
+        'stock_maximum',
         'fournisseur_principal_id',
         // Transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids et volume unitaires.
         'numero_onu',
@@ -44,6 +46,7 @@ class ProduitTenant extends Model
             'prix_unitaire' => 'decimal:4',
             'actif' => 'boolean',
             'seuil_alerte' => 'decimal:2',
+            'stock_maximum' => 'decimal:2',
             'qte_par_unite_achat' => 'integer',
             'poids_kg' => 'decimal:4',
             'volume_m3' => 'decimal:6',

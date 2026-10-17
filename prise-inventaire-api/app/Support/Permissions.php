@@ -72,6 +72,14 @@ class Permissions
             'annuler' => ['base' => 'modifier', 'fr' => 'Annuler une commande', 'en' => 'Cancel an order',
                 'aide_fr' => 'Annuler une commande fournisseur.', 'aide_en' => 'Cancel a purchase order.'],
         ]],
+        'suggestions_achat' => ['onglet' => 'achats', 'fr' => "Suggestions d'achat", 'en' => 'Purchase suggestions', 'crud' => ['voir'], 'actions' => [
+            'gerer' => ['base' => 'creer', 'fr' => "Gérer les suggestions d'achat", 'en' => 'Manage purchase suggestions',
+                'aide_fr' => 'Calculer les suggestions (stock sous le minimum, reliquats clients), les accepter, changer quantité et fournisseur, et en faire des commandes fournisseur. Commander demande aussi le droit de créer des commandes fournisseur.',
+                'aide_en' => 'Compute suggestions (stock below minimum, customer back orders), accept them, change quantity and supplier, and turn them into purchase orders. Ordering also requires the right to create purchase orders.'],
+            'suggerer' => ['base' => 'voir', 'fr' => "Créer une suggestion d'achat", 'en' => 'Create a purchase suggestion',
+                'aide_fr' => "Signaler depuis un produit qu'il faut le commander, sans pouvoir passer de commande soi-même.",
+                'aide_en' => 'Flag from a product that it must be ordered, without being able to place an order yourself.'],
+        ]],
         'receptions' => ['onglet' => 'achats', 'fr' => 'Réceptions', 'en' => 'Receipts'],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',

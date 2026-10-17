@@ -50,6 +50,7 @@ import ConsignationsPage from '@/pages/ConsignationsPage';
 import CaissesPage from '@/pages/CaissesPage';
 import PointDeVentePage from '@/pages/PointDeVentePage';
 import CartesCadeauxPage from '@/pages/CartesCadeauxPage';
+import SuggestionsAchatPage from '@/pages/SuggestionsAchatPage';
 import DisponibilitesPage from '@/pages/DisponibilitesPage';
 import AcomptesPage from '@/pages/AcomptesPage';
 import DemandesAcomptePage from '@/pages/DemandesAcomptePage';
@@ -169,6 +170,7 @@ function AppRoutes() {
         <Route path="caisses" element={<CaissesPage />} />
         <Route path="point-de-vente" element={<PointDeVentePage />} />
         <Route path="cartes-cadeaux" element={<CartesCadeauxPage />} />
+        <Route path="suggestions-achat" element={<SuggestionsAchatPage />} />
         <Route path="disponibilites" element={<DisponibilitesPage />} />
         <Route path="acomptes" element={<AcomptesPage />} />
         <Route path="demandes-acompte" element={<DemandesAcomptePage />} />

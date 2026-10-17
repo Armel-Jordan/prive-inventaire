@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { messageErreur } from '@/lib/erreurs';
 import { AlertTriangle, AlertCircle, Info, Bell, Settings, RefreshCw, Plus, X, Save } from 'lucide-react';
 import { getProduits } from '@/services/api';
 import { apiFetch, NetworkError } from '@/services/http';
@@ -34,6 +35,8 @@ interface ProduitAvecSeuil {
   numero: string;
   description: string;
   seuil_alerte: number | null;
+  // Maximum visé par le réassort (suggestions d'achat).
+  stock_maximum: number | null;
 }
 
 export default function AlertesPage() {
@@ -46,6 +49,7 @@ export default function AlertesPage() {
   const [produits, setProduits] = useState<ProduitAvecSeuil[]>([]);
   const [loadingProduits, setLoadingProduits] = useState(false);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
+  const [maxEdits, setMaxEdits] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
 
   async function loadData() {
@@ -87,11 +91,12 @@ export default function AlertesPage() {
       const data = await getProduits();
       const mapped: ProduitAvecSeuil[] = data
         .filter((p: Produit) => p.id !== undefined)
-        .map((p: Produit & { seuil_alerte?: number | null }) => ({
+        .map((p: Produit & { seuil_alerte?: number | null; stock_maximum?: number | string | null }) => ({
           id: p.id as number,
           numero: p.numero,
           description: p.description,
           seuil_alerte: p.seuil_alerte ?? null,
+          stock_maximum: p.stock_maximum !== null && p.stock_maximum !== undefined ? Number(p.stock_maximum) : null,
         }));
       setProduits(mapped);
       // Pré-remplir seuilEdits avec les valeurs existantes
@@ -100,6 +105,7 @@ export default function AlertesPage() {
         initial[p.id] = p.seuil_alerte !== null ? String(p.seuil_alerte) : '0';
       });
       setSeuilEdits(initial);
+      setMaxEdits(Object.fromEntries(mapped.map(p => [p.id, p.stock_maximum !== null ? String(p.stock_maximum) : ''])));
     } catch {
       toast('Erreur de chargement des produits', 'error');
     } finally {
@@ -119,13 +125,13 @@ export default function AlertesPage() {
     try {
       await apiFetch(`/alertes/produit/${produitId}/seuil`, {
         method: 'PUT',
-        body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0 }),
+        body: JSON.stringify({ seuil_alerte: parseFloat(seuil) || 0, stock_maximum: (maxEdits[produitId] ?? '').trim() === '' ? null : parseFloat(maxEdits[produitId]) }),
         responseType: 'void',
       });
       toast('Seuil sauvegardé', 'success');
       loadData();
-    } catch {
-      toast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      toast(messageErreur(e, 'Erreur lors de la sauvegarde'), 'error');
     } finally {
       setSaving(false);
     }
@@ -204,6 +210,7 @@ export default function AlertesPage() {
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Numéro</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Description</th>
                       <th className="px-4 py-2 text-right text-sm font-medium text-gray-600">Seuil minimum</th>
+                      <th className="px-4 py-2 text-right text-sm font-medium text-gray-600" title="Quantité visée par les suggestions d'achat (vide : le seuil)">Maximum (réassort)</th>
                       <th className="px-4 py-2 text-center text-sm font-medium text-gray-600">Action</th>
                     </tr>
                   </thead>
@@ -220,6 +227,17 @@ export default function AlertesPage() {
                             placeholder="0"
                             value={seuilEdits[produit.id] ?? ''}
                             onChange={(e) => setSeuilEdits(prev => ({ ...prev, [produit.id]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-24 px-2 py-1 border rounded text-right"
+                            placeholder="—"
+                            aria-label={`Maximum — ${produit.numero}`}
+                            value={maxEdits[produit.id] ?? ''}
+                            onChange={(e) => setMaxEdits(prev => ({ ...prev, [produit.id]: e.target.value }))}
                           />
                         </td>
                         <td className="px-4 py-2 text-center">

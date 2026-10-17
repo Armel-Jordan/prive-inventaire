@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Gift, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -94,6 +94,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     icon: Warehouse,
     items: [
       { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
+      { path: '/suggestions-achat', label: t.purchaseSuggestions.nav, icon: Lightbulb, module: 'suggestions_achat' },
       { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
       { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
       { path: '/retours-fournisseurs', label: t.supplierReturns.nav, icon: PackageMinus, module: 'retours_fournisseurs' },
