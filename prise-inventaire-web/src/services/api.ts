@@ -1272,6 +1272,12 @@ export interface BonLivraison {
   date_pret?: string;
   date_livraison?: string;
   lignes?: BonLivraisonLigne[];
+  notes_livraison?: string | null;
+  /** Signature électronique : image (dans le détail seulement), signataire, moment ; a_signature dans les listes. */
+  signature_client?: string | null;
+  signataire_nom?: string | null;
+  signe_le?: string | null;
+  a_signature?: boolean;
 }
 
 export interface BonLivraisonLigne {
@@ -1667,6 +1673,7 @@ export async function marquerBLPret(id: number): Promise<BonLivraison> {
 export async function enregistrerLivraison(id: number, data: {
   lignes: { id: number; quantite_livree: number }[];
   signature_client?: string;
+  signataire_nom?: string;
   notes_livraison?: string;
 }): Promise<BonLivraison> {
   return fetchApi(`/bons-livraison/${id}/livrer`, { method: 'POST', body: JSON.stringify(data) });

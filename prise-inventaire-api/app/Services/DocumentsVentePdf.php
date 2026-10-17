@@ -27,6 +27,7 @@ class DocumentsVentePdf
         'emise' => 'Émise', 'partiellement_payee' => 'Partiellement payée', 'payee' => 'Payée', 'annulee' => 'Annulée',
         'creditee' => 'Créditée', 'emis' => 'Émise', 'solde' => 'Soldée', 'envoyee' => 'Envoyée',
         'cree' => 'Créé', 'en_preparation' => 'En préparation', 'pret' => 'Prêt', 'livre' => 'Livré', 'annule' => 'Annulé',
+        'en_livraison' => 'En livraison', 'livre_complet' => 'Livré', 'livre_partiel' => 'Livré en partie',
     ];
 
     private const MODES_LIVRAISON = [
@@ -164,7 +165,12 @@ class DocumentsVentePdf
                 'livree' => $l->quantite_livree,
             ])->all(),
             'notes' => $bon->notes_livraison,
-            'signatures' => ['Livré par', 'Reçu par le client (date et signature)'],
+            // Signature électronique du client, si elle a été recueillie à la livraison.
+            'signatures' => ['Livré par', filled($bon->getAttributes()['signature_client'] ?? null) ? [
+                'libelle' => 'Reçu par le client',
+                'image' => $bon->getAttributes()['signature_client'],
+                'detail' => implode(' — ', array_filter([$bon->signataire_nom, $bon->signe_le?->format('d/m/Y')])),
+            ] : 'Reçu par le client (date et signature)'],
         ]);
     }
 

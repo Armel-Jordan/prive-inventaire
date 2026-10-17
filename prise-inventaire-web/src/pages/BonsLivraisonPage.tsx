@@ -2,7 +2,9 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Eye, Package, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { Eye, Package, CheckCircle, Truck, XCircle, PenLine } from 'lucide-react';
+import PadSignature from '@/components/PadSignature';
+import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -31,6 +33,7 @@ function nomProduit(ligne: BonLivraisonLigne): string {
 export default function BonsLivraisonPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut } = usePermissions();
+  const { t } = useLanguage();
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [bons, setBons] = useState<BonLivraison[]>([]);
@@ -43,6 +46,9 @@ export default function BonsLivraisonPage() {
   const [lignesPreparation, setLignesPreparation] = useState<{ id: number; quantite_preparee: number }[]>([]);
   const [lignesLivraison, setLignesLivraison] = useState<{ id: number; quantite_livree: number }[]>([]);
   const [notesLivraison, setNotesLivraison] = useState('');
+  // Signature électronique du client, recueillie à la livraison.
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signataire, setSignataire] = useState('');
 
   const loadBons = useCallback(async () => {
     try {
@@ -128,6 +134,8 @@ export default function BonsLivraisonPage() {
         })) || []
       );
       setNotesLivraison('');
+      setSignature(null);
+      setSignataire('');
       setShowLivraisonModal(true);
     } catch (error) {
       signaler(error, 'Impossible de charger le bon de livraison');
@@ -150,6 +158,8 @@ export default function BonsLivraisonPage() {
       await enregistrerLivraison(selectedBon.id, {
         lignes: lignesLivraison,
         notes_livraison: notesLivraison || undefined,
+        signature_client: signature ?? undefined,
+        signataire_nom: signature ? signataire.trim() || undefined : undefined,
       });
       setShowLivraisonModal(false);
       loadBons();
@@ -238,7 +248,10 @@ export default function BonsLivraisonPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {bon.mode_livraison === 'entreprise' ? 'Livraison' : 'Retrait client'}
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatutBadge(bon.statut)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {getStatutBadge(bon.statut)}
+                    {bon.a_signature && <PenLine size={14} className="inline ml-1 text-green-600" aria-label={t.deliverySignature.signed}><title>{t.deliverySignature.signed}</title></PenLine>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
@@ -358,6 +371,16 @@ export default function BonsLivraisonPage() {
                   <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>
                 </div>
               </div>
+
+              {selectedBon.signature_client && (
+                <div className="border-t pt-4 dark:border-gray-700">
+                  <h3 className="font-medium mb-2 dark:text-white">{t.deliverySignature.title}</h3>
+                  <img src={selectedBon.signature_client} alt={t.deliverySignature.title} className="max-h-28 rounded border bg-white p-1 dark:border-gray-600" />
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                    {[selectedBon.signataire_nom, selectedBon.signe_le && formatDateHeure(selectedBon.signe_le)].filter(Boolean).join(' — ')}
+                  </p>
+                </div>
+              )}
 
               {selectedBon.lignes && selectedBon.lignes.length > 0 && (
                 <div className="border-t pt-4 dark:border-gray-700">
@@ -490,6 +513,13 @@ export default function BonsLivraisonPage() {
                   placeholder="Remarques, problèmes..."
                 />
                 <BoutonRemarquesRapides onInserer={texte => setNotesLivraison(n => ajouterRemarque(n, texte))} />
+              </div>
+              <div className="pt-1">
+                <p className="text-sm font-medium mb-1 dark:text-gray-300">{t.deliverySignature.title}</p>
+                <input value={signataire} onChange={e => setSignataire(e.target.value)} maxLength={150} aria-label={t.deliverySignature.name}
+                  placeholder={t.deliverySignature.name}
+                  className="w-full mb-2 px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                <PadSignature onChange={setSignature} />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
