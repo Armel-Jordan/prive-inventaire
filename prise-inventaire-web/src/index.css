@@ -9,3 +9,8 @@ body {
 html.dark body {
   background-color: #111827;
 }
+
+/* Listes en tableau : sur un petit écran, le tableau défile dans sa carte au lieu d'être coupé (recette B21). */
+.overflow-hidden:has(> table) {
+  overflow-x: auto;
+}

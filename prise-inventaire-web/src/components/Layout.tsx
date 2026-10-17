@@ -356,7 +356,8 @@ export default function Layout() {
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen bg-gray-100 dark:bg-gray-900">
         {/* Top bar with notifications */}
-        <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-3 flex items-center justify-end gap-4">
+        {/* Sur téléphone, la place du bouton du menu (fixe, en haut à gauche) est laissée libre. */}
+        <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b dark:border-gray-700 pl-16 pr-3 sm:pr-6 lg:px-6 py-3 flex items-center justify-end gap-1 sm:gap-4">
           <RechercheGlobale />
           <ThemeToggle />
           <LanguageSelector />
