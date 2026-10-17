@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\CourrielParametresController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
 use App\Http\Controllers\Api\DemandeAcompteController;
 use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\DisponibiliteController;
 use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FournisseurController;
@@ -625,6 +626,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/rembourser', [AvoirController::class, 'rembourser'])->whereNumber('id');
         Route::delete('/{id}', [AvoirController::class, 'destroy'])->whereNumber('id');
     });
+
+    // Disponibilité des produits : stock compté, réservé par les commandes acceptées, en commande, en reliquat.
+    Route::get('/disponibilites', [DisponibiliteController::class, 'index'])->middleware('module:ventes');
 
     // Reliquats clients (back orders) : produits attendus faute de stock, commandés au fournisseur, facturés à réception.
     Route::prefix('reliquats-clients')->middleware('module:ventes')->group(function () {

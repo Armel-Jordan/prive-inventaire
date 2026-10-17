@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, Hourglass, PackageMinus, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, Hourglass, PackageMinus, PackageSearch, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -109,6 +109,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
       { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
       { path: '/reliquats-clients', label: t.backOrders.nav, icon: Hourglass, module: 'reliquats_clients' },
+      { path: '/disponibilites', label: t.availability.nav, icon: PackageSearch, module: 'commandes_client' },
       { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
       { path: '/notes-credit', label: t.creditNotes.nav, icon: ReceiptText, module: 'avoirs' },
       { path: '/retours-clients', label: t.customerReturns.nav, icon: ArchiveRestore, module: 'retours_clients' },
