@@ -1,7 +1,7 @@
 # ACHATS — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-04-10
+> Dernière mise à jour : 2026-10-16 — retours fournisseurs et avoirs (§9)
 
 ---
 
@@ -15,6 +15,7 @@
 6. [Statuts et transitions](#6-statuts-et-transitions)
 7. [Impact sur le stock](#7-impact-sur-le-stock)
 8. [Multi-devise](#8-multi-devise)
+9. [Retours fournisseurs et avoirs](#9-retours-fournisseurs-et-avoirs-achats--retours-fournisseurs)
 
 ---
 
@@ -281,10 +282,9 @@ Permet de soumettre plusieurs réceptions en une seule requête (pour un flow mo
 ### 4.6 Impact sur l'inventaire
 
 Dès qu'une réception est validée :
-- Le produit apparaît dans le secteur assigné
-- Son stock augmente du nombre d'unités reçues
-- Un mouvement de type `entree_reception` est créé pour la traçabilité
-- Si des alertes de stock bas existaient pour ce produit, elles se mettent à jour
+- elle est rangée dans le secteur assigné ;
+- elle ne crée pas de mouvement de stock : la prise d'inventaire suivante la compte comme une **entrée** de ce secteur (FLOW-PRISE-INVENTAIRE) ;
+- la marchandise qui repart chez le fournisseur passe par un retour fournisseur (§9).
 
 ---
 
@@ -371,7 +371,9 @@ Dès qu'une réception est validée :
 
 | Action | Type mouvement | Direction |
 |--------|---------------|-----------|
-| Réception d'arrivage | `entree_reception` | Entrée dans secteur |
+| Réception d'arrivage | aucun : la réception, rangée dans un secteur, compte comme une entrée à la prise d'inventaire | Entrée dans secteur |
+| Retour fournisseur expédié (ligne prise dans un secteur) | `sortie` (« Retour fournisseur RF-… ») | Sortie du secteur |
+| Remplacement reçu à la clôture d'un retour | `arrivage` (« Remplacement fournisseur RF-… ») | Entrée dans le secteur choisi |
 | Relocalisation produit | `relocalisation` | Sortie secteur A / Entrée secteur B |
 | Préparation BL | `sortie_preparation` | Sortie secteur → zone préparation |
 | Livraison client | `livraison_client` | Sortie camion → client |
@@ -420,6 +422,98 @@ négatif est refusé (`taux_change` > 0).
 Les montants sont affichés :
 1. Dans la devise de la commande (devise du fournisseur)
 2. Avec conversion optionnelle dans la devise de l'entreprise
+
+## 9. Retours fournisseurs et avoirs (Achats → Retours fournisseurs)
+
+Plan de parité fripv2, phase 3.4. Dans fripv2, un retour au fournisseur est une ligne à quantité négative d'une réception, ou un suivi de retour avec numéro RMA. Ici, c'est un document à part : un **retour fournisseur**.
+
+**Origine du retour :**
+- **une commande du fournisseur** : bouton **Retour au fournisseur** d'une commande envoyée, reçue en partie ou en totalité. Chaque ligne repart au plus dans la quantité reçue, moins ce qui en est déjà reparti ; le prix proposé est celui de la commande et le secteur celui de sa dernière réception ;
+- **un retour client traité** (FLOW-VENTES §5.12) : action **Renvoyer au fournisseur**, par exemple pour des produits défectueux rapportés par un client :
+  - les lignes mises au rebut sont proposées, hors stock ;
+  - une ligne remise en stock peut aussi repartir, de son secteur ;
+  - le fournisseur principal des produits est proposé ;
+- **aucune** : **Nouveau retour**, n'importe quel produit.
+
+**Type :**
+
+| Type | Le fournisseur… | À la clôture |
+|---|---|---|
+| `remboursement` | crédite la marchandise | crédit obtenu et référence de son avoir |
+| `remplacement` | renvoie une marchandise identique | entrée en stock du remplacement dans un secteur (facultative) |
+| `consigne` | reprend un contenant, une palette, un emballage | rien d'attendu |
+
+**Une ligne :**
+- produit, quantité ;
+- **prix crédité** : celui de la commande, sinon le dernier prix payé au fournisseur (ou son prix d'achat convenu) ;
+- **secteur d'où la marchandise sort** du stock, ou **Hors stock** pour une marchandise qui n'y est pas (défectueuse et mise au rebut, en quarantaine) ;
+- raison : raisons du référentiel de type « Retour fournisseur », **obligatoire dès que l'entreprise en a défini une**.
+
+**En-tête :**
+- fournisseur (celui de la commande pour un retour de commande) ;
+- date du retour, **numéro RMA** (autorisation de retour donnée par le fournisseur, à reporter sur le colis) et notes ;
+- **devise** : celle de la commande ; sinon celle du fournisseur, avec son taux de change (proposé, corrigeable ; 422 s'il est inconnu), comme les documents de vente (FLOW-VENTES §5.11).
+
+**Statuts :**
+
+| Statut | Signification | Actions |
+|---|---|---|
+| `brouillon` | Sans numéro, sans effet sur le stock | Modifier, Expédier, Supprimer, PDF |
+| `expedie` | Numéroté, parti chez le fournisseur | Clôturer, PDF, Courriel |
+| `clos` | Le fournisseur a répondu | PDF, Courriel |
+
+**À l'expédition :**
+1. les quantités sont contrôlées de nouveau : un autre retour de la même origine a pu partir entre-temps (422 « Au plus 0 (quantité reçue, retours déjà expédiés déduits). ») ;
+2. le retour reçoit son numéro (numérotation `retour_fournisseur`, `RF-00001` par défaut, voir FLOW-PARAMETRES §7) ;
+3. chaque ligne prise dans un secteur en **sort** : mouvement de stock `sortie`, motif « Retour fournisseur RF-00001 : Produit défectueux », daté du jour de l'expédition. Comme les retours clients, il ne passe pas par les seuils d'approbation (l'expédition est déjà une action réservée) ;
+4. une ligne hors stock ne crée aucun mouvement ;
+5. la commande d'origine n'est pas modifiée (ses quantités reçues restent celles reçues).
+
+**À la clôture :**
+- `remboursement` : **crédit obtenu** (le montant attendu est proposé) et **référence de l'avoir** du fournisseur ;
+- `remplacement` : si un secteur est choisi, la marchandise de remplacement y **entre** (un arrivage par ligne, motif « Remplacement fournisseur RF-00001 ») ;
+- `consigne` : simple clôture ;
+- la date de clôture ne précède pas l'expédition.
+
+**Crédits (avoirs) :**
+- **attendus** : la valeur des retours `remboursement` expédiés et pas encore clos ;
+- **obtenus** : les crédits notés à la clôture ;
+- convertis dans la devise de l'entreprise au taux de chaque retour ;
+- résumés en haut de la liste des retours et dans la synthèse de la **fiche fournisseur** (FLOW-FICHE-FOURNISSEUR) ;
+- ils ne sont pas encore imputés sur des factures fournisseur : les comptes à payer viendront avec la phase 3.5.
+
+**Documents :**
+- **Bon de retour** (PDF) : coordonnées de l'entreprise et du fournisseur, numéro RMA en évidence, lignes au prix crédité, crédit attendu, crédit obtenu une fois clos ;
+- **courriel** au fournisseur (type `retour_fournisseur`, bon de retour joint, adressé au courriel du fournisseur) ;
+- **recherche globale** : par numéro, numéro RMA ou fournisseur.
+
+| Route | Rôle |
+|---|---|
+| `GET /retours-fournisseurs` | Liste (statut, type, fournisseur, commande, retour client, période, recherche), avec `resume` |
+| `GET /retours-fournisseurs/depuis-commande/{id}` | Ce qui peut repartir d'une commande |
+| `GET /retours-fournisseurs/depuis-retour-client/{id}` | Ce qu'un retour client traité peut renvoyer |
+| `GET /retours-fournisseurs/{id}` | Détail |
+| `GET /retours-fournisseurs/{id}/pdf` | Bon de retour |
+| `POST /retours-fournisseurs` | Brouillon : `commande_fournisseur_id` ou `retour_client_id` (ou aucun), `fournisseur_id`, `type`, `date_retour`, `numero_rma`, `devise`, `taux_change`, `notes`, `lignes[]` |
+| `PUT /retours-fournisseurs/{id}` | Modifier un brouillon (son origine reste celle de sa création) |
+| `POST /retours-fournisseurs/{id}/expedier` | Expédier (`date_expedition` facultative), action nommée « Expédier un retour fournisseur » |
+| `POST /retours-fournisseurs/{id}/cloturer` | Clôturer : `date_cloture`, `montant_credite`, `reference_avoir`, `secteur_remplacement_id` ; action nommée « Clôturer un retour fournisseur » |
+| `DELETE /retours-fournisseurs/{id}` | Supprimer un brouillon |
+
+**Une ligne** (`lignes[]`) : `com_four_ligne_id`, `retour_client_ligne_id` ou `produit_id` selon l'origine, `quantite`, `prix_unitaire`, `secteur_id` (vide : hors stock), `raison_id`, `notes`.
+
+**Droits** (module « Retours fournisseurs », onglet Achats) :
+- à la mise à jour, chaque groupe reçoit ceux des commandes fournisseur ;
+- « Expédier » reprend le réglage de « Valider une commande » ;
+- « Clôturer » reprend celui de « Clôturer une commande ».
+
+**Données :**
+- tables `retours_fournisseurs` et `retour_fournisseur_lignes` ;
+- chaque ligne garde la sortie créée à l'expédition (`mouvement_id`) et l'arrivage du remplacement (`mouvement_remplacement_id`).
+
+Code :
+- API : service `App\Services\RetoursFournisseurs`, PDF `App\Services\RetourFournisseurPdf`, migration `2026_10_16_100036_creer_retours_fournisseurs` ;
+- web : page `RetoursFournisseursPage`, composants `retoursFournisseurs/EditeurRetourFournisseur` et `retoursFournisseurs/CloturerRetourFournisseur`.
 
 ---
 

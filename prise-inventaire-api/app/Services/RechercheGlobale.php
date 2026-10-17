@@ -14,6 +14,7 @@ use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Models\RetourClient;
+use App\Models\RetourFournisseur;
 use App\Models\Secteur;
 use App\Models\Tenant;
 use Closure;
@@ -30,7 +31,7 @@ final class RechercheGlobale
     /** Types disponibles, dans l'ordre d'affichage. */
     public const TYPES = [
         'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'retours_clients',
-        'demandes_acompte', 'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
+        'demandes_acompte', 'bons_livraison', 'commandes_fournisseur', 'retours_fournisseurs', 'secteurs', 'employes',
     ];
 
     /**
@@ -233,6 +234,21 @@ final class RechercheGlobale
                     'sous_titre' => $c->fournisseur?->raison_sociale,
                     'details' => ['fournisseur' => $c->fournisseur?->raison_sociale, 'date' => $date($c->date_commande), 'statut' => $c->statut, 'montant' => (float) $c->montant_total, 'devise' => $c->devise],
                     'lien' => $lien('/commandes-fournisseur', $c->numero),
+                ],
+            ],
+            // Retours expédiés ou clos (un brouillon n'a pas encore de numéro).
+            'retours_fournisseurs' => [
+                'module' => 'achats',
+                'cle' => 'numero',
+                'requete' => fn (string $motif) => RetourFournisseur::query()->with('fournisseur:id,raison_sociale')->whereNotNull('numero')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('numero_rma', 'like', $motif)
+                        ->orWhereHas('fournisseur', fn ($f) => $f->where('raison_sociale', 'like', $motif))),
+                'resultat' => fn (RetourFournisseur $r) => [
+                    'id' => $r->id,
+                    'titre' => $r->numero,
+                    'sous_titre' => $r->fournisseur?->raison_sociale,
+                    'details' => ['fournisseur' => $r->fournisseur?->raison_sociale, 'date' => $date($r->date_retour), 'statut' => $r->statut, 'rma' => $r->numero_rma, 'montant' => (float) $r->montant, 'devise' => $r->devise],
+                    'lien' => $lien('/retours-fournisseurs', $r->numero),
                 ],
             ],
             'secteurs' => [

@@ -2,7 +2,9 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Eye, Send, Ban, Trash2, Package } from 'lucide-react';
+import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, PackageMinus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -45,6 +47,7 @@ interface LigneForm {
 export default function CommandesFournisseurPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut } = usePermissions();
+  const { t } = useLanguage();
   const [commandes, setCommandes] = useState<ComFourEntete[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -379,6 +382,17 @@ export default function CommandesFournisseurPage() {
                             <Ban size={16} />
                           </button>
                         )}</>
+                      )}
+                      {/* Marchandise reçue qui repart chez le fournisseur (défectueuse, en trop, à remplacer). */}
+                      {['envoyee', 'partielle', 'complete'].includes(commande.statut) && peut('retours_fournisseurs', 'creer') && (
+                        <Link
+                          to={`/retours-fournisseurs?commande=${commande.id}`}
+                          className="inline-flex p-1 text-orange-600 hover:bg-orange-50 rounded mr-1 align-middle"
+                          title={t.supplierReturns.returnToSupplier}
+                          aria-label={`${t.supplierReturns.returnToSupplier} — ${commande.numero}`}
+                        >
+                          <PackageMinus size={16} />
+                        </Link>
                       )}
                       {commande.statut === 'partielle' && (
                         <>{peut('commandes_fournisseur', 'cloturer') && (

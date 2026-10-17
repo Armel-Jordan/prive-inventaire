@@ -73,6 +73,14 @@ class Permissions
                 'aide_fr' => 'Annuler une commande fournisseur.', 'aide_en' => 'Cancel a purchase order.'],
         ]],
         'receptions' => ['onglet' => 'achats', 'fr' => 'Réceptions', 'en' => 'Receipts'],
+        'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
+            'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',
+                'aide_fr' => 'Expédier un retour brouillon : il reçoit son numéro, et ce qui était en stock sort de son secteur.',
+                'aide_en' => 'Ship a draft return: it gets its number, and goods taken from stock leave their sector.'],
+            'cloturer' => ['base' => 'modifier', 'fr' => 'Clôturer un retour fournisseur', 'en' => 'Close a supplier return',
+                'aide_fr' => 'Noter la réponse du fournisseur : crédit obtenu (avoir), marchandise de remplacement reçue, ou contenant rendu.',
+                'aide_en' => "Record the supplier's answer: credit obtained, replacement goods received, or container returned."],
+        ]],
 
         'clients' => ['onglet' => 'ventes', 'fr' => 'Clients', 'en' => 'Customers', 'actions' => [
             'categories' => ['base' => 'supprimer', 'fr' => 'Gérer les catégories de clients', 'en' => 'Manage customer categories',

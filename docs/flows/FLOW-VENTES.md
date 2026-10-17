@@ -900,6 +900,7 @@ Plan de parité fripv2, phase 1.7 : la marchandise qu'un client rapporte, avec l
 - **Détail d'une note de crédit** : lien vers le retour dont elle est issue ;
 - **Liste des retours** : quantités traitées de la sélection (remises en stock, au rebut, par raison) ;
 - **Recherche globale** : retours traités, par numéro, client ou facture.
+- **Renvoyer au fournisseur** (avec le module Achats) : un retour traité prépare un retour fournisseur de ses produits, par exemple défectueux (FLOW-ACHATS §9).
 
 | Route | Rôle |
 |---|---|

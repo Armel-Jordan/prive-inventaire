@@ -72,9 +72,10 @@ class RelanceController extends Controller
     public function store(Request $request, int $id): JsonResponse
     {
         $facture = Facture::findOrFail($id);
+        // L'application compte en UTC : un jour de marge laisse passer la date du jour de l'utilisateur, quel que soit son fuseau.
         $donnees = $request->validate([
             'mode' => ['required', Rule::in(FactureRelance::MODES)],
-            'date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'date' => 'required|date_format:Y-m-d|before_or_equal:tomorrow',
             'notes' => 'nullable|string|max:2000',
         ]);
         if (in_array($facture->statut, ['brouillon', 'annulee'], true)) {

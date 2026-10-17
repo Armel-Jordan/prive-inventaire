@@ -118,8 +118,8 @@ class RolesEtAccesTest extends TestCase
         $migration->up();
         $migration->up();
         // Les modules et actions ajoutés ensuite (groupes et permissions fines, notes de crédit, acomptes, relances,
-        // retours clients) se rejouent aussi.
-        foreach (['100029_creer_groupes_et_permissions_nommees', '100030_creer_notes_de_credit', '100031_creer_acomptes', '100033_creer_relances_paiement', '100035_creer_retours_clients'] as $suivante) {
+        // retours clients et fournisseurs) se rejouent aussi.
+        foreach (['100029_creer_groupes_et_permissions_nommees', '100030_creer_notes_de_credit', '100031_creer_acomptes', '100033_creer_relances_paiement', '100035_creer_retours_clients', '100036_creer_retours_fournisseurs'] as $suivante) {
             (require database_path("migrations/2026_10_16_{$suivante}.php"))->up();
         }
 

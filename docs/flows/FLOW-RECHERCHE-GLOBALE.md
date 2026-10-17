@@ -19,6 +19,7 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 | Demandes d'acompte | numéro, description, nom du client | Ventes |
 | Bons de livraison | numéro, numéro de facture, nom du client | Ventes |
 | Commandes fournisseurs | numéro, nom du fournisseur | Achats |
+| Retours fournisseurs (expédiés) | numéro, numéro RMA, nom du fournisseur | Achats |
 | Secteurs | code, nom | — |
 | Employés | numéro, nom, prénom, courriel | — |
 

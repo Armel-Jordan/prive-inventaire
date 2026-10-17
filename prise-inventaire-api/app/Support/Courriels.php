@@ -9,6 +9,7 @@ use App\Models\ComFourEntete;
 use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Models\RetourFournisseur;
 
 /**
  * Catalogue des courriels : types d'envoi, variables utilisables dans chaque type et modèles
@@ -29,6 +30,7 @@ final class Courriels
         'relance' => ['numero', 'date', 'date_echeance', 'jours_retard', 'niveau', 'client_nom', 'client_code', 'contact_nom', 'montant_ttc', 'montant_paye', 'reste_a_payer'],
         'bon_livraison' => ['numero', 'date_livraison', 'numero_facture', 'client_nom', 'client_code', 'contact_nom'],
         'commande_fournisseur' => ['numero', 'date', 'date_livraison_prevue', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant_total'],
+        'retour_fournisseur' => ['numero', 'date', 'type_retour', 'numero_rma', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant'],
         'general' => [],
     ];
 
@@ -46,6 +48,7 @@ final class Courriels
         'relance' => Facture::class,
         'bon_livraison' => BonLivraison::class,
         'commande_fournisseur' => ComFourEntete::class,
+        'retour_fournisseur' => RetourFournisseur::class,
     ];
 
     /** Module de l'entreprise dont dépend chaque type de document. */
@@ -58,6 +61,7 @@ final class Courriels
         'relance' => 'ventes',
         'bon_livraison' => 'ventes',
         'commande_fournisseur' => 'achats',
+        'retour_fournisseur' => 'achats',
     ];
 
     /** Nom par défaut du PDF joint, suivi du numéro du document (mêmes noms que les PDF téléchargés). */
@@ -71,6 +75,7 @@ final class Courriels
         'relance' => 'facture',
         'bon_livraison' => 'bon-livraison',
         'commande_fournisseur' => 'bon-commande',
+        'retour_fournisseur' => 'retour-fournisseur',
     ];
 
     private const DEFAUTS = [
@@ -83,6 +88,7 @@ final class Courriels
             'relance' => ['Relance : facture {numero} — {entreprise_nom}', "Bonjour,\n\nSauf erreur de notre part, la facture {numero} du {date}, échue le {date_echeance}, reste impayée : {reste_a_payer} restent dus.\n\nNous vous remercions de bien vouloir procéder à son règlement dans les meilleurs délais. Si votre paiement est déjà parti, merci de ne pas tenir compte de ce message.\n\nCordialement,\n{entreprise_nom}"],
             'bon_livraison' => ['Bon de livraison {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint le bon de livraison {numero}.\n\nCordialement,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Bon de commande {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint notre bon de commande {numero} du {date}. Merci de nous en confirmer la réception et la date de livraison prévue.\n\nCordialement,\n{entreprise_nom}"],
+            'retour_fournisseur' => ['Retour de marchandise {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint notre bon de retour {numero} du {date} ({type_retour}), d'une valeur de {montant}. Merci de nous en confirmer la prise en charge et, au besoin, de nous communiquer un numéro d'autorisation de retour.\n\nCordialement,\n{entreprise_nom}"],
             'general' => ['Message de {entreprise_nom}', "Bonjour,\n\n\n\nCordialement,\n{entreprise_nom}"],
         ],
         'en' => [
@@ -94,6 +100,7 @@ final class Courriels
             'relance' => ['Reminder: invoice {numero} — {entreprise_nom}', "Hello,\n\nUnless we are mistaken, invoice {numero} of {date}, due on {date_echeance}, remains unpaid: {reste_a_payer} is still due.\n\nWe would be grateful if you could settle it at your earliest convenience. If your payment has already been sent, please disregard this message.\n\nBest regards,\n{entreprise_nom}"],
             'bon_livraison' => ['Delivery note {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached delivery note {numero}.\n\nBest regards,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Purchase order {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our purchase order {numero} of {date}. Kindly confirm receipt and the expected delivery date.\n\nBest regards,\n{entreprise_nom}"],
+            'retour_fournisseur' => ['Goods return {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our return note {numero} of {date} ({type_retour}), valued at {montant}. Kindly confirm you will handle it and, if needed, send us a return authorization number.\n\nBest regards,\n{entreprise_nom}"],
             'general' => ['Message from {entreprise_nom}', "Hello,\n\n\n\nBest regards,\n{entreprise_nom}"],
         ],
     ];

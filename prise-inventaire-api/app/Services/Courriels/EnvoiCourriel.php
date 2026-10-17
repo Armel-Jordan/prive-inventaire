@@ -10,6 +10,7 @@ use App\Services\BonCommandePdf;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
 use App\Services\Relances;
+use App\Services\RetourFournisseurPdf;
 use App\Support\Courriels;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -32,6 +33,7 @@ class EnvoiCourriel
         private readonly MailerTenant $mailer,
         private readonly DocumentsVentePdf $documents,
         private readonly BonCommandePdf $bonCommande,
+        private readonly RetourFournisseurPdf $bonRetour,
     ) {}
 
     /** Document source d'un envoi, dans l'entreprise courante. */
@@ -170,7 +172,7 @@ class EnvoiCourriel
     {
         return match ($type) {
             'bon_livraison' => $document->facture?->client?->email,
-            'commande_fournisseur' => $document->fournisseur?->email,
+            'commande_fournisseur', 'retour_fournisseur' => $document->fournisseur?->email,
             default => $document->client?->email,
         } ?: null;
     }
@@ -191,6 +193,9 @@ class EnvoiCourriel
     {
         if ($type === 'commande_fournisseur') {
             return $this->bonCommande->pdf($document)->output();
+        }
+        if ($type === 'retour_fournisseur') {
+            return $this->bonRetour->pdf($document)->output();
         }
 
         $donnees = match ($type) {

@@ -4,7 +4,7 @@ import { apiFetch } from '@/services/http';
 
 export const TYPES_RECHERCHE = [
   'produits', 'clients', 'fournisseurs', 'devis', 'commandes_client', 'factures', 'avoirs', 'retours_clients',
-  'demandes_acompte', 'bons_livraison', 'commandes_fournisseur', 'secteurs', 'employes',
+  'demandes_acompte', 'bons_livraison', 'commandes_fournisseur', 'retours_fournisseurs', 'secteurs', 'employes',
 ] as const;
 
 export type TypeRecherche = typeof TYPES_RECHERCHE[number];
@@ -22,6 +22,7 @@ export const MODULE_DU_TYPE: Record<TypeRecherche, string> = {
   demandes_acompte: 'demandes_acompte',
   bons_livraison: 'bons_livraison',
   commandes_fournisseur: 'commandes_fournisseur',
+  retours_fournisseurs: 'retours_fournisseurs',
   secteurs: 'secteurs',
   employes: 'employes',
 };

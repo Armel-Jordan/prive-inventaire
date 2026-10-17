@@ -63,9 +63,9 @@ Un **mouvement de relocalisation** enregistre le déplacement physique d'un prod
 
 | Type | Signification | Champs obligatoires |
 |------|---------------|---------------------|
-| `arrivage` | Entrée de produit dans un secteur (dont les retours clients remis en stock, motif « Retour client RC-… ») | `secteur_destination`, `quantite` |
+| `arrivage` | Entrée de produit dans un secteur (dont les retours clients remis en stock, motif « Retour client RC-… », et les remplacements reçus d'un fournisseur, « Remplacement fournisseur RF-… ») | `secteur_destination`, `quantite` |
 | `transfert` | Déplacement d'un secteur à un autre | `secteur_source`, `secteur_destination`, `quantite` |
-| `sortie` | Retrait d'un produit d'un secteur | `secteur_source`, `quantite` |
+| `sortie` | Retrait d'un produit d'un secteur (dont les retours fournisseurs expédiés, motif « Retour fournisseur RF-… ») | `secteur_source`, `quantite` |
 | `ajustement` | Correction manuelle du stock | `secteur_destination`, `quantite` |
 
 ### 2.3 Champs d'un mouvement

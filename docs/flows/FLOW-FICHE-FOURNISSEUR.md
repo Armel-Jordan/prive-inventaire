@@ -13,7 +13,7 @@ Une page par fournisseur, ouverte depuis la liste **Achats → Fournisseurs** en
 
 | Onglet | Contenu |
 |---|---|
-| **Synthèse** | Achats de l'année et de l'année précédente, achats depuis le début, commande moyenne, brouillons non envoyés, reste à recevoir, délai moyen de livraison, part des commandes livrées à temps, taux de réception, dernière commande, achats des 12 derniers mois, 5 produits les plus achetés |
+| **Synthèse** | Achats de l'année et de l'année précédente, achats depuis le début, commande moyenne, brouillons non envoyés, reste à recevoir, délai moyen de livraison, part des commandes livrées à temps, taux de réception, dernière commande, achats des 12 derniers mois, 5 produits les plus achetés, retours et avoirs (crédits attendus, crédits obtenus, retours en cours ; FLOW-ACHATS §9) |
 | **Historique d'achats** | Lignes des commandes au fournisseur, de la plus récente à la plus ancienne, avec quantités commandées et reçues, filtrables par période et par produit, et le total de la sélection |
 | **Produits fournis** | Catalogue du fournisseur : référence chez lui, prix d'achat convenu, délai, fournisseur principal, dernier prix payé |
 | **Contacts** | Personnes à joindre : fonction, téléphones, courriel, notes, indicateur « reçoit les bons de commande » |

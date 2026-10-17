@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSpreadsheet, PackageMinus, ReceiptText, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -96,6 +96,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
       { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
       { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
+      { path: '/retours-fournisseurs', label: t.supplierReturns.nav, icon: PackageMinus, module: 'retours_fournisseurs' },
     ],
   },
   {

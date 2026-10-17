@@ -216,7 +216,7 @@ class RetoursClientsTest extends TestCase
         $avecRaison = fn (array $l) => $l + ['raison_id' => $defectueux];
         $this->retourner($facture, [$avecRaison($this->auRebut($ligne, 1))], ['client_id' => $this->clientId])->assertUnprocessable()->assertJsonValidationErrors(['facture_id']);
         $this->retourner($facture, [$avecRaison($this->auRebut($ligne, 1))], ['date_retour' => '2026-10-15'])->assertUnprocessable()->assertJsonValidationErrors(['date_retour']);
-        $this->retourner($facture, [$avecRaison($this->auRebut($ligne, 1))], ['date_retour' => '2026-10-17'])->assertUnprocessable()
+        $this->retourner($facture, [$avecRaison($this->auRebut($ligne, 1))], ['date_retour' => '2026-10-18'])->assertUnprocessable()
             ->assertJsonPath('errors', ['date_retour' => ['Le retour ne peut pas être daté dans le futur.']]);
         $brouillon = $this->postJson('/api/factures', ['client_id' => $this->clientId, 'date_facture' => '2026-10-16', 'lignes' => [['produit_id' => $this->produitId, 'quantite' => 1, 'prix_unitaire_ht' => 100, 'taux_tva' => 20]]])->json();
         $this->retourner($brouillon['id'], [$avecRaison($this->auRebut($brouillon['lignes'][0]['id'], 1))])->assertUnprocessable()
