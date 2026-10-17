@@ -61,6 +61,9 @@ class Permissions
             'comptes_bancaires' => ['base' => 'modifier', 'fr' => 'Gérer les coordonnées bancaires', 'en' => 'Manage bank details',
                 'aide_fr' => "Ajouter, modifier ou supprimer les comptes bancaires d'un fournisseur (fiche fournisseur).",
                 'aide_en' => "Add, change or delete a supplier's bank accounts (supplier record)."],
+            'importer_prix' => ['base' => 'modifier', 'fr' => 'Importer une grille de prix fournisseur', 'en' => 'Import a supplier price list',
+                'aide_fr' => "Mettre à jour en lot les prix d'achat du catalogue des fournisseurs depuis un fichier CSV, et gérer les profils d'import.",
+                'aide_en' => 'Update supplier catalog purchase prices in bulk from a CSV file, and manage import profiles.'],
         ]],
         'commandes_fournisseur' => ['onglet' => 'achats', 'fr' => 'Commandes fournisseur', 'en' => 'Purchase orders', 'actions' => [
             'valider' => ['base' => 'modifier', 'fr' => 'Valider une commande', 'en' => 'Confirm an order',

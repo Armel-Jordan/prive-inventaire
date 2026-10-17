@@ -123,7 +123,7 @@ class RolesEtAccesTest extends TestCase
             '2026_10_16_100029_creer_groupes_et_permissions_nommees', '2026_10_16_100030_creer_notes_de_credit', '2026_10_16_100031_creer_acomptes',
             '2026_10_16_100033_creer_relances_paiement', '2026_10_16_100035_creer_retours_clients', '2026_10_16_100036_creer_retours_fournisseurs',
             '2026_10_16_100038_creer_reliquats_clients', '2026_10_17_100048_creer_abonnements_clients', '2026_10_17_100049_creer_contrats_location',
-            '2026_10_17_100051_creer_consignations', '2026_10_17_100052_creer_caisses', '2026_10_17_100053_creer_point_de_vente', '2026_10_17_100054_creer_cartes_cadeaux', '2026_10_17_100055_creer_suggestions_achat',
+            '2026_10_17_100051_creer_consignations', '2026_10_17_100052_creer_caisses', '2026_10_17_100053_creer_point_de_vente', '2026_10_17_100054_creer_cartes_cadeaux', '2026_10_17_100055_creer_suggestions_achat', '2026_10_17_100056_import_prix_fournisseurs',
         ] as $suivante) {
             (require database_path("migrations/{$suivante}.php"))->up();
         }

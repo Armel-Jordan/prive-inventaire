@@ -17,6 +17,7 @@
 8. [Multi-devise](#8-multi-devise)
 9. [Retours fournisseurs et avoirs](#9-retours-fournisseurs-et-avoirs-achats--retours-fournisseurs)
 10. [Suggestions d'achat](#10-suggestions-dachat-achats--suggestions-dachat)
+11. [Import d'une grille de prix fournisseur](#11-import-dune-grille-de-prix-fournisseur-achats--fournisseurs)
 
 ---
 
@@ -562,6 +563,47 @@ Plan de parité fripv2, phase 3.2 (« Suggestion de commandes aux fournisseurs �
 Code :
 - API : service `App\Services\SuggestionsAchat` (le fournisseur principal et le dernier prix viennent de `ReliquatsClients`), `SuggestionAchatController`, migration `2026_10_17_100055_creer_suggestions_achat` (`produits.stock_maximum`, table `suggestions_achat`, droits du module) ;
 - web : page `SuggestionsAchatPage`, composant `achats/SuggererAchat` (liste des produits), colonne Maximum dans les seuils des alertes.
+
+---
+
+## 11. Import d'une grille de prix fournisseur (Achats → Fournisseurs)
+
+Plan de parité fripv2, phase 3.6 (« Importer une grille de prix fournisseur ») : le fichier de prix reçu d'un fournisseur met à jour, en une fois, le prix d'achat des produits de son catalogue (fiche fournisseur, onglet Produits fournis).
+
+**Fichier :** un CSV, avec le séparateur deviné (point-virgule, tabulation ou virgule). Un classeur Excel s'enregistre d'abord au format CSV.
+
+**Réglages** (bouton « Importer une grille de prix ») :
+- Les colonnes du fichier se choisissent dans un aperçu de ses premières lignes. Elles sont devinées d'après les en-têtes (fournisseur, article, coût).
+- **Fournisseur** : une colonne du code fournisseur (plusieurs fournisseurs dans un fichier), ou un fournisseur fixé pour tout le fichier.
+- **Code de l'article** : la colonne qui identifie l'article.
+- **Coût d'achat** : la colonne du coût. Les formes « 1 234,56 », « 1234.56 » et « 1.234,56 € » sont lues.
+- **Ligne de début** des données : 2 par défaut, la ligne 1 étant celle des en-têtes.
+- Les réglages se **mémorisent** sous un nom (profils d'import de l'entreprise) et se rechargent à l'import suivant.
+
+**Règles :**
+- L'article se cherche d'abord par la **référence du fournisseur** (au catalogue de ce fournisseur), puis par le **numéro de produit**. Dans les deux cas, il doit figurer au catalogue du fournisseur, car c'est là que le prix est inscrit.
+- Une ligne est **ignorée**, avec son motif, dans ces cas :
+  - fournisseur introuvable avec ce numéro ;
+  - code article vide ;
+  - coût illisible ou négatif ;
+  - produit introuvable ;
+  - produit non rattaché à ce fournisseur ;
+  - article déjà présent plus haut dans le fichier.
+- **Simuler** donne le rapport sans rien écrire : prix à changer (ancien → nouveau), prix inchangés, lignes ignorées.
+- **Importer** applique les prix reconnus d'un seul tenant, et chaque changement est journalisé (« Prix fournisseur », ancien et nouveau prix).
+- L'import ne crée ni produit ni lien fournisseur.
+
+**Droits :** **Importer une grille de prix fournisseur** (`fournisseurs.importer_prix`), qui couvre la simulation, l'import et les profils. À sa création, il est réglé comme le droit de modifier les fournisseurs.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| POST | `/fournisseurs/import-prix` | Simulation ou import : `fichier`, `fournisseur_id` ou `colonne_fournisseur`, `colonne_code`, `colonne_cout`, `ligne_debut`, `simuler` |
+| GET / POST | `/profils-import?type=prix_fournisseur` | Profils d'import (le POST remplace un profil de même nom) |
+| DELETE | `/profils-import/{id}` | Supprimer un profil |
+
+Code :
+- API : service `App\Services\ImportPrixFournisseurs`, `ImportPrixFournisseurController`, migration `2026_10_17_100056_import_prix_fournisseurs` (table `profils_import`, action du droit) ;
+- web : composant `fournisseurs/ImportGrillePrix`, service `importPrix.ts`.
 
 ---
 

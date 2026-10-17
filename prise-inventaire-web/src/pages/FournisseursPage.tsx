@@ -1,7 +1,9 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail, FileUp } from 'lucide-react';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import ImportGrillePrix from '@/components/fournisseurs/ImportGrillePrix';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { useCodeDevise } from '@/lib/documents';
@@ -47,6 +49,9 @@ const emptyForm: FournisseurForm = {
 };
 
 export default function FournisseursPage() {
+  // Import d'une grille de prix fournisseur (droit « importer_prix »).
+  const { peut } = usePermissions();
+  const [importPrix, setImportPrix] = useState(false);
   const { t } = useLanguage();
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,6 +150,11 @@ export default function FournisseursPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Fournisseurs</h1>
+        {peut('fournisseurs', 'importer_prix') && (
+          <button onClick={() => setImportPrix(true)} className="ml-auto flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+            <FileUp size={18} /> {t.supplierPriceImport.button}
+          </button>
+        )}
         <button
           onClick={openCreate}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -401,6 +411,7 @@ export default function FournisseursPage() {
           </div>
         </div>
       )}
+      {importPrix && <ImportGrillePrix onClose={() => setImportPrix(false)} />}
     </div>
   );
 }
