@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\NettoyerNotifications;
+use App\Taches\RelancerDevisSansReponse;
 use App\Taches\RelancerFacturesEnRetard;
 use App\Taches\SignalerAlertesStock;
 use App\Taches\SignalerCommandesFournisseurEnRetard;
@@ -28,6 +29,7 @@ final class TachesPlanifiees
         'nettoyage_notifications' => [NettoyerNotifications::class, 'quotidienne', '02:00'],
         'factures_impayees' => [SignalerFacturesImpayees::class, 'quotidienne', '07:00'],
         'relances_paiement' => [RelancerFacturesEnRetard::class, 'quotidienne', '08:00'],
+        'relances_devis' => [RelancerDevisSansReponse::class, 'quotidienne', '08:30'],
         'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
@@ -41,6 +43,8 @@ final class TachesPlanifiees
         'factures_impayees' => ['jours' => 30],
         // Retard minimal avant la 1re relance, puis intervalle entre deux relances.
         'relances_paiement' => ['jours' => 15],
+        // Délai sans réponse avant la 1re relance d'un devis, puis intervalle entre deux relances.
+        'relances_devis' => ['jours' => 7],
         'commandes_fournisseur_en_retard' => ['jours' => 0],
         'livraisons_en_retard' => ['jours' => 3],
         'controles_techniques' => ['jours' => 30],
@@ -50,6 +54,7 @@ final class TachesPlanifiees
     public const MODULES = [
         'factures_impayees' => 'ventes',
         'relances_paiement' => 'ventes',
+        'relances_devis' => 'ventes',
         'commandes_fournisseur_en_retard' => 'achats',
         'livraisons_en_retard' => 'ventes',
         'controles_techniques' => 'ventes',

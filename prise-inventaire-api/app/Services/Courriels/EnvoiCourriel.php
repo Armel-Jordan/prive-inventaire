@@ -10,6 +10,7 @@ use App\Services\BonCommandePdf;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
 use App\Services\Relances;
+use App\Services\RelancesDevis;
 use App\Services\ReponsesDevis;
 use App\Services\RetourFournisseurPdf;
 use App\Support\Courriels;
@@ -151,6 +152,10 @@ class EnvoiCourriel
             if ($envoi->type === 'devis') {
                 app(ReponsesDevis::class)->marquerEnvoye((int) $envoi->document_id);
             }
+            // Une relance de devis envoyée est comptée sur le devis.
+            if ($envoi->type === 'relance_devis') {
+                app(RelancesDevis::class)->apresEnvoiCourriel((int) $envoi->document_id);
+            }
         } catch (ModelNotFoundException) {
             $envoi->fill(['statut' => CourrielEnvoi::ECHEC, 'erreur' => 'Le document à joindre est introuvable (supprimé ?).']);
         } catch (Throwable $erreur) {
@@ -210,7 +215,7 @@ class EnvoiCourriel
         }
 
         $donnees = match ($type) {
-            'devis' => $this->documents->devis($document),
+            'devis', 'relance_devis' => $this->documents->devis($document),
             'commande_client' => $this->documents->commande($document),
             'facture', 'relance' => $this->documents->facture($document),
             'avoir' => $this->documents->avoir($document),

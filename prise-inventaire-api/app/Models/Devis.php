@@ -30,6 +30,8 @@ class Devis extends Model
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
         // Envoi au client et réponse, en ligne ou notée par un employé (voir App\Services\ReponsesDevis).
         'envoye_le', 'reponse_le', 'reponse_en_ligne', 'reponse_nom', 'reponse_commentaire',
+        // Relances envoyées et date de la dernière (voir App\Services\RelancesDevis).
+        'relances', 'derniere_relance_le',
     ];
 
     /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
@@ -43,6 +45,8 @@ class Devis extends Model
         'reponse_le' => 'datetime',
         'reponse_en_ligne' => 'boolean',
         'reponse_jeton' => 'encrypted',
+        'relances' => 'integer',
+        'derniere_relance_le' => 'datetime',
     ];
 
     const STATUT_BROUILLON = 'brouillon';

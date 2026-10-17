@@ -2087,7 +2087,7 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
 }
 
 // === COURRIELS (paramètres d'envoi et modèles) ===
-export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'bon_livraison' | 'commande_fournisseur' | 'retour_fournisseur' | 'general';
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'relance_devis' | 'bon_livraison' | 'commande_fournisseur' | 'retour_fournisseur' | 'general';
 export type LangueCourriel = 'fr' | 'en';
 
 export interface ContenuModeleCourriel {
@@ -2309,6 +2309,9 @@ export interface DevisRecord extends CoordonneesPassage {
   reponse_en_ligne?: boolean;
   reponse_nom?: string | null;
   reponse_commentaire?: string | null;
+  /** Relances envoyées au client et date de la dernière. */
+  relances?: number;
+  derniere_relance_le?: string | null;
 }
 
 export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {

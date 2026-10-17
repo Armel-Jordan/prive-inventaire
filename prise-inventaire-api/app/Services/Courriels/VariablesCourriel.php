@@ -80,6 +80,16 @@ class VariablesCourriel
                 'montant_total' => $montant($d->montant_total),
                 'lien_reponse' => app(ReponsesDevis::class)->lien($d),
             ] + $this->client($d->client, $d),
+            'relance_devis' => [
+                'numero' => $d->numero,
+                'date' => $date($d->date_devis),
+                'date_validite' => $date($d->date_validite),
+                'jours_restants' => (string) max(0, (int) Carbon::today()->diffInDays($d->date_validite, false)),
+                // Niveau de la relance à envoyer : celles déjà faites, plus une.
+                'niveau' => (string) ((int) $d->relances + 1),
+                'montant_total' => $montant($d->montant_total),
+                'lien_reponse' => app(ReponsesDevis::class)->lien($d),
+            ] + $this->client($d->client, $d),
             'commande_client' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_commande),
@@ -177,7 +187,7 @@ class VariablesCourriel
     {
         $en = $langue === 'en';
         $jour = Carbon::today();
-        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'relance' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC', 'retour_fournisseur' => 'RF'];
+        $prefixes = ['devis' => 'DEV', 'relance_devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'relance' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC', 'retour_fournisseur' => 'RF'];
 
         $valeurs = [
             'numero' => ($prefixes[$type] ?? 'DOC').'-00001',
@@ -203,6 +213,7 @@ class VariablesCourriel
             'montant' => $this->montant(300, $langue, $devise),
             'description' => $en ? 'Deposit before starting the work' : 'Acompte avant le début des travaux',
             'jours_retard' => '15',
+            'jours_restants' => '10',
             'niveau' => '1',
             'type_retour' => $this->typeRetour('remboursement', $langue),
             'numero_rma' => 'RMA-12345',

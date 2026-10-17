@@ -18,6 +18,8 @@ const ROUTES_PDF: Record<TypeDocumentCourriel, string> = {
   demande_acompte: 'demandes-acompte',
   // La relance joint la facture relancée.
   relance: 'factures',
+  // La relance d'un devis joint le devis.
+  relance_devis: 'devis',
   bon_livraison: 'bons-livraison',
   commande_fournisseur: 'commandes-fournisseur',
   retour_fournisseur: 'retours-fournisseurs',

@@ -2,7 +2,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy } from 'lucide-react';
+import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy, BellRing } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -349,6 +349,9 @@ export default function DevisPage() {
                       {['brouillon', 'envoye'].includes(devis.statut) && peut('devis', 'envoyer') && (
                         <button onClick={() => handleLienReponse(devis)} className="p-1 text-teal-600 hover:bg-teal-50 rounded" title={tr.shareLinkHelp} aria-label={`${tr.shareLink} — ${devis.numero}`}><Link2 size={16} /></button>
                       )}
+                      {devis.statut === 'envoye' && peut('devis', 'envoyer') && (
+                        <BoutonCourriel type="relance_devis" documentId={devis.id} taille={16} titre={tr.remind} icone={BellRing} onFerme={loadData} />
+                      )}
                       {devis.statut === 'brouillon' && (
                         <>
                           <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>
@@ -520,9 +523,12 @@ export default function DevisPage() {
                 <span>{montant(selectedDevis.montant_total, selectedDevis.devise)}</span>
               </div>
               {selectedDevis.notes && <p className="text-sm text-gray-500">Notes: {selectedDevis.notes}</p>}
-              {(selectedDevis.envoye_le || selectedDevis.reponse_le) && (
+              {(selectedDevis.envoye_le || selectedDevis.reponse_le || selectedDevis.derniere_relance_le) && (
                 <div className="border-t pt-3 text-sm space-y-1">
                   {selectedDevis.envoye_le && <p className="text-gray-500">{tr.sentOn.replace('{date}', dateHeure(selectedDevis.envoye_le))}</p>}
+                  {(selectedDevis.relances ?? 0) > 0 && selectedDevis.derniere_relance_le && (
+                    <p className="text-gray-500">{tr.reminders.replace('{n}', String(selectedDevis.relances)).replace('{date}', dateHeure(selectedDevis.derniere_relance_le))}</p>
+                  )}
                   {selectedDevis.reponse_le && ['accepte', 'refuse'].includes(selectedDevis.statut) && (
                     <p className="font-medium">
                       {(selectedDevis.statut === 'accepte'

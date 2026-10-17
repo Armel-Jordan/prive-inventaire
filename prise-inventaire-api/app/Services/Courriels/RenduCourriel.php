@@ -85,7 +85,7 @@ class RenduCourriel
     private function carteReponse(string $type, string $contenu, array $valeurs, string $langue): ?array
     {
         $lien = (string) ($valeurs['lien_reponse'] ?? '');
-        if ($type !== 'devis' || $lien === '' || str_contains($contenu, '{lien_reponse}') || str_contains($contenu, $lien)) {
+        if (! in_array($type, ['devis', 'relance_devis'], true) || $lien === '' || str_contains($contenu, '{lien_reponse}') || str_contains($contenu, $lien)) {
             return null;
         }
         $en = $langue === 'en';

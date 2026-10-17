@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Mail } from 'lucide-react';
+import { Mail, type LucideIcon } from 'lucide-react';
 import type { TypeDocumentCourriel } from '@/services/api';
 import { useLanguage } from '@/i18n/useLanguage';
 import ComposerCourriel from '@/components/ComposerCourriel';
 
 /** Bouton qui ouvre l'envoi du document par courriel. */
-export default function BoutonCourriel({ type, documentId, taille = 18, className = '', titre, onFerme }: {
+export default function BoutonCourriel({ type, documentId, taille = 18, className = '', titre, icone: Icone = Mail, onFerme }: {
   type: TypeDocumentCourriel;
   documentId: number;
   taille?: number;
   className?: string;
   /** Libellé du bouton (par défaut : « Envoyer par courriel »). */
   titre?: string;
+  /** Icône du bouton (par défaut : une enveloppe). */
+  icone?: LucideIcon;
   /** Après la fermeture de la fenêtre (un courriel a pu partir) : pour rafraîchir l'écran. */
   onFerme?: () => void;
 }) {
@@ -27,7 +29,7 @@ export default function BoutonCourriel({ type, documentId, taille = 18, classNam
         onClick={() => setOuvert(true)}
         className={`p-1 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded ${className}`}
       >
-        <Mail size={taille} />
+        <Icone size={taille} />
       </button>
       {ouvert && <ComposerCourriel type={type} documentId={documentId} onClose={() => { setOuvert(false); onFerme?.(); }} />}
     </>
