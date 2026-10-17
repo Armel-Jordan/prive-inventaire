@@ -292,6 +292,10 @@ class Droits
     {
         $methode = $request->method();
         $uri = $request->route()?->uri() ?? $request->path();
+        // L'application mobile reprend sous « mobile/ » des adresses du back-office : elle suit les mêmes droits.
+        if (str_starts_with($uri, 'api/mobile/')) {
+            $uri = 'api/'.substr($uri, strlen('api/mobile/'));
+        }
         $cle = "{$methode} {$uri}";
         if (isset(self::PARTICULIERES[$cle])) {
             return self::PARTICULIERES[$cle];

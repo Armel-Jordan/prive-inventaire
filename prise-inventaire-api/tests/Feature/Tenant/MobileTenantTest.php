@@ -29,6 +29,35 @@ class MobileTenantTest extends TestCase
         $this->postJson('/api/mobile/scan/enregistrer', [])->assertStatus(401);
     }
 
+    /** Recette B : les écritures de l'application mobile suivent les mêmes droits que le back-office. */
+    public function test_mobile_writes_follow_the_permissions(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $admin = AdminUser::factory()->for($tenant)->create(['role' => 'admin']);
+        $operateur = AdminUser::factory()->for($tenant)->create(['role' => 'manager']);
+        $this->withHeader('X-Tenant-Slug', $tenant->slug);
+
+        // Avec les droits du rôle : les requêtes passent (et sont refusées par la validation, pas par les droits),
+        // y compris pour le rôle « utilisateur » des employés qui scannent sur le terrain.
+        Sanctum::actingAs($operateur, ['*']);
+        $this->postJson('/api/mobile/scan/enregistrer', [])->assertStatus(422);
+        $this->postJson('/api/mobile/relocalisation', [])->assertStatus(422);
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs(AdminUser::factory()->for($tenant)->create(['role' => 'user']), ['*']);
+        $this->postJson('/api/mobile/scan/enregistrer', [])->assertStatus(422);
+
+        // Sans le droit de créer dans Inventaires ni dans Relocalisation : refusées.
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($admin, ['*']);
+        $this->putJson("/api/acces-comptes/{$operateur->id}", ['groupes' => [], 'exceptions' => ['inventaires.creer' => false, 'relocalisation.creer' => false]])->assertOk();
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($operateur->fresh(), ['*']);
+        $this->postJson('/api/mobile/scan/enregistrer', [])->assertForbidden()->assertJsonPath('module', 'inventaires');
+        $this->postJson('/api/mobile/relocalisation', [])->assertForbidden()->assertJsonPath('module', 'relocalisation');
+        // La vérification d'un QR de secteur reste ouverte, comme au back-office.
+        $this->assertNotSame(403, $this->postJson('/api/mobile/secteurs/validate-qr', ['qr_code' => 'INCONNU'])->status());
+    }
+
     public function test_tenant_scope_is_applied_to_mobile_models(): void
     {
         $models = [ScanTenant::class, MouvementTenant::class, Secteur::class, ProduitTenant::class, EmployeTenant::class];
