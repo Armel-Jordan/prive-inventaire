@@ -48,6 +48,7 @@ import AbonnementsClientsPage from '@/pages/AbonnementsClientsPage';
 import ContratsLocationPage from '@/pages/ContratsLocationPage';
 import ConsignationsPage from '@/pages/ConsignationsPage';
 import CaissesPage from '@/pages/CaissesPage';
+import PointDeVentePage from '@/pages/PointDeVentePage';
 import DisponibilitesPage from '@/pages/DisponibilitesPage';
 import AcomptesPage from '@/pages/AcomptesPage';
 import DemandesAcomptePage from '@/pages/DemandesAcomptePage';
@@ -165,6 +166,7 @@ function AppRoutes() {
         <Route path="contrats-location" element={<ContratsLocationPage />} />
         <Route path="consignations" element={<ConsignationsPage />} />
         <Route path="caisses" element={<CaissesPage />} />
+        <Route path="point-de-vente" element={<PointDeVentePage />} />
         <Route path="disponibilites" element={<DisponibilitesPage />} />
         <Route path="acomptes" element={<AcomptesPage />} />
         <Route path="demandes-acompte" element={<DemandesAcomptePage />} />

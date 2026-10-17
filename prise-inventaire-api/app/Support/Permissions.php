@@ -168,6 +168,11 @@ class Permissions
                 'aide_fr' => "Enregistrer le dépôt reçu (date, mode, référence) : l'acompte est créé au dossier du client.",
                 'aide_en' => "Record the deposit received (date, method, reference): the deposit is added to the customer's account."],
         ]],
+        'point_de_vente' => ['onglet' => 'ventes', 'fr' => 'Point de vente', 'en' => 'Point of sale', 'crud' => ['voir'], 'actions' => [
+            'vendre' => ['base' => 'creer', 'fr' => 'Vendre au comptoir', 'en' => 'Sell at the counter',
+                'aide_fr' => "Enregistrer une vente au comptoir : la facture est créée, émise et encaissée d'un coup. Demande aussi les droits de créer, d'émettre et d'encaisser des factures.",
+                'aide_en' => 'Record a counter sale: the invoice is created, issued and paid at once. Also requires the rights to create, issue and take payment on invoices.'],
+        ]],
         'caisses' => ['onglet' => 'ventes', 'fr' => 'Gestion de caisse', 'en' => 'Cash management', 'crud' => ['voir'], 'actions' => [
             'gerer' => ['base' => 'modifier', 'fr' => 'Gérer les sessions de caisse', 'en' => 'Manage register sessions',
                 'aide_fr' => "Ouvrir une caisse avec son fond, enregistrer les entrées et sorties d'argent, fermer la caisse en comptant le tiroir.",

@@ -247,8 +247,11 @@ class DocumentsVentePdf
         ];
     }
 
-    /** Totaux HT / taxes / TTC : une ligne par taxe si le document a un détail, sinon la TVA globale. */
-    private function totaux(string $type, Model $document, iterable $lignes): array
+    /**
+     * Totaux HT / taxes / TTC : une ligne par taxe si le document a un détail, sinon la TVA globale (aussi pour le
+     * reçu d'une vente au comptoir).
+     */
+    public function totaux(string $type, Model $document, iterable $lignes): array
     {
         $recapitulatif = $this->taxes->recapitulatif($type, collect($lignes)->pluck('id'));
         $taxes = $recapitulatif

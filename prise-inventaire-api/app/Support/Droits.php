@@ -59,6 +59,7 @@ class Droits
         'acomptes' => 'acomptes',
         'demandes-acompte' => 'demandes_acompte',
         'caisses' => 'caisses',
+        'point-de-vente' => 'point_de_vente',
         'relances' => 'relances',
         'bons-livraison' => 'bons_livraison',
         'camions' => 'camions',
@@ -126,6 +127,8 @@ class Droits
         'DELETE api/clients/{client}/favori',
         // Aperçu d'un abonnement avant de l'enregistrer : un calcul, rien n'est écrit.
         'POST api/abonnements-clients/apercu',
+        // Aperçu d'une vente au comptoir (prix du client, taxes) : un calcul, rien n'est écrit.
+        'POST api/point-de-vente/calculer',
     ];
 
     /** Routes rattachées à une autre règle que celle de leur préfixe (dont les actions nommées). */
@@ -162,6 +165,8 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        // Vente au comptoir (droits des factures contrôlés aussi par le contrôleur).
+        'POST api/point-de-vente/ventes' => ['point_de_vente', 'vendre'],
         // Gestion de caisse : ouvrir, entrées et sorties d'argent, fermer.
         'POST api/caisses/{id}/ouvrir' => ['caisses', 'gerer'],
         'POST api/caisses/sessions/{id}/mouvements' => ['caisses', 'gerer'],
