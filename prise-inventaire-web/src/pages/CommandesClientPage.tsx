@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet, Hourglass } from 'lucide-react';
 import ReliquatsDepuisCommande from '@/components/reliquats/ReliquatsDepuisCommande';
+import type { ManqueCommande } from '@/services/disponibilites';
 import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
@@ -58,6 +59,8 @@ export default function CommandesClientPage() {
   const [showModal, setShowModal] = useState(false);
   // Commande acceptée dont des produits manquent : reliquats à noter.
   const [reliquatsDe, setReliquatsDe] = useState<number | null>(null);
+  // Manques signalés à l'acceptation, proposés comme reliquats (par produit).
+  const [manquesProposes, setManquesProposes] = useState<Record<number, number> | undefined>(undefined);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCommande, setSelectedCommande] = useState<ComClientEntete | null>(null);
   const [showRefusModal, setShowRefusModal] = useState(false);
@@ -178,8 +181,15 @@ export default function CommandesClientPage() {
 
   const handleAccepter = async (id: number) => {
     try {
-      await accepterCommandeClient(id);
+      const acceptee = await accepterCommandeClient(id) as ComClientEntete & { manques?: ManqueCommande[] };
       loadData();
+      // Stock insuffisant : l'acceptation est faite ; on propose de noter les quantités qui manquent en reliquat.
+      const manques = acceptee.manques ?? [];
+      if (manques.length > 0 && peut('reliquats_clients', 'creer')
+        && confirm(t.availability.shortageOnAccept.replace('{produits}', manques.map(m => `${m.description} (${m.manque})`).join(', ')))) {
+        setManquesProposes(Object.fromEntries(manques.map(m => [m.produit_id, m.manque])));
+        setReliquatsDe(id);
+      }
     } catch (error) {
       signaler(error, 'Erreur lors de l\'acceptation');
       loadData();
@@ -707,8 +717,9 @@ onChange={(e) => {
       {reliquatsDe !== null && (
         <ReliquatsDepuisCommande
           commandeId={reliquatsDe}
-          onClose={() => setReliquatsDe(null)}
-          onEnregistre={nombre => { setReliquatsDe(null); toast(t.backOrders.fromOrderSaved.replace('{n}', String(nombre))); }}
+          proposees={manquesProposes}
+          onClose={() => { setReliquatsDe(null); setManquesProposes(undefined); }}
+          onEnregistre={nombre => { setReliquatsDe(null); setManquesProposes(undefined); toast(t.backOrders.fromOrderSaved.replace('{n}', String(nombre))); }}
         />
       )}
       <Toasts toasts={toasts} onDismiss={dismiss} />

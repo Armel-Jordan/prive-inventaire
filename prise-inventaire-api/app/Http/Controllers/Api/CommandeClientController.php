@@ -10,6 +10,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
 use App\Services\DevisesVente;
+use App\Services\DisponibiliteProduits;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -228,6 +229,9 @@ class CommandeClientController extends Controller
                 ProduitLocalisation::reserver($ligne->produit_id, $ligne->quantite, $commande->id);
             }
         });
+        // Produits dont le stock ne couvre pas les commandes acceptées (celle-ci comprise) : l'écran propose de noter
+        // des reliquats. L'acceptation n'est pas bloquée.
+        $commande->setAttribute('manques', app(DisponibiliteProduits::class)->manquesDeCommande($commande));
 
         return response()->json($commande);
     }

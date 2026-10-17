@@ -10,8 +10,10 @@ const classeChamp = 'px-2 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-
  * Reliquats d'une commande client acceptée : pour chaque ligne, la quantité qui manque (au plus la quantité commandée,
  * reliquats déjà notés déduits). Prix, remise, devise et date souhaitée viennent de la commande.
  */
-export default function ReliquatsDepuisCommande({ commandeId, onClose, onEnregistre }: {
+export default function ReliquatsDepuisCommande({ commandeId, proposees, onClose, onEnregistre }: {
   commandeId: number;
+  /** Quantités proposées par produit (manques signalés à l'acceptation de la commande). */
+  proposees?: Record<number, number>;
   onClose: () => void;
   onEnregistre: (nombre: number) => void;
 }) {
@@ -24,9 +26,22 @@ export default function ReliquatsDepuisCommande({ commandeId, onClose, onEnregis
 
   useEffect(() => {
     let actif = true;
-    getLignesCommandeReliquat(commandeId).then(d => { if (actif) setDonnees(d); }, e => { if (actif) setErreur(messageErreur(e, tb.error)); });
+    getLignesCommandeReliquat(commandeId).then(d => {
+      if (!actif) return;
+      setDonnees(d);
+      // Manques proposés : sur la première ligne de chaque produit, au plus ce qui peut encore être noté.
+      if (proposees) {
+        const vus = new Set<number>();
+        setQuantites(Object.fromEntries(d.lignes.flatMap(l => {
+          const produit = l.produit?.id;
+          if (!produit || vus.has(produit) || !proposees[produit]) return [];
+          vus.add(produit);
+          return [[l.ligne_id, String(Math.min(proposees[produit], l.quantite - l.deja_en_reliquat))]];
+        })));
+      }
+    }, e => { if (actif) setErreur(messageErreur(e, tb.error)); });
     return () => { actif = false; };
-  }, [commandeId, tb.error]);
+  }, [commandeId, proposees, tb.error]);
 
   const saisies = (donnees?.lignes ?? []).map(l => ({ ligne: l, quantite: Math.max(0, Math.floor(Number(quantites[l.ligne_id] ?? 0) || 0)) }));
   const retenues = saisies.filter(s => s.quantite > 0);

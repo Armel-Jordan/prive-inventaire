@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — reliquats clients (§5.14)
+> Dernière mise à jour : 2026-10-17 — disponibilité des produits et réservation (§5.15)
 
 ---
 
@@ -1033,6 +1033,35 @@ La commande client elle-même ne change pas.
 Code :
 - API : service `App\Services\ReliquatsClients` et création des factures dans `App\Services\FacturesVente` (partagée avec la saisie d'une facture), migration `2026_10_16_100038_creer_reliquats_clients` ;
 - web : page `ReliquatsClientsPage`, composant `reliquats/ReliquatsDepuisCommande`.
+
+### 5.15 Disponibilité des produits et réservation (Ventes → Disponibilités)
+
+Plan de parité fripv2, phase 1.4 : la réservation de stock. Dans fripv2, une commande réserve sa marchandise ; PI compte son stock par les scans et ne le décrémente pas : la réservation **se calcule**.
+
+**Par produit :**
+
+| Colonne | Calcul |
+|---|---|
+| Stock compté | Somme des scans du produit, comme les alertes de stock |
+| Réservé | Quantités des commandes client **acceptées** (pas encore facturées), moins ce qui en est noté en reliquat (§5.14) |
+| Disponible | Stock moins réservé ; **négatif = manque** |
+| En commande | Reste à recevoir des commandes fournisseur envoyées ou reçues en partie |
+| En reliquat | Ce que les clients attendent encore (reliquats inscrits, commandés, reçus en partie) |
+
+**Filtres :**
+- produits **engagés** (par défaut) : réservés, en commande ou en reliquat ;
+- produits **en manque** ;
+- **tous** les produits actifs.
+
+**À l'acceptation d'une commande client :**
+- la réponse de `POST /commandes-client/{id}/accepter` liste ses `manques`, l'acceptation n'étant pas bloquée : les produits dont le disponible, cette commande comprise, est négatif, avec la quantité qui manque (au plus celle commandée) ;
+- l'écran propose alors de **noter ces quantités en reliquat**, en pré-remplissant la fenêtre des reliquats de la commande.
+
+| Route | Rôle |
+|---|---|
+| `GET /disponibilites` | Liste (`recherche`, `manques=1`, `tous=1`), avec `resume` (produits, en manque) |
+
+Code : service `App\Services\DisponibiliteProduits` ; web : page `DisponibilitesPage`.
 
 ---
 
