@@ -58,6 +58,7 @@ class Droits
         'retours-clients' => 'retours_clients',
         'acomptes' => 'acomptes',
         'demandes-acompte' => 'demandes_acompte',
+        'caisses' => 'caisses',
         'relances' => 'relances',
         'bons-livraison' => 'bons_livraison',
         'camions' => 'camions',
@@ -89,6 +90,8 @@ class Droits
         'comptes-clients' => 'comptes_clients',
         'relances' => 'relances',
         'portail-clients' => 'espace_client',
+        // Sessions de caisse : montants des tiroirs.
+        'caisses' => 'caisses',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -159,6 +162,10 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        // Gestion de caisse : ouvrir, entrées et sorties d'argent, fermer.
+        'POST api/caisses/{id}/ouvrir' => ['caisses', 'gerer'],
+        'POST api/caisses/sessions/{id}/mouvements' => ['caisses', 'gerer'],
+        'POST api/caisses/sessions/{id}/fermer' => ['caisses', 'gerer'],
         'POST api/factures/{id}/relances' => ['relances', 'creer'],
         'POST api/commandes-client/{id}/soumettre' => ['commandes_client', 'soumettre'],
         'POST api/commandes-client/{id}/accepter' => ['commandes_client', 'decider'],

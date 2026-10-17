@@ -49,6 +49,8 @@ export interface SaisieAcompte {
   notes?: string | null;
   devise?: string;
   taux_change?: number;
+  /** Caisse du poste : l'acompte entre dans sa session ouverte. */
+  caisse_id?: number;
 }
 
 export type StatutDemande = 'brouillon' | 'envoyee' | 'payee';
@@ -118,7 +120,7 @@ export async function appliquerAcompte(id: number, donnees: { facture_id: number
   return apiFetch(`/acomptes/${id}/appliquer`, { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
 }
 
-export async function rembourserAcompte(id: number, donnees: { montant: number; date_remboursement: string; mode?: ModeAcompte; reference?: string }): Promise<Acompte> {
+export async function rembourserAcompte(id: number, donnees: { montant: number; date_remboursement: string; mode?: ModeAcompte; reference?: string; caisse_id?: number }): Promise<Acompte> {
   return apiFetch(`/acomptes/${id}/rembourser`, { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
 }
 
@@ -146,7 +148,7 @@ export async function envoyerDemandeAcompte(id: number): Promise<DemandeAcompte>
   return apiFetch(`/demandes-acompte/${id}/envoyer`, { method: 'POST', retries: 0 });
 }
 
-export async function encaisserDemandeAcompte(id: number, paiement: { date: string; mode: ModeAcompte; reference?: string }): Promise<DemandeAcompte> {
+export async function encaisserDemandeAcompte(id: number, paiement: { date: string; mode: ModeAcompte; reference?: string; caisse_id?: number }): Promise<DemandeAcompte> {
   return apiFetch(`/demandes-acompte/${id}/encaisser`, { method: 'POST', body: JSON.stringify(paiement), retries: 0 });
 }
 

@@ -5,6 +5,8 @@ import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, dateSaisie, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { getFactures, type Facture } from '@/services/api';
 import { appliquerAcompte, MODES_ACOMPTE, rembourserAcompte, type Acompte, type ModeAcompte } from '@/services/acomptes';
+import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
+import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
 
@@ -21,6 +23,8 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
   const { t, language } = useLanguage();
   const td = t.deposits;
   const montantDoc = useMontantDocument();
+  // Poste de caisse : le remboursement sort de la session ouverte de sa caisse.
+  const encaissement = useEncaissementCaisse();
   // Dans la devise de l'acompte (seules les factures de cette devise peuvent être payées avec).
   const montant = (v: number | string | null | undefined) => montantDoc(v, acompte.devise);
   const disponible = Number(acompte.disponible);
@@ -61,9 +65,9 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
         const resultat = await appliquerAcompte(acompte.id, { facture_id: factureId, montant: Number(saisie.montant), date: saisie.date });
         onFait(resultat, td.applyDone.replace('{numero}', factures?.find(f => f.id === factureId)?.numero ?? ''));
       } else {
-        const resultat = await rembourserAcompte(acompte.id, {
-          montant: Number(saisie.montant), date_remboursement: saisie.date, mode: saisie.mode, reference: saisie.reference.trim() || undefined,
-        });
+        const resultat = await encaissement.encaisser(caisse_id => rembourserAcompte(acompte.id, {
+          montant: Number(saisie.montant), date_remboursement: saisie.date, mode: saisie.mode, reference: saisie.reference.trim() || undefined, caisse_id,
+        }));
         onFait(resultat, td.refundDone);
       }
     } catch (err) {
@@ -89,6 +93,7 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
           <span className="block text-xs text-gray-500 dark:text-gray-400">{mode === 'appliquer' ? td.applyHelp : td.refundHelp}</span>
         </p>
 
+        {mode === 'rembourser' && <CaisseDuPoste caisse={encaissement.caisse} />}
         {mode === 'appliquer' && factures === null && !erreur && <p className="text-sm text-gray-500">{td.loading}</p>}
         {mode === 'appliquer' && factures !== null && factures.length === 0 && <p className="px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800">{td.noInvoice}</p>}
         {mode === 'appliquer' && factures !== null && factures.length > 0 && (
@@ -138,6 +143,7 @@ export default function UtiliserAcompte({ acompte, mode, onClose, onFait }: {
           </button>
         </div>
       </form>
+      {encaissement.dialogue}
     </div>
   );
 }

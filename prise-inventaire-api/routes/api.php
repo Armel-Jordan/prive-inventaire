@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\AvoirController;
 use App\Http\Controllers\Api\BaliseController;
 use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
+use App\Http\Controllers\Api\CaisseController;
 use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ChargementTourneeController;
@@ -732,6 +733,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [DemandeAcompteController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/envoyer', [DemandeAcompteController::class, 'envoyer'])->whereNumber('id');
         Route::post('/{id}/encaisser', [DemandeAcompteController::class, 'encaisser'])->whereNumber('id');
+    });
+
+    // Gestion de caisse : ouverture avec le fond, entrées et sorties d'argent, fermeture (tiroir compté), sommaire.
+    Route::prefix('caisses')->middleware('module:ventes')->group(function () {
+        Route::get('/', [CaisseController::class, 'index']);
+        Route::post('/{id}/ouvrir', [CaisseController::class, 'ouvrir'])->whereNumber('id');
+        Route::get('/sessions', [CaisseController::class, 'sessions']);
+        Route::get('/sessions/{id}', [CaisseController::class, 'show'])->whereNumber('id');
+        Route::get('/sessions/{id}/pdf', [CaisseController::class, 'pdf'])->whereNumber('id');
+        Route::post('/sessions/{id}/mouvements', [CaisseController::class, 'mouvement'])->whereNumber('id');
+        Route::post('/sessions/{id}/fermer', [CaisseController::class, 'fermer'])->whereNumber('id');
     });
 
     // Relances de paiement : factures en retard, historique des relances.

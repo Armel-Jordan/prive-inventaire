@@ -10,7 +10,7 @@ class AcompteRemboursement extends Model
     protected $table = 'acompte_remboursements';
 
     protected $fillable = [
-        'acompte_id', 'date_remboursement', 'montant', 'mode', 'reference', 'notes', 'enregistre_par',
+        'acompte_id', 'date_remboursement', 'montant', 'mode', 'reference', 'notes', 'enregistre_par', 'caisse_session_id',
     ];
 
     protected $casts = [

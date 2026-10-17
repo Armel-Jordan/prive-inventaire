@@ -77,9 +77,11 @@ class AcompteController extends Controller
             'commande_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:2000',
             ...DevisesVente::regles(),
+            // Caisse du poste : l'acompte entre dans sa session ouverte (refusé si elle est fermée).
+            'caisse_id' => 'nullable|integer',
         ]);
 
-        return response()->json($this->acomptes->recevoir($donnees, $request->user()?->id)->load('client:id,code,raison_sociale', 'commande:id,numero'), 201);
+        return $this->executer(fn () => response()->json($this->acomptes->recevoir($donnees, $request->user()?->id)->load('client:id,code,raison_sociale', 'commande:id,numero'), 201));
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -132,6 +134,8 @@ class AcompteController extends Controller
             'mode' => ['nullable', Rule::in(Acomptes::MODES)],
             'reference' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:2000',
+            // Caisse du poste : le remboursement sort de sa session ouverte (refusé si elle est fermée).
+            'caisse_id' => 'nullable|integer',
         ]);
 
         return $this->executer(fn () => response()->json($this->acomptes->rembourser($acompte, $donnees, $request->user()?->id)->load('remboursements')));

@@ -36,8 +36,12 @@ class Acomptes
 
     private const TOLERANCE = 0.005;
 
+    public function __construct(private readonly Caisses $caisses) {}
+
     /**
-     * @param  array{client_id: int, date_acompte: string, mode: string, reference?: ?string, montant: float|string, commande_id?: ?int, demande_id?: ?int, notes?: ?string, devise?: ?string, taux_change?: mixed}  $donnees
+     * Reçoit un acompte ; reçu sur le poste d'une caisse (`caisse_id`), il entre dans sa session ouverte.
+     *
+     * @param  array{client_id: int, date_acompte: string, mode: string, reference?: ?string, montant: float|string, commande_id?: ?int, demande_id?: ?int, notes?: ?string, devise?: ?string, taux_change?: mixed, caisse_id?: ?int}  $donnees
      */
     public function recevoir(array $donnees, ?int $auteur = null): Acompte
     {
@@ -48,7 +52,7 @@ class Acomptes
             ? app(DevisesVente::class)->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, Client::find((int) $donnees['client_id']))
             : ['devise' => $commande->devise, 'taux_change' => (float) ($commande->taux_change ?: 1)];
 
-        return Acompte::create($devise + [
+        return DB::transaction(fn () => Acompte::create($devise + [
             'client_id' => $donnees['client_id'],
             'date_acompte' => $donnees['date_acompte'],
             'mode' => $donnees['mode'],
@@ -58,7 +62,8 @@ class Acomptes
             'demande_id' => $donnees['demande_id'] ?? null,
             'notes' => $donnees['notes'] ?? null,
             'enregistre_par' => $auteur,
-        ]);
+            'caisse_session_id' => $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null),
+        ]));
     }
 
     /**
@@ -158,9 +163,10 @@ class Acomptes
     }
 
     /**
-     * Rembourse au client une part de ce qui reste de l'acompte (par défaut, par son mode de paiement).
+     * Rembourse au client une part de ce qui reste de l'acompte (par défaut, par son mode de paiement) ; fait sur le
+     * poste d'une caisse (`caisse_id`), l'argent sort de sa session ouverte.
      *
-     * @param  array{montant: float|string, date_remboursement: string, mode?: ?string, reference?: ?string, notes?: ?string}  $donnees
+     * @param  array{montant: float|string, date_remboursement: string, mode?: ?string, reference?: ?string, notes?: ?string, caisse_id?: ?int}  $donnees
      */
     public function rembourser(Acompte $acompte, array $donnees, ?int $auteur = null): Acompte
     {
@@ -185,6 +191,7 @@ class Acomptes
                 'reference' => $donnees['reference'] ?? null,
                 'notes' => $donnees['notes'] ?? null,
                 'enregistre_par' => $auteur,
+                'caisse_session_id' => $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null),
             ]);
             $this->actualiser($acompte);
 

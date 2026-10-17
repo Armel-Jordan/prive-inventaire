@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -118,6 +118,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/retours-clients', label: t.customerReturns.nav, icon: ArchiveRestore, module: 'retours_clients' },
       { path: '/acomptes', label: t.deposits.nav, icon: Wallet, module: 'acomptes' },
       { path: '/demandes-acompte', label: t.depositRequests.nav, icon: FileClock, module: 'demandes_acompte' },
+      { path: '/caisses', label: t.cashRegisters.nav, icon: Banknote, module: 'caisses' },
       { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'comptes_clients' },
       { path: '/relances', label: t.reminders.nav, icon: BellRing, module: 'relances' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },

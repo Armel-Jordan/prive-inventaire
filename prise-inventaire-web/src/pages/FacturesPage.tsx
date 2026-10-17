@@ -41,6 +41,8 @@ import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
+import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 
 
 export default function FacturesPage() {
@@ -52,6 +54,8 @@ export default function FacturesPage() {
   const deviseEntreprise = useCodeDevise();
   const { t } = useLanguage();
   const { toasts, toast, dismiss } = useToast();
+  // Poste de caisse : le paiement entre dans la session ouverte de sa caisse (ouverture proposée si elle est fermée).
+  const encaissement = useEncaissementCaisse();
   // Facture en cours de crédit (note de crédit).
   const [aCrediter, setACrediter] = useState<number | null>(null);
   // Acomptes disponibles du client de la facture à payer.
@@ -224,7 +228,8 @@ export default function FacturesPage() {
 
   const ouvrirPaiement = (facture: Facture) => {
     setSelectedFacture(facture);
-    setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? '') });
+    // Sur un poste de caisse, l'argent comptant est proposé.
+    setPaiementData({ ...paiementData, montant: String(facture.reste_a_payer ?? ''), ...(encaissement.caisse ? { mode_paiement: 'especes' } : {}) });
     setShowPaiementModal(true);
     proposerEscompte(facture, paiementData.date_paiement);
     setAcomptesClient([]);
@@ -254,13 +259,14 @@ export default function FacturesPage() {
   const handlePaiement = async () => {
     if (!selectedFacture || !paiementData.montant) return;
     try {
-      await enregistrerPaiement(selectedFacture.id, {
+      await encaissement.encaisser(caisse_id => enregistrerPaiement(selectedFacture.id, {
         montant: parseFloat(paiementData.montant),
         date_paiement: paiementData.date_paiement,
         mode_paiement: paiementData.mode_paiement,
         reference: paiementData.reference || undefined,
         escompte: avecEscompte || undefined,
-      });
+        caisse_id,
+      }));
       setShowPaiementModal(false);
       setPaiementData({
         montant: '',
@@ -752,6 +758,7 @@ export default function FacturesPage() {
         />
       )}
       <Toasts toasts={toasts} onDismiss={dismiss} />
+      {encaissement.dialogue}
 
       {/* Modal paiement */}
       {showPaiementModal && selectedFacture && (
@@ -761,6 +768,7 @@ export default function FacturesPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Facture {selectedFacture.numero} - Reste à payer: {montant(Number(selectedFacture.reste_a_payer ?? 0), selectedFacture?.devise)}
             </p>
+            {encaissement.caisse && <div className="mb-4"><CaisseDuPoste caisse={encaissement.caisse} /></div>}
             {acomptesClient.length > 0 && (
               <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/60 dark:border-indigo-800 dark:bg-indigo-900/20 p-3">
                 <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200 mb-1">{t.deposits.customerDeposits}</p>

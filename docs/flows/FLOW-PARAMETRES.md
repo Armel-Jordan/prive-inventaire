@@ -612,6 +612,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Catégories | Classement hiérarchique des produits | Parent de la même entreprise, pas de boucle, nom unique entre catégories sœurs. Une catégorie qui a des sous-catégories ne peut pas être supprimée |
 | Fabricants | Fabricants et marques | Nom et code uniques |
 | Modes de paiement | Espèces, chèque, virement, carte, mobile money, prélèvement, autre | Code unique |
+| Caisses | Tiroirs-caisses ou points d'encaissement : un poste de caisse encaisse dans la session ouverte de sa caisse (FLOW-VENTES §5.19) | Code unique (en majuscules, 10 caractères au plus). Une caisse qui a déjà servi ne se supprime pas : on la désactive |
 | Conditions de paiement | Délai en jours, fin de mois, escompte pour paiement anticipé ; choisies sur les clients et les factures (échéance, escompte : FLOW-VENTES §5.10) | Une seule condition « par défaut » |
 | Comptes bancaires | Comptes de l'entreprise : banque, IBAN, BIC, devise | IBAN, BIC et devise mis en majuscules. Un seul compte « par défaut » |
 | Devises | Code ISO, symbole, décimales, taux | Taux = valeur d'une unité dans la devise de référence (§9.1). Chaque nouveau taux est historisé. Proposées comme devise d'un client et de ses documents de vente, le taux par défaut (FLOW-VENTES §5.11) |
@@ -642,7 +643,7 @@ Une seule API générique :
 | DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
 | GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
 
-`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `types_location`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `caisses`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `types_location`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
 
 ### 11.3 Droits
 

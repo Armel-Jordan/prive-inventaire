@@ -6,6 +6,8 @@ import { aujourdhui, dateSaisie, tauxPropose, useCodeDevise } from '@/lib/docume
 import ChampDevise from '@/components/ChampDevise';
 import { getClientsActifs, getCommandesClient, type Client, type ComClientEntete } from '@/services/api';
 import { creerAcompte, MODES_ACOMPTE, modifierAcompte, type Acompte, type ModeAcompte } from '@/services/acomptes';
+import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
+import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm disabled:opacity-60';
 /** Commandes auxquelles réserver un acompte : celles qui ne sont ni refusées, ni annulées, ni déjà facturées. */
@@ -25,12 +27,15 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
   const { t } = useLanguage();
   const td = t.deposits;
   const deviseEntreprise = useCodeDevise();
+  // Poste de caisse : l'acompte reçu entre dans la session ouverte de sa caisse.
+  const encaissement = useEncaissementCaisse();
   const [clients, setClients] = useState<Client[]>([]);
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
   const [saisie, setSaisie] = useState({
     client_id: String(acompte?.client_id ?? clientId ?? ''),
     date_acompte: acompte ? dateSaisie(acompte.date_acompte) : aujourdhui(),
-    mode: (acompte?.mode ?? 'virement') as ModeAcompte,
+    // Sur un poste de caisse, l'argent comptant est proposé.
+    mode: (acompte?.mode ?? (encaissement.caisse ? 'especes' : 'virement')) as ModeAcompte,
     reference: acompte?.reference ?? '',
     montant: acompte ? String(Number(acompte.montant)) : '',
     commande_id: String(acompte?.commande_id ?? commandeId ?? ''),
@@ -81,7 +86,7 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
       const devise = saisie.commande_id ? {} : { devise: saisie.devise || deviseEntreprise, taux_change: saisie.devise ? Number(saisie.taux) : undefined };
       const resultat = acompte
         ? await modifierAcompte(acompte.id, verrouille ? { reference: donnees.reference, commande_id: donnees.commande_id, notes: donnees.notes } : donnees)
-        : await creerAcompte({ client_id: Number(saisie.client_id), ...donnees, ...devise });
+        : await encaissement.encaisser(caisse_id => creerAcompte({ client_id: Number(saisie.client_id), ...donnees, ...devise, caisse_id }));
       onEnregistre(resultat);
     } catch (err) {
       setErreur(messageErreur(err, td.error));
@@ -98,6 +103,7 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={td.close}><X size={18} /></button>
         </div>
         {verrouille && <p className="px-3 py-2 rounded-lg text-xs bg-amber-50 text-amber-800">{td.usedLocked}</p>}
+        {!acompte && <CaisseDuPoste caisse={encaissement.caisse} />}
 
         {!clientFixe && (
           <label className="block text-xs text-gray-500 dark:text-gray-400">{td.customer}
@@ -150,6 +156,7 @@ export default function FormulaireAcompte({ acompte, clientId, commandeId, onClo
           <button type="submit" disabled={occupe} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">{td.save}</button>
         </div>
       </form>
+      {encaissement.dialogue}
     </div>
   );
 }
