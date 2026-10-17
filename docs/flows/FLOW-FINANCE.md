@@ -47,8 +47,9 @@ Le module Finance lit les données créées dans les modules Achats et Ventes :
 La page Comptabilité rapproche, sur une période (du… au…, un mois par défaut), les ventes facturées et les achats
 reçus :
 - **Journal des ventes** : les factures de la période, hors brouillons et factures annulées, en montant HT.
-- **Journal des achats** : les réceptions de la période, valorisées au prix de la commande fournisseur et
-  converties dans la devise de l'entreprise au taux enregistré sur la commande.
+- **Journal des achats** : les réceptions de la période (hors réceptions annulées), valorisées au coût facturé saisi
+  à la réception, sinon au prix de la commande fournisseur, et converties dans la devise de l'entreprise au taux
+  enregistré sur la commande.
 - **Marge brute** : ventes HT moins achats.
 - **Évolution mensuelle** : ventes et achats par mois, d'après la date du document.
 
@@ -57,7 +58,7 @@ reçus :
 | Indicateur | Calcul | Source |
 |------------|--------|--------|
 | Total ventes HT | Somme `montant_ht` des factures de la période (ni brouillon ni annulée) | `factures` |
-| Total achats | Somme `quantite_recue × prix_unitaire × taux_change` des réceptions de la période | `reception_arrivages_ligne`, `com_four_ligne`, `com_four_entete` |
+| Total achats | Somme `quantite_recue × coût × taux_change` des réceptions de la période (coût facturé saisi à la réception, sinon prix commandé ; réceptions annulées exclues) | `reception_arrivages_ligne`, `com_four_ligne`, `com_four_entete` |
 | Marge brute | Ventes HT − achats | Calculé |
 
 Toutes les pages de résultats sont chargées : le journal ne s'arrête pas aux 20 dernières factures ni aux

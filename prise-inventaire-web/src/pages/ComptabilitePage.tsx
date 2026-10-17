@@ -15,7 +15,8 @@ const fmtDate = (d: string) => formatDateDocument(d);
  */
 function getMontantReception(r: ReceptionLigne): number {
   const taux = Number(r.ligne_commande?.commande?.taux_change) || 1;
-  return (Number(r.quantite_recue) || 0) * (Number(r.ligne_commande?.prix_unitaire) || 0) * taux;
+  const cout = r.cout_unitaire !== null && r.cout_unitaire !== undefined ? Number(r.cout_unitaire) : Number(r.ligne_commande?.prix_unitaire);
+  return (Number(r.quantite_recue) || 0) * (cout || 0) * taux;
 }
 
 /** Champ texte du CSV : entre guillemets s'il contient le séparateur, un guillemet ou un retour à la ligne. */

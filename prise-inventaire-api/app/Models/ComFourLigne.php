@@ -18,6 +18,7 @@ class ComFourLigne extends Model
         'produit_id',
         'quantite_commandee',
         'quantite_recue',
+        'quantite_abandonnee',
         'unite_achat',
         'qte_par_unite_achat',
         'prix_unitaire',
@@ -27,6 +28,7 @@ class ComFourLigne extends Model
     protected $casts = [
         'quantite_commandee' => 'integer',
         'quantite_recue' => 'integer',
+        'quantite_abandonnee' => 'integer',
         'qte_par_unite_achat' => 'integer',
         'prix_unitaire' => 'decimal:2',
         'montant_ligne' => 'decimal:2',
@@ -49,7 +51,8 @@ class ComFourLigne extends Model
 
     public function getQuantiteRestanteAttribute(): int
     {
-        return $this->quantite_commandee - $this->quantite_recue;
+        // Une sur-réception acceptée ne laisse pas un reste négatif.
+        return max(0, $this->quantite_commandee - $this->quantite_recue);
     }
 
     public function isComplete(): bool

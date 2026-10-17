@@ -391,7 +391,7 @@ class RetoursFournisseurs
     }
 
     /** @return array<int, int> quantité déjà repartie par ligne de commande (retours expédiés ou clos, sauf celui indiqué) */
-    private function dejaRepartiCommande(ComFourEntete $commande, ?int $sauf = null): array
+    public function dejaRepartiCommande(ComFourEntete $commande, ?int $sauf = null): array
     {
         return $this->dejaReparti('com_four_ligne_id', 'commande_fournisseur_id', $commande->id, $sauf);
     }

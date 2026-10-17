@@ -236,10 +236,51 @@ class ReliquatsClients
      */
     public function commandeCloturee(ComFourEntete $commande): void
     {
-        $lignes = $commande->lignes()->pluck('id');
-        ReliquatClient::withoutGlobalScopes()->whereIn('com_four_ligne_id', $lignes)->where('statut', ReliquatClient::RECU_PARTIEL)
+        $this->lignesCloturees($commande->lignes()->pluck('id'));
+    }
+
+    /**
+     * Lignes fournisseur clôturées sans tout recevoir (commande close, ou ligne close à la réception) : leurs reliquats
+     * qui ont reçu quelque chose se facturent à la quantité reçue ; les autres redeviennent inscrits.
+     *
+     * @param  iterable<int>  $lignes
+     */
+    public function lignesCloturees(iterable $lignes): void
+    {
+        $ids = collect($lignes)->map(fn ($id) => (int) $id)->all();
+        if ($ids === []) {
+            return;
+        }
+        ReliquatClient::withoutGlobalScopes()->whereIn('com_four_ligne_id', $ids)->where('statut', ReliquatClient::RECU_PARTIEL)
             ->update(['statut' => ReliquatClient::RECU]);
-        $this->liberer($lignes);
+        $this->liberer($ids);
+    }
+
+    /**
+     * Réception annulée : les reliquats d'une ligne fournisseur ne peuvent pas avoir reçu plus que la ligne elle-même.
+     * Le surplus leur est repris, du plus récent au plus ancien ; s'il ne reste que des reliquats déjà facturés pour le
+     * reprendre, l'annulation est refusée.
+     */
+    public function receptionAnnulee(ComFourLigne $ligne): void
+    {
+        $reliquats = ReliquatClient::withoutGlobalScopes()->where('com_four_ligne_id', $ligne->id)
+            ->whereIn('statut', [ReliquatClient::RECU_PARTIEL, ReliquatClient::RECU, ReliquatClient::FACTURE])
+            ->orderByDesc('id')->get();
+        $exces = (int) $reliquats->sum('quantite_recue') - max(0, (int) $ligne->quantite_recue);
+        foreach ($reliquats->where('statut', '!=', ReliquatClient::FACTURE) as $reliquat) {
+            if ($exces <= 0) {
+                return;
+            }
+            $part = min($exces, (int) $reliquat->quantite_recue);
+            $exces -= $part;
+            $recue = $reliquat->quantite_recue - $part;
+            $reliquat->update(['quantite_recue' => $recue, 'statut' => $recue > 0 ? ReliquatClient::RECU_PARTIEL : ReliquatClient::COMMANDE]);
+        }
+        if ($exces > 0) {
+            $facture = $reliquats->firstWhere('statut', ReliquatClient::FACTURE);
+            $produit = $facture?->produit?->numero ?? $ligne->produit?->numero;
+            throw new DomainException("La marchandise {$produit} de cette réception est déjà facturée au client (reliquat {$facture?->client?->raison_sociale}) : la réception ne peut plus être annulée.");
+        }
     }
 
     /**

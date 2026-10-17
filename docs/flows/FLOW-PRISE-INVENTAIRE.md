@@ -51,7 +51,7 @@ Une session :
 | **Conforme** | Identique au dernier inventaire |
 
 - **Dernier inventaire** : quantité retenue par la dernière prise validée qui couvre le secteur. Un produit qui n'y figurait pas vaut 0.
-- **Mouvements depuis** : réceptions rangées dans le secteur (`+`), et relocalisations vers le secteur (`+`, dont les retours clients remis en stock) ou depuis lui (`−`), enregistrées après la fin de ce dernier inventaire. Ils servent à **expliquer** un écart, sans entrer dans son calcul. Les livraisons aux clients n'y figurent pas encore.
+- **Mouvements depuis** : réceptions rangées dans le secteur (`+`, en unités de stock : 2 cartons de 12 comptent 24 ; les réceptions annulées n'y figurent pas), et relocalisations vers le secteur (`+`, dont les retours clients remis en stock) ou depuis lui (`−`), enregistrées après la fin de ce dernier inventaire. Ils servent à **expliquer** un écart, sans entrer dans son calcul. Les livraisons aux clients n'y figurent pas encore.
 - **Retenu** : le compté, ou la **correction** d'un responsable (quantité et raison). « Revenir au comptage » retire la correction.
 - **Écart** = retenu − dernier inventaire.
 

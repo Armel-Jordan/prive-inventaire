@@ -241,62 +241,109 @@ Une **Réception** enregistre l'arrivée physique de marchandises dans l'entrep�
 
 **Concept important :** Une commande peut avoir **plusieurs réceptions**. Si on commande 100 unités et qu'elles arrivent en 3 livraisons (30, 40, 30), on fait 3 réceptions distinctes. Chaque réception met à jour les quantités reçues et le statut de la commande.
 
+Depuis la phase 3.3 du plan de parité fripv2 (« Réception fournisseur »), chaque livraison est un **document numéroté** (`REC-00001`, numérotation « Réceptions » de Configuration → Numérotation) :
+- il regroupe ses lignes, d'une ou de **plusieurs commandes envoyées du même fournisseur** (un camion qui livre deux commandes) ;
+- il porte le **bon de livraison** du fournisseur, le **connaissement** du transporteur et une note ;
+- il se retrouve dans l'**historique**, se **corrige** et s'**annule**.
+
+Les réceptions enregistrées avant n'ont pas de document et comptent comme avant.
+
 ### 4.2 Champs d'une réception
+
+**Document (`receptions`)** : `numero`, `fournisseur_id`, `date_reception`, `bon_livraison`, `connaissement`, `notes`, `statut` (`enregistree` ou `annulee`), `recue_par`, et pour une annulation `annulee_le`, `annulee_par`, `motif_annulation`.
+
+**Lignes (`reception_arrivages_ligne`)** :
 
 | Champ | Description | Obligatoire |
 |-------|-------------|-------------|
+| `reception_id` | Le document de la réception (vide pour les réceptions antérieures) | — |
 | `com_four_ligne_id` | La ligne de commande concernée | Oui |
 | `date_reception` | Date d'arrivée physique | Oui |
-| `quantite_recue` | Quantité reçue (≤ quantité restante à recevoir) | Oui |
+| `quantite_recue` | Quantité reçue, en unité d'achat (≤ reste à recevoir, sauf sur-réception confirmée) | Oui |
+| `cout_unitaire` | Coût unitaire facturé, dans la devise de la commande et par unité d'achat ; vide = prix commandé | Non |
 | `secteur_id` | Où ranger la marchandise dans l'entrepôt | Non |
 | `lot_numero` | Numéro de lot (traçabilité) | Non |
 | `date_peremption` | Date de péremption si applicable | Non |
 | `notes` | Remarques (ex: "3 boîtes abîmées") | Non |
+| `annulee` | Ligne d'une réception annulée : elle ne compte plus nulle part | — |
+
+Une même ligne de commande peut revenir plusieurs fois dans une réception : une fois par **secteur** où la marchandise est rangée.
 
 ### 4.3 Flow complet d'une réception
 
 ```
-Étape 1 : Aller dans Réceptions → "Nouvelle réception"
-Étape 2 : Sélectionner la commande fournisseur concernée
+Étape 1 : Achats → Réceptions, onglet « À recevoir »
+Étape 2 : Sélectionner la commande fournisseur concernée, puis « Réceptionner »
           → Seules les commandes en statut "envoyee" ou "partielle" s'affichent
-Étape 3 : L'application affiche toutes les lignes avec quantités restantes à recevoir
-          → Colonne "Commandé" | "Déjà reçu" | "Restant" | "À réceptionner"
-Étape 4 : Saisir la quantité reçue pour chaque ligne
-          → La quantité ne peut pas dépasser "Restant"
-          → Possibilité de ne remplir qu'une partie des lignes (réception partielle)
-Étape 5 : (optionnel) Assigner un secteur de rangement
-Étape 6 : (optionnel) Saisir numéro de lot et date péremption
-Étape 7 : Valider la réception
+Étape 3 : La fenêtre reprend les lignes en attente, quantités pré-remplies avec le reste à recevoir
+          → « Tout recevoir » / « Tout à zéro »
+          → « Ajouter une commande du même fournisseur » si la livraison en couvre plusieurs
+Étape 4 : Saisir le bon de livraison et le connaissement (facultatifs)
+Étape 5 : Ligne par ligne : quantité reçue, coût facturé (pré-rempli avec le prix commandé), secteur, lot,
+          péremption, remarque ; « Répartir » range une partie de la ligne dans un autre secteur
+Étape 6 : (optionnel) Cocher « Clôturer » sur une ligne dont le reste ne viendra pas
+Étape 7 : Enregistrer → le document est numéroté
 ```
 
-### 4.4 Ce qui se passe lors de la validation
+### 4.4 Ce qui se passe à l'enregistrement
+
+Tout ou rien (service `App\Services\ReceptionsFournisseur`) :
 
 ```
+Contrôles :
+  - les lignes appartiennent à des commandes envoyées ou partielles d'un seul fournisseur ;
+  - la quantité d'une ligne de commande (toutes répartitions confondues) ne dépasse pas son reste,
+    sauf sur-réception confirmée (accepter_surplus) ;
+  - la numérotation des réceptions est active.
+
 Pour chaque ligne réceptionnée :
-  1. Crée un enregistrement ReceptionArrivagesLigne
-  2. Met à jour quantite_recue dans ComFourLigne
-  3. Crée un mouvement de stock (entrée dans le secteur indiqué)
-  4. Met à jour ProduitLocalisation (quantité dans ce secteur)
+  1. Crée la ligne de réception rattachée au document
+  2. Met à jour quantite_recue dans ComFourLigne et le statut de la commande
+  3. Répartit la quantité sur les reliquats clients de la ligne (FLOW-VENTES §5.14)
+  4. Coût facturé différent du prix commandé : inscrit à l'historique des prix d'achat et, si la commande est dans
+     la devise du fournisseur, au catalogue du fournisseur (journal « Prix fournisseur », source « Réception REC-… »)
 
-Après toutes les lignes :
-  5. Recalcule le statut de la commande :
-     - Si toutes les lignes sont complètes → statut = "complete"
-     - Si au moins une ligne est incomplète → statut = "partielle"
+Lignes clôturées :
+  5. La quantité commandée est ramenée au reçu ; le reste est noté abandonné (quantite_abandonnee),
+     visible dans le détail de la commande (« 4 abandonné(s) »)
+  6. Les reliquats clients de la ligne reçus en partie deviennent facturables ; les autres redeviennent inscrits
+  7. Une commande dont rien n'a été reçu ne se clôture pas ligne par ligne : on l'annule
 ```
 
-### 4.5 Réception multiple simultanée
+La clôture d'une commande entière (« Clôturer le reste », §3.6) note aussi le reste abandonné de ses lignes.
 
-**Endpoint :** `POST /receptions/multiple`
+### 4.5 Endpoints
 
-Permet de soumettre plusieurs réceptions en une seule requête (pour un flow mobile plus rapide).
+| Méthode | Route | Rôle |
+|---|---|---|
+| POST | `/receptions/multiple` | Réception d'une livraison : `date_reception`, `bon_livraison`, `connaissement`, `notes`, `accepter_surplus`, `receptions[]` (ligne, quantité, `cout_unitaire`, secteur, lot, péremption, note), `clotures[]` (lignes à clôturer). Clôturer sans rien recevoir ne crée pas de document. |
+| POST | `/receptions` | Réception d'une seule ligne (même traitement, un document d'une ligne) |
+| GET | `/receptions/documents` | Historique : `recherche` (numéro, bon de livraison, connaissement, fournisseur, commande), `fournisseur_id`, `commande_id`, `produit_id`, `statut`, `date_debut`, `date_fin` ; avec les commandes et la valeur reçue |
+| GET | `/receptions/documents/{id}` | Détail, lignes avec coût retenu et montant |
+| PUT | `/receptions/documents/{id}` | Correction : date, bon de livraison, connaissement, note, coût des lignes (jamais les quantités) |
+| POST | `/receptions/documents/{id}/annuler` | Annulation, avec un motif |
+| GET | `/receptions/documents/{id}/pdf` | Bon de réception |
+| GET | `/receptions` | Lignes reçues (journal comptable), sans celles des réceptions annulées |
 
-### 4.6 Impact sur l'inventaire
+### 4.6 Correction et annulation
+
+- **Corriger** (droit « Modifier » des réceptions) : date, références, note et coût des lignes. La valorisation suit le nouveau coût. Les quantités ne se corrigent pas, car elles sont déjà reportées sur les commandes : on annule la réception et on la refait.
+- **Annuler** (droit « Annuler une réception », `receptions.annuler`, réglé à sa création comme le droit de supprimer des réceptions) :
+  - ses quantités sont retirées des lignes de commande, qui redeviennent à recevoir ;
+  - le statut des commandes est recalculé (envoyée, partielle ou complète) ;
+  - les reliquats clients rendent ce qu'ils avaient reçu en trop, du plus récent au plus ancien ;
+  - ses lignes ne comptent plus nulle part.
+- **L'annulation est refusée** si la marchandise est déjà repartie au fournisseur (retour expédié) ou déjà facturée au client d'un reliquat. Une ligne clôturée par la réception n'est pas rouverte.
+
+### 4.7 Impact sur l'inventaire
 
 Dès qu'une réception est validée :
 - elle est rangée dans le secteur assigné ;
-- elle ne crée pas de mouvement de stock : la prise d'inventaire suivante la compte comme une **entrée** de ce secteur (FLOW-PRISE-INVENTAIRE) ;
+- elle ne crée pas de mouvement de stock : la prise d'inventaire suivante la compte comme une **entrée** de ce secteur, **en unités de stock** (2 cartons de 12 comptent 24 unités), sans les réceptions annulées (FLOW-PRISE-INVENTAIRE) ;
 - la marchandise qui repart chez le fournisseur passe par un retour fournisseur (§9) ;
-- les **reliquats clients** de la ligne reçue se mettent à jour, du plus ancien au plus récent (FLOW-VENTES §5.14). Annuler, supprimer ou clore une commande, ou retirer une ligne d'un brouillon, met aussi à jour ses reliquats.
+- les **reliquats clients** de la ligne reçue se mettent à jour, du plus ancien au plus récent (FLOW-VENTES §5.14). Annuler, supprimer ou clore une commande, ou retirer une ligne d'un brouillon, met aussi à jour ses reliquats ;
+- la **valorisation de l'inventaire** prend, pour une ligne de commande, le coût réel de ses réceptions qui en portent un (moyenne pondérée par les quantités reçues), sinon le prix commandé ;
+- une **sur-réception** ne rend pas négatif ce qui reste en commande (disponibilité, suggestions d'achat).
 
 ---
 

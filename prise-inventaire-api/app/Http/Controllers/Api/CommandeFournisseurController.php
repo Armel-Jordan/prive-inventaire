@@ -115,7 +115,7 @@ class CommandeFournisseurController extends Controller
 
     public function show(ComFourEntete $commande): JsonResponse
     {
-        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions', 'createdBy', 'auteurEnvoi:id,nom']);
+        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions' => fn ($q) => $q->where('annulee', false)->with('reception:id,numero'), 'createdBy', 'auteurEnvoi:id,nom']);
 
         return response()->json($commande);
     }
@@ -237,6 +237,8 @@ class CommandeFournisseurController extends Controller
 
         foreach ($commande->lignes as $ligne) {
             if ($ligne->quantite_recue < $ligne->quantite_commandee) {
+                // Le reste abandonné reste visible : la quantité commandée est ramenée au reçu.
+                $ligne->quantite_abandonnee += $ligne->quantite_commandee - $ligne->quantite_recue;
                 $ligne->quantite_commandee = $ligne->quantite_recue;
                 $ligne->montant_ligne = $ligne->quantite_recue * $ligne->prix_unitaire;
                 $ligne->saveQuietly();

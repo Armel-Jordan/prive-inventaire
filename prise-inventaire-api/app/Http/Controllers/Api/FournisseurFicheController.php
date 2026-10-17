@@ -290,6 +290,7 @@ class FournisseurFicheController extends Controller
             ->where('com_four_entete.tenant_id', app(TenantContext::class)->getTenantId())
             ->where('com_four_entete.fournisseur_id', $fournisseur->id)
             ->where('com_four_entete.statut', ComFourEntete::STATUT_COMPLETE)
+            ->where('reception_arrivages_ligne.annulee', false)
             ->groupBy('com_four_entete.id', 'com_four_entete.date_commande', 'com_four_entete.date_livraison_prevue')
             ->selectRaw('com_four_entete.id, com_four_entete.date_commande, com_four_entete.date_livraison_prevue, MAX(reception_arrivages_ligne.date_reception) AS derniere_reception')
             ->get();

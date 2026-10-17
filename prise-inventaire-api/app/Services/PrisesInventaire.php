@@ -373,8 +373,10 @@ final class PrisesInventaire
             ->where('e.tenant_id', app(TenantContext::class)->getTenantId())
             ->where('r.secteur_id', $secteur->id)
             ->where('r.created_at', '>', $depuis)
+            ->where('r.annulee', false)
             ->groupBy('p.numero')
-            ->selectRaw('p.numero AS numero, SUM(r.quantite_recue) AS total')
+            // Quantité reçue en unités d'achat : ramenée à l'unité de stock (un carton de 12 compte 12 unités).
+            ->selectRaw('p.numero AS numero, SUM(r.quantite_recue * COALESCE(l.qte_par_unite_achat, 1)) AS total')
             ->get(), 'entrees');
 
         foreach (['secteur_destination' => 'entrees', 'secteur_source' => 'sorties'] as $colonne => $sens) {

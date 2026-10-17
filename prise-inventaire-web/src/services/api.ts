@@ -856,6 +856,8 @@ export interface ComFourLigne {
   produit?: Produit;
   quantite_commandee: number;
   quantite_recue: number;
+  /** Reste abandonné : le fournisseur ne le livrera pas (ligne ou commande clôturée). */
+  quantite_abandonnee?: number;
   unite_achat?: string | null;
   qte_par_unite_achat?: number;
   prix_unitaire: number;
@@ -1041,9 +1043,15 @@ export async function ouvrirPieceJointe(piece: PieceJointe): Promise<void> {
 // === RECEPTIONS ===
 export interface ReceptionLigne {
   id: number;
+  /** Document de la réception (vide pour les réceptions enregistrées avant leur numérotation). */
+  reception_id?: number | null;
+  reception?: { id: number; numero: string; bon_livraison?: string | null } | null;
   com_four_ligne_id: number;
   date_reception: string;
   quantite_recue: number;
+  /** Coût unitaire facturé (devise de la commande) ; vide = prix commandé. */
+  cout_unitaire?: number | string | null;
+  annulee?: boolean;
   secteur_id?: number;
   lot_numero?: string;
   date_peremption?: string;
@@ -1087,24 +1095,6 @@ export async function createReception(data: {
   notes?: string;
 }): Promise<{ message: string; reception: ReceptionLigne }> {
   return fetchApi('/receptions', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function createReceptionMultiple(data: {
-  commande_id: number;
-  date_reception: string;
-  receptions: {
-    com_four_ligne_id: number;
-    quantite_recue: number;
-    secteur_id?: number;
-    lot_numero?: string;
-    date_peremption?: string;
-    notes?: string;
-  }[];
-}): Promise<{ message: string; receptions: ReceptionLigne[] }> {
-  return fetchApi('/receptions/multiple', {
     method: 'POST',
     body: JSON.stringify(data),
   });

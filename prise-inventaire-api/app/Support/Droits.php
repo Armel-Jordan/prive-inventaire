@@ -214,6 +214,7 @@ class Droits
         'POST api/commandes-fournisseur/{commande}/cloturer' => ['commandes_fournisseur', 'cloturer'],
         'POST api/commandes-fournisseur/{commande}/annuler' => ['commandes_fournisseur', 'annuler'],
         'POST api/retours-fournisseurs/{id}/expedier' => ['retours_fournisseurs', 'expedier'],
+        'POST api/receptions/documents/{id}/annuler' => ['receptions', 'annuler'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],

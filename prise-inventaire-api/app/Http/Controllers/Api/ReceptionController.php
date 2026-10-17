@@ -5,21 +5,30 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
+use App\Models\Reception;
 use App\Models\ReceptionArrivagesLigne;
+use App\Services\ReceptionPdf;
+use App\Services\ReceptionsFournisseur;
 use App\Support\TenantRule;
+use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 
 class ReceptionController extends Controller
 {
+    public function __construct(private readonly ReceptionsFournisseur $receptions) {}
+
     public function index(Request $request): JsonResponse
     {
         // Scope tenant via le trait sur ComFourEntete (commande) : ne remonte que les réceptions du tenant courant.
+        // Les lignes d'une réception annulée ne comptent plus.
         $query = ReceptionArrivagesLigne::query()
             ->whereHas('ligneCommande.commande')
+            ->where('annulee', false)
             ->with([
+                'reception:id,numero,bon_livraison',
                 'ligneCommande.commande.fournisseur',
                 'ligneCommande.produit',
                 'secteur',
@@ -51,6 +60,7 @@ class ReceptionController extends Controller
             'com_four_ligne_id' => 'required|exists:com_four_ligne,id',
             'date_reception' => 'required|date',
             'quantite_recue' => 'required|integer|min:1',
+            'cout_unitaire' => 'nullable|numeric|min:0',
             'secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'lot_numero' => 'nullable|string|max:50',
             'date_peremption' => 'nullable|date',
@@ -79,81 +89,147 @@ class ReceptionController extends Controller
             ], 422);
         }
 
-        $reception = DB::transaction(function () use ($validated, $request) {
-            return ReceptionArrivagesLigne::create([
-                'com_four_ligne_id' => $validated['com_four_ligne_id'],
+        // Une réception d'une seule ligne est un document comme les autres (numéroté, annulable).
+        return $this->executer(function () use ($validated, $request, $commande) {
+            $resultat = $this->receptions->enregistrer([
                 'date_reception' => $validated['date_reception'],
-                'quantite_recue' => $validated['quantite_recue'],
-                'secteur_id' => $validated['secteur_id'] ?? null,
-                'lot_numero' => $validated['lot_numero'] ?? null,
-                'date_peremption' => $validated['date_peremption'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'received_by' => $request->user()->id,
-            ]);
-        });
+                'receptions' => [array_intersect_key($validated, array_flip([
+                    'com_four_ligne_id', 'quantite_recue', 'cout_unitaire', 'secteur_id', 'lot_numero', 'date_peremption', 'notes',
+                ]))],
+            ], $commande->tenant_id, $request->user());
 
-        return response()->json([
-            'message' => 'Réception enregistrée avec succès.',
-            'reception' => $reception->load(['ligneCommande.produit', 'secteur']),
-        ], 201);
+            return response()->json([
+                'message' => 'Réception enregistrée avec succès.',
+                'reception' => $resultat['lignes'][0]->load(['ligneCommande.produit', 'secteur']),
+                'document' => $resultat['reception'],
+            ], 201);
+        });
     }
 
+    /**
+     * Réception d'une livraison : lignes d'une ou de plusieurs commandes envoyées du même fournisseur (une ligne peut se
+     * répartir sur plusieurs secteurs), avec le bon de livraison, le connaissement et le coût réel ; clôture des lignes
+     * que le fournisseur ne livrera pas au complet. Recevoir plus que le reste demande « accepter_surplus ».
+     */
     public function receptionMultiple(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'commande_id' => ['required', TenantRule::exists('com_four_entete')],
+            'commande_id' => ['nullable', TenantRule::exists('com_four_entete')],
             'date_reception' => 'required|date',
-            'receptions' => 'required|array|min:1',
-            'receptions.*.com_four_ligne_id' => 'required|exists:com_four_ligne,id',
+            'bon_livraison' => 'nullable|string|max:60',
+            'connaissement' => 'nullable|string|max:60',
+            'notes' => 'nullable|string|max:2000',
+            'accepter_surplus' => 'boolean',
+            'receptions' => 'nullable|array',
+            'receptions.*.com_four_ligne_id' => 'required|integer',
             'receptions.*.quantite_recue' => 'required|integer|min:1',
+            'receptions.*.cout_unitaire' => 'nullable|numeric|min:0',
             'receptions.*.secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'receptions.*.lot_numero' => 'nullable|string|max:50',
             'receptions.*.date_peremption' => 'nullable|date',
             'receptions.*.notes' => 'nullable|string',
+            'clotures' => 'nullable|array',
+            'clotures.*' => 'integer',
         ]);
 
-        $commande = ComFourEntete::findOrFail($validated['commande_id']);
-
-        if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
-            return response()->json([
-                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
-            ], 422);
+        if (isset($validated['commande_id'])) {
+            $commande = ComFourEntete::findOrFail($validated['commande_id']);
+            if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
+                return response()->json([
+                    'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
+                ], 422);
+            }
         }
 
-        $receptions = DB::transaction(function () use ($validated, $request, $commande) {
-            $created = [];
+        return $this->executer(function () use ($validated, $request) {
+            $resultat = $this->receptions->enregistrer($validated, $request->attributes->get('tenant')->id, $request->user());
+            $cloturees = count($resultat['cloturees']);
+            $message = $resultat['reception']
+                ? "Réception {$resultat['reception']->numero} enregistrée : ".count($resultat['lignes']).' ligne(s)'.($cloturees ? ", {$cloturees} ligne(s) clôturée(s)" : '').'.'
+                : "{$cloturees} ligne(s) clôturée(s).";
 
-            foreach ($validated['receptions'] as $receptionData) {
-                // Scoper la ligne à la commande (tenant-scopée) : empêche de réceptionner sur la ligne d'un autre tenant.
-                $ligneCommande = $commande->lignes()->findOrFail($receptionData['com_four_ligne_id']);
-                $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
-
-                if ($receptionData['quantite_recue'] > $quantiteRestante) {
-                    // 422 (et non 500) ; la transaction annule les réceptions déjà créées.
-                    throw ValidationException::withMessages([
-                        'receptions' => "La quantité reçue ({$receptionData['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante}) pour le produit {$ligneCommande->produit?->description}.",
-                    ]);
-                }
-
-                $created[] = ReceptionArrivagesLigne::create([
-                    'com_four_ligne_id' => $receptionData['com_four_ligne_id'],
-                    'date_reception' => $validated['date_reception'],
-                    'quantite_recue' => $receptionData['quantite_recue'],
-                    'secteur_id' => $receptionData['secteur_id'] ?? null,
-                    'lot_numero' => $receptionData['lot_numero'] ?? null,
-                    'date_peremption' => $receptionData['date_peremption'] ?? null,
-                    'notes' => $receptionData['notes'] ?? null,
-                    'received_by' => $request->user()->id,
-                ]);
-            }
-
-            return $created;
+            return response()->json([
+                'message' => $message,
+                'reception' => $resultat['reception'],
+                'receptions' => $resultat['lignes'],
+                'cloturees' => $resultat['cloturees'],
+            ], $resultat['reception'] ? 201 : 200);
         });
+    }
 
-        return response()->json([
-            'message' => count($receptions).' réception(s) enregistrée(s) avec succès.',
-            'receptions' => $receptions,
-        ], 201);
+    /** Historique des réceptions (documents), filtrable ; avec leurs commandes et leur valeur. */
+    public function documents(Request $request): JsonResponse
+    {
+        $filtres = $request->validate([
+            'recherche' => 'nullable|string|max:100',
+            'fournisseur_id' => 'nullable|integer',
+            'commande_id' => 'nullable|integer',
+            'produit_id' => 'nullable|integer',
+            'statut' => ['nullable', Rule::in([Reception::ENREGISTREE, Reception::ANNULEE])],
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date',
+            'per_page' => 'nullable|integer|between:1,100',
+        ]);
+        $recherche = trim($filtres['recherche'] ?? '');
+
+        $receptions = Reception::query()
+            ->with(['fournisseur:id,code,raison_sociale', 'auteur:id,nom', 'lignes.ligneCommande.commande:id,numero,devise,taux_change'])
+            ->withCount('lignes')
+            ->when($recherche !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->where('numero', 'like', "%{$recherche}%")
+                ->orWhere('bon_livraison', 'like', "%{$recherche}%")
+                ->orWhere('connaissement', 'like', "%{$recherche}%")
+                ->orWhereHas('fournisseur', fn ($f) => $f->where('raison_sociale', 'like', "%{$recherche}%")->orWhere('code', 'like', "%{$recherche}%"))
+                ->orWhereHas('lignes.ligneCommande.commande', fn ($c) => $c->where('numero', 'like', "%{$recherche}%"))))
+            ->when($filtres['fournisseur_id'] ?? null, fn ($q, $id) => $q->where('fournisseur_id', $id))
+            ->when($filtres['commande_id'] ?? null, fn ($q, $id) => $q->whereHas('lignes.ligneCommande', fn ($l) => $l->where('com_four_entete_id', $id)))
+            ->when($filtres['produit_id'] ?? null, fn ($q, $id) => $q->whereHas('lignes.ligneCommande', fn ($l) => $l->where('produit_id', $id)))
+            ->when($filtres['statut'] ?? null, fn ($q, $statut) => $q->where('statut', $statut))
+            ->when($filtres['date_debut'] ?? null, fn ($q, $date) => $q->whereDate('date_reception', '>=', $date))
+            ->when($filtres['date_fin'] ?? null, fn ($q, $date) => $q->whereDate('date_reception', '<=', $date))
+            ->orderByDesc('date_reception')->orderByDesc('id')
+            ->paginate($filtres['per_page'] ?? 20);
+
+        return response()->json($receptions->through(fn (Reception $reception) => $this->presenter($reception, false)));
+    }
+
+    public function document(int $id): JsonResponse
+    {
+        return response()->json($this->presenter(Reception::query()->with($this->receptions->relations())->findOrFail($id)));
+    }
+
+    /** Correction d'une réception : date, bon de livraison, connaissement, note, coût des lignes (jamais les quantités). */
+    public function modifier(Request $request, int $id): JsonResponse
+    {
+        $reception = Reception::findOrFail($id);
+        $donnees = $request->validate([
+            'date_reception' => 'sometimes|required|date',
+            'bon_livraison' => 'sometimes|nullable|string|max:60',
+            'connaissement' => 'sometimes|nullable|string|max:60',
+            'notes' => 'sometimes|nullable|string|max:2000',
+            'lignes' => 'sometimes|array',
+            'lignes.*.id' => 'required|integer',
+            'lignes.*.cout_unitaire' => 'nullable|numeric|min:0',
+        ]);
+
+        return $this->executer(fn () => response()->json($this->presenter($this->receptions->modifier($reception, $donnees))));
+    }
+
+    public function annuler(Request $request, int $id): JsonResponse
+    {
+        $reception = Reception::findOrFail($id);
+        $donnees = $request->validate(['motif' => 'nullable|string|max:255']);
+
+        return $this->executer(fn () => response()->json($this->presenter(
+            $this->receptions->annuler($reception, $donnees['motif'] ?? null, $request->user()),
+        )));
+    }
+
+    public function pdf(int $id, ReceptionPdf $pdf): Response
+    {
+        $reception = Reception::query()->with($this->receptions->relations())->findOrFail($id);
+
+        return $pdf->pdf($reception)->download("reception-{$reception->numero}.pdf");
     }
 
     public function commandesEnAttente(): JsonResponse
@@ -188,5 +264,38 @@ class ReceptionController extends Controller
             });
 
         return response()->json($lignes);
+    }
+
+    /**
+     * Réception telle qu'affichée : ses commandes, et sa valeur dans la devise de ses commandes (quantité × coût réel,
+     * sinon prix commandé) et dans celle de l'entreprise. Le détail ajoute, par ligne, le coût retenu et le montant.
+     */
+    private function presenter(Reception $reception, bool $detail = true): array
+    {
+        $lignes = $reception->lignes;
+        $cout = fn (ReceptionArrivagesLigne $l) => (float) ($l->cout_unitaire ?? $l->ligneCommande?->prix_unitaire ?? 0);
+        $taux = fn (ReceptionArrivagesLigne $l) => (float) ($l->ligneCommande?->commande?->taux_change ?: 1);
+        $devises = $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->ligneCommande?->commande?->devise)->unique()->values();
+        $donnees = $reception->toArray();
+        unset($donnees['lignes']);
+
+        return $donnees + [
+            'commandes' => $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->ligneCommande?->commande?->numero)->filter()->unique()->values()->all(),
+            'devise' => $devises->count() === 1 ? $devises->first() : null,
+            'montant' => round($lignes->sum(fn ($l) => $l->quantite_recue * $cout($l)), 2),
+            'montant_reference' => round($lignes->sum(fn ($l) => $l->quantite_recue * $cout($l) * $taux($l)), 2),
+        ] + ($detail ? ['lignes' => $lignes->map(fn (ReceptionArrivagesLigne $l) => $l->toArray() + [
+            'cout_retenu' => $cout($l),
+            'montant' => round($l->quantite_recue * $cout($l), 2),
+        ])->all()] : ['lignes_count' => $reception->lignes_count ?? $lignes->count()]);
+    }
+
+    private function executer(callable $action): JsonResponse
+    {
+        try {
+            return $action();
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 }

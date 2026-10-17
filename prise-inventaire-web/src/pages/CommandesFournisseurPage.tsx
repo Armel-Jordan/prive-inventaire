@@ -720,6 +720,9 @@ export default function CommandesFournisseurPage() {
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
                             {ligne.quantite_commandee}
+                            {(ligne.quantite_abandonnee ?? 0) > 0 && (
+                              <div className="text-xs text-red-600 whitespace-nowrap">{t.receipts.abandoned.replace('{n}', String(ligne.quantite_abandonnee))}</div>
+                            )}
                             {ligne.unite_achat && (ligne.qte_par_unite_achat ?? 1) > 1 && (
                               <div className="text-xs text-orange-600 whitespace-nowrap">
                                 {ligne.unite_achat} × {ligne.qte_par_unite_achat} = {ligne.quantite_commandee * (ligne.qte_par_unite_achat ?? 1)} UN

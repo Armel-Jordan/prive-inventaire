@@ -7,6 +7,7 @@ use App\Models\ProduitTenant;
 use App\Models\TenantParametres;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Valorisation de l'inventaire officiel (plan de parité fripv2, phase 2.6) : les quantités retenues par les
@@ -17,7 +18,8 @@ use Illuminate\Support\Collection;
  *  - prix_vente    : prix unitaire de la fiche produit.
  *
  * Les prix d'achat sont ramenés à l'unité de stock (un carton de 12 coûte 12 unités) et à la devise de
- * l'entreprise (taux de change figé sur la commande). Rien n'est enregistré : c'est un état.
+ * l'entreprise (taux de change figé sur la commande). Le prix d'une ligne de commande est le coût réel saisi à ses
+ * réceptions quand il y en a un (phase 3.3), sinon le prix commandé. Rien n'est enregistré : c'est un état.
  */
 class ValorisationInventaire
 {
@@ -90,18 +92,23 @@ class ValorisationInventaire
         }
 
         $numeros = $produits->mapWithKeys(fn (ProduitTenant $p) => [$p->id => $p->numero]);
+        // Coût réel des réceptions (non annulées) qui en portent un, par ligne de commande.
+        $coutsRecus = DB::table('reception_arrivages_ligne')->where('annulee', false)->whereNotNull('cout_unitaire')
+            ->groupBy('com_four_ligne_id')
+            ->selectRaw('com_four_ligne_id, SUM(quantite_recue) AS qte_cout, SUM(quantite_recue * cout_unitaire) AS valeur_cout');
         $achats = ComFourEntete::query()
             ->join('com_four_ligne as l', 'l.com_four_entete_id', '=', 'com_four_entete.id')
+            ->leftJoinSub($coutsRecus, 'rc', 'rc.com_four_ligne_id', '=', 'l.id')
             ->whereIn('l.produit_id', $numeros->keys())
             ->whereNotIn('com_four_entete.statut', [ComFourEntete::STATUT_BROUILLON, ComFourEntete::STATUT_ANNULEE])
             ->orderBy('com_four_entete.date_commande')->orderBy('com_four_entete.id')
             ->get(['l.produit_id', 'l.quantite_commandee', 'l.quantite_recue', 'l.qte_par_unite_achat', 'l.prix_unitaire',
-                'com_four_entete.taux_change', 'com_four_entete.numero', 'com_four_entete.date_commande'])
+                'com_four_entete.taux_change', 'com_four_entete.numero', 'com_four_entete.date_commande', 'rc.qte_cout', 'rc.valeur_cout'])
             ->groupBy('produit_id');
 
         $couts = [];
         foreach ($achats as $produitId => $lignes) {
-            $unitaire = fn ($l) => (float) $l->prix_unitaire * ((float) $l->taux_change ?: 1.0) / max(1, (int) $l->qte_par_unite_achat);
+            $unitaire = fn ($l) => $this->prixLigne($l) * ((float) $l->taux_change ?: 1.0) / max(1, (int) $l->qte_par_unite_achat);
             if ($methode === 'dernier_achat') {
                 $derniere = $lignes->last();
                 $couts[$numeros[$produitId]] = [
@@ -124,5 +131,20 @@ class ValorisationInventaire
         }
 
         return $couts;
+    }
+
+    /**
+     * Prix d'achat d'une ligne de commande (devise de la commande, unité d'achat) : le coût réel de ses réceptions qui
+     * en portent un, le reste reçu (ou rien de reçu) au prix commandé.
+     */
+    private function prixLigne(object $ligne): float
+    {
+        $qteCout = (float) ($ligne->qte_cout ?? 0);
+        if ($qteCout <= 0) {
+            return (float) $ligne->prix_unitaire;
+        }
+        $recue = max((float) $ligne->quantite_recue, $qteCout);
+
+        return ((float) $ligne->valeur_cout + ($recue - $qteCout) * (float) $ligne->prix_unitaire) / $recue;
     }
 }
