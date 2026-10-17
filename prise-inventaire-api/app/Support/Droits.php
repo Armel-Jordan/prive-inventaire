@@ -234,6 +234,13 @@ class Droits
         'PUT api/banque/comptes/{id}' => ['banque', 'configurer'],
         'POST api/banque/transactions' => ['banque', 'saisir'],
         'POST api/banque/transactions/{id}/annuler' => ['banque', 'annuler'],
+        // Rapprochement bancaire : commencer, corriger le relevé, pointer, terminer, rouvrir, supprimer.
+        'POST api/banque/comptes/{id}/rapprochements' => ['banque', 'rapprocher'],
+        'PUT api/banque/rapprochements/{id}' => ['banque', 'rapprocher'],
+        'POST api/banque/rapprochements/{id}/pointer' => ['banque', 'rapprocher'],
+        'POST api/banque/rapprochements/{id}/terminer' => ['banque', 'rapprocher'],
+        'POST api/banque/rapprochements/{id}/rouvrir' => ['banque', 'rapprocher'],
+        'DELETE api/banque/rapprochements/{id}' => ['banque', 'rapprocher'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],

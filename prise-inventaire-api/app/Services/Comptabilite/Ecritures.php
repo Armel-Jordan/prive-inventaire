@@ -88,6 +88,9 @@ class Ecritures
         if ($ecriture->periode->exercice->estCloture() || $ecriture->periode->fermee) {
             return 'La période de cette écriture est fermée : contre-passez-la plutôt que de la modifier.';
         }
+        if ($ecriture->lignes()->whereNotNull('rapprochement_id')->exists()) {
+            return 'Cette écriture est pointée dans un rapprochement bancaire : retirez-la d\'abord du rapprochement.';
+        }
 
         return null;
     }
@@ -147,6 +150,9 @@ class Ecritures
         $existante = EcritureComptable::where('source', EcritureComptable::OUVERTURE)->where('exercice_id', $exercice->id)->first();
         if ($existante && $this->periodeFermee($existante)) {
             throw ValidationException::withMessages(['lignes' => 'La première période est fermée : les soldes d\'ouverture ne peuvent plus changer.']);
+        }
+        if ($existante && $existante->lignes()->whereNotNull('rapprochement_id')->exists()) {
+            throw ValidationException::withMessages(['lignes' => 'Des soldes d\'ouverture sont pointés dans un rapprochement bancaire : retirez-les d\'abord du rapprochement.']);
         }
         if (! $lignes) {
             $existante?->delete();

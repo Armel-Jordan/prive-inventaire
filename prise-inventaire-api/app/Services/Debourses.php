@@ -11,6 +11,7 @@ use App\Models\FactureFournisseur;
 use App\Models\FactureFournisseurPaiement;
 use App\Models\Fournisseur;
 use App\Models\TenantParametres;
+use App\Services\Banque\Rapprochements;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -256,6 +257,7 @@ class Debourses
             if ($debourse->statut === Debourse::ANNULE) {
                 throw new DomainException("Le déboursé {$debourse->numero} est déjà annulé.");
             }
+            app(Rapprochements::class)->verifierDocument('debourse', $debourse->id, "Le déboursé {$debourse->numero}");
             $paiements = FactureFournisseurPaiement::query()->where('debourse_id', $debourse->id)->get();
             $factures = FactureFournisseur::query()->whereIn('id', $paiements->pluck('facture_fournisseur_id'))->orderBy('id')->lockForUpdate()->get();
             foreach ($factures as $facture) {

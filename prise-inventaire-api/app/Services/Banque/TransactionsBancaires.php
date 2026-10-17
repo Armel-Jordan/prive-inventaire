@@ -109,6 +109,7 @@ class TransactionsBancaires
             if ($transaction->statut === TransactionBancaire::ANNULE) {
                 throw new DomainException("La transaction {$transaction->numero} est déjà annulée.");
             }
+            app(Rapprochements::class)->verifierDocument('transaction_bancaire', $transaction->id, "La transaction {$transaction->numero}");
             $transaction->update([
                 'statut' => TransactionBancaire::ANNULE,
                 'annule_le' => now(),

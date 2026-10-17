@@ -138,3 +138,82 @@ export function creerTransactionBancaire(saisie: SaisieTransactionBancaire): Pro
 export function annulerTransactionBancaire(id: number, motif?: string | null): Promise<TransactionBancaire> {
   return apiFetch(`/banque/transactions/${id}/annuler`, { method: 'POST', body: JSON.stringify({ motif: motif || null }), retries: 0 });
 }
+
+// === Rapprochement bancaire ===
+
+export interface RapprochementBancaire {
+  id: number;
+  compte_bancaire_id: number;
+  date_releve: string;
+  solde_releve: string;
+  solde_depart: string;
+  statut: 'en_cours' | 'termine';
+  notes: string | null;
+  auteur?: { id: number; nom: string } | null;
+  auteur_fin?: { id: number; nom: string } | null;
+  termine_le: string | null;
+}
+
+export interface LigneRapprochement {
+  id: number;
+  ecriture_id: number;
+  date: string;
+  numero: string;
+  journal: string;
+  libelle: string;
+  reference: string | null;
+  source: SourceEcriture;
+  entree: number;
+  sortie: number;
+  pointee: boolean;
+}
+
+export interface ResumeRapprochement {
+  solde_depart: number;
+  entrees_pointees: number;
+  sorties_pointees: number;
+  solde_pointe: number;
+  solde_releve: number;
+  ecart: number;
+  entrees_en_circulation: number;
+  sorties_en_circulation: number;
+  solde_comptable: number;
+}
+
+export interface DetailRapprochement {
+  rapprochement: RapprochementBancaire;
+  lignes: LigneRapprochement[];
+  resume: ResumeRapprochement;
+}
+
+export function getRapprochements(compteId: number): Promise<RapprochementBancaire[]> {
+  return apiFetch(`/banque/comptes/${compteId}/rapprochements`);
+}
+
+export function commencerRapprochement(compteId: number, donnees: { date_releve: string; solde_releve: number; notes?: string | null }): Promise<RapprochementBancaire> {
+  return apiFetch(`/banque/comptes/${compteId}/rapprochements`, { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
+}
+
+export function getRapprochement(id: number): Promise<DetailRapprochement> {
+  return apiFetch(`/banque/rapprochements/${id}`);
+}
+
+export function modifierRapprochement(id: number, donnees: { date_releve?: string; solde_releve?: number; notes?: string | null }): Promise<DetailRapprochement> {
+  return apiFetch(`/banque/rapprochements/${id}`, { method: 'PUT', body: JSON.stringify(donnees), retries: 0 });
+}
+
+export function pointerMouvements(id: number, lignes: number[], pointee: boolean): Promise<DetailRapprochement> {
+  return apiFetch(`/banque/rapprochements/${id}/pointer`, { method: 'POST', body: JSON.stringify({ lignes, pointee }), retries: 0 });
+}
+
+export function terminerRapprochement(id: number): Promise<RapprochementBancaire> {
+  return apiFetch(`/banque/rapprochements/${id}/terminer`, { method: 'POST', retries: 0 });
+}
+
+export function rouvrirRapprochement(id: number): Promise<RapprochementBancaire> {
+  return apiFetch(`/banque/rapprochements/${id}/rouvrir`, { method: 'POST', retries: 0 });
+}
+
+export function supprimerRapprochement(id: number): Promise<{ message: string }> {
+  return apiFetch(`/banque/rapprochements/${id}`, { method: 'DELETE', retries: 0 });
+}
