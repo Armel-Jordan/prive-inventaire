@@ -66,6 +66,7 @@ use App\Http\Controllers\Api\FournisseurFicheController;
 use App\Http\Controllers\Api\FournisseurFicheRemarqueController;
 use App\Http\Controllers\Api\FraisController;
 use App\Http\Controllers\Api\GroupeTaxeController;
+use App\Http\Controllers\Api\ImportPrixFournisseurController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\PointDeVenteController;
@@ -757,6 +758,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/recharger', [CarteCadeauController::class, 'recharger'])->whereNumber('id');
         Route::post('/{id}/rembourser', [CarteCadeauController::class, 'rembourser'])->whereNumber('id');
         Route::get('/{id}/certificat', [CarteCadeauController::class, 'certificat'])->whereNumber('id');
+    });
+
+    // Import d'une grille de prix fournisseur (simulation puis import) et profils d'import mémorisés.
+    Route::post('/fournisseurs/import-prix', [ImportPrixFournisseurController::class, 'importer'])->middleware('module:achats');
+    Route::prefix('profils-import')->middleware('module:achats')->group(function () {
+        Route::get('/', [ImportPrixFournisseurController::class, 'profils']);
+        Route::post('/', [ImportPrixFournisseurController::class, 'enregistrerProfil']);
+        Route::delete('/{id}', [ImportPrixFournisseurController::class, 'supprimerProfil'])->whereNumber('id');
     });
 
     // Suggestions d'achat : stock sous le minimum et reliquats clients à commander, puis commandes fournisseur par fournisseur.

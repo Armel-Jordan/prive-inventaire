@@ -169,6 +169,10 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        // Grilles de prix fournisseur : importer (la simulation aussi) ; profils d'import (seul type : prix fournisseur).
+        'POST api/fournisseurs/import-prix' => ['fournisseurs', 'importer_prix'],
+        'POST api/profils-import' => ['fournisseurs', 'importer_prix'],
+        'DELETE api/profils-import/{id}' => ['fournisseurs', 'importer_prix'],
         // Suggestions d'achat : en signaler une (depuis un produit) ; calculer, accepter, modifier, retirer et commander (les
         // droits des commandes fournisseur sont contrôlés aussi pour commander).
         'POST api/suggestions-achat' => ['suggestions_achat', 'suggerer'],
