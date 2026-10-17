@@ -88,6 +88,14 @@ class Permissions
                 'aide_fr' => 'Annuler une réception saisie par erreur : ses quantités sont retirées des commandes fournisseur et des reliquats clients.',
                 'aide_en' => 'Cancel a receipt entered by mistake: its quantities are removed from the purchase orders and customer back orders.'],
         ]],
+        'factures_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Factures fournisseurs', 'en' => 'Supplier invoices', 'crud' => ['voir', 'creer', 'modifier'], 'actions' => [
+            'payer' => ['base' => 'modifier', 'fr' => 'Payer une facture fournisseur', 'en' => 'Pay a supplier invoice',
+                'aide_fr' => "Enregistrer un paiement versé au fournisseur sur une de ses factures, ou l'annuler s'il a été saisi par erreur.",
+                'aide_en' => 'Record a payment made to the supplier on one of its invoices, or cancel it if it was entered by mistake.'],
+            'annuler' => ['base' => 'modifier', 'fr' => 'Annuler une facture fournisseur', 'en' => 'Cancel a supplier invoice',
+                'aide_fr' => 'Annuler une facture fournisseur saisie par erreur, sans paiement : ses réceptions redeviennent à facturer.',
+                'aide_en' => 'Cancel a supplier invoice entered by mistake, without payments: its receipts are to be invoiced again.'],
+        ]],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',
                 'aide_fr' => 'Expédier un retour brouillon : il reçoit son numéro, et ce qui était en stock sort de son secteur.',

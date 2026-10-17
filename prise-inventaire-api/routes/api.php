@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DisponibiliteController;
 use App\Http\Controllers\Api\DocumentPdfController;
 use App\Http\Controllers\Api\FactureController;
+use App\Http\Controllers\Api\FactureFournisseurController;
 use App\Http\Controllers\Api\FournisseurController;
 use App\Http\Controllers\Api\FournisseurFicheAdresseController;
 use App\Http\Controllers\Api\FournisseurFicheCompteController;
@@ -528,6 +529,20 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/documents/{id}', [ReceptionController::class, 'modifier'])->whereNumber('id');
         Route::post('/documents/{id}/annuler', [ReceptionController::class, 'annuler'])->whereNumber('id');
         Route::get('/documents/{id}/pdf', [ReceptionController::class, 'pdf'])->whereNumber('id');
+    });
+
+    // Factures fournisseurs (comptes à payer) : saisies à la main ou depuis des réceptions, rapprochées de la marchandise
+    // reçue, payées jusqu'au reste dû.
+    Route::prefix('factures-fournisseurs')->middleware('module:achats')->group(function () {
+        Route::get('/', [FactureFournisseurController::class, 'index']);
+        Route::get('/proposition', [FactureFournisseurController::class, 'proposition']);
+        Route::post('/', [FactureFournisseurController::class, 'store']);
+        Route::get('/{id}', [FactureFournisseurController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [FactureFournisseurController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/aligner-couts', [FactureFournisseurController::class, 'alignerCouts'])->whereNumber('id');
+        Route::post('/{id}/paiements', [FactureFournisseurController::class, 'payer'])->whereNumber('id');
+        Route::delete('/{id}/paiements/{paiement}', [FactureFournisseurController::class, 'annulerPaiement'])->whereNumber(['id', 'paiement']);
+        Route::post('/{id}/annuler', [FactureFournisseurController::class, 'annuler'])->whereNumber('id');
     });
 
     // Retours fournisseurs : marchandise renvoyée (reçue d'une commande, rapportée par un client, ou sans origine),

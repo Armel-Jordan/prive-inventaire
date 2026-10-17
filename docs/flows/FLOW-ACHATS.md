@@ -18,6 +18,7 @@
 9. [Retours fournisseurs et avoirs](#9-retours-fournisseurs-et-avoirs-achats--retours-fournisseurs)
 10. [Suggestions d'achat](#10-suggestions-dachat-achats--suggestions-dachat)
 11. [Import d'une grille de prix fournisseur](#11-import-dune-grille-de-prix-fournisseur-achats--fournisseurs)
+12. [Factures fournisseurs](#12-factures-fournisseurs-achats--factures-fournisseurs)
 
 ---
 
@@ -333,7 +334,7 @@ La clôture d'une commande entière (« Clôturer le reste », §3.6) note aussi
   - le statut des commandes est recalculé (envoyée, partielle ou complète) ;
   - les reliquats clients rendent ce qu'ils avaient reçu en trop, du plus récent au plus ancien ;
   - ses lignes ne comptent plus nulle part.
-- **L'annulation est refusée** si la marchandise est déjà repartie au fournisseur (retour expédié) ou déjà facturée au client d'un reliquat. Une ligne clôturée par la réception n'est pas rouverte.
+- **L'annulation est refusée** si la marchandise est déjà repartie au fournisseur (retour expédié), déjà facturée au client d'un reliquat, ou si la réception est facturée par une facture fournisseur (§12 : on annule d'abord la facture). Une ligne clôturée par la réception n'est pas rouverte.
 
 ### 4.7 Impact sur l'inventaire
 
@@ -690,6 +691,54 @@ Plan de parité fripv2, phase 3.6 (« Importer une grille de prix fournisseur »
 Code :
 - API : service `App\Services\ImportPrixFournisseurs`, `ImportPrixFournisseurController`, migration `2026_10_17_100056_import_prix_fournisseurs` (table `profils_import`, action du droit) ;
 - web : composant `fournisseurs/ImportGrillePrix`, service `importPrix.ts`.
+
+---
+
+## 12. Factures fournisseurs (Achats → Factures fournisseurs)
+
+Plan de parité fripv2, phase 3.5 (« Compte à payer ») : la facture reçue d'un fournisseur, rapprochée de la marchandise reçue, avec ses taxes, son échéance et ses paiements.
+
+**Saisie** (« Nouvelle facture », ou cases cochées dans l'historique des réceptions puis « Facturer les réceptions ») :
+- en-tête : fournisseur, numéro de la facture chez lui, date, condition de paiement, devise (celle de l'entreprise ou une autre, avec son taux), note ;
+- lignes : description, quantité, prix unitaire HT, taxe (taux de la ligne, sinon groupe de taxes par défaut, sinon taux de l'entreprise) ;
+- **depuis des réceptions** d'un même fournisseur, pas encore facturées : une ligne par ligne reçue, à la quantité reçue et au coût réel (sinon au prix commandé), dans la devise des commandes. Des réceptions dans des devises différentes se facturent séparément ;
+- l'**échéance** se calcule d'après la condition de paiement choisie, sinon celle par défaut de l'entreprise (fin de mois comprise). Elle peut aussi se saisir ;
+- une même facture du fournisseur (même numéro) ne s'enregistre pas deux fois ;
+- numérotation « Factures fournisseurs » (`FF-00001`, Configuration → Numérotation).
+
+**Réceptions facturées** :
+- elles portent la facture qui les règle (« Facturée FF-00001 » dans l'historique et le détail, filtre « Facturation » : à facturer / facturées) ;
+- elles ne s'annulent plus tant que la facture n'est pas annulée.
+
+**Rapprochement** :
+- pour chaque ligne qui facture une ligne de réception : valeur reçue (quantité reçue × coût réel, sinon prix commandé) et **écart** avec le montant facturé ; écart total de la facture ;
+- « **Aligner le coût des réceptions sur la facture** » : le coût réel des lignes reçues prend le prix facturé, comme l'ajustement des coûtants de fripv2. La valorisation de l'inventaire et les coûts annexes répartis à la valeur suivent. Seules les lignes dans la devise de leur commande sont alignées.
+
+**Paiements et état** :
+- un paiement (date, montant, mode : virement, chèque, espèces, carte, autre ; référence) va jusqu'au reste à payer ; un paiement saisi par erreur s'annule ;
+- l'**état** se calcule : impayée, payée en partie, payée, **en retard** (reste à payer et échéance passée, avec le nombre de jours), annulée ;
+- une facture qui a reçu un paiement ne se modifie plus et ne s'annule pas (ses paiements s'annulent d'abord) ;
+- annulée (avec un motif), elle libère ses réceptions.
+
+**Liste** : reste à payer et montant en retard (dans la devise de l'entreprise), recherche (numéro, numéro chez le fournisseur, fournisseur), filtres par état et par période. La facture du fournisseur (PDF, photo) se joint au document (pièces jointes).
+
+**Droits** : module **Factures fournisseurs** (`factures_fournisseurs` : voir, créer, modifier ; aligner les coûts relève de « modifier »), réglé à sa création comme les commandes fournisseur ; actions **Payer une facture fournisseur** (`payer`, réglée comme l'encaissement des factures) et **Annuler une facture fournisseur** (`annuler`, réglée comme la suppression des commandes fournisseur).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/factures-fournisseurs` | Liste (`recherche`, `fournisseur_id`, `etat` : impayee, partielle, payee, en_retard, annulee, a_payer ; `date_debut`, `date_fin`) avec le `resume` (à payer, en retard) |
+| GET | `/factures-fournisseurs/proposition?receptions[]=` | Facture proposée depuis des réceptions |
+| POST / PUT | `/factures-fournisseurs[/{id}]` | Enregistrer (la modification est refusée après un paiement) |
+| GET | `/factures-fournisseurs/{id}` | Détail : lignes avec `valeur_recue` et `ecart`, taxes, paiements, réceptions |
+| POST | `/factures-fournisseurs/{id}/aligner-couts` | Aligner le coût réel des réceptions sur la facture |
+| POST / DELETE | `/factures-fournisseurs/{id}/paiements[/{paiement}]` | Payer, annuler un paiement |
+| POST | `/factures-fournisseurs/{id}/annuler` | Annuler la facture (motif) |
+
+Code :
+- API : service `App\Services\FacturesFournisseurs`, `FactureFournisseurController`, migration `2026_10_17_100060_creer_factures_fournisseurs` (tables `factures_fournisseurs`, `facture_fournisseur_lignes`, `facture_fournisseur_paiements`, `receptions.facture_fournisseur_id`, droits) ;
+- web : page `FacturesFournisseursPage`, composants `facturesFournisseurs/*`, service `facturesFournisseurs.ts`.
+
+À venir : les écritures comptables des achats (phase 4.3), les déboursés groupés, chèques et fichiers de paiement (phase 4.5), et les frais d'achat de fripv2 (surcharges par produit ou par document).
 
 ---
 

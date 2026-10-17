@@ -189,6 +189,10 @@ class ReceptionsFournisseur
             if ($reception->statut !== Reception::ENREGISTREE) {
                 throw new DomainException('Cette réception est déjà annulée.');
             }
+            if ($reception->facture_fournisseur_id) {
+                $facture = $reception->factureFournisseur()->value('numero');
+                throw new DomainException("Cette réception est facturée ({$facture}) : annulez d'abord la facture fournisseur.");
+            }
 
             $lignes = $reception->lignes()->where('annulee', false)->get();
             $commandes = [];
@@ -222,7 +226,7 @@ class ReceptionsFournisseur
     {
         return [
             'fournisseur:id,code,raison_sociale,adresse,ville,telephone,email,devise',
-            'auteur:id,nom', 'auteurAnnulation:id,nom', 'frais.fournisseur:id,code,raison_sociale',
+            'auteur:id,nom', 'auteurAnnulation:id,nom', 'frais.fournisseur:id,code,raison_sociale', 'factureFournisseur:id,numero,numero_fournisseur',
             'lignes.ligneCommande.commande:id,numero,devise,taux_change,date_commande,statut',
             'lignes.ligneCommande.produit' => fn ($q) => $q->withTrashed(),
             'lignes.secteur' => fn ($q) => $q->withTrashed(),

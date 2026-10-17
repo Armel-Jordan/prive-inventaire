@@ -24,7 +24,7 @@ class Reception extends Model
 
     protected $fillable = [
         'tenant_id', 'numero', 'fournisseur_id', 'date_reception', 'bon_livraison', 'connaissement', 'notes', 'statut',
-        'recue_par', 'annulee_le', 'annulee_par', 'motif_annulation',
+        'recue_par', 'annulee_le', 'annulee_par', 'motif_annulation', 'facture_fournisseur_id',
     ];
 
     protected $casts = [
@@ -46,6 +46,12 @@ class Reception extends Model
     public function frais(): HasMany
     {
         return $this->hasMany(ReceptionFrais::class)->orderBy('id');
+    }
+
+    /** Facture fournisseur qui règle la réception (« facturée »). */
+    public function factureFournisseur(): BelongsTo
+    {
+        return $this->belongsTo(FactureFournisseur::class);
     }
 
     public function auteur(): BelongsTo
