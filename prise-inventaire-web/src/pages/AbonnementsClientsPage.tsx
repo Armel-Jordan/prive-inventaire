@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Copy, FileText, Link2, Pencil, Plus, Repeat, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, FileText, Link2, Pencil, Plus, Repeat, Trash2, Upload, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, useMontantDocument } from '@/lib/documents';
 import { getClientsActifs, getFactures, getProduits, type Client, type Facture } from '@/services/api';
+import { ApiError } from '@/services/http';
 import {
-  FREQUENCES, VARIABLES_ABONNEMENT, apercuAbonnement, creerAbonnement, facturerAbonnements, getAbonnement, getAbonnements, modifierAbonnement,
-  relierEcheance, supprimerAbonnement, type AbonnementClient, type ApercuAbonnement, type BilanFacturation, type EcheanceAbonnement, type SaisieAbonnement,
+  FREQUENCES, VARIABLES_ABONNEMENT, ajouterReleve, apercuAbonnement, creerAbonnement, facturerAbonnements, getAbonnement, getAbonnements, getReleves,
+  importerReleves, modifierAbonnement, relierEcheance, supprimerAbonnement, supprimerReleve,
+  type AbonnementClient, type ApercuAbonnement, type BilanFacturation, type EcheanceAbonnement, type ReleveAbonnement, type SaisieAbonnement,
 } from '@/services/abonnementsClients';
 import type { PageResultats } from '@/services/api';
 import Pagination from '@/components/Pagination';
@@ -25,6 +27,7 @@ const COULEURS: Record<string, string> = {
   echu: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
   a_venir: 'bg-sky-100 text-sky-800',
   en_retard: 'bg-red-100 text-red-800',
+  rien_a_facturer: 'bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
   brouillon: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
   emise: 'bg-blue-100 text-blue-800',
   partiellement_payee: 'bg-amber-100 text-amber-800',
@@ -57,6 +60,8 @@ export default function AbonnementsClientsPage() {
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [facturation, setFacturation] = useState<{ client?: { id: number; nom: string } } | null>(null);
   const [aRelier, setARelier] = useState<{ abonnement: AbonnementClient; echeance: EcheanceAbonnement } | null>(null);
+  // Import de relevés refusé : les erreurs, ligne par ligne.
+  const [erreursImport, setErreursImport] = useState<string[]>([]);
 
   useEffect(() => {
     const minuterie = setTimeout(() => { setTerme(recherche.trim()); setPage(1); }, 300);
@@ -74,6 +79,19 @@ export default function AbonnementsClientsPage() {
 
   const recharger = () => { setVersion(v => v + 1); setOuverts({}); };
   const abonnements = resultat?.data ?? [];
+
+  async function importer(fichier: File | undefined) {
+    if (!fichier) return;
+    setErreursImport([]);
+    try {
+      const resultat = await importerReleves(fichier);
+      toast(resultat.message);
+      recharger();
+    } catch (e) {
+      const erreurs = e instanceof ApiError ? (e.data as { erreurs?: string[] } | null)?.erreurs : undefined;
+      if (erreurs?.length) setErreursImport(erreurs); else toast(messageErreur(e, ts.error), 'error');
+    }
+  }
 
   async function basculer(abonnement: AbonnementClient) {
     if (abonnement.id in ouverts) {
@@ -113,6 +131,13 @@ export default function AbonnementsClientsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{ts.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {peut('abonnements_clients', 'modifier') && (
+            <label className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 cursor-pointer" title={ts.importHelp}>
+              <Upload size={18} /> {ts.importReadings}
+              <input type="file" accept=".csv,text/csv,text/plain" className="sr-only" aria-label={ts.importReadings}
+                onChange={e => { void importer(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+          )}
           {peut('abonnements_clients', 'facturer') && (
             <button type="button" onClick={() => setFacturation({})} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-500 dark:text-purple-300 dark:hover:bg-purple-900/30">
               <FileText size={18} /> {ts.invoiceDue}
@@ -141,6 +166,15 @@ export default function AbonnementsClientsPage() {
       </div>
 
       {erreur && <p role="alert" className="mb-4 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{erreur}</p>}
+      {erreursImport.length > 0 && (
+        <div role="alert" className="mb-4 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-medium">{ts.importRefused}</p>
+            <button type="button" onClick={() => setErreursImport([])} aria-label={ts.close}><X size={16} /></button>
+          </div>
+          <ul className="list-disc pl-5 max-h-40 overflow-y-auto">{erreursImport.map(e => <li key={e}>{e}</li>)}</ul>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto">
         <table className="w-full text-sm min-w-[64rem]">
@@ -183,7 +217,11 @@ export default function AbonnementsClientsPage() {
                       {a.description && <span className="block text-xs text-gray-500">{a.description}</span>}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{frequence(a)}</td>
-                    <td className="px-3 py-2 text-right text-gray-900 dark:text-white">{a.quantite}</td>
+                    <td className="px-3 py-2 text-right text-gray-900 dark:text-white">
+                      {a.mode_quantite === 'releve'
+                        ? <span className="text-xs">{ts.usageShort}{a.quantite_incluse > 0 && <span className="block text-gray-500">{ts.includedShort.replace('{n}', String(a.quantite_incluse))}</span>}</span>
+                        : a.quantite}
+                    </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap text-gray-700 dark:text-gray-300" title={a.prix_fixe ? ts.fixedPriceHelp : ts.customerPriceHelp}>
                       {a.prix_courant !== null ? montantDoc(a.prix_courant, devise) : '—'}
                       <span className="block text-xs text-gray-500">{a.prix_fixe ? ts.fixedPrice : ts.customerPrice}</span>
@@ -224,9 +262,12 @@ export default function AbonnementsClientsPage() {
                       <td />
                       <td colSpan={10} className="px-3 py-2">
                         {ouverts[a.id] === null ? <p className="text-xs text-gray-500">{ts.loading}</p> : (
-                          <div className="max-h-72 overflow-y-auto">
-                            <Echeances echeances={ouverts[a.id] ?? []} devise={devise}
-                              onRelier={peut('abonnements_clients', 'facturer') ? e => setARelier({ abonnement: a, echeance: e }) : undefined} />
+                          <div className={a.mode_quantite === 'releve' ? 'grid lg:grid-cols-2 gap-4' : ''}>
+                            <div className="max-h-72 overflow-y-auto">
+                              <Echeances echeances={ouverts[a.id] ?? []} devise={devise}
+                                onRelier={peut('abonnements_clients', 'facturer') ? e => setARelier({ abonnement: a, echeance: e }) : undefined} />
+                            </div>
+                            {a.mode_quantite === 'releve' && <Releves abonnementId={a.id} modifiable={peut('abonnements_clients', 'modifier')} />}
                           </div>
                         )}
                       </td>
@@ -291,6 +332,71 @@ function Echeances({ echeances, devise, onRelier }: { echeances: EcheanceAbonnem
   );
 }
 
+/** Relevés de consommation d'un abonnement à l'usage : liste, ajout, retrait (pas une fois la période facturée). */
+function Releves({ abonnementId, modifiable }: { abonnementId: number; modifiable: boolean }) {
+  const { t, language } = useLanguage();
+  const ts = t.subscriptions;
+  const [releves, setReleves] = useState<ReleveAbonnement[] | null>(null);
+  const [saisie, setSaisie] = useState({ date: aujourdhui(), quantite: '', note: '' });
+  const [erreur, setErreur] = useState('');
+
+  useEffect(() => {
+    let actif = true;
+    getReleves(abonnementId).then(r => { if (actif) setReleves(r); }, e => { if (actif) setErreur(messageErreur(e, ts.error)); });
+    return () => { actif = false; };
+  }, [abonnementId, ts.error]);
+
+  async function agir(action: () => Promise<ReleveAbonnement[]>) {
+    setErreur('');
+    try { setReleves(await action()); } catch (e) { setErreur(messageErreur(e, ts.error)); }
+  }
+
+  return (
+    <div className="text-xs">
+      <p className="font-medium text-gray-700 dark:text-gray-200 mb-1">{ts.readings}</p>
+      {modifiable && (
+        <form className="flex flex-wrap items-end gap-1 mb-2" onSubmit={e => {
+          e.preventDefault();
+          void agir(async () => {
+            const r = await ajouterReleve(abonnementId, { date_releve: saisie.date, quantite: Number(saisie.quantite), note: saisie.note.trim() || null });
+            setSaisie(s => ({ ...s, quantite: '', note: '' }));
+            return r;
+          });
+        }}>
+          <input type="date" required value={saisie.date} onChange={e => setSaisie({ ...saisie, date: e.target.value })} aria-label={ts.readingDate} className="px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <input type="number" required min={0} value={saisie.quantite} onChange={e => setSaisie({ ...saisie, quantite: e.target.value })} aria-label={ts.readingQuantity} placeholder={ts.readingQuantity}
+            className="w-28 px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <input maxLength={255} value={saisie.note} onChange={e => setSaisie({ ...saisie, note: e.target.value })} aria-label={ts.readingNote} placeholder={ts.readingNote}
+            className="flex-1 min-w-[6rem] px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <button type="submit" className="px-2 py-1 bg-teal-600 text-white rounded hover:bg-teal-700">{ts.addReading}</button>
+        </form>
+      )}
+      {erreur && <p role="alert" className="mb-1 px-2 py-1 rounded bg-red-50 text-red-700">{erreur}</p>}
+      {releves === null ? <p className="text-gray-500">{ts.loading}</p> : releves.length === 0 ? <p className="text-gray-500 italic">{ts.noReadings}</p> : (
+        <div className="max-h-60 overflow-y-auto">
+          <table className="w-full">
+            <tbody>
+              {releves.map(r => (
+                <tr key={r.id} className="text-gray-700 dark:text-gray-300">
+                  <td className="py-0.5">{formatDateDocument(r.date_releve, language)}</td>
+                  <td className="py-0.5 text-right">{r.quantite}</td>
+                  <td className="py-0.5 pl-2 text-gray-500">{r.note}</td>
+                  <td className="py-0.5 text-right">
+                    {r.facture ? <span className="text-gray-500">{ts.billedReading}</span> : modifiable && (
+                      <button type="button" onClick={() => { void agir(() => supprimerReleve(abonnementId, r.id)); }} className="text-red-600 hover:underline"
+                        aria-label={`${ts.deleteReading} — ${formatDateDocument(r.date_releve, language)}`}>{ts.deleteReading}</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Saisie d'un abonnement (nouveau, copie ou modification), avec l'aperçu de la première échéance. */
 function FormulaireAbonnement({ formulaire, onClose, onEnregistre }: { formulaire: Formulaire; onClose: () => void; onEnregistre: () => void }) {
   const { t, language } = useLanguage();
@@ -305,7 +411,9 @@ function FormulaireAbonnement({ formulaire, onClose, onEnregistre }: { formulair
     client_id: source ? String(source.client_id) : '',
     produit_id: source ? String(source.produit_id) : '',
     description: source?.description ?? '',
+    mode_quantite: source?.mode_quantite ?? 'fixe',
     quantite: source ? String(source.quantite) : '1',
+    quantite_incluse: source ? String(source.quantite_incluse ?? 0) : '0',
     prix_fixe: source?.prix_fixe ?? false,
     prix_unitaire: source?.prix_unitaire != null ? String(Number(source.prix_unitaire)) : '',
     frequence: source?.frequence ?? 'mensuelle',
@@ -334,7 +442,8 @@ function FormulaireAbonnement({ formulaire, onClose, onEnregistre }: { formulair
 
   const corps = (): SaisieAbonnement => ({
     client_id: Number(saisie.client_id), produit_id: Number(saisie.produit_id), description: saisie.description.trim() || null,
-    quantite: Number(saisie.quantite), prix_fixe: saisie.prix_fixe, prix_unitaire: saisie.prix_fixe ? Number(saisie.prix_unitaire) : null,
+    mode_quantite: saisie.mode_quantite, quantite: saisie.mode_quantite === 'releve' ? 1 : Number(saisie.quantite), quantite_incluse: Number(saisie.quantite_incluse) || 0,
+    prix_fixe: saisie.prix_fixe, prix_unitaire: saisie.prix_fixe ? Number(saisie.prix_unitaire) : null,
     frequence: saisie.frequence, jour_facturation: Number(saisie.jour_facturation), mois_facturation: mensuel || !saisie.mois_facturation ? null : Number(saisie.mois_facturation),
     jour_debut_periode: Number(saisie.jour_debut_periode), mois_debut_periode: mensuel || !saisie.mois_debut_periode ? null : Number(saisie.mois_debut_periode),
     periode_precedente: saisie.periode_precedente, date_debut: saisie.date_debut, date_fin: saisie.date_fin, brouillon: saisie.brouillon, notes: saisie.notes.trim() || null,
@@ -420,9 +529,23 @@ function FormulaireAbonnement({ formulaire, onClose, onEnregistre }: { formulair
               </select>
             </label>
           )}
-          <label className={classeLibelle}>{ts.quantity}
-            <input type="number" required min={1} max={999999} step={1} value={saisie.quantite} onChange={e => setSaisie({ ...saisie, quantite: e.target.value })} className={classeChamp} />
+          <label className={classeLibelle}>{ts.quantityMode}
+            {/* À l'usage, la consommation se facture après coup : la période écoulée est proposée. */}
+            <select value={saisie.mode_quantite} className={classeChamp}
+              onChange={e => setSaisie(s => ({ ...s, mode_quantite: e.target.value as SaisieAbonnement['mode_quantite'], periode_precedente: e.target.value === 'releve' ? true : s.periode_precedente }))}>
+              <option value="fixe">{ts.fixedQuantity}</option>
+              <option value="releve">{ts.usageQuantity}</option>
+            </select>
           </label>
+          {saisie.mode_quantite === 'fixe' ? (
+            <label className={classeLibelle}>{ts.quantity}
+              <input type="number" required min={1} max={999999} step={1} value={saisie.quantite} onChange={e => setSaisie({ ...saisie, quantite: e.target.value })} className={classeChamp} />
+            </label>
+          ) : (
+            <label className={classeLibelle} title={ts.includedHelp}>{ts.includedQuantity}
+              <input type="number" min={0} max={999999} step={1} value={saisie.quantite_incluse} onChange={e => setSaisie({ ...saisie, quantite_incluse: e.target.value })} className={classeChamp} />
+            </label>
+          )}
           <label className={`${classeLibelle} sm:col-span-2`}>
             <span className="flex items-center gap-2 mb-1 text-gray-700 dark:text-gray-200">
               <input type="checkbox" checked={saisie.prix_fixe} onChange={e => setSaisie({ ...saisie, prix_fixe: e.target.checked })} /> {ts.fixedPrice}

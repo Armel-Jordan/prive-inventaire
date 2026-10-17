@@ -4,11 +4,16 @@ namespace App\Services;
 
 use App\Models\AbonnementClient;
 use App\Models\AbonnementEcheance;
+use App\Models\AbonnementReleve;
+use App\Models\Client;
 use App\Models\Configuration;
 use App\Models\Facture;
+use App\Models\ProduitTenant;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -61,7 +66,10 @@ class AbonnementsClients
         }
         $dates = [];
         for (; $date->lte($fin); $date->addMonthsNoOverflow($pas)) {
-            $dates[] = $date->copy();
+            // Facturée après coup, une échéance dont la période finit avant le début de l'abonnement n'a rien à facturer.
+            if ($this->periode($abonnement, $date)[1]->gte($debut)) {
+                $dates[] = $date->copy();
+            }
         }
 
         return $dates;
@@ -93,13 +101,13 @@ class AbonnementsClients
     }
 
     /**
-     * (Re)calcule les échéances à facturer : les échéances facturées restent ; les autres sont remplacées par le
-     * calendrier, qui reprend après la dernière échéance facturée.
+     * (Re)calcule les échéances à facturer : les échéances traitées (facturées, ou closes sans rien à facturer)
+     * restent ; les autres sont remplacées par le calendrier, qui reprend après la dernière échéance traitée.
      */
     public function planifier(AbonnementClient $abonnement): void
     {
         DB::transaction(function () use ($abonnement) {
-            $abonnement->echeances()->whereNull('facture_id')->delete();
+            $abonnement->echeances()->aFacturer()->delete();
             $derniere = $abonnement->echeances()->max('date_prevue');
             foreach ($this->dates($abonnement) as $date) {
                 if ($derniere && $date->lte(Carbon::parse($derniere))) {
@@ -178,54 +186,70 @@ class AbonnementsClients
             throw ValidationException::withMessages(['facture' => 'La numérotation automatique des factures doit être active pour facturer les abonnements.']);
         }
         $dues = AbonnementEcheance::query()
-            ->whereNull('facture_id')->whereDate('date_prevue', '<=', $jusquau->toDateString())
+            ->aFacturer()->whereDate('date_prevue', '<=', $jusquau->toDateString())
             ->whereHas('abonnement', fn ($q) => $q->when($clientId, fn ($q) => $q->where('client_id', $clientId)))
             ->with(['abonnement.client', 'abonnement.produit'])
             ->orderBy('date_prevue')->orderBy('id')->get();
 
-        $resultat = ['factures' => [], 'echeances' => 0, 'erreurs' => []];
+        $resultat = ['factures' => [], 'echeances' => 0, 'sans_facture' => 0, 'erreurs' => []];
         $groupes = $dues->groupBy(fn (AbonnementEcheance $e) => $e->abonnement->client_id.'|'.$e->date_prevue->toDateString());
         foreach ($groupes as $echeances) {
             $client = $echeances->first()->abonnement->client;
             $date = $echeances->first()->date_prevue;
             try {
-                $facture = DB::transaction(function () use ($echeances, $client, $date, $emettre, $auteur, $tenantId) {
+                $traite = DB::transaction(function () use ($echeances, $client, $date, $emettre, $auteur, $tenantId) {
                     // Reprises sous verrou : une facturation lancée en même temps ne les facture pas deux fois.
-                    $libres = AbonnementEcheance::whereKey($echeances->pluck('id'))->whereNull('facture_id')->lockForUpdate()->pluck('id')->all();
+                    $libres = AbonnementEcheance::whereKey($echeances->pluck('id'))->aFacturer()->lockForUpdate()->pluck('id')->all();
                     $echeances = $echeances->whereIn('id', $libres)->values();
                     if ($echeances->isEmpty()) {
                         return null;
                     }
                     $devise = $this->devises->pourDocument(null, null, $client);
-                    $lignes = $echeances->map(function (AbonnementEcheance $echeance) use ($date, $devise) {
+                    $lignes = [];
+                    $sansRien = [];
+                    foreach ($echeances as $echeance) {
                         $abonnement = $echeance->abonnement;
+                        $quantite = $this->quantiteAFacturer($abonnement, $echeance);
+                        // À l'usage, consommation couverte par la quantité incluse : l'échéance se clôt sans ligne.
+                        if ($quantite <= 0) {
+                            $sansRien[] = $echeance->id;
+
+                            continue;
+                        }
                         $prix = $this->prixA($abonnement, $date, $devise);
                         if ($prix === null) {
                             throw ValidationException::withMessages(['prix' => "Aucun prix pour le produit {$abonnement->produit?->numero} : fixez le prix de l'abonnement."]);
                         }
-
-                        return [
+                        $lignes[$echeance->id] = [
                             'produit_id' => $abonnement->produit_id,
-                            'quantite' => $abonnement->quantite,
+                            'quantite' => $quantite,
                             'prix_unitaire_ht' => $prix,
                             'description' => $this->description($abonnement, $echeance->periode_debut, $echeance->periode_fin),
                         ];
-                    })->all();
+                    }
+                    AbonnementEcheance::whereKey($sansRien)->update(['rien_a_facturer' => true]);
+                    if ($lignes === []) {
+                        return [null, 0, count($sansRien)];
+                    }
                     $facture = $this->factures->creer($devise + [
                         'client_id' => $client->id,
                         'date_facture' => $date->toDateString(),
-                        'lignes' => $lignes,
+                        'lignes' => array_values($lignes),
                     ], $tenantId);
-                    AbonnementEcheance::whereKey($echeances->pluck('id'))->update(['facture_id' => $facture->id]);
+                    AbonnementEcheance::whereKey(array_keys($lignes))->update(['facture_id' => $facture->id]);
                     if ($emettre && ! $echeances->contains(fn (AbonnementEcheance $e) => $e->abonnement->brouillon)) {
                         $this->factures->emettre($facture, $auteur);
                     }
 
-                    return [$facture, $echeances->count()];
+                    return [$facture, count($lignes), count($sansRien)];
                 });
-                if ($facture) {
-                    $resultat['factures'][] = $facture[0];
-                    $resultat['echeances'] += $facture[1];
+                if ($traite) {
+                    [$facture, $facturees, $sansRien] = $traite;
+                    if ($facture) {
+                        $resultat['factures'][] = $facture;
+                    }
+                    $resultat['echeances'] += $facturees;
+                    $resultat['sans_facture'] += $sansRien;
                 }
             } catch (ValidationException $e) {
                 $resultat['erreurs'][] = ['client' => $client?->raison_sociale, 'date' => $date->toDateString(), 'message' => collect($e->errors())->flatten()->first() ?? $e->getMessage()];
@@ -235,10 +259,136 @@ class AbonnementsClients
         return $resultat;
     }
 
+    /**
+     * Quantité à facturer pour une échéance : la quantité de l'abonnement ; à l'usage, la consommation relevée sur sa
+     * période moins la quantité incluse (sans relevé sur la période, la facture attend : erreur rapportée).
+     */
+    public function quantiteAFacturer(AbonnementClient $abonnement, AbonnementEcheance $echeance): int
+    {
+        if (! $abonnement->aLUsage()) {
+            return $abonnement->quantite;
+        }
+        $releves = $this->relevesDeLaPeriode($abonnement, $echeance->periode_debut, $echeance->periode_fin);
+        if ($releves->isEmpty()) {
+            throw ValidationException::withMessages(['releve' => "Relevé manquant pour {$abonnement->produit?->numero} : période du {$echeance->periode_debut->format('d/m/Y')} au {$echeance->periode_fin->format('d/m/Y')}."]);
+        }
+
+        return max(0, (int) $releves->sum('quantite') - $abonnement->quantite_incluse);
+    }
+
+    /** Relevés d'un abonnement datés dans une période (bornes comprises). */
+    public function relevesDeLaPeriode(AbonnementClient $abonnement, CarbonInterface $debut, CarbonInterface $fin): Collection
+    {
+        return $abonnement->releves()->whereDate('date_releve', '>=', $debut->toDateString())->whereDate('date_releve', '<=', $fin->toDateString())->get();
+    }
+
+    /** Lignes importées au plus par fichier de relevés. */
+    public const MAX_RELEVES = 5000;
+
+    /**
+     * Importe des relevés d'un fichier CSV (séparateur ; , ou tabulation, première ligne d'en-têtes : client (code),
+     * produit (numéro), date, quantité, note facultative). Chaque relevé va à l'abonnement à l'usage du client pour ce
+     * produit, en cours à cette date. Tout ou rien : à la moindre erreur, rien n'est importé et les erreurs sont
+     * renvoyées avec leur numéro de ligne.
+     *
+     * @return array{importes: int, erreurs: list<string>}
+     */
+    public function importerReleves(string $contenu, ?int $auteur): array
+    {
+        $lignes = preg_split('/\r\n|\r|\n/', trim(preg_replace('/^\xEF\xBB\xBF/', '', $contenu)));
+        if (! $lignes || trim($lignes[0]) === '') {
+            return ['importes' => 0, 'erreurs' => ['Le fichier est vide.']];
+        }
+        if (count($lignes) - 1 > self::MAX_RELEVES) {
+            return ['importes' => 0, 'erreurs' => ['Le fichier dépasse '.self::MAX_RELEVES.' relevés.']];
+        }
+        $separateur = collect([';', "\t", ','])->sortByDesc(fn ($s) => substr_count($lignes[0], $s))->first();
+        $alias = ['code_client' => 'client', 'no_client' => 'client', 'numero' => 'produit', 'no_produit' => 'produit', 'numero_produit' => 'produit',
+            'date_releve' => 'date', 'qte' => 'quantite', 'consommation' => 'quantite', 'commentaire' => 'note'];
+        $normaliser = fn (string $v) => Str::of($v)->ascii()->lower()->trim()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_')->toString();
+        $entetes = array_map(fn ($e) => $alias[$normaliser($e)] ?? $normaliser($e), str_getcsv($lignes[0], $separateur));
+        if ($manquantes = array_diff(['client', 'produit', 'date', 'quantite'], $entetes)) {
+            return ['importes' => 0, 'erreurs' => ['Colonnes obligatoires absentes : '.implode(', ', $manquantes).'. Colonnes attendues : client;produit;date;quantite;note.']];
+        }
+
+        $clients = Client::query()->pluck('id', 'code');
+        $produits = ProduitTenant::query()->pluck('id', 'numero');
+        $releves = [];
+        $erreurs = [];
+        foreach (array_slice($lignes, 1) as $index => $brute) {
+            $rang = $index + 2;
+            if (trim($brute) === '') {
+                continue;
+            }
+            $ligne = array_combine($entetes, array_slice(array_pad(str_getcsv($brute, $separateur), count($entetes), ''), 0, count($entetes)));
+            $date = $this->dateDuFichier(trim($ligne['date']));
+            $quantite = trim($ligne['quantite']);
+            $clientId = $clients[trim($ligne['client'])] ?? null;
+            $produitId = $produits[trim($ligne['produit'])] ?? null;
+            $probleme = match (true) {
+                ! $clientId => "client « {$ligne['client']} » inconnu",
+                ! $produitId => "produit « {$ligne['produit']} » inconnu",
+                ! $date => "date « {$ligne['date']} » illisible (AAAA-MM-JJ ou JJ/MM/AAAA)",
+                ! preg_match('/^\d{1,9}$/', $quantite) => "quantité « {$quantite} » invalide (nombre entier)",
+                default => null,
+            };
+            if ($probleme) {
+                $erreurs[] = "Ligne {$rang} : {$probleme}.";
+
+                continue;
+            }
+            $abonnements = AbonnementClient::query()->where('client_id', $clientId)->where('produit_id', $produitId)->where('mode_quantite', 'releve')
+                ->whereDate('date_debut', '<=', $date->toDateString())->whereDate('date_fin', '>=', $date->toDateString())->get();
+            if ($abonnements->count() !== 1) {
+                $erreurs[] = "Ligne {$rang} : ".($abonnements->isEmpty() ? 'aucun abonnement à l\'usage en cours à cette date pour ce client et ce produit.' : 'plusieurs abonnements à l\'usage en cours pour ce client et ce produit.');
+
+                continue;
+            }
+            $releve = new AbonnementReleve(['abonnement_id' => $abonnements->first()->id, 'date_releve' => $date->toDateString(), 'quantite' => (int) $quantite,
+                'note' => mb_substr(trim($ligne['note'] ?? ''), 0, 255) ?: null, 'cree_par' => $auteur]);
+            if ($this->releveFacture($releve)) {
+                $erreurs[] = "Ligne {$rang} : cette période est déjà facturée.";
+
+                continue;
+            }
+            $releves[] = $releve;
+        }
+        if ($erreurs) {
+            return ['importes' => 0, 'erreurs' => $erreurs];
+        }
+        DB::transaction(fn () => collect($releves)->each->save());
+
+        return ['importes' => count($releves), 'erreurs' => []];
+    }
+
+    private function dateDuFichier(string $valeur): ?Carbon
+    {
+        foreach (['Y-m-d', 'd/m/Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat('!'.$format, $valeur);
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($date && $date->format($format) === $valeur) {
+                return $date;
+            }
+        }
+
+        return null;
+    }
+
+    /** Un relevé déjà facturé (dans la période d'une échéance traitée) ne se modifie plus. */
+    public function releveFacture(AbonnementReleve $releve): bool
+    {
+        return AbonnementEcheance::where('abonnement_id', $releve->abonnement_id)->traitee()
+            ->whereDate('periode_debut', '<=', $releve->date_releve->toDateString())
+            ->whereDate('periode_fin', '>=', $releve->date_releve->toDateString())->exists();
+    }
+
     /** Relie une échéance à une facture faite à la main pour elle : elle ne sera plus facturée. */
     public function relier(AbonnementEcheance $echeance, Facture $facture): void
     {
-        if ($echeance->facture_id) {
+        if ($echeance->facture_id || $echeance->rien_a_facturer) {
             throw ValidationException::withMessages(['echeance' => 'Cette échéance est déjà reliée à une facture.']);
         }
         if ((int) $facture->client_id !== (int) $echeance->abonnement->client_id) {
@@ -247,11 +397,14 @@ class AbonnementsClients
         $echeance->update(['facture_id' => $facture->id]);
     }
 
-    /** Statut d'une échéance : celui de sa facture, sinon en_retard (date passée) ou a_venir. */
+    /** Statut d'une échéance : celui de sa facture, rien_a_facturer, sinon en_retard (date passée) ou a_venir. */
     public function statutEcheance(AbonnementEcheance $echeance): string
     {
         if ($echeance->facture) {
             return $echeance->facture->statut;
+        }
+        if ($echeance->rien_a_facturer) {
+            return 'rien_a_facturer';
         }
 
         return $echeance->date_prevue->lt(today()) ? 'en_retard' : 'a_venir';
