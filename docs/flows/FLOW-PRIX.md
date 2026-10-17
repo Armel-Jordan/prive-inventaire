@@ -1,7 +1,7 @@
 # PRIX ET REMISES — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — création (plan de parité fripv2, phase 1.2a)
+> Dernière mise à jour : 2026-10-17 — prix proposés dans les devis, commandes et factures (§4.1, phase 1.2b)
 
 ---
 
@@ -22,9 +22,7 @@ L'écran **Finance → Tarifs & Prix** (`/gestion-prix`) gère les prix de vente
 
 **Montants :** affichés avec le symbole de devise des paramètres de l'entreprise.
 
-**Ce que cette phase ne change pas :**
-- Les devis, commandes et factures se saisissent comme avant : le prix y reste saisi à la main.
-- Le pré-remplissage des lignes par ce calcul viendra en phase 1.2b. L'API de calcul est déjà prête pour lui.
+**Dans les documents :** les devis, commandes et factures proposent ce prix sur chaque ligne (§4.1). Il reste modifiable.
 
 ---
 
@@ -62,7 +60,7 @@ Pour un client, un produit, une quantité et une date :
 1. **Prix de la liste** : celui de la liste du client, sinon le prix de base.
 2. **Candidats** :
    - ce prix ;
-   - la **remise globale** de la fiche client (`taux_remise_global`, saisie jusqu'ici sans être appliquée nulle part) ;
+   - la **remise globale** de la fiche client (`taux_remise_global`) ;
    - chaque règle active à la date, qui vise ce client (ou sa liste, ou tous), ce produit (ou sa catégorie, ou tous), et dont la quantité minimale est atteinte.
 3. **Prix retenu** : le **plus bas des prix positifs**, comme dans fripv2. À égalité, le premier trouvé l'emporte : liste, remise du client, puis règles par ancienneté.
 4. **Remise affichée** : écart entre le prix retenu et le prix de la liste, en %.
@@ -72,6 +70,25 @@ Pour un client, un produit, une quantité et une date :
 **Écarts avec fripv2 :**
 - Une règle sans dates ou sans quantité minimale s'applique. Dans fripv2, d'après la lecture de sa requête (non vérifié à l'exécution), une telle règle ne correspond jamais.
 - Un client sans liste obtient quand même un prix (le prix de base) et ses règles ; dans fripv2, le calcul s'arrêtait.
+
+### 4.1 Prix proposés dans les devis, commandes et factures (phase 1.2b)
+
+Dans les formulaires de devis, de commande et de facture, ce calcul propose le prix de chaque ligne, pour le client, la quantité et la date du document.
+
+**Quand le prix est proposé :**
+- au choix du produit, son prix de base s'affiche aussitôt, puis le prix du client le remplace ;
+- un changement de quantité (paliers des règles), de client, de date ou de devise recalcule les prix proposés ;
+- dans une devise étrangère, le prix est converti au taux du document.
+
+**Ce qui n'est jamais remplacé :**
+- un prix saisi à la main ;
+- les prix enregistrés des lignes d'un document qu'on modifie.
+
+**Affichage :** une pastille verte (étiquette, avec la remise s'il y en a une) signale un prix venu d'une liste, de la remise du client ou d'une règle ; son origine s'affiche au survol.
+
+Sans liste de prix, sans règle et sans remise client, le prix proposé reste le prix de base, comme avant. Le portail client applique déjà ce calcul à ses commandes.
+
+Code : hook `usePrixAutomatiques`, `lib/prixDocuments`, composant `OriginePrix`.
 
 ---
 
@@ -98,8 +115,7 @@ Pour un client, un produit, une quantité et une date :
 
 ## 6. Suite prévue
 
-- **1.2b** : pré-remplir le prix et la remise des lignes de devis, commandes et factures avec `POST /prix/calculer`. Le prix restera modifiable.
-- Règles par **catégorie de clients**, une fois la fiche client (phase 1.1) fusionnée.
+- Règles par **catégorie de clients**.
 - **Révision de prix planifiée**, avec la tâche planifiée de la phase 0.10.
 - **Import de grilles de prix** (CSV).
 - **Références produit du client.**
