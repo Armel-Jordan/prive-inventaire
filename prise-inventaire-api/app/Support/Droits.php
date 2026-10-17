@@ -175,6 +175,10 @@ class Droits
         'PUT api/tournees/{id}/ordre' => ['tournees', 'piloter'],
         'POST api/tournees/{id}/ordonner' => ['tournees', 'piloter'],
         'POST api/tournees/{id}/ajouter-route' => ['tournees', 'piloter'],
+        // Chargement du camion : cocher les colis et le vrac, scanner les étiquettes.
+        'POST api/tournees/{id}/chargement/scan' => ['tournees', 'charger'],
+        'POST api/tournees/{id}/chargement/colis/{colisId}' => ['tournees', 'charger'],
+        'POST api/tournees/{id}/chargement/vrac/{bonId}' => ['tournees', 'charger'],
         'POST api/prises-inventaire' => ['inventaires', 'prises'],
         'PUT api/prises-inventaire/{id}/corrections' => ['inventaires', 'prises'],
         'POST api/prises-inventaire/{id}/valider' => ['inventaires', 'prises'],

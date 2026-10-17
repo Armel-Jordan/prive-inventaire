@@ -8,6 +8,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
+use App\Services\ChargementsTournee;
 use App\Services\FeuilleDeRoutePdf;
 use App\Services\MatieresDangereusesPdf;
 use App\Services\SequencesLivraison;
@@ -65,7 +66,9 @@ class TourneeController extends Controller
             }
         }
 
-        return $tournee->setAttribute('poids_total_kg', round($poids, 2))->setAttribute('matieres_dangereuses', $dangereuses);
+        return $tournee->setAttribute('poids_total_kg', round($poids, 2))->setAttribute('matieres_dangereuses', $dangereuses)
+            // Avancement du chargement du camion (colis et vrac cochés).
+            ->setAttribute('chargement', app(ChargementsTournee::class)->etat($tournee)['resume']);
     }
 
     /** Range les arrêts de la tournée planifiée par rang de passage des clients. */
@@ -181,7 +184,7 @@ class TourneeController extends Controller
         return response()->json($this->detail($tournee));
     }
 
-    public function retirerBon(int $id, int $bonId): JsonResponse
+    public function retirerBon(int $id, int $bonId, ChargementsTournee $chargements): JsonResponse
     {
         $tournee = Tournee::findOrFail($id);
 
@@ -189,7 +192,10 @@ class TourneeController extends Controller
             return response()->json(['message' => 'Impossible de modifier cette tournée'], 422);
         }
 
-        TourneeBon::where('tournee_id', $id)->where('bon_livraison_id', $bonId)->delete();
+        // Le bon sort du camion : ses colis ne sont plus chargés.
+        if (TourneeBon::where('tournee_id', $id)->where('bon_livraison_id', $bonId)->delete()) {
+            $chargements->decharger([$bonId]);
+        }
 
         return response()->json($this->detail($tournee));
     }
@@ -263,7 +269,7 @@ class TourneeController extends Controller
         return response()->json($this->detail($tournee));
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id, ChargementsTournee $chargements): JsonResponse
     {
         $tournee = Tournee::findOrFail($id);
 
@@ -271,6 +277,7 @@ class TourneeController extends Controller
             return response()->json(['message' => 'Seules les tournées planifiées peuvent être supprimées'], 422);
         }
 
+        $chargements->decharger($tournee->tourneeBons()->pluck('bon_livraison_id')->all());
         $tournee->tourneeBons()->delete();
         $tournee->delete();
 

@@ -35,4 +35,10 @@ class ColisLivraison extends Model
     {
         return $this->belongsTo(AdminUser::class, 'prepare_par');
     }
+
+    /** Qui l'a coché comme chargé dans le camion. */
+    public function chargeur(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'charge_par');
+    }
 }

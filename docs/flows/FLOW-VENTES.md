@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — colis des bons de livraison et étiquettes (§6.3d)
+> Dernière mise à jour : 2026-10-17 — chargement du camion (§8.9)
 
 ---
 
@@ -157,7 +157,8 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Supprimer | ✅ | Statut `planifiee` — bouton 🗑️ |
 | Ajouter BL | ✅ | Statut `planifiee`, BL en `pret` |
 | Retirer BL | ✅ | Statut `planifiee` — bouton ➖ dans modal détail |
-| Démarrer | ✅ | Statut `planifiee` + au moins 1 BL |
+| Démarrer | ✅ | Statut `planifiee` + au moins 1 BL (avertissement si le chargement n'est pas fini, §8.9) |
+| Charger le camion | ✅ | Statut `planifiee` — bouton Chargement (§8.9) |
 | Terminer | ✅ | Statut `en_cours` |
 
 ---
@@ -1265,7 +1266,7 @@ Plan de parité fripv2, phase 1.6 (« Préparation boîte ») : la marchandise d
 
 **Numéro :** celui du bon suivi d'un rang sur trois chiffres (`BL-00010-001`, `BL-00010-002`…). Le rang suit le plus grand déjà pris : un colis retiré libère son numéro seulement s'il était le dernier.
 
-**Modifier, retirer :** le crayon change les quantités, le poids et la note. Toutes les quantités à 0 : le colis est retiré. La corbeille le retire aussi.
+**Modifier, retirer :** le crayon change les quantités, le poids et la note. Toutes les quantités à 0 : le colis est retiré. La corbeille le retire aussi. Un colis coché comme chargé dans le camion (§8.9) ne se modifie plus : on le décoche d'abord.
 
 **Quand :** les colis se préparent et se modifient tant que le bon n'est pas parti, aux statuts `cree`, `en_preparation` et `pret`. Ensuite ils restent consultables et imprimables, mais plus modifiables (422).
 
@@ -1615,6 +1616,50 @@ Sans matière dangereuse à bord, la réponse est 422. Le document ne bloque rie
 Le téléphone d'urgence et la déclaration se règlent dans Paramètres → Entreprise, selon la réglementation du pays (au Canada, par exemple, le numéro de CANUTEC).
 
 Code : service `App\Services\MatieresDangereusesPdf`, vue `pdf/matieres-dangereuses`, migration `2026_10_16_100044_matieres_dangereuses`.
+
+### 8.9 Chargement du camion
+
+Plan de parité fripv2, phase 1.6 (« Chargement ») : avant le départ, on coche ce qui monte dans le camion.
+
+**Où :** le bouton **Chargement** d'une tournée planifiée (liste des tournées) ou du détail d'une tournée ouvre la fenêtre de chargement. Le bouton du détail donne l'avancement (« 3 / 4 chargé(s) »).
+
+**Ordre de chargement :** les arrêts s'affichent dans l'ordre inverse des livraisons. Le dernier arrêt part au fond du camion, le premier reste près des portes.
+
+**Ce qu'on coche, arrêt par arrêt :**
+- chaque **colis** du bon (§6.3d) ;
+- le **vrac** : la marchandise du bon qui n'est dans aucun colis (quantité préparée, sinon à livrer, moins ce qui est en colis). Il se coche d'un bloc par arrêt. Un bon sans colis n'a que du vrac.
+
+Chaque pointage garde qui l'a fait et quand.
+
+**Scanner :** le champ **Numéro du colis** reçoit ce que lit la douchette sur l'étiquette (QR code du numéro), ou une saisie suivie d'Entrée. Le colis est coché, et le champ se vide et reste actif pour le scan suivant. Les réponses possibles :
+- « Colis BL-00013-001 chargé. » ;
+- « … déjà chargé. » (le premier pointage est gardé) ;
+- « Colis inconnu : … » ;
+- « Le colis … n'est pas dans cette tournée. »
+
+**Fiche de chargement** (`GET /tournees/{id}/chargement/pdf`) : les arrêts dans l'ordre de chargement, colis par colis puis le vrac. Pour chacun : contenu, poids et une case à cocher (✔ et le nom de qui a chargé, si c'est déjà fait). En pied de fiche : le total des colis et de leur poids, et les lignes « Chargé par » et « Contrôlé par le chauffeur ».
+
+**Départ :** **Démarrer** ne dépend pas du chargement (l'API ne change pas). L'écran prévient seulement si le chargement n'est pas fini (« … élément(s) ne sont pas cochés comme chargés. Démarrer quand même ? »). Il ne prévient que si le chargement a commencé ou si la tournée a des colis : une entreprise qui ne s'en sert pas n'est pas gênée.
+
+**Règles :**
+- On ne coche qu'avant le départ (tournée `planifiee`), sinon 422 « Le chargement se coche avant le départ de la tournée. » Ensuite, la fenêtre est en lecture seule.
+- Un colis coché comme chargé ne se modifie plus et ne se retire plus (422) : on le décoche d'abord.
+- Un bon retiré de la tournée, ou une tournée supprimée, décharge ses colis.
+- Le stock n'est pas touché : le mouvement « chargement camion » reste celui du départ de la tournée.
+
+**Droits :** cocher et scanner demandent **Tournées → Charger un camion** (`tournees.charger`, accordé avec la modification des tournées). Consulter le chargement et imprimer la fiche suivent la lecture des tournées.
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| GET | `/api/tournees/{id}/chargement` | Arrêts dans l'ordre de chargement, colis, vrac, décompte (`resume`) |
+| GET | `/api/tournees/{id}/chargement/pdf` | Fiche de chargement |
+| POST | `/api/tournees/{id}/chargement/scan` | Colis scanné (`numero`) : coché comme chargé |
+| POST | `/api/tournees/{id}/chargement/colis/{colisId}` | Cocher ou décocher un colis (`charge`) |
+| POST | `/api/tournees/{id}/chargement/vrac/{bonId}` | Cocher ou décocher le vrac d'un arrêt (`charge`) |
+
+Le détail de la tournée (`GET /tournees/{id}`) donne aussi le décompte, dans `chargement` : colis et lots de vrac, cochés ou non, `reste` et `commence`.
+
+Code : services `ChargementsTournee` et `FicheChargementPdf`, `ChargementTourneeController`, vue `pdf/fiche-chargement`, composant `livraison/ChargementTournee` ; migration `2026_10_17_100047_chargement_camion` (`tournee_bons.vrac_charge_le`, `vrac_charge_par` ; les colis utilisent `bl_colis.charge_le`, `charge_par`).
 
 ---
 

@@ -1,6 +1,7 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
 import { apiFetch, getAuthHeaders, API_BASE_URL, type ApiOptions } from './http';
 import { URL_ESPACE_CLIENT } from './portailClients';
+import type { ResumeChargement } from './chargement';
 
 // Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
 export { getAuthHeaders };
@@ -1326,6 +1327,8 @@ export interface Tournee {
   /** Détail : charge estimée (poids des produits encore à livrer) et lignes de matières dangereuses à bord. */
   poids_total_kg?: number;
   matieres_dangereuses?: number;
+  /** Avancement du chargement du camion (dans le détail). */
+  chargement?: ResumeChargement;
 }
 
 export interface TourneeBon {
