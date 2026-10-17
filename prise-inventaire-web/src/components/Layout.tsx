@@ -139,6 +139,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/plan-comptable', label: t.accounting.chartNav, icon: BookOpen, module: 'comptabilite' },
       { path: '/exercices-comptables', label: t.accounting.yearsNav, icon: CalendarRange, module: 'comptabilite' },
       { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
+      { path: '/ecritures-recurrentes', label: t.accounting.recurringNav, icon: Repeat, module: 'comptabilite' },
       { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite', action: 'etats' },
       { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite', action: 'etats' },
       { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite', action: 'etats' },

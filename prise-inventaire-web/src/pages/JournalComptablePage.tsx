@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookText, ChevronDown, ChevronRight, Download, Pencil, Plus, Settings2, Trash2, Undo2, X } from 'lucide-react';
+import { BookText, ChevronDown, ChevronRight, Download, Pencil, Plus, Repeat, Settings2, Trash2, Undo2, X } from 'lucide-react';
 import {
   getComptes, getExercices, getJournaux, getEcritures, enregistrerEcriture, supprimerEcriture, contrePasserEcriture, exporterEcritures,
-  enregistrerJournal, supprimerJournal, montant, TYPES_JOURNAL,
-  type CompteComptable, type EcritureComptable, type JournalComptable, type PageEcritures, type SourceEcriture, type TypeJournal,
+  enregistrerJournal, supprimerJournal, montant, planifierRecurrence, TYPES_JOURNAL, FREQUENCES_RECURRENCE,
+  type CompteComptable, type EcritureComptable, type FrequenceRecurrence, type JournalComptable, type PageEcritures, type SourceEcriture, type TypeJournal,
 } from '@/services/comptabilite';
 import { ApiError } from '@/services/http';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -151,6 +151,24 @@ export default function JournalComptablePage() {
     }
   }
 
+  // Répétition d'une écriture manuelle : première date, nombre de répétitions, fréquence.
+  const [repetition, setRepetition] = useState<{ ecriture: EcritureComptable; date_debut: string; nombre: string; frequence: FrequenceRecurrence } | null>(null);
+
+  async function repeter(e: React.FormEvent) {
+    e.preventDefault();
+    if (!repetition) return;
+    try {
+      const recurrence = await planifierRecurrence(repetition.ecriture.id, {
+        date_debut: repetition.date_debut, nombre: Number(repetition.nombre), frequence: repetition.frequence,
+      });
+      setRepetition(null);
+      recharger(tj.repeatSaved.replace('{numero}', String(recurrence.numero)).replace('{n}', String(recurrence.echeances.length)));
+    } catch (erreur) {
+      setRepetition(null);
+      echec(erreur);
+    }
+  }
+
   async function contrePasser(e: React.FormEvent) {
     e.preventDefault();
     if (!inversion) return;
@@ -265,7 +283,8 @@ export default function JournalComptablePage() {
                 <EcritureLignes key={ecriture.id} ecriture={ecriture} deplie={deplie} onBasculer={() => basculer(ecriture.id)} date={date} locale={locale}
                   textes={tj} peutModifier={peutModifier}
                   onModifier={() => ouvrirSaisie(ecriture)} onSupprimer={() => supprimer(ecriture)}
-                  onContrePasser={() => setInversion({ ecriture, date: aujourdhui() })} />
+                  onContrePasser={() => setInversion({ ecriture, date: aujourdhui() })}
+                  onRepeter={() => setRepetition({ ecriture, date_debut: ecriture.date, nombre: '12', frequence: 'mensuelle' })} />
               );
             })}
           </tbody>
@@ -395,6 +414,35 @@ export default function JournalComptablePage() {
         </div>
       )}
 
+      {repetition && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <form onSubmit={repeter} className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md space-y-4" aria-label={tj.repeatTitle.replace('{numero}', repetition.ecriture.numero)}>
+            <h2 className="text-lg font-bold dark:text-white">{tj.repeatTitle.replace('{numero}', repetition.ecriture.numero)}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{tj.repeatHelp}</p>
+            <div>
+              <label htmlFor="repetition-debut" className={classeLibelle}>{tj.startDate}</label>
+              <input id="repetition-debut" type="date" required className={classeChamp} value={repetition.date_debut} onChange={e => setRepetition({ ...repetition, date_debut: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="repetition-nombre" className={classeLibelle}>{tj.occurrences}</label>
+                <input id="repetition-nombre" type="number" min={1} max={120} required className={classeChamp} value={repetition.nombre} onChange={e => setRepetition({ ...repetition, nombre: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="repetition-frequence" className={classeLibelle}>{tj.frequency}</label>
+                <select id="repetition-frequence" className={classeChamp} value={repetition.frequence} onChange={e => setRepetition({ ...repetition, frequence: e.target.value as FrequenceRecurrence })}>
+                  {FREQUENCES_RECURRENCE.map(f => <option key={f} value={f}>{t.recurringEntries.frequencies[f]}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setRepetition(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">{tj.cancel}</button>
+              <button type="submit" className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">{tj.repeat}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {gestionJournaux && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-4">
@@ -472,10 +520,11 @@ interface PropsLignes {
   onModifier: () => void;
   onSupprimer: () => void;
   onContrePasser: () => void;
+  onRepeter: () => void;
 }
 
 /** Une écriture du journal et, dépliée, ses lignes. */
-function EcritureLignes({ ecriture, deplie, onBasculer, date, locale, textes: tj, peutModifier, onModifier, onSupprimer, onContrePasser }: PropsLignes) {
+function EcritureLignes({ ecriture, deplie, onBasculer, date, locale, textes: tj, peutModifier, onModifier, onSupprimer, onContrePasser, onRepeter }: PropsLignes) {
   return (
     <>
       <tr className="border-t dark:border-gray-700 align-top">
@@ -492,6 +541,7 @@ function EcritureLignes({ ecriture, deplie, onBasculer, date, locale, textes: tj
             {ecriture.source !== 'manuelle' && <span className="px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-800">{tj.sources[ecriture.source]}</span>}
             {ecriture.contrepassation_de && <span className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{tj.reversalOf.replace('{numero}', ecriture.contrepassation_de)}</span>}
             {ecriture.contrepassee_par && <span className="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800">{tj.reversedBy.replace('{numero}', ecriture.contrepassee_par)}</span>}
+            {ecriture.recurrence && <span className="px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-800">{tj.recurrence.replace('{numero}', String(ecriture.recurrence))}</span>}
           </span>
         </td>
         <td className="px-4 py-2 text-right whitespace-nowrap text-gray-900 dark:text-white">{montant(ecriture.total, locale)}</td>
@@ -499,6 +549,7 @@ function EcritureLignes({ ecriture, deplie, onBasculer, date, locale, textes: tj
           {peutModifier && (
             <div className="flex justify-end gap-1">
               {ecriture.modifiable && <button onClick={onModifier} title={tj.edit} aria-label={`${tj.edit} — ${ecriture.numero}`} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"><Pencil size={16} /></button>}
+              {ecriture.source === 'manuelle' && !ecriture.contrepassation_de && <button onClick={onRepeter} title={tj.repeat} aria-label={`${tj.repeat} — ${ecriture.numero}`} className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded"><Repeat size={16} /></button>}
               {!ecriture.contrepassee_par && <button onClick={onContrePasser} title={tj.reverse} aria-label={`${tj.reverse} — ${ecriture.numero}`} className="p-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded"><Undo2 size={16} /></button>}
               {ecriture.modifiable && !ecriture.contrepassee_par && <button onClick={onSupprimer} title={tj.delete} aria-label={`${tj.delete} — ${ecriture.numero}`} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={16} /></button>}
             </div>

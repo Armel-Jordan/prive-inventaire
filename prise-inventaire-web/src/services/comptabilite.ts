@@ -164,6 +164,8 @@ export interface EcritureComptable {
   createur: string | null;
   contrepassation_de: string | null;
   contrepassee_par: string | null;
+  /** Numéro de la récurrence qui a créé l'écriture (écriture récurrente). */
+  recurrence?: number | null;
   modifiable: boolean;
   lignes: LigneEcriture[];
 }
@@ -291,6 +293,57 @@ export async function supprimerEcriture(id: number): Promise<void> {
 
 export async function contrePasserEcriture(id: number, date: string): Promise<EcritureComptable> {
   return apiFetch(`/comptabilite/ecritures/${id}/contre-passer`, { method: 'POST', body: JSON.stringify({ date }) });
+}
+
+// ── Écritures récurrentes ──────────────────────────────────────────────────────
+
+export type FrequenceRecurrence = 'journaliere' | 'hebdomadaire' | 'quatorze_jours' | 'mensuelle' | 'trimestrielle' | 'semestrielle' | 'annuelle';
+export const FREQUENCES_RECURRENCE: FrequenceRecurrence[] = ['mensuelle', 'trimestrielle', 'semestrielle', 'annuelle', 'hebdomadaire', 'quatorze_jours', 'journaliere'];
+
+/** Récurrence d'une écriture manuelle : ses dates planifiées et les écritures déjà créées. */
+export interface RecurrenceComptable {
+  id: number;
+  numero: number;
+  libelle: string;
+  reference: string | null;
+  frequence: FrequenceRecurrence;
+  date_debut: string;
+  nombre: number;
+  active: boolean;
+  journal: { id: number; code: string; libelle: string } | null;
+  modele: { id: number; numero: string } | null;
+  lignes: { compte_id: number; libelle: string | null; debit: number; credit: number }[];
+  echeances: { id: number; date_prevue: string; ecriture_id: number | null; ecriture: { id: number; numero: string; date: string } | null }[];
+  converties: number;
+  echues: number;
+  prochaine: string | null;
+}
+
+export interface ConversionRecurrences {
+  converties: number;
+  erreurs: { recurrence: number; date: string; message: string }[];
+  message: string;
+}
+
+export async function getRecurrences(): Promise<{ recurrences: RecurrenceComptable[]; echues: number }> {
+  return apiFetch('/comptabilite/recurrences');
+}
+
+export async function planifierRecurrence(ecritureId: number, donnees: { date_debut: string; nombre: number; frequence: FrequenceRecurrence }): Promise<RecurrenceComptable> {
+  return apiFetch(`/comptabilite/ecritures/${ecritureId}/recurrence`, { method: 'POST', body: JSON.stringify(donnees) });
+}
+
+/** Convertit les dates échues à ce jour, ou les dates choisies. */
+export async function convertirRecurrences(echeances?: number[]): Promise<ConversionRecurrences> {
+  return apiFetch('/comptabilite/recurrences/convertir', { method: 'POST', body: JSON.stringify(echeances ? { echeances } : {}) });
+}
+
+export async function activerRecurrence(id: number, active: boolean): Promise<RecurrenceComptable> {
+  return apiFetch(`/comptabilite/recurrences/${id}`, { method: 'PUT', body: JSON.stringify({ active }) });
+}
+
+export async function supprimerRecurrence(id: number): Promise<{ message: string }> {
+  return apiFetch(`/comptabilite/recurrences/${id}`, { method: 'DELETE' });
 }
 
 export async function exporterEcritures(du: string, au: string): Promise<void> {
