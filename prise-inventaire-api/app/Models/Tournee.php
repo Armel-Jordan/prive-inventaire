@@ -14,6 +14,8 @@ class Tournee extends Model
 
     protected $fillable = [
         'tenant_id', 'numero', 'date_tournee', 'camion_id', 'livreur_id', 'zone',
+        // Route suivie par la tournée (ses clients y ont leur rang de passage).
+        'itineraire_id',
         'statut', 'heure_depart', 'heure_retour', 'km_depart', 'km_retour',
     ];
 
@@ -37,6 +39,12 @@ class Tournee extends Model
     public function camion(): BelongsTo
     {
         return $this->belongsTo(Camion::class);
+    }
+
+    /** Route suivie par la tournée. */
+    public function itineraire(): BelongsTo
+    {
+        return $this->belongsTo(Itineraire::class);
     }
 
     public function tourneeBons(): HasMany

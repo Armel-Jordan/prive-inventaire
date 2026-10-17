@@ -169,6 +169,8 @@ class Droits
         'POST api/tournees/{id}/demarrer' => ['tournees', 'piloter'],
         'POST api/tournees/{id}/terminer' => ['tournees', 'piloter'],
         'PUT api/tournees/{id}/ordre' => ['tournees', 'piloter'],
+        'POST api/tournees/{id}/ordonner' => ['tournees', 'piloter'],
+        'POST api/tournees/{id}/ajouter-route' => ['tournees', 'piloter'],
         'POST api/prises-inventaire' => ['inventaires', 'prises'],
         'PUT api/prises-inventaire/{id}/corrections' => ['inventaires', 'prises'],
         'POST api/prises-inventaire/{id}/valider' => ['inventaires', 'prises'],

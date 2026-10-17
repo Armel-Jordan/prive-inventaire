@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — charge des tournées et document des matières dangereuses (§8.8)
+> Dernière mise à jour : 2026-10-17 — séquences de livraison et feuille de route (§8.7b)
 
 ---
 
@@ -186,6 +186,7 @@ Un **Client** est une entreprise ou personne qui achète nos produits. Il est le
 | `taux_remise_global` | Remise en % applicable à tous ses achats | Non |
 | `actif` | Actif ou inactif | Oui |
 | `de_passage` | Fiche du client de passage (§2.6) | - |
+| `itineraire_id`, `sequence_livraison` | Route de livraison et rang de passage (§8.7b) | Non |
 
 ### 2.3 Encours client
 
@@ -1523,6 +1524,33 @@ Le bouton 🗑️ est disponible dans le tableau des tournées, uniquement pour 
 ### 8.7 Réorganiser l'ordre de livraison
 
 `PUT /tournees/{id}/ordre` permet de changer l'ordre des BL dans la tournée (pour optimiser le trajet). Seulement pour les tournées `planifiee`.
+
+### 8.7b Séquences de livraison et feuille de route
+
+Plan de parité fripv2, phase 1.6 (« Séquences des routes ») : comme dans fripv2, un client a une **route** et un **rang de passage** sur cette route. Une route est un itinéraire du référentiel logistique (Paramètres → Référentiels).
+
+**Fiche client :**
+- « Route de livraison » et « Rang de passage » (`itineraire_id`, `sequence_livraison`) ;
+- 10, 20, 30… laisse de la place pour intercaler un nouveau client.
+
+**Tournée :**
+- à la création, une tournée peut **suivre une route** (`itineraire_id`) ;
+- **Ajouter les bons de la route** (`POST /tournees/{id}/ajouter-route`) : les bons **prêts**, pas encore en tournée, des clients de cette route, dans leur ordre de passage ;
+- **Trier par séquence** (`POST /tournees/{id}/ordonner`) : range les arrêts par rang de passage des clients. Les clients sans rang passent à la fin, dans l'ordre où ils ont été ajoutés ;
+- les **flèches** de chaque arrêt le montent ou le descendent (`PUT /tournees/{id}/ordre`) ;
+- tout cela tant que la tournée est planifiée, avec le droit « Piloter les tournées ».
+
+**Feuille de route** (`GET /tournees/{id}/feuille-de-route`, PDF, format paysage) : la feuille du livreur, dans l'ordre de passage. Pour chaque arrêt :
+- bon et facture ;
+- client, avec son rang ;
+- adresse : celle de livraison principale de la fiche client, avec ses instructions, sinon l'adresse du client ; pour un client de passage, celle notée sur sa facture ;
+- téléphone et contact ;
+- quantités ;
+- des cases « Reçu par / signature » et « Remarques ».
+
+En pied de feuille : départ et retour (heure, kilomètres) et signature du livreur.
+
+Code : services `App\Services\SequencesLivraison` et `App\Services\FeuilleDeRoutePdf`, vue `pdf/feuille-de-route`, migration `2026_10_16_100045_sequences_livraison`.
 
 ### 8.8 Charge du camion et matières dangereuses
 
