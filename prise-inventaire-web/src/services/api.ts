@@ -1128,11 +1128,21 @@ export interface Client {
   frais_livraison_id?: number | null;
   /** Devise du client (null : celle de l'entreprise), reprise par ses documents de vente. */
   devise?: string | null;
+  /** Fiche du client de passage : ses coordonnées se notent sur chaque document. */
+  de_passage?: boolean;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
   categorie_id?: number | null;
   categorie?: { id: number; nom: string } | null;
   favori?: boolean;
+}
+
+/** Coordonnées du client de passage notées sur un devis, une commande ou une facture. */
+export interface CoordonneesPassage {
+  passage_nom?: string | null;
+  passage_telephone?: string | null;
+  passage_courriel?: string | null;
+  passage_adresse?: string | null;
 }
 
 export interface ConditionPaiement {
@@ -1152,7 +1162,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete {
+export interface ComClientEntete extends CoordonneesPassage {
   recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
@@ -1185,7 +1195,7 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture {
+export interface Facture extends CoordonneesPassage {
   recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
@@ -1331,6 +1341,11 @@ export async function getClients(params?: { search?: string; actif?: boolean; ca
 
 export async function getClientsActifs(): Promise<Client[]> {
   return fetchApi('/clients/actifs');
+}
+
+/** Fiche du client de passage de l'entreprise (ventes au comptoir), créée à sa première utilisation. */
+export async function getClientDePassage(): Promise<Client> {
+  return fetchApi('/clients/de-passage');
 }
 
 export async function getClient(id: number): Promise<Client> {
@@ -1525,7 +1540,7 @@ export async function createCommandeClient(data: {
   remise_globale?: number;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
-}): Promise<ComClientEntete> {
+} & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
 
@@ -1614,7 +1629,7 @@ export async function createFacture(data: {
   date_echeance?: string;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
-}): Promise<Facture> {
+} & CoordonneesPassage): Promise<Facture> {
   return fetchApi('/factures', { method: 'POST', body: JSON.stringify(data) });
 }
 
@@ -2266,7 +2281,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord {
+export interface DevisRecord extends CoordonneesPassage {
   id: number;
   numero: string;
   client_id: number;
@@ -2301,7 +2316,7 @@ export async function createDevis(data: {
   devise?: string;
   taux_change?: number;
   lignes: { produit_id: number; quantite: number; prix_unitaire: number }[];
-}): Promise<DevisRecord> {
+} & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
 
@@ -2311,7 +2326,7 @@ export async function updateDevis(id: number, data: {
   date_validite: string;
   notes?: string;
   lignes: { id?: number; produit_id: number; quantite: number; prix_unitaire: number }[];
-}): Promise<DevisRecord> {
+} & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 

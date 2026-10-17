@@ -550,6 +550,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('clients')->middleware('module:ventes')->group(function () {
         Route::get('/', [ClientController::class, 'index']);
         Route::get('/actifs', [ClientController::class, 'actifs']);
+        // Fiche du client de passage, créée à sa première utilisation (ventes au comptoir).
+        Route::get('/de-passage', [ClientController::class, 'dePassage']);
         Route::get('/{id}', [ClientController::class, 'show']);
         Route::post('/', [ClientController::class, 'store']);
         Route::put('/{id}', [ClientController::class, 'update']);

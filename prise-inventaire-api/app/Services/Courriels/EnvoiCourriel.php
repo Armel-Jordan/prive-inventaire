@@ -170,6 +170,12 @@ class EnvoiCourriel
 
     private function adresseDestinataire(string $type, Model $document): ?string
     {
+        // Client de passage : le courriel noté sur le document (sur sa facture pour une note de crédit ou un bon).
+        $source = in_array($type, ['avoir', 'bon_livraison'], true) ? $document->getRelationValue('facture') : $document;
+        if (filled($source?->getAttribute('passage_courriel'))) {
+            return $source->passage_courriel;
+        }
+
         return match ($type) {
             'bon_livraison' => $document->facture?->client?->email,
             'commande_fournisseur', 'retour_fournisseur' => $document->fournisseur?->email,

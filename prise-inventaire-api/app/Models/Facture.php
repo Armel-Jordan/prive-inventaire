@@ -18,6 +18,8 @@ class Facture extends Model
         'date_facture', 'date_echeance', 'condition_paiement_id', 'statut',
         'montant_ht', 'montant_tva', 'montant_ttc',
         'montant_paye', 'montant_credite', 'montant_escompte', 'reste_a_payer', 'notes', 'devise', 'taux_change',
+        // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
+        'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
     ];
 
     protected $casts = [

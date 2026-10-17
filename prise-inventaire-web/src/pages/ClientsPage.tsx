@@ -14,6 +14,7 @@ import type { Client, FicheReferentiel } from '../services/api';
 import { getReferentiel } from '../services/api';
 import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
 import Pagination from '@/components/Pagination';
+import { PastilleClientDePassage } from '@/components/ClientDePassage';
 import { signaler } from '@/lib/erreurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 import { getFrais, type Frais } from '@/services/frais';
@@ -234,7 +235,7 @@ export default function ClientsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Building2 size={16} className="text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-white">{client.raison_sociale}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">{client.raison_sociale}<PastilleClientDePassage client={client} /></span>
                     </div>
                     <BalisesFiche entite="client" entiteId={client.id} />
                   </td>

@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — disponibilité des produits et réservation (§5.15)
+> Dernière mise à jour : 2026-10-17 — client de passage (§2.6)
 
 ---
 
@@ -185,6 +185,7 @@ Un **Client** est une entreprise ou personne qui achète nos produits. Il est le
 | `encours_actuel` | Montant actuellement dû (calculé auto) | - |
 | `taux_remise_global` | Remise en % applicable à tous ses achats | Non |
 | `actif` | Actif ou inactif | Oui |
+| `de_passage` | Fiche du client de passage (§2.6) | - |
 
 ### 2.3 Encours client
 
@@ -205,12 +206,43 @@ Via `GET/POST /clients/{id}/conditions-paiement`, on peut définir des échéanc
 ```
 GET    /clients          → liste avec pagination
 GET    /clients/actifs   → liste pour les selects
+GET    /clients/de-passage → fiche du client de passage (créée à sa première utilisation)
 POST   /clients          → créer
 PUT    /clients/{id}     → modifier
 DELETE /clients/{id}     → désactiver
 GET    /clients/{id}/conditions-paiement  → voir les conditions
 POST   /clients/{id}/conditions-paiement → définir les conditions
 ```
+
+### 2.6 Client de passage (ventes au comptoir)
+
+Plan de parité fripv2, phase 1.1 : le « client comptant » de fripv2. On vend à quelqu'un qui n'a pas de fiche sans en créer une à chaque vente.
+
+**La fiche :**
+- une seule par entreprise, marquée `de_passage`, avec le code `PASSAGE` (`PASSAGE-2`… si ce code est déjà pris) et la raison sociale « Client de passage » ;
+- elle est créée à sa première utilisation par `GET /clients/de-passage`, qui la renvoie ensuite ;
+- c'est une fiche comme les autres : devise, condition de paiement et frais de livraison se règlent dessus et valent pour toutes les ventes de passage. Les listes la signalent par la pastille « De passage ».
+
+**Dans les formulaires de devis, de commande et de facture :**
+- le bouton **Client de passage**, sous la liste des clients, choisit cette fiche ;
+- quatre champs facultatifs apparaissent : nom, téléphone, courriel, adresse (`passage_nom`, `passage_telephone`, `passage_courriel`, `passage_adresse`).
+
+**Ce que deviennent ces coordonnées :**
+- elles suivent les documents : devis → commande (conversion) → facture (depuis la commande), puis la facture du reste d'un bon de livraison ;
+- sur le PDF, le destinataire est le nom noté, avec son adresse, son téléphone et son courriel ; une note de crédit et un bon de livraison reprennent ceux de leur facture ;
+- dans le courriel, `{client_nom}` vaut le nom noté et le destinataire proposé est le courriel noté (celui de la facture pour une note de crédit, un bon de livraison ou une relance) ;
+- les listes de devis, de commandes et de factures affichent le nom noté ; la recherche globale et celle des devis trouvent le document par ce nom.
+
+**Règles :**
+- les coordonnées ne sont retenues que pour la fiche de passage : pour un autre client, elles sont ignorées ;
+- changer le client d'un document efface ses coordonnées ;
+- une modification qui ne les transmet pas les conserve ; une modification qui en transmet une partie ne change que celles-là.
+
+**Droits :** ceux des documents de vente. Lire la fiche, et la créer à sa première utilisation, est ouvert à qui travaille dans le module Ventes, comme `GET /clients/actifs`.
+
+Code :
+- API : service `App\Services\ClientsDePassage`, migration `2026_10_16_100039_client_de_passage` (colonne `clients.de_passage`, coordonnées sur `devis`, `com_client_entete` et `factures`) ;
+- web : composants `ClientDePassage` (bouton, champs, détail, pastille) et `lib/clientDePassage`.
 
 ---
 

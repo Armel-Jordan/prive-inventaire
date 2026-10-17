@@ -1,7 +1,7 @@
 # FICHE CLIENT — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — création (plan de parité fripv2, phase 1.1)
+> Dernière mise à jour : 2026-10-17 — client de passage (FLOW-VENTES §2.6)
 
 ---
 
@@ -26,6 +26,8 @@ L'en-tête rappelle :
 - l'étoile favori.
 
 Les montants s'affichent avec le symbole de devise des paramètres de l'entreprise.
+
+Le **client de passage** (ventes au comptoir, FLOW-VENTES §2.6) a sa fiche comme les autres, signalée par la pastille « De passage ». Ses chiffres regroupent toutes les ventes de passage. Les coordonnées de chaque acheteur sont notées sur ses documents.
 
 ---
 

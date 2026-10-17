@@ -9,6 +9,7 @@ use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
 use App\Models\MouvementVente;
+use App\Services\ClientsDePassage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -222,7 +223,7 @@ class BonLivraisonController extends Controller
             $numeroFacture = Facture::generateNumero();
         }
 
-        $nouvelleFacture = Facture::create([
+        $nouvelleFacture = Facture::create(app(ClientsDePassage::class)->copier($factureOrigine) + [
             'numero' => $numeroFacture,
             'commande_id' => $factureOrigine->commande_id,
             'client_id' => $factureOrigine->client_id,

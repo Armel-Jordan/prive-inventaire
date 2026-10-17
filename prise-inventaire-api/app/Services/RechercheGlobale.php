@@ -84,6 +84,8 @@ final class RechercheGlobale
         });
         $date = fn ($valeur) => $valeur ? Carbon::parse($valeur)->toDateString() : null;
         $lien = fn (string $page, string $recherche) => $page.'?recherche='.rawurlencode($recherche);
+        // Client de passage : le nom noté sur le document.
+        $client = fn ($document) => $document->client?->de_passage && filled($document->passage_nom) ? $document->passage_nom : $document->client?->raison_sociale;
 
         return [
             'produits' => [
@@ -126,39 +128,39 @@ final class RechercheGlobale
             'devis' => [
                 'module' => 'ventes',
                 'cle' => 'numero',
-                'requete' => fn (string $motif) => Devis::query()->with('client:id,raison_sociale')
-                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
+                'requete' => fn (string $motif) => Devis::query()->with('client:id,raison_sociale,de_passage')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
                 'resultat' => fn (Devis $d) => [
                     'id' => $d->id,
                     'titre' => $d->numero,
-                    'sous_titre' => $d->client?->raison_sociale,
-                    'details' => ['client' => $d->client?->raison_sociale, 'date' => $date($d->date_devis), 'validite' => $date($d->date_validite), 'statut' => $d->statut, 'montant' => (float) $d->montant_total, 'devise' => $d->devise],
+                    'sous_titre' => $client($d),
+                    'details' => ['client' => $client($d), 'date' => $date($d->date_devis), 'validite' => $date($d->date_validite), 'statut' => $d->statut, 'montant' => (float) $d->montant_total, 'devise' => $d->devise],
                     'lien' => $lien('/devis', $d->numero),
                 ],
             ],
             'commandes_client' => [
                 'module' => 'ventes',
                 'cle' => 'numero',
-                'requete' => fn (string $motif) => ComClientEntete::query()->with('client:id,raison_sociale')
-                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
+                'requete' => fn (string $motif) => ComClientEntete::query()->with('client:id,raison_sociale,de_passage')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
                 'resultat' => fn (ComClientEntete $c) => [
                     'id' => $c->id,
                     'titre' => $c->numero,
-                    'sous_titre' => $c->client?->raison_sociale,
-                    'details' => ['client' => $c->client?->raison_sociale, 'date' => $date($c->date_commande), 'statut' => $c->statut, 'montant' => (float) $c->montant_ttc, 'devise' => $c->devise],
+                    'sous_titre' => $client($c),
+                    'details' => ['client' => $client($c), 'date' => $date($c->date_commande), 'statut' => $c->statut, 'montant' => (float) $c->montant_ttc, 'devise' => $c->devise],
                     'lien' => $lien('/commandes-client', $c->numero),
                 ],
             ],
             'factures' => [
                 'module' => 'ventes',
                 'cle' => 'numero',
-                'requete' => fn (string $motif) => Facture::query()->with('client:id,raison_sociale')
-                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
+                'requete' => fn (string $motif) => Facture::query()->with('client:id,raison_sociale,de_passage')
+                    ->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif))),
                 'resultat' => fn (Facture $f) => [
                     'id' => $f->id,
                     'titre' => $f->numero,
-                    'sous_titre' => $f->client?->raison_sociale,
-                    'details' => ['client' => $f->client?->raison_sociale, 'date' => $date($f->date_facture), 'echeance' => $date($f->date_echeance), 'statut' => $f->statut, 'montant' => (float) $f->montant_ttc, 'reste' => (float) $f->reste_a_payer, 'devise' => $f->devise],
+                    'sous_titre' => $client($f),
+                    'details' => ['client' => $client($f), 'date' => $date($f->date_facture), 'echeance' => $date($f->date_echeance), 'statut' => $f->statut, 'montant' => (float) $f->montant_ttc, 'reste' => (float) $f->reste_a_payer, 'devise' => $f->devise],
                     'lien' => $lien('/factures', $f->numero),
                 ],
             ],

@@ -23,6 +23,8 @@ class Client extends Model
         'devise',
         // Frais de livraison proposé sur ses devis, commandes et factures.
         'frais_livraison_id',
+        // Fiche du client de passage de l'entreprise (une seule, créée à sa première utilisation).
+        'de_passage',
         'adresse_facturation',
         'adresse_livraison',
         'ville',
@@ -43,6 +45,7 @@ class Client extends Model
         'encours_actuel' => 'decimal:2',
         'taux_remise_global' => 'decimal:2',
         'actif' => 'boolean',
+        'de_passage' => 'boolean',
     ];
 
     public static function generateCode(): string

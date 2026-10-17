@@ -77,14 +77,14 @@ class VariablesCourriel
                 'date' => $date($d->date_devis),
                 'date_validite' => $date($d->date_validite),
                 'montant_total' => $montant($d->montant_total),
-            ] + $this->client($d->client),
+            ] + $this->client($d->client, $d),
             'commande_client' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_commande),
                 'date_livraison_souhaitee' => $date($d->date_livraison_souhaitee),
                 'montant_ht' => $montant($d->montant_ht),
                 'montant_ttc' => $montant($d->montant_ttc),
-            ] + $this->client($d->client),
+            ] + $this->client($d->client, $d),
             'facture' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_facture),
@@ -93,7 +93,7 @@ class VariablesCourriel
                 'montant_ttc' => $montant($d->montant_ttc),
                 'montant_paye' => $montant($d->montant_paye),
                 'reste_a_payer' => $montant($d->reste_a_payer),
-            ] + $this->client($d->client),
+            ] + $this->client($d->client, $d),
             'avoir' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_avoir),
@@ -102,7 +102,7 @@ class VariablesCourriel
                 'montant_ht' => $montant($d->montant_ht),
                 'montant_ttc' => $montant($d->montant_ttc),
                 'credit_disponible' => $montant($d->credit_disponible),
-            ] + $this->client($d->client),
+            ] + $this->client($d->client, $d->facture),
             'relance' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_facture),
@@ -113,7 +113,7 @@ class VariablesCourriel
                 'montant_ttc' => $montant($d->montant_ttc),
                 'montant_paye' => $montant($d->montant_paye),
                 'reste_a_payer' => $montant($d->reste_a_payer),
-            ] + $this->client($d->client),
+            ] + $this->client($d->client, $d),
             'demande_acompte' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_demande),
@@ -124,7 +124,7 @@ class VariablesCourriel
                 'numero' => $d->numero,
                 'date_livraison' => $date($d->date_livraison),
                 'numero_facture' => $d->facture?->numero,
-            ] + $this->client($d->facture?->client),
+            ] + $this->client($d->facture?->client, $d->facture),
             'commande_fournisseur' => [
                 'numero' => $d->numero,
                 'date' => $date($d->date_commande),
@@ -149,10 +149,11 @@ class VariablesCourriel
         };
     }
 
-    private function client(?Model $client): array
+    private function client(?Model $client, ?Model $document = null): array
     {
         return [
-            'client_nom' => $client?->raison_sociale,
+            // Client de passage : le nom noté sur le document.
+            'client_nom' => $client?->de_passage && filled($document?->getAttribute('passage_nom')) ? $document->passage_nom : $client?->raison_sociale,
             'client_code' => $client?->code,
             'contact_nom' => $client?->contact_nom,
         ];

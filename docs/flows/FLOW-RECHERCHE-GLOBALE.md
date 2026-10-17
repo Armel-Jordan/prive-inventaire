@@ -1,7 +1,7 @@
 # RECHERCHE GLOBALE — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-15 — création (plan de parité fripv2, phase 6.4)
+> Dernière mise à jour : 2026-10-17 — nom du client de passage (FLOW-VENTES §2.6)
 
 ---
 
@@ -14,7 +14,7 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 | Produits | numéro, description, catégorie | — |
 | Clients | code, raison sociale, ville, courriel, téléphone | Ventes |
 | Fournisseurs | code, raison sociale, courriel, téléphone | Achats |
-| Devis, commandes clients, factures | numéro, nom du client | Ventes |
+| Devis, commandes clients, factures | numéro, nom du client (ou celui noté pour le client de passage, affiché à la place de « Client de passage ») | Ventes |
 | Notes de crédit (émises), retours clients (traités) | numéro, nom du client, numéro de facture | Ventes |
 | Demandes d'acompte | numéro, description, nom du client | Ventes |
 | Bons de livraison | numéro, numéro de facture, nom du client | Ventes |
