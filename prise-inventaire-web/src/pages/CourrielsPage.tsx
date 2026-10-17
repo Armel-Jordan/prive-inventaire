@@ -9,7 +9,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import BadgeStatutCourriel from '@/components/BadgeStatutCourriel';
 
 const STATUTS: StatutCourriel[] = ['en_attente', 'en_cours', 'envoye', 'echec'];
-const TYPES: TypeDocumentCourriel[] = ['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur'];
+const TYPES: TypeDocumentCourriel[] = ['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'relance_devis', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur'];
 
 /** Historique et file d'envoi des courriels de l'entreprise, avec relance des échecs. */
 export default function CourrielsPage() {

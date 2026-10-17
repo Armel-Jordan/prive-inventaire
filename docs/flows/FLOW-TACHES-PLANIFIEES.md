@@ -1,7 +1,7 @@
 # TÂCHES PLANIFIÉES — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
+> Dernière mise à jour : 2026-10-17 — relances des devis (`relances_devis`). 2026-10-16 : alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
 >
 > Historique : 2026-10-15 — création (plan de parité fripv2, phase 0.10)
 
@@ -19,6 +19,7 @@ Des traitements automatiques prédéfinis par l'application. Chaque entreprise l
 | `nettoyage_notifications` | Chaque jour à 02:00 | Supprime les notifications lues depuis plus de 30 jours |
 | `factures_impayees` | Chaque jour à 07:00 | Notifie les factures émises ou partiellement payées dont il reste à payer, plus de **N jours** (30) après l'échéance (ou la date de facture, sans échéance) |
 | `relances_paiement` | Chaque jour à 08:00 | Envoie le courriel de relance (modèle « relance », facture jointe) pour chaque facture en retard d'au moins **N jours** (15) dont la dernière relance date d'au moins N jours ; 3 relances automatiques au plus par facture, seulement aux clients qui ont une adresse de courriel (FLOW-VENTES §7 ter) |
+| `relances_devis` | Chaque jour à 08:30 | Envoie le courriel « Relance de devis » (devis joint, boutons Accepter et Refuser) pour chaque devis envoyé resté sans réponse depuis au moins **N jours** (7), comptés depuis l'envoi ou la dernière relance, tant qu'il est valable ; 3 relances au plus par devis, seulement aux clients qui ont une adresse de courriel (FLOW-VENTES §3.8) |
 | `commandes_fournisseur_en_retard` | Chaque jour à 07:00 | Notifie les commandes fournisseur envoyées ou partiellement reçues dont la livraison prévue est dépassée de plus de **N jours** (0 : dès le lendemain) |
 | `livraisons_en_retard` | Chaque jour à 07:00 | Notifie les bons de livraison pas encore livrés (créés, en préparation, prêts, en livraison) plus de **N jours** (3) après leur création |
 | `controles_techniques` | Chaque jour à 07:00 | Prévient **N jours** (30) avant l'expiration du contrôle technique d'un camion actif, et une fois la date dépassée |

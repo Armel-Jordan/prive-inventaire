@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — réponse en ligne du client aux devis (§3.7)
+> Dernière mise à jour : 2026-10-17 — relances des devis (§3.8)
 
 ---
 
@@ -366,6 +366,25 @@ Code :
 - API : service `App\Services\ReponsesDevis`, contrôleur `App\Http\Controllers\Portail\DevisEnLigneController`, carte dans `RenduCourriel` et la vue `emails/courriel`, migration `2026_10_16_100040_reponse_en_ligne_devis` ;
 - espace client : page `espace/pages/ReponseDevis` (route `/devis/:jeton`, hors de l'espace connecté) ;
 - back-office : bouton Lien de réponse et détail de la réponse dans `DevisPage`.
+
+### 3.8 Relances des devis
+
+Plan de parité fripv2, phase 1.3 : relancer le client d'un devis envoyé resté sans réponse.
+
+**À la main :** le bouton **Relancer le client** (cloche) d'un devis envoyé ouvre la fenêtre d'envoi avec le modèle « Relance de devis ». Le devis est joint et les boutons de réponse en ligne s'ajoutent (§3.7). Le bouton suit le droit « Envoyer un devis ».
+
+**Automatiquement :** la tâche planifiée `relances_devis` (Paramètres → Tâches planifiées), **inactive par défaut**. Chaque jour, elle relance les devis :
+- envoyés, sans réponse depuis au moins **N jours** (7 par défaut), comptés depuis l'envoi ou la dernière relance ;
+- encore valables (date de validité pas dépassée) ;
+- relancés moins de 3 fois ;
+- dont le client a une adresse de courriel (celle notée pour un client de passage) ;
+- sans relance déjà en file d'envoi.
+
+**Suivi :** chaque relance envoyée est comptée sur le devis (`relances`, `derniere_relance_le`) ; le détail du devis affiche « Relancé N fois, dernière relance le … ». Une réponse du client (en ligne ou notée) arrête les relances.
+
+**Modèle « Relance de devis » :** variables du devis, plus `jours_restants` (jours de validité restants) et `niveau` (numéro de la relance) ; personnalisable dans Paramètres → Courriels.
+
+Code : service `App\Services\RelancesDevis`, tâche `App\Taches\RelancerDevisSansReponse`, migration `2026_10_16_100041_relances_devis`.
 
 ---
 
