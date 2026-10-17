@@ -36,6 +36,7 @@ const ENTITY_LABELS: Record<string, string> = {
   tournee:       'Tournées',
   contrat_location: 'Contrats de location',
   consignation: 'Consignations',
+  carte_cadeau: 'Cartes cadeaux',
 };
 
 const DEFAULT_CONFIGS: FormatConfig[] = [
@@ -56,6 +57,7 @@ const DEFAULT_CONFIGS: FormatConfig[] = [
   { entite: 'tournee',       label: 'Tournées',       prefixe: 'T',   suffixe: '', longueur: 4, separateur: '',  auto_increment: true,  prochain_numero: 1, format_exemple: 'T0001' },
   { entite: 'contrat_location', label: 'Contrats de location', prefixe: 'CT', suffixe: '', longueur: 5, separateur: '-', auto_increment: true, prochain_numero: 1, format_exemple: 'CT-00001' },
   { entite: 'consignation', label: 'Consignations', prefixe: 'CS', suffixe: '', longueur: 5, separateur: '-', auto_increment: true, prochain_numero: 1, format_exemple: 'CS-00001' },
+  { entite: 'carte_cadeau', label: 'Cartes cadeaux', prefixe: 'CC', suffixe: '', longueur: 6, separateur: '-', auto_increment: true, prochain_numero: 1, format_exemple: 'CC-000001' },
 ];
 
 type MainTab = 'numeros' | 'entreprise' | 'devise' | 'delais' | 'courriels';

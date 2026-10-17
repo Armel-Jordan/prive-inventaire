@@ -60,6 +60,7 @@ class Droits
         'demandes-acompte' => 'demandes_acompte',
         'caisses' => 'caisses',
         'point-de-vente' => 'point_de_vente',
+        'cartes-cadeaux' => 'cartes_cadeaux',
         'relances' => 'relances',
         'bons-livraison' => 'bons_livraison',
         'camions' => 'camions',
@@ -93,6 +94,8 @@ class Droits
         'portail-clients' => 'espace_client',
         // Sessions de caisse : montants des tiroirs.
         'caisses' => 'caisses',
+        // Cartes cadeaux : soldes et mouvements.
+        'cartes-cadeaux' => 'cartes_cadeaux',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -165,6 +168,9 @@ class Droits
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
+        // Cartes cadeaux : recharger (modifier) ; rembourser le solde (le droit de modifier est contrôlé aussi).
+        'POST api/cartes-cadeaux/{id}/recharger' => ['cartes_cadeaux', 'modifier'],
+        'POST api/cartes-cadeaux/{id}/rembourser' => ['cartes_cadeaux', 'rembourser'],
         // Vente au comptoir (droits des factures contrôlés aussi par le contrôleur).
         'POST api/point-de-vente/ventes' => ['point_de_vente', 'vendre'],
         // Gestion de caisse : ouvrir, entrées et sorties d'argent, fermer.

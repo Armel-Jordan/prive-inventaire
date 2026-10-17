@@ -36,7 +36,7 @@ class ComptesClients
     private const STATUTS = ['emise', 'partiellement_payee', 'payee', 'creditee'];
 
     /** Modes de paiement, tels qu'écrits dans les libellés du relevé. */
-    private const MODES = ['especes' => 'espèces', 'cheque' => 'chèque', 'virement' => 'virement', 'carte' => 'carte', 'autre' => 'autre'];
+    private const MODES = ['especes' => 'espèces', 'cheque' => 'chèque', 'virement' => 'virement', 'carte' => 'carte', 'autre' => 'autre', 'carte_cadeau' => 'par carte cadeau'];
 
     /** Mouvements d'un même jour : la facture, puis ce qui la crédite, la règle ou rembourse le client. */
     private const ORDRE = ['facture' => 0, 'avoir' => 1, 'acompte' => 2, 'paiement' => 3, 'escompte' => 4, 'remboursement' => 5];
@@ -92,7 +92,7 @@ class ComptesClients
         $taux = $factures->mapWithKeys(fn ($f) => [$f->id => $this->taux($f->taux_change)]);
         // Les paiements faits avec un acompte ne sont pas de nouveaux mouvements : l'acompte est déjà au crédit.
         $paiements = FacturePaiement::whereIn('facture_id', $factures->pluck('id'))->whereNull('acompte_id')->whereDate('date_paiement', '<=', $au)
-            ->get(['facture_id', 'date_paiement', 'montant', 'escompte', 'mode_paiement', 'reference']);
+            ->get(['facture_id', 'date_paiement', 'montant', 'escompte', 'mode_paiement', 'reference', 'carte_cadeau_id']);
         $avoirs = Avoir::with('facture:id,numero')->where('client_id', $client->id)->whereIn('statut', Avoir::EMISES)
             ->whereDate('date_avoir', '<=', $au)->get(['id', 'numero', 'facture_id', 'date_avoir', 'montant_ttc', 'taux_change']);
         $tauxAvoirs = $avoirs->mapWithKeys(fn ($a) => [$a->id => $this->taux($a->taux_change)]);
@@ -111,7 +111,7 @@ class ComptesClients
             ->concat($avoirs->map(fn ($a) => ['date' => $a->date_avoir->toDateString(), 'type' => 'avoir', 'piece' => $a->numero,
                 'libelle' => 'Note de crédit '.$a->numero.($a->facture ? " (facture {$a->facture->numero})" : ''), 'debit' => 0.0, 'credit' => round((float) $a->montant_ttc * $tauxAvoirs[$a->id], 2)]))
             ->concat($paiements->map(fn ($p) => ['date' => $p->date_paiement->toDateString(), 'type' => 'paiement', 'piece' => $numeros[$p->facture_id] ?? null,
-                'libelle' => trim('Paiement '.$this->mode($p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant * ($taux[$p->facture_id] ?? 1.0), 2)]))
+                'libelle' => trim('Paiement '.$this->mode($p->carte_cadeau_id ? 'carte_cadeau' : $p->mode_paiement).($p->reference ? " {$p->reference}" : '')), 'debit' => 0.0, 'credit' => round((float) $p->montant * ($taux[$p->facture_id] ?? 1.0), 2)]))
             ->concat($remboursements->map(fn ($r) => ['date' => $r->date_remboursement->toDateString(), 'type' => 'remboursement', 'piece' => $numerosAvoirs[$r->avoir_id] ?? null,
                 'libelle' => trim('Remboursement '.$this->mode($r->mode).($r->reference ? " {$r->reference}" : '')), 'debit' => round((float) $r->montant * ($tauxAvoirs[$r->avoir_id] ?? 1.0), 2), 'credit' => 0.0]))
             // Escompte accordé avec un paiement : au crédit, comme le paiement qui l'accompagne.

@@ -43,6 +43,7 @@ import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
+import ChampCarteCadeau from '@/components/cartesCadeaux/ChampCarteCadeau';
 
 
 export default function FacturesPage() {
@@ -73,6 +74,8 @@ export default function FacturesPage() {
     date_paiement: aujourdhui(),
     mode_paiement: 'virement',
     reference: '',
+    // Paiement par carte cadeau : son numéro.
+    carte_cadeau: '',
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -266,6 +269,7 @@ export default function FacturesPage() {
         reference: paiementData.reference || undefined,
         escompte: avecEscompte || undefined,
         caisse_id,
+        carte_cadeau: paiementData.mode_paiement === 'carte_cadeau' ? paiementData.carte_cadeau.trim() : undefined,
       }));
       setShowPaiementModal(false);
       setPaiementData({
@@ -273,6 +277,7 @@ export default function FacturesPage() {
         date_paiement: aujourdhui(),
         mode_paiement: 'virement',
         reference: '',
+        carte_cadeau: '',
       });
       setSelectedFacture(null);
       loadFactures();
@@ -840,8 +845,13 @@ export default function FacturesPage() {
                   <option value="cheque">Chèque</option>
                   <option value="especes">Espèces</option>
                   <option value="carte">Carte bancaire</option>
+                  <option value="carte_cadeau">{t.giftCards.giftCard}</option>
                 </select>
               </div>
+              {paiementData.mode_paiement === 'carte_cadeau' && (
+                <ChampCarteCadeau numero={paiementData.carte_cadeau} onNumero={carte_cadeau => setPaiementData(d => ({ ...d, carte_cadeau }))}
+                  onVerifiee={carte => setPaiementData(d => ({ ...d, montant: String(Math.min(Number(carte.solde), Number(selectedFacture.reste_a_payer ?? 0))) }))} />
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-300">Référence</label>
                 <input

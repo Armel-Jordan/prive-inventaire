@@ -1358,7 +1358,7 @@ Plan de parité fripv2, phase 1.10a (« Caisses », « Gestion de caisse », « 
 - Les **paiements de factures**, les **acomptes reçus** (aussi par une demande d'acompte payée) et les **remboursements d'acompte** saisis sur ce poste entrent dans la session ouverte de sa caisse ; la fenêtre le rappelle et propose les espèces.
 - Caisse fermée, l'encaissement est refusé (422 sur `caisse_id`). Avec le droit de gérer la caisse, une fenêtre propose de l'ouvrir sur-le-champ (fond initial) et l'encaissement reprend.
 - Un poste qui n'est pas une caisse encaisse comme avant, hors caisse.
-- Appliquer un acompte sur une facture n'apporte pas d'argent : ce paiement-là n'entre dans aucune caisse.
+- Appliquer un acompte sur une facture n'apporte pas d'argent : ce paiement-là n'entre dans aucune caisse. De même pour un paiement par carte cadeau ; en revanche, une carte cadeau vendue ou rechargée sur le poste est un encaissement, et son remboursement une sortie (§5.21).
 
 **Session** : de l'ouverture à la fermeture ; une seule session ouverte par caisse.
 - **Ouvrir** avec un fond initial (il peut être nul), en espèces par défaut.
@@ -1409,6 +1409,7 @@ Plan de parité fripv2, phase 1.10b (facturation sur un poste de caisse et fenê
 - Le **client de passage** paie toute la vente, et un paiement en espèces règle toute la vente.
 - Un client en compte peut payer une partie, par chèque, carte ou virement, ou rien (« Porter au compte ») : le reste demeure à recevoir.
 - La vente crée la **facture**, l'**émet** et enregistre les **paiements**, d'un seul tenant. Sur un poste de caisse, les paiements entrent dans la session ouverte de sa caisse (§5.19). Caisse fermée, rien n'est créé, pas même un numéro de facture, et l'ouverture est proposée comme pour tout encaissement.
+- Une **carte cadeau** est un mode de paiement : on saisit ou scanne son numéro, « Vérifier » montre son solde et propose au plus ce solde (§5.21). Elle ne peut pas dépasser ce qui reste dû ; une vente payée seulement par carte cadeau n'a pas besoin de caisse ouverte.
 - Le stock compté (les scans) n'est pas touché, comme pour toute facture.
 
 **Reçu** : ticket de 80 mm (« Imprimer le reçu ») de toute facture émise, qui se réimprime à l'identique.
@@ -1430,6 +1431,55 @@ La facture PDF reste disponible.
 | GET | `/point-de-vente/recus/{factureId}?fuseau=` | Reçu (ticket de 80 mm) d'une facture émise |
 
 Code : services `App\Services\VentesComptoir` et `RecuVentePdf` (le calcul des lignes est partagé avec la saisie des factures : `FacturesVente::calculerLignes`), `PointDeVenteController`, vue `pdf/recu-vente` ; web : page `PointDeVentePage`, service `pointDeVente.ts` ; migration `2026_10_17_100053_creer_point_de_vente` (`facture_paiements.montant_recu`, droits du module).
+
+### 5.21 Cartes cadeaux (Ventes → Cartes cadeaux)
+
+Plan de parité fripv2, phase 1.10c (« Cartes cadeaux », « Vente et gestion d'une carte cadeau », « Certificat cadeau ») : des cartes **au porteur**, vendues puis utilisées pour payer jusqu'à épuisement de leur solde.
+
+**Vendre une carte** (écran Cartes cadeaux, ou « Vendre une carte cadeau » au point de vente) :
+- **Montant, mode de paiement reçu, référence.** Le montant est encaissé, sur la caisse du poste s'il en a une (§5.19).
+- **Client acheteur et date d'expiration**, facultatifs. Le client n'est noté qu'à titre indicatif : la carte s'utilise au porteur.
+- **Devise** : celle de l'entreprise, ou une devise active du référentiel. Elle est figée à la vente.
+- **Numéro** : attribué automatiquement (`CC-000001`, Paramètres → Numérotation). En numérotation manuelle, on saisit ou scanne le numéro de la carte pré-imprimée (lettres, chiffres, tirets).
+  - Un numéro n'est jamais réutilisé, même sur une carte annulée.
+  - Le compteur automatique saute un numéro déjà saisi à la main.
+
+**Payer avec une carte :**
+- **Où :** au point de vente (§5.20) et à l'encaissement d'une facture (mode « Carte cadeau »).
+- **Montant :** au plus le solde de la carte et ce qui reste dû.
+- **Refus :** carte introuvable, annulée, expirée (à la date du paiement), dans une autre devise que la facture, ou solde insuffisant (« Solde insuffisant sur la carte … (solde disponible : …) »).
+- **Enregistrement :** le paiement de la facture est en mode « autre », rattaché à la carte (`facture_paiements.carte_cadeau_id`). Le mode de paiement est une énumération MySQL : rien n'y est ajouté. La carte reste verrouillée pendant le paiement.
+- **Hors caisse :** ce paiement n'apporte pas d'argent dans la caisse.
+- **Imprimés :** le reçu montre « Carte cadeau CC-… » et le solde restant sur la carte, et le relevé du client « Paiement par carte cadeau ».
+
+**Fiche d'une carte :**
+- **Consultation :** solde, statut et historique (vente, recharges, utilisations avec leur facture, remboursement), avec le solde après chaque mouvement.
+- **Recharger :** montant et mode reçus. Une carte annulée ne se recharge plus.
+- **Rembourser le solde :** tout le solde rendu par le mode choisi, et la carte est **annulée** ; il n'y a pas de remboursement partiel.
+- **Expiration :** modifiable tant que la carte n'est pas annulée.
+
+**Statuts** : Active, Épuisée (solde nul), Expirée (date dépassée), Annulée. La liste se cherche par numéro ou client et se filtre par statut. Elle montre le **solde à honorer** : ce que les cartes encore valables peuvent payer, dans la devise de l'entreprise.
+
+**Certificat cadeau** (PDF A5) : l'entreprise, le numéro de la carte, le montant, le solde du moment, la validité et la date de vente.
+
+**Droits :** module **Cartes cadeaux** (`cartes_cadeaux`), copié des acomptes à sa création.
+- Consulter (liste, fiche, certificat ; les lectures de `/cartes-cadeaux` sont contrôlées).
+- Vendre : créer.
+- Recharger et changer l'expiration : modifier.
+- **Rembourser le solde d'une carte cadeau** (`cartes_cadeaux.rembourser`) : suit le droit de rembourser un acompte, et demande aussi le droit de modifier.
+- Payer avec une carte ne demande que le droit d'encaisser. La vérification d'une carte présentée (`/point-de-vente/carte-cadeau`) reste ouverte.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET / POST | `/cartes-cadeaux` | Liste (`recherche`, `etat`, solde à honorer) ; vente (`numero` en numérotation manuelle, `client_id`, `devise`, `montant`, `mode`, `reference`, `date`, `expire_le`, `caisse_id`) |
+| GET / PUT | `/cartes-cadeaux/{id}` | Fiche et mouvements ; client, expiration, notes |
+| POST | `/cartes-cadeaux/{id}/recharger` | Recharge (`montant`, `mode`, `caisse_id`) |
+| POST | `/cartes-cadeaux/{id}/rembourser` | Remboursement du solde, carte annulée (`mode`, `caisse_id`) |
+| GET | `/cartes-cadeaux/{id}/certificat` | Certificat cadeau (PDF) |
+| GET | `/point-de-vente/carte-cadeau?numero=` | Carte présentée pour payer : solde et statut |
+| POST | `/point-de-vente/ventes`, `/factures/{id}/paiement` | Mode `carte_cadeau` avec le numéro (`paiements[].carte_cadeau`, `carte_cadeau`) |
+
+Code : services `App\Services\CartesCadeaux` et `CertificatCadeauPdf`, `CarteCadeauController`, vue `pdf/certificat-cadeau` ; web : page `CartesCadeauxPage`, composants `cartesCadeaux/VendreCarte` et `cartesCadeaux/ChampCarteCadeau` ; migration `2026_10_17_100054_creer_cartes_cadeaux` (tables `cartes_cadeaux`, `carte_cadeau_mouvements`, colonne `facture_paiements.carte_cadeau_id`, droits du module).
 
 ---
 

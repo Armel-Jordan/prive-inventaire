@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Facture;
 use App\Services\Caisses;
+use App\Services\CartesCadeaux;
 use App\Services\ClientsDePassage;
 use App\Services\RecuVentePdf;
 use App\Services\VentesComptoir;
@@ -47,14 +48,16 @@ class PointDeVenteController extends Controller
             // L'application compte en UTC : un jour de marge laisse passer la date du jour de l'utilisateur, quel que soit son fuseau.
             'date' => 'required|date_format:Y-m-d|before_or_equal:tomorrow',
             'paiements' => 'present|array|max:20',
-            'paiements.*.mode' => ['required', Rule::in(Caisses::MODES)],
+            'paiements.*.mode' => ['required', Rule::in([...Caisses::MODES, 'carte_cadeau'])],
             'paiements.*.montant' => 'required|numeric|min:0.01|max:9999999999',
             'paiements.*.reference' => 'nullable|string|max:100',
+            // Carte cadeau : son numéro.
+            'paiements.*.carte_cadeau' => 'nullable|required_if:paiements.*.mode,carte_cadeau|string|max:30',
             // Caisse du poste : les paiements entrent dans sa session ouverte (refusés si elle est fermée).
             'caisse_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:2000',
             ...ClientsDePassage::regles(),
-        ], ['lignes.required' => 'Ajoutez au moins un produit.', 'lignes.min' => 'Ajoutez au moins un produit.']);
+        ], ['lignes.required' => 'Ajoutez au moins un produit.', 'lignes.min' => 'Ajoutez au moins un produit.', 'paiements.*.carte_cadeau.required_if' => 'Saisissez ou scannez le numéro de la carte cadeau.']);
         foreach (array_filter(['creer' => true, 'emettre' => true, 'encaisser' => $donnees['paiements'] !== []]) as $action => $requis) {
             if (! $droits->permet($request->user(), 'factures', $action)) {
                 return response()->json(['message' => $droits->messageRefus('factures', $action), 'module' => 'factures', 'action' => $action], 403);
@@ -71,6 +74,18 @@ class PointDeVenteController extends Controller
         return response()->json($vente + [
             'message' => "Vente {$facture->numero} enregistrée.".((float) $facture->reste_a_payer > 0.004 ? ' Le reste est porté au compte du client.' : ''),
         ], 201);
+    }
+
+    /** Carte cadeau présentée pour payer : son solde et ce qui l'empêcherait de payer (annulée, expirée). */
+    public function carteCadeau(Request $request, CartesCadeaux $cartes): JsonResponse
+    {
+        $numero = (string) $request->validate(['numero' => 'required|string|max:30'])['numero'];
+        $carte = $cartes->consulter($numero);
+        if (! $carte) {
+            return response()->json(['message' => 'Carte cadeau '.mb_strtoupper(trim($numero)).' introuvable.'], 404);
+        }
+
+        return response()->json($carte->only(['id', 'numero', 'devise', 'solde', 'expire_le', 'etat']));
     }
 
     /** Reçu (ticket de 80 mm) d'une facture émise, heure dans le fuseau de l'utilisateur. */

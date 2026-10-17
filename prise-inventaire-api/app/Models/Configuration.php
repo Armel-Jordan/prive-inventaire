@@ -94,6 +94,7 @@ class Configuration extends Model
         'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
         'contrat_location' => ['prefixe' => 'CT', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'consignation' => ['prefixe' => 'CS', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'carte_cadeau' => ['prefixe' => 'CC', 'longueur' => 6, 'separateur' => '-', 'auto_increment' => true],
     ];
 
     /**

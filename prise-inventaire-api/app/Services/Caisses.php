@@ -8,6 +8,7 @@ use App\Models\AdminUser;
 use App\Models\Caisse;
 use App\Models\CaisseMouvement;
 use App\Models\CaisseSession;
+use App\Models\CarteCadeauMouvement;
 use App\Models\FacturePaiement;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,7 +24,8 @@ use Illuminate\Validation\ValidationException;
  *   se rattachent à la session ouverte de sa caisse ; caisse fermée, l'encaissement est refusé ;
  * - entrées et sorties d'argent en cours de session (raison obligatoire pour une sortie) ;
  * - attendu par mode de paiement et devise = fond + encaissements + acomptes − remboursements + entrées − sorties.
- *   Appliquer un acompte sur une facture n'apporte pas d'argent : ce paiement-là n'est pas compté ;
+ *   Appliquer un acompte sur une facture, ou la payer avec une carte cadeau, n'apporte pas d'argent : ces paiements-là
+ *   ne sont pas comptés ; une carte cadeau vendue ou rechargée est un encaissement, son remboursement une sortie ;
  * - la fermeture fige l'attendu, le compté et l'écart : le sommaire réimprimé plus tard reste identique.
  */
 class Caisses
@@ -36,7 +38,11 @@ class Caisses
     public const LIBELLES_TYPES = [
         'fond' => 'Fond de caisse', 'encaissement' => 'Encaissement', 'acompte' => 'Acompte reçu',
         'remboursement' => "Remboursement d'acompte", 'entree' => "Entrée d'argent", 'sortie' => "Sortie d'argent",
+        'carte_cadeau' => 'Carte cadeau vendue', 'recharge_carte' => 'Recharge de carte cadeau', 'remboursement_carte' => 'Remboursement de carte cadeau',
     ];
+
+    /** Mouvement d'une carte cadeau qui fait entrer ou sortir de l'argent => type d'opération de la caisse. */
+    private const OPERATIONS_CARTES = ['vente' => 'carte_cadeau', 'recharge' => 'recharge_carte', 'remboursement' => 'remboursement_carte'];
 
     /** Colonnes additionnées d'une ligne (mode, devise). */
     private const COLONNES = ['fond', 'encaissements', 'acomptes', 'remboursements', 'entrees', 'sorties'];
@@ -182,6 +188,7 @@ class Caisses
             ->each(fn ($s) => $ajouter($s, self::COLONNE_MOUVEMENT[$s->type] ?? 'entrees'));
         DB::table('facture_paiements')->join('factures', 'factures.id', '=', 'facture_paiements.facture_id')
             ->where('facture_paiements.caisse_session_id', $session->id)->whereNull('facture_paiements.acompte_id')
+            ->whereNull('facture_paiements.carte_cadeau_id')
             ->groupBy('facture_paiements.mode_paiement', 'factures.devise')
             ->selectRaw('facture_paiements.mode_paiement AS mode, factures.devise AS devise, SUM(facture_paiements.montant) AS montant')->get()
             ->each(fn ($s) => $ajouter($s, 'encaissements'));
@@ -193,6 +200,14 @@ class Caisses
             ->groupBy('acompte_remboursements.mode', 'acomptes.devise')
             ->selectRaw('acompte_remboursements.mode AS mode, acomptes.devise AS devise, SUM(acompte_remboursements.montant) AS montant')->get()
             ->each(fn ($s) => $ajouter($s, 'remboursements'));
+        // Cartes cadeaux vendues ou rechargées (encaissements) et remboursées (en positif dans les remboursements).
+        DB::table('carte_cadeau_mouvements')->join('cartes_cadeaux', 'cartes_cadeaux.id', '=', 'carte_cadeau_mouvements.carte_cadeau_id')
+            ->where('carte_cadeau_mouvements.caisse_session_id', $session->id)->whereIn('carte_cadeau_mouvements.type', array_keys(self::OPERATIONS_CARTES))
+            ->groupBy('carte_cadeau_mouvements.type', 'carte_cadeau_mouvements.mode', 'cartes_cadeaux.devise')
+            ->selectRaw('carte_cadeau_mouvements.type AS type, carte_cadeau_mouvements.mode AS mode, cartes_cadeaux.devise AS devise, SUM(carte_cadeau_mouvements.montant) AS montant')->get()
+            ->each(fn ($s) => $s->type === 'remboursement'
+                ? $ajouter((object) ['mode' => $s->mode, 'devise' => $s->devise, 'montant' => -(float) $s->montant], 'remboursements')
+                : $ajouter($s, 'encaissements'));
 
         return $this->trier($lignes);
     }
@@ -232,8 +247,8 @@ class Caisses
                 $mouvement->type === 'sortie' ? -(float) $mouvement->montant : (float) $mouvement->montant, $mouvement->cree_par, $mouvement->note,
                 ['mouvement_id' => $mouvement->id]));
         }
-        $operations = $operations->merge($this->encaissements(fn (Builder $q) => $q->where('caisse_session_id', $session->id),
-            fn (Builder $q) => $q->where('caisse_session_id', $session->id), fn (Builder $q) => $q->where('caisse_session_id', $session->id)));
+        $deLaSession = fn (Builder $q) => $q->where('caisse_session_id', $session->id);
+        $operations = $operations->merge($this->encaissements($deLaSession, $deLaSession, $deLaSession, $deLaSession));
 
         return $this->avecCommis($operations->sortBy([['date', 'asc'], ['ordre', 'asc']])->values())->all();
     }
@@ -248,7 +263,7 @@ class Caisses
     {
         $periode = [$session->ouverte_le, $session->fermee_le ?? now()];
         $filtre = fn (Builder $q) => $q->whereNull('caisse_session_id')->whereBetween('created_at', $periode);
-        $operations = $this->encaissements($filtre, $filtre, $filtre)->sortBy([['date', 'asc'], ['ordre', 'asc']])->values();
+        $operations = $this->encaissements($filtre, $filtre, $filtre, $filtre)->sortBy([['date', 'asc'], ['ordre', 'asc']])->values();
 
         return [
             'operations' => $this->avecCommis($operations->take(self::MAX_SANS_CAISSE))->all(),
@@ -265,7 +280,7 @@ class Caisses
      */
     public function parUsager(array $operations): array
     {
-        return collect($operations)->whereIn('type', ['encaissement', 'acompte', 'remboursement'])
+        return collect($operations)->whereIn('type', ['encaissement', 'acompte', 'remboursement', ...array_values(self::OPERATIONS_CARTES)])
             ->groupBy(fn (array $o) => ($o['commis'] ?? '').'|'.$o['mode'].'|'.$o['devise'])
             ->map(fn (Collection $groupe) => [
                 'commis' => $groupe->first()['commis'], 'mode' => $groupe->first()['mode'], 'devise' => $groupe->first()['devise'],
@@ -309,13 +324,13 @@ class Caisses
     }
 
     /**
-     * Encaissements (paiements de factures hors application d'acompte, acomptes reçus, remboursements d'acompte)
-     * retenus par les filtres donnés.
+     * Encaissements (paiements de factures, hors application d'acompte et paiement par carte cadeau, acomptes reçus,
+     * remboursements d'acompte, cartes cadeaux vendues, rechargées ou remboursées) retenus par les filtres donnés.
      */
-    private function encaissements(callable $paiements, callable $acomptes, callable $remboursements): Collection
+    private function encaissements(callable $paiements, callable $acomptes, callable $remboursements, callable $cartes): Collection
     {
         $operations = collect();
-        $requete = FacturePaiement::whereNull('acompte_id')->whereHas('facture')
+        $requete = FacturePaiement::whereNull('acompte_id')->whereNull('carte_cadeau_id')->whereHas('facture')
             ->with(['facture:id,numero,client_id,devise,passage_nom', 'facture.client:id,code,raison_sociale']);
         foreach ($paiements($requete)->get() as $paiement) {
             $facture = $paiement->facture;
@@ -335,6 +350,13 @@ class Caisses
                 $remboursement->mode, $acompte?->devise, -(float) $remboursement->montant, $remboursement->enregistre_par,
                 $remboursement->reference ?: $remboursement->notes, ['acompte_id' => $acompte?->id, 'client' => $acompte?->client?->raison_sociale]));
         }
+        $requete = CarteCadeauMouvement::whereIn('type', array_keys(self::OPERATIONS_CARTES))->with('carte.client:id,code,raison_sociale');
+        foreach ($cartes($requete)->get() as $mouvement) {
+            $carte = $mouvement->carte;
+            $operations->push($this->operation($mouvement->created_at, self::OPERATIONS_CARTES[$mouvement->type], 'Carte cadeau '.$carte?->numero,
+                (string) $mouvement->mode, $carte?->devise, (float) $mouvement->montant, $mouvement->cree_par, $mouvement->reference,
+                ['carte_cadeau_id' => $mouvement->carte_cadeau_id, 'client' => $carte?->client?->raison_sociale]));
+        }
 
         return $operations;
     }
@@ -344,7 +366,7 @@ class Caisses
     {
         return array_merge([
             'date' => Carbon::parse($date)->toIso8601String(), 'type' => $type, 'ordre' => array_search($type, array_keys(self::LIBELLES_TYPES), true),
-            'document' => $document, 'facture_id' => null, 'acompte_id' => null, 'mouvement_id' => null, 'client' => null,
+            'document' => $document, 'facture_id' => null, 'acompte_id' => null, 'mouvement_id' => null, 'carte_cadeau_id' => null, 'client' => null,
             'mode' => $mode, 'devise' => $this->devise($devise), 'montant' => round($montant, 2), 'auteur' => $auteur, 'note' => $note,
         ], $liens);
     }

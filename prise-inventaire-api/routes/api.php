@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CaisseController;
 use App\Http\Controllers\Api\CamionController;
+use App\Http\Controllers\Api\CarteCadeauController;
 use App\Http\Controllers\Api\ChampPersonnaliseController;
 use App\Http\Controllers\Api\ChargementTourneeController;
 use App\Http\Controllers\Api\ClientController;
@@ -742,6 +743,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/calculer', [PointDeVenteController::class, 'calculer']);
         Route::post('/ventes', [PointDeVenteController::class, 'vendre']);
         Route::get('/recus/{factureId}', [PointDeVenteController::class, 'recu'])->whereNumber('factureId');
+        // Carte cadeau présentée pour payer : son solde.
+        Route::get('/carte-cadeau', [PointDeVenteController::class, 'carteCadeau']);
+    });
+
+    // Cartes cadeaux : vente, recharge, remboursement du solde, certificat ; elles paient au point de vente et à l'encaissement.
+    Route::prefix('cartes-cadeaux')->middleware('module:ventes')->group(function () {
+        Route::get('/', [CarteCadeauController::class, 'index']);
+        Route::post('/', [CarteCadeauController::class, 'store']);
+        Route::get('/{id}', [CarteCadeauController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [CarteCadeauController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/recharger', [CarteCadeauController::class, 'recharger'])->whereNumber('id');
+        Route::post('/{id}/rembourser', [CarteCadeauController::class, 'rembourser'])->whereNumber('id');
+        Route::get('/{id}/certificat', [CarteCadeauController::class, 'certificat'])->whereNumber('id');
     });
 
     // Gestion de caisse : ouverture avec le fond, entrées et sorties d'argent, fermeture (tiroir compté), sommaire.

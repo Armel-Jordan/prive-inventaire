@@ -20,7 +20,9 @@ use Illuminate\Validation\ValidationException;
  * - le paiement se répartit entre plusieurs modes ; seules les espèces peuvent dépasser ce qui reste dû : l'excédent est
  *   la monnaie rendue, et seul ce qui est dû est encaissé (l'argent remis est noté pour le reçu) ;
  * - le client de passage paie tout, et un paiement en espèces règle tout ; un client en compte peut ne payer qu'une
- *   partie, ou rien : le reste demeure à recevoir.
+ *   partie, ou rien : le reste demeure à recevoir ;
+ * - une carte cadeau paie jusqu'à son solde, comme un mode qui ne peut pas dépasser ; elle n'apporte pas d'argent dans la
+ *   caisse (une vente payée seulement par carte cadeau n'a pas besoin de caisse ouverte).
  */
 class VentesComptoir
 {
@@ -32,6 +34,7 @@ class VentesComptoir
         private readonly Caisses $caisses,
         private readonly DevisesVente $devises,
         private readonly ClientsDePassage $passage,
+        private readonly CartesCadeaux $cartes,
     ) {}
 
     /** Produits actifs à vendre : le numéro exact d'abord (lecture d'un code), puis ceux qui commencent par la saisie ou la contiennent. */
@@ -87,7 +90,7 @@ class VentesComptoir
     /**
      * Enregistre la vente : facture créée et émise, paiements encaissés sur la session ouverte de la caisse du poste.
      *
-     * @param  array{client_id?: ?int, date: string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht?: mixed}>, paiements?: list<array{mode: string, montant: float|string, reference?: ?string}>, caisse_id?: ?int, notes?: ?string, passage_nom?: ?string, passage_telephone?: ?string, passage_courriel?: ?string, passage_adresse?: ?string}  $donnees
+     * @param  array{client_id?: ?int, date: string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht?: mixed}>, paiements?: list<array{mode: string, montant: float|string, reference?: ?string, carte_cadeau?: ?string}>, caisse_id?: ?int, notes?: ?string, passage_nom?: ?string, passage_telephone?: ?string, passage_courriel?: ?string, passage_adresse?: ?string}  $donnees
      * @return array{facture: \App\Models\Facture, monnaie: float}
      */
     public function vendre(array $donnees, ?int $auteur, int $tenantId): array
@@ -101,8 +104,9 @@ class VentesComptoir
         $lignes = $this->auPrix($client, $devise, $donnees['lignes'], $donnees['date'], true);
 
         return DB::transaction(function () use ($donnees, $auteur, $tenantId, $client, $devise, $lignes) {
-            // La caisse du poste d'abord : fermée, rien n'est créé (pas même un numéro de facture).
-            $session = $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null);
+            // La caisse du poste d'abord, si de l'argent est reçu : fermée, rien n'est créé (pas même un numéro de facture).
+            $argent = collect($donnees['paiements'] ?? [])->contains(fn (array $p) => $p['mode'] !== 'carte_cadeau');
+            $session = $argent ? $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null) : null;
             $facture = $this->factures->creer($devise + array_intersect_key($donnees, array_flip(ClientsDePassage::CHAMPS)) + [
                 'client_id' => $client->id,
                 'date_facture' => $donnees['date'],
@@ -112,12 +116,18 @@ class VentesComptoir
             $this->factures->emettre($facture, $auteur);
             $reglement = $this->repartir($donnees['paiements'] ?? [], round((float) $facture->fresh()->reste_a_payer, 2), (bool) $client->de_passage, $devise['devise']);
             foreach ($reglement['paiements'] as $paiement) {
-                FacturePaiement::create($paiement + [
+                // Carte cadeau : vérifiée et verrouillée, le paiement ne passe pas par la caisse.
+                $carte = isset($paiement['carte']) ? $this->cartes->pourPaiement($paiement['carte'], $devise['devise'], $paiement['montant'], $donnees['date']) : null;
+                $enregistre = FacturePaiement::create(array_diff_key($paiement, ['carte' => true]) + [
                     'facture_id' => $facture->id,
                     'date_paiement' => $donnees['date'],
                     'enregistre_par' => $auteur,
-                    'caisse_session_id' => $session,
+                    'caisse_session_id' => $carte ? null : $session,
+                    'carte_cadeau_id' => $carte?->id,
                 ]);
+                if ($carte) {
+                    $this->cartes->utiliser($carte, $enregistre, $auteur);
+                }
             }
 
             return [
@@ -168,8 +178,11 @@ class VentesComptoir
      * Répartit le paiement : chaque mode garde son montant, sauf les espèces, qui n'encaissent que ce qui reste dû ;
      * l'excédent d'espèces est la monnaie rendue.
      *
-     * @param  list<array{mode: string, montant: float|string, reference?: ?string}>  $paiements
-     * @return array{paiements: list<array{mode_paiement: string, montant: float, reference: ?string, montant_recu: ?float}>, monnaie: float}
+     * Une carte cadeau compte comme un mode qui ne peut pas dépasser ; ses lignes sont regroupées par carte (enregistrées en
+     * mode « autre », rattachées à la carte).
+     *
+     * @param  list<array{mode: string, montant: float|string, reference?: ?string, carte_cadeau?: ?string}>  $paiements
+     * @return array{paiements: list<array{mode_paiement: string, montant: float, reference: ?string, montant_recu: ?float, carte?: string}>, monnaie: float}
      */
     private function repartir(array $paiements, float $du, bool $dePassage, ?string $devise): array
     {
@@ -187,10 +200,17 @@ class VentesComptoir
         }
         $monnaie = max(0.0, round($especes + $autres - $du, 2));
         $resultat = [];
+        $cartes = [];
         foreach ($paiements as $paiement) {
-            if ($paiement['mode'] !== 'especes') {
+            if ($paiement['mode'] === 'carte_cadeau') {
+                $numero = mb_strtoupper(trim((string) ($paiement['carte_cadeau'] ?? '')));
+                $cartes[$numero] = round(($cartes[$numero] ?? 0) + (float) $paiement['montant'], 2);
+            } elseif ($paiement['mode'] !== 'especes') {
                 $resultat[] = ['mode_paiement' => $paiement['mode'], 'montant' => round((float) $paiement['montant'], 2), 'reference' => $paiement['reference'] ?? null, 'montant_recu' => null];
             }
+        }
+        foreach ($cartes as $numero => $montant) {
+            $resultat[] = ['mode_paiement' => 'autre', 'montant' => $montant, 'reference' => $numero, 'montant_recu' => null, 'carte' => (string) $numero];
         }
         if ($especes - $monnaie > self::TOLERANCE) {
             $resultat[] = ['mode_paiement' => 'especes', 'montant' => round($especes - $monnaie, 2), 'reference' => null, 'montant_recu' => $especes];
