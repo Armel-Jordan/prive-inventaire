@@ -872,6 +872,10 @@ export interface ComFourEntete {
   date_commande: string;
   date_livraison_prevue?: string;
   statut: 'brouillon' | 'envoyee' | 'partielle' | 'complete' | 'annulee';
+  /** Jour et auteur de l'envoi au fournisseur (bouton « Valider et envoyer » ou courriel). */
+  envoyee_le?: string | null;
+  envoyee_par?: number | null;
+  auteur_envoi?: { id: number; nom: string } | null;
   montant_total: number;
   devise?: string;
   taux_change?: number;
@@ -2238,6 +2242,8 @@ export interface PreparationCourriel {
   objet: string;
   contenu: string;
   piece_jointe: string | null;
+  /** Statut du document : un devis ou un bon de commande au brouillon change de statut à l'envoi. */
+  statut_document?: string | null;
 }
 
 export interface EnvoiCourriel {

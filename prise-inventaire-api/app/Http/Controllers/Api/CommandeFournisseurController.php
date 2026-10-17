@@ -7,8 +7,8 @@ use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
-use App\Models\HistoriquePrixAchat;
 use App\Models\ProduitTenant;
+use App\Services\CommandesFournisseur;
 use App\Services\ReliquatsClients;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -115,7 +115,7 @@ class CommandeFournisseurController extends Controller
 
     public function show(ComFourEntete $commande): JsonResponse
     {
-        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions', 'createdBy']);
+        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions', 'createdBy', 'auteurEnvoi:id,nom']);
 
         return response()->json($commande);
     }
@@ -186,7 +186,7 @@ class CommandeFournisseurController extends Controller
         return response()->json($commande->fresh()->load(['fournisseur', 'lignes.produit']));
     }
 
-    public function valider(ComFourEntete $commande): JsonResponse
+    public function valider(Request $request, ComFourEntete $commande, CommandesFournisseur $commandes): JsonResponse
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
@@ -194,20 +194,7 @@ class CommandeFournisseurController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($commande) {
-            $commande->statut = ComFourEntete::STATUT_ENVOYEE;
-            $commande->save();
-
-            foreach ($commande->lignes as $ligne) {
-                HistoriquePrixAchat::create([
-                    'produit_id' => $ligne->produit_id,
-                    'fournisseur_id' => $commande->fournisseur_id,
-                    'prix_achat' => $ligne->prix_unitaire,
-                    'date_effet' => $commande->date_commande,
-                    'com_four_entete_id' => $commande->id,
-                ]);
-            }
-        });
+        $commandes->valider($commande, $request->user()?->id);
 
         return response()->json([
             'message' => 'Commande validée et envoyée.',

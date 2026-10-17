@@ -276,6 +276,12 @@
                     <div class="info-label">Date de commande</div>
                     <div class="info-value">{{ \Carbon\Carbon::parse($commande->date_commande)->format('d/m/Y') }}</div>
 
+                    {{-- Jour où la commande est partie chez le fournisseur, quand ce n'est pas celui du document. --}}
+                    @if($commande->envoyee_le && $commande->envoyee_le->format('Y-m-d') !== \Carbon\Carbon::parse($commande->date_commande)->format('Y-m-d'))
+                        <div class="info-label">Commandée le</div>
+                        <div class="info-value">{{ $commande->envoyee_le->format('d/m/Y') }}</div>
+                    @endif
+
                     <div class="info-label">Date de livraison souhaitée</div>
                     <div class="info-value">
                         {{ $commande->date_livraison_prevue ? \Carbon\Carbon::parse($commande->date_livraison_prevue)->format('d/m/Y') : 'Non spécifiée' }}

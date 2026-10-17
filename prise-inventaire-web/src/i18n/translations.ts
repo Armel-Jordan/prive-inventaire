@@ -3214,6 +3214,10 @@ export const translations = {
       retry: 'Réessayer',
       previousSends: 'Envois précédents',
       noPreviousSends: 'Aucun envoi pour ce document.',
+      draftNotes: {
+        devis: 'Ce devis est au brouillon : son envoi le fait passer à « Envoyé ».',
+        commande_fournisseur: 'Ce bon de commande est au brouillon : son envoi le valide, comme « Valider et envoyer ». Le PDF joint part sans la mention « Brouillon ».',
+      },
       // Historique
       historyTitle: 'Courriels envoyés',
       historySubtitle: 'Historique et file d\'envoi des courriels de l\'entreprise.',
@@ -6484,6 +6488,10 @@ export const translations = {
       retry: 'Retry',
       previousSends: 'Previous sends',
       noPreviousSends: 'No email sent for this document.',
+      draftNotes: {
+        devis: 'This quote is a draft: sending it marks it as "Sent".',
+        commande_fournisseur: 'This purchase order is a draft: sending it validates it, like "Validate and send". The attached PDF is not marked "Draft".',
+      },
       // History
       historyTitle: 'Sent emails',
       historySubtitle: 'History and sending queue of the company emails.',

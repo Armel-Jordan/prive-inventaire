@@ -351,7 +351,7 @@ export default function CommandesFournisseurPage() {
                         <Eye size={16} />
                       </button>
                       <BoutonPdf chemin={`/commandes-fournisseur/${commande.id}/pdf`} nomFichier={`bon-commande-${commande.numero}.pdf`} taille={16} />
-                      <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" />
+                      <BoutonCourriel type="commande_fournisseur" documentId={commande.id} taille={16} className="mr-1" onFerme={loadData} />
                       {commande.statut === 'brouillon' && (
                         <>
                           {peut('commandes_fournisseur', 'valider') && (
@@ -641,6 +641,9 @@ export default function CommandesFournisseurPage() {
                 <span className={`px-2 py-1 rounded text-xs font-medium ${statutLabels[selectedCommande.statut]?.color}`}>
                   {statutLabels[selectedCommande.statut]?.label}
                 </span>
+                {/* Envoyer un brouillon par courriel le valide : l'écran se met à jour à la fermeture de la fenêtre. */}
+                <BoutonCourriel type="commande_fournisseur" documentId={selectedCommande.id} taille={16} className="ml-2 align-middle"
+                  onFerme={() => { loadData(); openDetail(selectedCommande); }} />
               </div>
               <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X size={20} />
@@ -660,6 +663,12 @@ export default function CommandesFournisseurPage() {
                 <div>
                   <p className="text-sm text-gray-500">Date commande</p>
                   <p className="font-medium">{formatDateDocument(selectedCommande.date_commande)}</p>
+                  {selectedCommande.envoyee_le && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Envoyée le {new Date(selectedCommande.envoyee_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                      {selectedCommande.auteur_envoi && ` par ${selectedCommande.auteur_envoi.nom}`}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Livraison prévue</p>

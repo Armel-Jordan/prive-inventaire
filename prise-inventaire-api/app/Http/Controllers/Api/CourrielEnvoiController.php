@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\EnvoyerCourriel;
+use App\Models\ComFourEntete;
 use App\Models\CourrielEnvoi;
 use App\Services\Courriels\EnvoiCourriel;
 use App\Services\Portail\AccesPortail;
 use App\Support\Courriels;
+use App\Support\Droits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -37,7 +39,7 @@ class CourrielEnvoiController extends Controller
     }
 
     /** Met le courriel en file puis l'envoie (tout de suite avec la file « sync »). */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, Droits $droits): JsonResponse
     {
         $donnees = $request->validate([
             'type' => ['required', Rule::in(array_keys(Courriels::DOCUMENTS))],
@@ -55,6 +57,13 @@ class CourrielEnvoiController extends Controller
         ]);
         $this->verifierModule($request, $donnees['type']);
         $document = $this->envois->document($donnees['type'], (int) $donnees['document_id']);
+        // Le bon de commande au brouillon est validé par son envoi : il y faut le droit de valider la commande.
+        if ($donnees['type'] === 'commande_fournisseur' && $document->getAttribute('statut') === ComFourEntete::STATUT_BROUILLON
+            && ! $droits->permet($request->user(), 'commandes_fournisseur', 'valider')) {
+            return response()->json([
+                'message' => $droits->messageRefus('commandes_fournisseur', 'valider'), 'module' => 'commandes_fournisseur', 'action' => 'valider',
+            ], 403);
+        }
 
         $envoi = $this->envois->creer($donnees['type'], $document, $donnees, $request->user()?->id);
         EnvoyerCourriel::dispatch($envoi->id);
