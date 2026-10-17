@@ -38,7 +38,7 @@ import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
 import OriginePrix from '@/components/OriginePrix';
 import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
-import { prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
+import { annexesALaVente, prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
 import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
@@ -716,7 +716,16 @@ export default function FacturesPage() {
                             const produit = produits.find(p => p.id === produitId);
                             // Dans l'unité de vente proposée d'office pour ce produit.
                             const unite = uniteParDefaut(produit);
-                            modifierLigne(idx, ligne => ({ ...choisirProduit(ligne, produitId, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), createForm.devise, Number(createForm.taux))), unite }));
+                            // Ses annexes (la pile fournie avec l'appareil), ajoutées d'office après sa ligne.
+                            const annexes = annexesALaVente(produit, l.quantite, unite, produits).map(a => ({
+                              produit_id: Number(a.produit.id), quantite: a.quantite, unite: null,
+                              prix_unitaire_ht: dansLaDevise(prixUnite(a.produit, null), createForm.devise, Number(createForm.taux)), auto: true,
+                            }));
+                            setCreateLignes(ls => {
+                              const maj = ls.map((ligne, i) => (i !== idx ? ligne
+                                : { ...choisirProduit(ligne, produitId, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), createForm.devise, Number(createForm.taux))), unite }));
+                              return [...maj.slice(0, idx + 1), ...annexes, ...maj.slice(idx + 1)];
+                            });
                           }}
                           aria-label="Produit"
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">

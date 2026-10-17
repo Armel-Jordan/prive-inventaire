@@ -21,7 +21,9 @@ class ProduitTenantController extends Controller
     {
         $statut = $request->query('statut', 'actifs');
         // Unités de vente : les lignes des documents proposent l'unité et son prix.
-        $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal', 'unites.unite:id,code,libelle,decimales'])
+        // Annexes : les lignes des documents les ajoutent d'office ; composants : le produit est un ensemble.
+        $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal', 'unites.unite:id,code,libelle,decimales',
+            'annexes:id,produit_id,lie_id,quantite', 'composants:id,produit_id,lie_id,quantite'])
             ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')
