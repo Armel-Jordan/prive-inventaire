@@ -53,7 +53,8 @@ class DisponibiliteProduits
             ->where('com_four_entete.tenant_id', $this->tenant())
             ->whereIn('com_four_entete.statut', [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])
             ->whereIn('com_four_ligne.produit_id', $ids)
-            ->groupBy('com_four_ligne.produit_id')->selectRaw('com_four_ligne.produit_id AS produit, SUM(CASE WHEN com_four_ligne.quantite_commandee > com_four_ligne.quantite_recue THEN com_four_ligne.quantite_commandee - com_four_ligne.quantite_recue ELSE 0 END) AS quantite')
+            // Reste à recevoir en unités d'achat, converti en unités de stock (une caisse de 12 attendue : 12).
+            ->groupBy('com_four_ligne.produit_id')->selectRaw('com_four_ligne.produit_id AS produit, SUM(CASE WHEN com_four_ligne.quantite_commandee > com_four_ligne.quantite_recue THEN (com_four_ligne.quantite_commandee - com_four_ligne.quantite_recue) * com_four_ligne.qte_par_unite_achat ELSE 0 END) AS quantite')
             ->pluck('quantite', 'produit');
         $reliquats = ReliquatClient::query()->whereIn('produit_id', $ids)
             ->whereIn('statut', [ReliquatClient::CREE, ReliquatClient::COMMANDE, ReliquatClient::RECU_PARTIEL])

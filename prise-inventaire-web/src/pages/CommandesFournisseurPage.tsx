@@ -24,8 +24,9 @@ import {
   cloturerCommandeFournisseur,
   getTauxChange,
   getParametres,
+  getProduitsFournis,
 } from '@/services/api';
-import type { ComFourEntete, Fournisseur } from '@/services/api';
+import type { ComFourEntete, Fournisseur, ProduitFourni } from '@/services/api';
 import type { Produit } from '@/types';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import BoutonPdf from '@/components/BoutonPdf';
@@ -62,6 +63,8 @@ export default function CommandesFournisseurPage() {
   const [selectedCommande, setSelectedCommande] = useState<ComFourEntete | null>(null);
 
   const [formFournisseur, setFormFournisseur] = useState<number>(0);
+  // Catalogue du fournisseur choisi : son conditionnement de chaque produit (sinon celui du produit).
+  const [catalogueFournisseur, setCatalogueFournisseur] = useState<{ fournisseur: number; produits: Record<number, ProduitFourni> }>({ fournisseur: 0, produits: {} });
   const [formDateCommande, setFormDateCommande] = useState(aujourdhui());
   const [formDateLivraison, setFormDateLivraison] = useState('');
   const [formNotes, setFormNotes] = useState('');
@@ -103,6 +106,15 @@ export default function CommandesFournisseurPage() {
     getConfiguration('commande_fournisseur').then(setConfigNumero).catch(() => {});
     getParametres().then(p => setDeviseLocale(p.devise_code || 'EUR')).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!formFournisseur) return;
+    let actif = true;
+    getProduitsFournis(formFournisseur)
+      .then(liste => { if (actif) setCatalogueFournisseur({ fournisseur: formFournisseur, produits: Object.fromEntries(liste.map(p => [p.produit_id, p])) }); })
+      .catch(() => {});
+    return () => { actif = false; };
+  }, [formFournisseur]);
 
   /** Montant d'une commande dans sa devise (celle du fournisseur), et non en euros d'office. */
   const montantCommande = (valeur: number | string | null | undefined, devise?: string | null) =>
@@ -173,10 +185,15 @@ export default function CommandesFournisseurPage() {
     ? 'taux du référentiel des devises'
     : sourceTaux === 'frankfurter' ? 'cours du jour (Frankfurter)' : 'taux saisi';
 
+  // Conditionnement de la ligne : celui du fournisseur choisi (son catalogue), sinon celui du produit, comme l'API.
   function getProduitConditionnement(produitId: number) {
     const p = produits.find(p => p.id === produitId);
-    if (!p?.unite_achat || (p.qte_par_unite_achat ?? 1) <= 1) return null;
-    return { unite_achat: p.unite_achat, qte: p.qte_par_unite_achat ?? 1, mesure: p.mesure };
+    const chez = catalogueFournisseur.fournisseur === formFournisseur ? catalogueFournisseur.produits[produitId] : undefined;
+    const propre = chez && (chez.unite_achat || chez.qte_par_unite_achat);
+    const unite = propre ? (chez.unite_achat ?? p?.unite_achat) : p?.unite_achat;
+    const qte = propre ? (chez.qte_par_unite_achat ?? p?.qte_par_unite_achat ?? 1) : (p?.qte_par_unite_achat ?? 1);
+    if (!unite || qte <= 1) return null;
+    return { unite_achat: unite, qte, mesure: p?.mesure };
   }
 
   function getMontantTotal(): number {
@@ -725,7 +742,7 @@ export default function CommandesFournisseurPage() {
                             )}
                             {ligne.unite_achat && (ligne.qte_par_unite_achat ?? 1) > 1 && (
                               <div className="text-xs text-orange-600 whitespace-nowrap">
-                                {ligne.unite_achat} × {ligne.qte_par_unite_achat} = {ligne.quantite_commandee * (ligne.qte_par_unite_achat ?? 1)} UN
+                                {ligne.unite_achat} × {ligne.qte_par_unite_achat} = {ligne.quantite_commandee * (ligne.qte_par_unite_achat ?? 1)} {ligne.produit?.mesure || 'UN'}
                               </div>
                             )}
                           </td>

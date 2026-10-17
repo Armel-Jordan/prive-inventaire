@@ -769,6 +769,13 @@ export interface ProduitFourni {
   prix_achat: number | null;
   delai_livraison: number | null;
   fournisseur_principal: boolean;
+  /** Conditionnement chez ce fournisseur : unité d'achat et unités de stock qu'elle contient (vides : ceux du produit). */
+  unite_achat?: string | null;
+  qte_par_unite_achat?: number | null;
+  /** Unité de stock et conditionnement du produit. */
+  mesure?: string | null;
+  unite_achat_produit?: string | null;
+  qte_par_unite_achat_produit?: number;
   dernier_prix: number | null;
   dernier_prix_devise: string | null;
   derniere_commande: string | null;
@@ -835,7 +842,7 @@ export async function getProduitsFournis(id: number): Promise<ProduitFourni[]> {
   return fetchApi(`/fournisseurs/${id}/produits`);
 }
 
-export type SaisieProduitFourni = Pick<ProduitFourni, 'reference_fournisseur' | 'prix_achat' | 'delai_livraison' | 'fournisseur_principal'>;
+export type SaisieProduitFourni = Pick<ProduitFourni, 'reference_fournisseur' | 'prix_achat' | 'delai_livraison' | 'fournisseur_principal' | 'unite_achat' | 'qte_par_unite_achat'>;
 
 export async function enregistrerProduitFourni(fournisseurId: number, produitId: number, donnees: SaisieProduitFourni, nouveau: boolean): Promise<void> {
   await fetchApi(nouveau ? `/fournisseurs/${fournisseurId}/produits` : `/fournisseurs/${fournisseurId}/produits/${produitId}`, {

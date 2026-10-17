@@ -20,6 +20,7 @@
 11. [Import d'une grille de prix fournisseur](#11-import-dune-grille-de-prix-fournisseur-achats--fournisseurs)
 12. [Factures fournisseurs](#12-factures-fournisseurs-achats--factures-fournisseurs)
 13. [Déboursés](#13-déboursés-achats--déboursés)
+14. [Unités d'achat](#14-unités-dachat-fiche-fournisseur--produits-fournis)
 
 ---
 
@@ -932,6 +933,42 @@ Le plan de décaissement de fripv2 (« Paiements dus — comptes à payer ») : 
 Code : service `App\Services\PaiementsDus`, `Debourses::payerLot`, page `PaiementsDusPage`.
 
 À venir : l'impression des chèques et les fichiers de paiement bancaires viendront avec les comptes bancaires (phase 4.6).
+
+---
+
+## 14. Unités d'achat (fiche fournisseur → Produits fournis)
+
+Plan de parité fripv2, phase 2.2 (suite) : chaque fournisseur livre un produit dans son **conditionnement** (la caisse
+de 24 chez la brasserie, le pack de 6 ailleurs). Les unités de vente sont décrites dans FLOW-VENTES (section 15).
+
+**Le conditionnement d'un fournisseur** (fiche fournisseur, onglet Produits fournis) :
+- son **unité d'achat** et le nombre d'**unités de stock** qu'elle contient ; le prix convenu vaut pour cette unité ;
+- vides : le conditionnement du produit (son unité d'achat et ses « unités par paquet »), comme avant.
+
+**Sur les commandes fournisseur** :
+- chaque ligne prend le conditionnement du fournisseur de la commande (sinon celui du produit) et le garde ;
+- un brouillon passé chez un autre fournisseur prend le conditionnement de celui-ci ;
+- quantités et prix de la ligne sont en unités d'achat, et la réception les compte en unités de stock (comme avant).
+
+**Convertis en unités de stock**, avec le facteur de la ligne (une caisse de 24 compte pour 24) :
+- l'**en commande** des disponibilités et des suggestions d'achat, y compris les brouillons ;
+- les **réceptions** réparties sur les reliquats clients, et leur annulation ;
+- les **retours au fournisseur** repris d'une commande : la sortie et le remplacement se comptent en unités de stock.
+
+**Commandés en unités d'achat entières**, arrondies au-dessus :
+- un **reliquat** client de 30 unités se commande en 2 caisses de 24 ;
+- une **suggestion d'achat** de 50 unités se commande en 3 caisses.
+
+Jusqu'ici, ces quantités passaient d'une unité à l'autre sans conversion. Rien ne change pour un produit acheté à
+l'unité (facteur 1).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/fournisseurs/{id}/produits` | Catalogue : avec `unite_achat`, `qte_par_unite_achat` du fournisseur, et ceux du produit |
+| POST / PUT | `/fournisseurs/{id}/produits[/{produit}]` | Ajouter, modifier : accepte `unite_achat` et `qte_par_unite_achat` (vides : ceux du produit) |
+
+Code : service `App\Services\UnitesAchat` (conditionnement du fournisseur, quantités en unités d'achat entières) ;
+migration `2026_10_17_100074_unites_achat_fournisseurs` (`produit_fournisseur.unite_achat`, `qte_par_unite_achat`).
 
 ---
 

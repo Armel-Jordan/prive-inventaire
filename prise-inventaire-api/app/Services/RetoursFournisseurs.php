@@ -449,6 +449,8 @@ class RetoursFournisseurs
     private function mouvement(RetourFournisseur $retour, RetourFournisseurLigne $ligne, string $type, Secteur $secteur, string $motif, ?AdminUser $auteur, Carbon $moment): MouvementTenant
     {
         $sortie = $type === MouvementTenant::TYPE_SORTIE;
+        // Une ligne reprise d'une commande fournisseur est en unités d'achat : le mouvement se compte en unités de stock.
+        $facteur = $ligne->com_four_ligne_id ? max(1, (int) $ligne->ligneCommande?->qte_par_unite_achat) : 1;
 
         return MouvementTenant::create([
             'tenant_id' => $retour->tenant_id,
@@ -457,7 +459,7 @@ class RetoursFournisseurs
             'produit_nom' => $ligne->produit->description,
             'secteur_source' => $sortie ? ($secteur->code ?: $secteur->nom) : null,
             'secteur_destination' => $sortie ? null : ($secteur->code ?: $secteur->nom),
-            'quantite' => $ligne->quantite,
+            'quantite' => $ligne->quantite * $facteur,
             'unite_mesure' => $ligne->produit->mesure ?: 'unité',
             'motif' => Str::limit($motif, 255, ''),
             'employe' => Str::limit($auteur?->nom ?: 'Retour fournisseur', 100, ''),

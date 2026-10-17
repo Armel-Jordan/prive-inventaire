@@ -10,6 +10,7 @@ use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Services\CommandesFournisseur;
 use App\Services\ReliquatsClients;
+use App\Services\UnitesAchat;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,12 +95,11 @@ class CommandeFournisseurController extends Controller
 
             foreach ($validated['lignes'] as $ligne) {
                 $produit = ProduitTenant::find($ligne['produit_id']);
-                ComFourLigne::create([
+                // Conditionnement du fournisseur (son catalogue), sinon celui du produit.
+                ComFourLigne::create(app(UnitesAchat::class)->pour($produit, (int) $validated['fournisseur_id']) + [
                     'com_four_entete_id' => $commande->id,
                     'produit_id' => $ligne['produit_id'],
                     'quantite_commandee' => $ligne['quantite_commandee'],
-                    'unite_achat' => $produit?->unite_achat,
-                    'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                     'prix_unitaire' => $ligne['prix_unitaire'],
                     'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                 ]);
@@ -157,23 +157,21 @@ class CommandeFournisseurController extends Controller
 
             foreach ($validated['lignes'] as $ligne) {
                 $produit = ProduitTenant::find($ligne['produit_id']);
+                // Conditionnement du fournisseur (son catalogue), sinon celui du produit.
+                $conditionnement = app(UnitesAchat::class)->pour($produit, (int) $validated['fournisseur_id']);
                 if (isset($ligne['id'])) {
                     // Scoper à la commande courante (tenant-scopée) : empêche de modifier la ligne d'un autre tenant par id.
-                    $commande->lignes()->where('id', $ligne['id'])->update([
+                    $commande->lignes()->where('id', $ligne['id'])->update($conditionnement + [
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
-                        'unite_achat' => $produit?->unite_achat,
-                        'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                         'prix_unitaire' => $ligne['prix_unitaire'],
                         'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                     ]);
                 } else {
-                    ComFourLigne::create([
+                    ComFourLigne::create($conditionnement + [
                         'com_four_entete_id' => $commande->id,
                         'produit_id' => $ligne['produit_id'],
                         'quantite_commandee' => $ligne['quantite_commandee'],
-                        'unite_achat' => $produit?->unite_achat,
-                        'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                         'prix_unitaire' => $ligne['prix_unitaire'],
                         'montant_ligne' => $ligne['quantite_commandee'] * $ligne['prix_unitaire'],
                     ]);
