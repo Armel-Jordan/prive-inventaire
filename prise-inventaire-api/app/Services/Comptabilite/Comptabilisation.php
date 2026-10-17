@@ -275,7 +275,8 @@ class Comptabilisation
     private function aComptabiliser(string $type, Carbon $du, Carbon $au): Builder
     {
         [$requete, $date] = match ($type) {
-            'facture' => [Facture::query()->whereIn('statut', ['emise', 'partiellement_payee', 'payee'])->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_facture'],
+            // Une facture créditée en entier reste une vente : sa note de crédit l'annule au journal.
+            'facture' => [Facture::query()->whereIn('statut', ['emise', 'partiellement_payee', 'payee', 'creditee'])->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_facture'],
             'avoir' => [Avoir::query()->whereIn('statut', Avoir::EMISES)->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_avoir'],
             'paiement_client' => [FacturePaiement::query()->whereHas('facture')->whereNull('encaissement_id')
                 ->where(fn ($q) => $q->where('montant', '>', 0)->orWhere('escompte', '>', 0))->with('facture.client'), 'date_paiement'],
