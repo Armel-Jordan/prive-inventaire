@@ -187,6 +187,22 @@ class ComptabilisationTest extends TestCase
         $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('contre_passations', 0);
     }
 
+    public function test_facture_creditee_avant_la_comptabilisation_reste_une_vente(): void
+    {
+        // Facture de 10 sacs créditée en entier avant le passage au journal : la vente et sa note de crédit y passent.
+        $facture = $this->facture('2026-10-10', 10);
+        $ligne = $this->chez(fn () => Facture::find($facture['id'])->lignes()->value('id'));
+        $avoir = $this->postJson('/api/avoirs', ['facture_id' => $facture['id'], 'date_avoir' => '2026-10-12', 'lignes' => [['facture_ligne_id' => $ligne, 'quantite' => 10]]])
+            ->assertCreated()->json();
+        $this->postJson("/api/avoirs/{$avoir['id']}/emettre")->assertOk();
+        $this->assertSame('creditee', $this->chez(fn () => Facture::find($facture['id'])->statut));
+
+        $this->regler();
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 2)->assertJsonPath('erreurs', []);
+        $this->assertSame(['VE', [['701', 0.0, 1000.0], ['443', 0.0, 192.5], ['411', 1192.5, 0.0]], '2026-10-10'], $this->ecriture('facture', $facture['id']));
+        $this->assertSame(['VE', [['701', 1000.0, 0.0], ['443', 192.5, 0.0], ['411', 0.0, 1192.5]], '2026-10-12'], $this->ecriture('avoir', $avoir['id']));
+    }
+
     public function test_encaissement_comptabilise_en_une_ecriture_puis_contre_passe(): void
     {
         $this->regler();
