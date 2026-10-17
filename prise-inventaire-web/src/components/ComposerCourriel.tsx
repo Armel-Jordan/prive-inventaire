@@ -49,6 +49,7 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
   const [numero, setNumero] = useState('');
   const [personnalise, setPersonnalise] = useState(false);
   const [pieceJointe, setPieceJointe] = useState<string | null>(null);
+  const [statutDocument, setStatutDocument] = useState<string | null>(null);
   const [joindrePdf, setJoindrePdf] = useState(true);
   const [destinataires, setDestinataires] = useState('');
   const [copies, setCopies] = useState('');
@@ -71,6 +72,7 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
         setNumero(p.document_numero);
         setPersonnalise(p.modele_personnalise);
         setPieceJointe(p.piece_jointe);
+        setStatutDocument(p.statut_document ?? null);
         setDestinataires(saisis => saisis || p.destinataires.join(', '));
         setObjet(p.objet);
         setContenu(p.contenu);
@@ -131,6 +133,8 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
   const termine = compteRendu?.envoi !== undefined;
   const envoiEchoue = compteRendu?.envoi?.statut === 'echec' ? compteRendu.envoi : null;
   const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '');
+  // Un document au brouillon que l'envoi fait changer de statut (devis, bon de commande) : la fenêtre le dit avant.
+  const remarqueBrouillon = statutDocument === 'brouillon' && !termine ? (tc.draftNotes as Partial<Record<TypeDocumentCourriel, string>>)[type] : undefined;
 
   return createPortal(
     // Les clics restent dans la fenêtre (la ligne du tableau en dessous a parfois ses propres actions).
@@ -147,6 +151,9 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
           <p className="text-sm text-gray-500">{tc.loading}</p>
         ) : (
           <form onSubmit={envoyer} className="space-y-4">
+            {remarqueBrouillon && (
+              <p className="px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{remarqueBrouillon}</p>
+            )}
             <fieldset disabled={termine || envoiEnCours} className="space-y-3">
               <label className="block">
                 <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tc.to} *</span>

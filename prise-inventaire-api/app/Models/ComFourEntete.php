@@ -21,6 +21,8 @@ class ComFourEntete extends Model
         'date_commande',
         'date_livraison_prevue',
         'statut',
+        'envoyee_le',
+        'envoyee_par',
         'montant_total',
         'devise',
         'taux_change',
@@ -31,6 +33,7 @@ class ComFourEntete extends Model
     protected $casts = [
         'date_commande' => 'date',
         'date_livraison_prevue' => 'date',
+        'envoyee_le' => 'datetime',
         'montant_total' => 'decimal:2',
         'taux_change' => 'decimal:6',
     ];
@@ -58,6 +61,12 @@ class ComFourEntete extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'created_by');
+    }
+
+    /** Auteur de l'envoi au fournisseur (bouton « Valider et envoyer » ou courriel). */
+    public function auteurEnvoi(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'envoyee_par');
     }
 
     public static function generateNumero(): string

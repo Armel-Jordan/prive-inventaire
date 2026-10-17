@@ -120,6 +120,7 @@ Une **Commande Fournisseur** (appelée aussi "bon de commande" ou "PO — Purcha
 | `date_commande` | Date de création de la commande |
 | `date_livraison_prevue` | Date à laquelle on attend la livraison |
 | `statut` | État actuel (voir section statuts) |
+| `envoyee_le`, `envoyee_par` | Jour, heure et auteur de l'envoi au fournisseur (« Commandée le » de fripv2), notés quand la commande quitte le brouillon ; vides pour les commandes envoyées avant leur introduction |
 | `montant_total` | Somme de toutes les lignes |
 | `devise` | Devise de la commande ; sans devise transmise, celle du fournisseur |
 | `taux_change` | Taux de change si devise ≠ devise entreprise |
@@ -170,14 +171,22 @@ brouillon ──→ envoyee ──→ partielle ──→ complete
 
 ### 3.5 Validation / Envoi de commande
 
-**Action :** Cliquer sur "Valider et envoyer"
-**Endpoint :** `POST /commandes-fournisseur/{id}/valider`
+La commande quitte le brouillon de deux façons, comme dans fripv2 (bouton « Commander » ou envoi par courriel) :
+- le bouton **« Valider et envoyer »** (`POST /commandes-fournisseur/{id}/valider`, droit `commandes_fournisseur.valider`) ;
+- l'**envoi du bon de commande par courriel** (bouton enveloppe de la liste ou du détail de la commande).
 
-Ce que ça fait :
-1. Vérifie que la commande est en `brouillon`
-2. Vérifie qu'il y a au moins une ligne
-3. Passe le statut à `envoyee`
-4. Enregistre `validee_par` et `date_validation`
+Ce que ça fait (service `App\Services\CommandesFournisseur`) :
+1. Vérifie que la commande est en `brouillon` (sinon 422) ;
+2. Passe le statut à `envoyee` ;
+3. Note le jour et l'auteur de l'envoi (`envoyee_le`, `envoyee_par`), affichés dans le détail (« Envoyée le … par … ») et imprimés sur le bon (« Commandée le ») quand ce n'est pas le jour de la commande ;
+4. Inscrit le prix de chaque ligne à l'historique des prix d'achat.
+
+**Envoi par courriel** (type `commande_fournisseur`, bon de commande joint) :
+- **Destinataires proposés :** les contacts actifs du fournisseur qui **reçoivent les bons de commande** (case de leur fiche), le contact principal d'abord ; sans contact coché, le courriel du fournisseur. La liste reste modifiable.
+- **Commande au brouillon :** la fenêtre prévient que l'envoi la valide. Il faut le droit de valider la commande (`commandes_fournisseur.valider`, sinon 403). Le PDF joint part tel que la commande sera une fois envoyée, sans la mention « Brouillon ». La commande n'est validée qu'une fois le courriel parti : un envoi en échec la laisse au brouillon, et sa relance la valide au nom de celui qui l'avait envoyé.
+- **Commande déjà envoyée :** le courriel peut repartir (relance, copie), sans rien changer à la commande.
+
+> Même principe côté clients : la facture, sa relance, la note de crédit et la demande d'acompte sont proposées aux contacts du client qui **reçoivent les factures**, la commande client à ceux qui **reçoivent les commandes** ; sans contact coché, au courriel du client.
 
 > À noter : "Valider" dans l'application signifie "confirmer et envoyer". Il n'y a pas de step d'approbation intermédiaire côté achats (contrairement aux commandes client).
 

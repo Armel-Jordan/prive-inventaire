@@ -3,10 +3,14 @@
 namespace App\Services\Courriels;
 
 use App\Mail\CourrielSimple;
+use App\Models\ClientContact;
+use App\Models\ComFourEntete;
 use App\Models\CourrielEnvoi;
 use App\Models\CourrielModele;
 use App\Models\CourrielParametres;
+use App\Models\FournisseurContact;
 use App\Services\BonCommandePdf;
+use App\Services\CommandesFournisseur;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
 use App\Services\Relances;
@@ -29,6 +33,19 @@ use Throwable;
  */
 class EnvoiCourriel
 {
+    /**
+     * Contacts à qui revient chaque document, d'après la case de leur fiche (client ou fournisseur) : ils sont proposés
+     * comme destinataires à la place du courriel général. Sans contact coché, le courriel général reste proposé.
+     */
+    private const CONTACTS = [
+        'facture' => 'recoit_factures',
+        'relance' => 'recoit_factures',
+        'avoir' => 'recoit_factures',
+        'demande_acompte' => 'recoit_factures',
+        'commande_client' => 'recoit_commandes',
+        'commande_fournisseur' => 'recoit_commandes',
+    ];
+
     public function __construct(
         private readonly VariablesCourriel $variables,
         private readonly RenduCourriel $rendu,
@@ -58,7 +75,9 @@ class EnvoiCourriel
             'document_numero' => $document->numero,
             'langue' => $langue,
             'modele_personnalise' => $modele['personnalise'],
-            'destinataires' => array_values(array_filter([$this->adresseDestinataire($type, $document)])),
+            'destinataires' => $this->destinataires($type, $document),
+            // Statut du document : la fenêtre prévient quand l'envoi le fait changer (devis ou commande au brouillon).
+            'statut_document' => $document->getAttribute('statut'),
             'objet' => $this->variables->remplacer($modele['objet'], $valeurs),
             'contenu' => $this->variables->remplacer($modele['contenu'], $valeurs),
             'piece_jointe' => $this->rendu->nomFichier($type, $modele['nom_fichier'], $valeurs),
@@ -156,6 +175,10 @@ class EnvoiCourriel
             if ($envoi->type === 'relance_devis') {
                 app(RelancesDevis::class)->apresEnvoiCourriel((int) $envoi->document_id);
             }
+            // Un bon de commande au brouillon envoyé au fournisseur est validé (« Commandée le » de fripv2).
+            if ($envoi->type === 'commande_fournisseur') {
+                app(CommandesFournisseur::class)->apresEnvoiCourriel((int) $envoi->document_id, $envoi->envoye_par);
+            }
         } catch (ModelNotFoundException) {
             $envoi->fill(['statut' => CourrielEnvoi::ECHEC, 'erreur' => 'Le document à joindre est introuvable (supprimé ?).']);
         } catch (Throwable $erreur) {
@@ -176,6 +199,29 @@ class EnvoiCourriel
         return $modele
             ? $modele->only(['objet', 'contenu', 'nom_fichier', 'repondre_a', 'accuse_lecture']) + ['personnalise' => true]
             : Courriels::modeleParDefaut($type, $langue) + ['personnalise' => false];
+    }
+
+    /**
+     * Destinataires proposés : les contacts actifs à qui revient ce document (le principal d'abord), sinon le courriel
+     * du client de passage, du client ou du fournisseur.
+     */
+    private function destinataires(string $type, Model $document): array
+    {
+        $case = self::CONTACTS[$type] ?? null;
+        $contacts = $case && blank($document->getAttribute('passage_courriel')) ? $this->contacts($type, $document, $case) : [];
+
+        return $contacts ?: array_values(array_filter([$this->adresseDestinataire($type, $document)]));
+    }
+
+    /** Courriels des contacts actifs dont la fiche coche cette case, le contact principal d'abord. */
+    private function contacts(string $type, Model $document, string $case): array
+    {
+        $contacts = $type === 'commande_fournisseur'
+            ? FournisseurContact::query()->where('fournisseur_id', $document->getAttribute('fournisseur_id'))
+            : ClientContact::query()->where('client_id', $document->getAttribute('client_id'));
+
+        return $this->adresses($contacts->where($case, true)->where('actif', true)
+            ->orderByDesc('principal')->orderBy('nom')->pluck('email')->all());
     }
 
     private function adresseDestinataire(string $type, Model $document): ?string
@@ -208,6 +254,12 @@ class EnvoiCourriel
     private function pdf(string $type, Model $document): string
     {
         if ($type === 'commande_fournisseur') {
+            // Un brouillon part tel qu'il sera une fois envoyé (l'envoi le valide) : le fournisseur ne reçoit pas un
+            // bon marqué « Brouillon ». La commande enregistrée n'est pas touchée ici.
+            if ($document->getAttribute('statut') === ComFourEntete::STATUT_BROUILLON) {
+                $document = (clone $document)->forceFill(['statut' => ComFourEntete::STATUT_ENVOYEE, 'envoyee_le' => now()]);
+            }
+
             return $this->bonCommande->pdf($document)->output();
         }
         if ($type === 'retour_fournisseur') {
