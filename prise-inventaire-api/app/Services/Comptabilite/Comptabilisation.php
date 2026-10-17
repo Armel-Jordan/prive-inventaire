@@ -7,6 +7,7 @@ use App\Models\AcompteRemboursement;
 use App\Models\Avoir;
 use App\Models\AvoirRemboursement;
 use App\Models\CompteComptable;
+use App\Models\Debourse;
 use App\Models\DocumentTaxe;
 use App\Models\EcritureComptable;
 use App\Models\Encaissement;
@@ -37,11 +38,12 @@ use Illuminate\Validation\ValidationException;
  *  - encaissement réparti sur plusieurs factures (phase 4.4) : une écriture, l'argent reçu en caisse ou en banque, chaque
  *    facture réglée au crédit du client, le surplus au crédit des acomptes clients ;
  *  - facture fournisseur : achats (HT, par catégorie) et taxes déductibles au débit, fournisseur au crédit ; paiement
- *    d'un fournisseur ;
+ *    d'un fournisseur ; déboursé réparti sur plusieurs factures (phase 4.5) : une écriture, chaque facture réglée au
+ *    débit du fournisseur, l'argent versé et l'escompte obtenu au crédit ;
  *  - montants dans la devise de l'entreprise, au taux du document ; le compte du tiers prend la somme des contreparties
  *    arrondies (pas d'écart d'arrondi) ;
  *  - un document se comptabilise une fois (source et source_id de l'écriture) ; annulé ou supprimé ensuite (facture
- *    fournisseur, paiement fournisseur, acompte, encaissement), son écriture est contre-passée ;
+ *    fournisseur, paiement fournisseur, acompte, encaissement, déboursé), son écriture est contre-passée ;
  *  - seuls les documents datés à partir de la date de début réglée se comptabilisent ; un document refusé (période
  *    fermée, compte non réglé) reste à comptabiliser et son motif est rapporté.
  *
@@ -60,6 +62,7 @@ class Comptabilisation
         'remboursement_avoir' => 'Remboursements de notes de crédit',
         'facture_fournisseur' => 'Factures fournisseurs',
         'paiement_fournisseur' => 'Paiements aux fournisseurs',
+        'debourse' => 'Déboursés aux fournisseurs',
     ];
 
     public const MODES = ['especes', 'cheque', 'virement', 'carte', 'autre'];
@@ -75,6 +78,7 @@ class Comptabilisation
 
     private const LIBELLES = self::ESSENTIELS + [
         'compte_acomptes_id' => 'Acomptes clients', 'compte_escomptes_id' => 'Escomptes accordés', 'compte_cartes_cadeaux_id' => 'Cartes cadeaux',
+        'compte_escomptes_obtenus_id' => 'Escomptes obtenus',
     ];
 
     public function __construct(private readonly Ecritures $ecritures) {}
@@ -124,6 +128,7 @@ class Comptabilisation
             'compte_acomptes_id' => $parNumeros(['4191', '419']),
             'compte_escomptes_id' => $parNumeros(['673', '665', '709', '40900']),
             'compte_cartes_cadeaux_id' => $parNumeros(['4198', '4196']),
+            'compte_escomptes_obtenus_id' => $parNumeros(['773', '765', '50300']),
         ];
     }
 
@@ -242,7 +247,8 @@ class Comptabilisation
             'remboursement_acompte' => [AcompteRemboursement::query()->whereHas('acompte')->where('montant', '>', 0)->with('acompte.client'), 'date_remboursement'],
             'remboursement_avoir' => [AvoirRemboursement::query()->whereHas('avoir')->where('montant', '>', 0)->with('avoir.client'), 'date_remboursement'],
             'facture_fournisseur' => [FactureFournisseur::query()->where('statut', FactureFournisseur::ENREGISTREE)->where('montant_ttc', '!=', 0)->with(['fournisseur', 'lignes.produit']), 'date_facture'],
-            'paiement_fournisseur' => [FactureFournisseurPaiement::query()->where('montant', '>', 0)->whereHas('facture')->with('facture.fournisseur'), 'date_paiement'],
+            'paiement_fournisseur' => [FactureFournisseurPaiement::query()->where('montant', '>', 0)->whereNull('debourse_id')->whereHas('facture')->with('facture.fournisseur'), 'date_paiement'],
+            'debourse' => [Debourse::query()->where('statut', Debourse::VALIDE)->with(['fournisseur', 'lignes.facture']), 'date_debourse'],
         };
         $table = $requete->getModel()->getTable();
 
@@ -256,14 +262,15 @@ class Comptabilisation
     }
 
     /**
-     * Écritures dont le document a été annulé (facture fournisseur, encaissement) ou supprimé (paiement fournisseur,
-     * acompte), pas encore contre-passées, avec la date de leur contre-passation (celle de l'annulation, sinon aujourd'hui).
+     * Écritures dont le document a été annulé (facture fournisseur, encaissement, déboursé) ou supprimé (paiement
+     * fournisseur, acompte), pas encore contre-passées, avec la date de leur contre-passation (celle de l'annulation,
+     * sinon aujourd'hui).
      *
      * @return Collection<int, array{0: EcritureComptable, 1: string}>
      */
     private function aContrePasser(): Collection
     {
-        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte', 'encaissement'])
+        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte', 'encaissement', 'debourse'])
             ->whereNull('contrepassation_de')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ecritures_comptables as inverses')
                 ->whereColumn('inverses.contrepassation_de', 'ecritures_comptables.id'))
@@ -273,6 +280,7 @@ class Comptabilisation
             'paiement_fournisseur' => FactureFournisseurPaiement::query()->whereIn('id', $ecritures->where('source', 'paiement_fournisseur')->pluck('source_id'))->pluck('id', 'id'),
             'acompte' => Acompte::query()->whereIn('id', $ecritures->where('source', 'acompte')->pluck('source_id'))->pluck('id', 'id'),
             'encaissement' => Encaissement::query()->whereIn('id', $ecritures->where('source', 'encaissement')->pluck('source_id'))->get()->keyBy('id'),
+            'debourse' => Debourse::query()->whereIn('id', $ecritures->where('source', 'debourse')->pluck('source_id'))->get()->keyBy('id'),
         ];
         $aujourdhui = today()->toDateString();
 
@@ -283,6 +291,9 @@ class Comptabilisation
             }
             if ($ecriture->source === 'encaissement' && $document) {
                 return $document->statut === Encaissement::ANNULE ? [$ecriture, $document->annule_le?->toDateString() ?? $aujourdhui] : null;
+            }
+            if ($ecriture->source === 'debourse' && $document) {
+                return $document->statut === Debourse::ANNULE ? [$ecriture, $document->annule_le?->toDateString() ?? $aujourdhui] : null;
             }
 
             return $document ? null : [$ecriture, $aujourdhui];
@@ -309,6 +320,7 @@ class Comptabilisation
             'paiement_fournisseur' => $this->ecritureTresorerie($p, $document->mode, $document->date_paiement,
                 $this->montant($document->montant, $document->facture?->taux_change), $this->compte($p, 'compte_fournisseurs_id'), false,
                 "Paiement de {$document->facture?->numero} à ".($document->facture?->fournisseur?->raison_sociale ?? ''), $document->facture?->numero),
+            'debourse' => $this->ecritureDebourse($document, $p),
         };
     }
 
@@ -433,6 +445,40 @@ class Comptabilisation
     }
 
     /**
+     * Déboursé à un fournisseur, en une écriture : chaque facture réglée (argent et escompte) au débit du fournisseur ;
+     * l'argent versé en caisse ou en banque selon le mode et l'escompte obtenu au crédit. Les parts sont au taux de leur
+     * facture.
+     */
+    private function ecritureDebourse(Debourse $debourse, ParametreComptable $p): array
+    {
+        [$tresorerie, $journal] = $this->tresorerie($p, $debourse->mode);
+        $argent = 0.0;
+        $escompte = 0.0;
+        $debits = [];
+        foreach ($debourse->lignes as $ligne) {
+            $taux = $ligne->facture?->taux_change;
+            $verse = $this->montant((float) $ligne->montant - (float) $ligne->escompte, $taux);
+            $obtenu = $this->montant($ligne->escompte, $taux);
+            $argent += $verse;
+            $escompte += $obtenu;
+            $debits[] = $this->ligne($this->compte($p, 'compte_fournisseurs_id'), round($verse + $obtenu, 2), false,
+                $ligne->facture?->numero_fournisseur ?: $ligne->facture?->numero);
+        }
+        $credits = array_values(array_filter([
+            round($argent, 2) > 0 ? $this->ligne($tresorerie, round($argent, 2), true, null) : null,
+            round($escompte, 2) > 0 ? $this->ligne($this->compte($p, 'compte_escomptes_obtenus_id'), round($escompte, 2), true, 'Escompte obtenu') : null,
+        ]));
+
+        return [
+            'journal_id' => $journal,
+            'date' => $debourse->date_debourse->toDateString(),
+            'libelle' => mb_substr("Déboursé {$debourse->numero} — ".($debourse->fournisseur?->raison_sociale ?? ''), 0, 255),
+            'reference' => $debourse->reference ?: $debourse->numero,
+            'lignes' => [...$debits, ...$credits],
+        ];
+    }
+
+    /**
      * Mouvement de trésorerie : entrée (le compte de contrepartie est crédité) ou sortie (il est débité), en caisse ou
      * en banque selon le mode.
      */
@@ -547,6 +593,7 @@ class Comptabilisation
             'remboursement_acompte' => $this->montant($document->montant, $document->acompte?->taux_change),
             'remboursement_avoir' => $this->montant($document->montant, $document->avoir?->taux_change),
             'paiement_fournisseur' => $this->montant($document->montant, $document->facture?->taux_change),
+            'debourse' => $this->montant((float) $document->montant + (float) $document->escompte, $document->taux_change),
         };
     }
 
@@ -561,6 +608,7 @@ class Comptabilisation
             'remboursement_acompte' => 'Remboursement d\'acompte #'.$document->id,
             'remboursement_avoir' => 'Remboursement de '.$document->avoir?->numero,
             'paiement_fournisseur' => 'Paiement de '.$document->facture?->numero,
+            'debourse' => 'Déboursé '.$document->numero,
         };
     }
 

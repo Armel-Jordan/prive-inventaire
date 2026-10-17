@@ -48,6 +48,7 @@ class Droits
         'receptions' => 'receptions',
         'retours-fournisseurs' => 'retours_fournisseurs',
         'factures-fournisseurs' => 'factures_fournisseurs',
+        'debourses' => 'debourses',
         'devis' => 'devis',
         'clients' => 'clients',
         'commandes-client' => 'commandes_client',
@@ -93,8 +94,9 @@ class Droits
     private const LECTURES = [
         'comptabilite' => 'comptabilite',
         'comptes-clients' => 'comptes_clients',
-        // Encaissements des clients : l'argent reçu et sa répartition.
+        // Encaissements des clients : l'argent reçu et sa répartition ; déboursés : l'argent versé aux fournisseurs.
         'encaissements' => 'encaissements',
+        'debourses' => 'debourses',
         'relances' => 'relances',
         'portail-clients' => 'espace_client',
         // Sessions de caisse : montants des tiroirs.
@@ -224,6 +226,7 @@ class Droits
         'POST api/factures-fournisseurs/{id}/paiements' => ['factures_fournisseurs', 'payer'],
         'DELETE api/factures-fournisseurs/{id}/paiements/{paiement}' => ['factures_fournisseurs', 'payer'],
         'POST api/factures-fournisseurs/{id}/annuler' => ['factures_fournisseurs', 'annuler'],
+        'POST api/debourses/{id}/annuler' => ['debourses', 'annuler'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],

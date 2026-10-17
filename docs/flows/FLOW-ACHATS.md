@@ -19,6 +19,7 @@
 10. [Suggestions d'achat](#10-suggestions-dachat-achats--suggestions-dachat)
 11. [Import d'une grille de prix fournisseur](#11-import-dune-grille-de-prix-fournisseur-achats--fournisseurs)
 12. [Factures fournisseurs](#12-factures-fournisseurs-achats--factures-fournisseurs)
+13. [Déboursés](#13-déboursés-achats--déboursés)
 
 ---
 
@@ -738,7 +739,72 @@ Code :
 - API : service `App\Services\FacturesFournisseurs`, `FactureFournisseurController`, migration `2026_10_17_100060_creer_factures_fournisseurs` (tables `factures_fournisseurs`, `facture_fournisseur_lignes`, `facture_fournisseur_paiements`, `receptions.facture_fournisseur_id`, droits) ;
 - web : page `FacturesFournisseursPage`, composants `facturesFournisseurs/*`, service `facturesFournisseurs.ts`.
 
-À venir : les écritures comptables des achats (phase 4.3), les déboursés groupés, chèques et fichiers de paiement (phase 4.5), et les frais d'achat de fripv2 (surcharges par produit ou par document).
+Les écritures comptables des achats sont passées par la comptabilisation automatique (phase 4.3). Les paiements répartis sur plusieurs factures, avec escompte, sont les déboursés (§13).
+
+À venir : les frais d'achat de fripv2 (surcharges par produit ou par document).
+
+---
+
+## 13. Déboursés (Achats → Déboursés)
+
+Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argent versé à un fournisseur en une fois (un chèque, un virement…) se répartit sur plusieurs de ses factures, avec l'escompte qu'il accorde pour un paiement rapide.
+
+**Saisir un déboursé** (bouton **Nouveau déboursé**) :
+- **Fournisseur, date, mode** (chèque, virement, espèces, carte, autre), **référence** (n° de chèque, de virement) et **devise**. La devise est celle du fournisseur par défaut ; seules ses factures dans cette devise sont proposées.
+- **Factures à payer** : enregistrées, avec un reste à payer. Elles sont listées l'échéance la plus ancienne d'abord (sans échéance, à la date de la facture), avec leur retard.
+- **Escompte offert** : selon la condition de paiement de la facture (« 2/10 Net 30 »).
+  - Le taux s'applique au montant TTC, au plus ce qui reste dû.
+  - Il vaut jusqu'à la date de la facture plus les jours d'escompte (le dernier jour compte), pour un paiement à la date du déboursé.
+  - Il n'est offert qu'une fois par facture.
+  - La colonne affiche le montant et la date limite, ou « expiré ».
+- **Répartition**, par facture : l'argent payé et l'escompte obtenu. Ensemble, ils ne dépassent pas le reste dû.
+  - La case **Tout** règle le reste : l'escompte offert, et l'argent pour le solde.
+  - L'escompte se corrige à la main (le fournisseur peut en accorder un autre).
+- **Montant du déboursé** : l'argent versé, somme des parts payées. Un escompte seul ne fait pas un déboursé.
+- **Contrôles** :
+  - factures du fournisseur, enregistrées (pas annulées), dans la devise du déboursé, chacune une seule fois ;
+  - pas de date avant celle d'une facture, ni plus tard que demain.
+- **Numéro** : `DEB-00001` (Configuration → Numérotation). Il n'est consommé qu'à l'enregistrement.
+
+**Ce qui est enregistré** :
+- Chaque part devient un **paiement de sa facture**, au mode et à la référence du déboursé (à défaut, son numéro), avec l'escompte obtenu.
+- Le **réglé** de la facture compte l'argent versé et les escomptes. Le reste à payer et l'état (payée, en partie, en retard) suivent.
+- Dans le détail de la facture, chaque paiement montre son escompte et son déboursé.
+- Une part de déboursé ne s'annule pas seule depuis la facture : on annule le déboursé.
+- Le paiement simple d'une facture fournisseur (sans escompte) reste possible.
+
+**Détail d'un déboursé** :
+- factures réglées (leur numéro et le nôtre), escomptes obtenus, montant versé ;
+- **avis de paiement** (PDF) à transmettre au fournisseur avec le chèque ou le virement : ses factures réglées, l'escompte et le montant versé ;
+- pièces jointes (copie du chèque, avis de virement) ;
+- **corriger** : la référence et les notes (les paiements des factures suivent la référence). Le reste se corrige en annulant puis en refaisant le déboursé.
+
+**Annuler un déboursé** (avec un motif) :
+- ses paiements et ses escomptes sont retirés des factures, qui redeviennent dues ;
+- le déboursé reste dans la liste, barré, avec la date, l'auteur et le motif.
+
+**Liste** : recherche par numéro, référence, fournisseur ou facture (la nôtre ou celle du fournisseur) ; filtres mode, statut et période ; totaux des déboursés valides (montant versé, escomptes obtenus) dans la devise de l'entreprise.
+
+**Comptabilité** : la comptabilisation automatique passe un déboursé en **une écriture**. Chaque facture réglée est au débit des fournisseurs ; l'argent versé (caisse ou banque selon le mode) et l'escompte obtenu (compte « Escomptes obtenus » des réglages) sont au crédit. Un déboursé annulé fait contre-passer son écriture (voir FLOW-COMPTABILITE).
+
+**Droits** : module **Déboursés** (`debourses`), réglé pour chaque groupe comme le paiement des factures fournisseurs.
+- **Consulter** : liste, détail, avis de paiement ; les lectures de `/debourses` sont contrôlées.
+- **Saisir** : créer.
+- **Corriger** : modifier.
+- **Annuler un déboursé** : `debourses.annuler`.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/debourses` | Liste (`recherche`, `fournisseur_id`, `mode`, `statut`, `date_debut`, `date_fin`) et `resume` |
+| GET | `/debourses/a-payer?fournisseur_id=&devise=&date=` | Factures à payer du fournisseur dans la devise, avec l'escompte offert à la date |
+| POST | `/debourses` | Saisie (`fournisseur_id`, `date_debourse`, `mode`, `reference`, `devise`, `taux_change`, `notes`, `lignes[]` : `facture_fournisseur_id`, `montant` (argent), `escompte`) |
+| GET / PUT | `/debourses/{id}` | Détail ; correction (`reference`, `notes`) |
+| POST | `/debourses/{id}/annuler` | Annulation (`motif`) |
+| GET | `/debourses/{id}/pdf` | Avis de paiement |
+
+Code : services `App\Services\Debourses` et `AvisPaiementPdf`, `DebourseController`, vue `pdf/avis-paiement` ; web : page `DeboursesPage`, composants `debourses/FenetreDebourse` et `debourses/DetailDebourse`, service `src/services/debourses.ts` ; migration `2026_10_17_100064_creer_debourses` (tables `debourses`, `debourse_lignes`, colonnes `facture_fournisseur_paiements.escompte` et `.debourse_id`, `parametres_comptables.compte_escomptes_obtenus_id`, droits du module).
+
+À venir : le rapport des paiements dus et le paiement d'une sélection de factures en un geste, l'impression des chèques et les fichiers de paiement bancaires (phase 4.5).
 
 ---
 

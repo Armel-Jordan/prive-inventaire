@@ -241,14 +241,20 @@ class FacturesFournisseurs
         });
     }
 
-    /** Paiement saisi par erreur : retiré, le reste à payer revient. */
+    /**
+     * Paiement saisi par erreur : retiré (avec son escompte), le reste à payer revient. Une part d'un déboursé se retire
+     * en annulant le déboursé.
+     */
     public function annulerPaiement(FactureFournisseur $facture, int $paiementId): FactureFournisseur
     {
         return DB::transaction(function () use ($facture, $paiementId) {
             $facture = FactureFournisseur::query()->lockForUpdate()->findOrFail($facture->id);
-            $paiement = $facture->paiements()->whereKey($paiementId)->firstOrFail();
+            $paiement = $facture->paiements()->with('debourse:id,numero')->whereKey($paiementId)->firstOrFail();
+            if ($paiement->debourse) {
+                throw new DomainException("Ce paiement fait partie du déboursé {$paiement->debourse->numero} : annulez le déboursé.");
+            }
             $paiement->delete();
-            $facture->update(['montant_paye' => max(0, round((float) $facture->montant_paye - (float) $paiement->montant, 2))]);
+            $facture->update(['montant_paye' => max(0, round((float) $facture->montant_paye - (float) $paiement->montant - (float) $paiement->escompte, 2))]);
 
             return $facture->fresh($this->relations());
         });
@@ -300,7 +306,7 @@ class FacturesFournisseurs
         return [
             'fournisseur:id,code,raison_sociale,devise', 'condition:id,code,libelle', 'auteur:id,nom', 'auteurAnnulation:id,nom',
             'lignes.produit:id,numero,description', 'lignes.ligneReception.ligneCommande.commande:id,numero,devise',
-            'paiements.auteur:id,nom', 'receptions:id,numero,bon_livraison,date_reception,facture_fournisseur_id',
+            'paiements.auteur:id,nom', 'paiements.debourse:id,numero', 'receptions:id,numero,bon_livraison,date_reception,facture_fournisseur_id',
         ];
     }
 

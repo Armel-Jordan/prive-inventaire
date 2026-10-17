@@ -132,12 +132,12 @@ export async function rouvrirPeriode(id: number): Promise<PeriodeComptable> {
 export type TypeJournal = 'general' | 'ventes' | 'achats' | 'tresorerie' | 'ouverture';
 export type SourceEcriture = 'manuelle' | 'ouverture' | 'cloture' | 'recurrente'
   // Comptabilisation automatique, par type de document.
-  | 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur';
+  | 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse';
 
 /** Sources des écritures, dans l'ordre du filtre du journal. */
 export const SOURCES_ECRITURE: SourceEcriture[] = [
   'manuelle', 'ouverture', 'cloture', 'recurrente', 'facture', 'avoir', 'paiement_client', 'encaissement', 'acompte', 'remboursement_acompte',
-  'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur',
+  'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur', 'debourse',
 ];
 export const TYPES_JOURNAL: TypeJournal[] = ['general', 'ventes', 'achats', 'tresorerie', 'ouverture'];
 
@@ -305,12 +305,14 @@ export async function contrePasserEcriture(id: number, date: string): Promise<Ec
 
 // ── Comptabilisation automatique ───────────────────────────────────────────────
 
-export type TypeDocumentComptable = 'facture' | 'avoir' | 'paiement_client' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur';
+export type TypeDocumentComptable = 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir'
+  | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse';
 
 export const CHAMPS_JOURNAUX = ['journal_ventes_id', 'journal_achats_id', 'journal_banque_id', 'journal_caisse_id', 'journal_od_id'] as const;
 export const CHAMPS_COMPTES = [
   'compte_clients_id', 'compte_fournisseurs_id', 'compte_ventes_id', 'compte_achats_id', 'compte_tva_collectee_id', 'compte_tva_deductible_id',
   'compte_caisse_id', 'compte_banque_id', 'compte_acomptes_id', 'compte_escomptes_id', 'compte_cartes_cadeaux_id',
+  'compte_escomptes_obtenus_id',
 ] as const;
 export type ChampReglage = typeof CHAMPS_JOURNAUX[number] | typeof CHAMPS_COMPTES[number];
 

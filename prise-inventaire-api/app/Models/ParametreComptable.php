@@ -18,7 +18,7 @@ class ParametreComptable extends Model
     public const COMPTES = [
         'compte_clients_id', 'compte_fournisseurs_id', 'compte_ventes_id', 'compte_achats_id', 'compte_tva_collectee_id',
         'compte_tva_deductible_id', 'compte_caisse_id', 'compte_banque_id', 'compte_acomptes_id', 'compte_escomptes_id',
-        'compte_cartes_cadeaux_id',
+        'compte_cartes_cadeaux_id', 'compte_escomptes_obtenus_id',
     ];
 
     protected $table = 'parametres_comptables';

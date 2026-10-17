@@ -36,6 +36,10 @@ export interface PaiementFournisseur {
   mode: ModePaiementFournisseur;
   reference: string | null;
   notes: string | null;
+  /** Escompte obtenu avec le paiement (déboursé). */
+  escompte?: number | string;
+  /** Déboursé dont le paiement est une part : il s'annule avec lui. */
+  debourse?: { id: number; numero: string } | null;
   auteur?: { id: number; nom: string } | null;
 }
 

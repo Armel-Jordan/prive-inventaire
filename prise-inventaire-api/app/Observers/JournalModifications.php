@@ -11,6 +11,7 @@ use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
 use App\Models\Configuration;
+use App\Models\Debourse;
 use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
@@ -54,6 +55,7 @@ class JournalModifications
         Avoir::class => ['Note de crédit', ['create', 'update', 'delete']],
         Acompte::class => ['Acompte', ['create', 'update', 'delete']],
         Encaissement::class => ['Encaissement', ['create', 'update', 'delete']],
+        Debourse::class => ['Déboursé', ['create', 'update', 'delete']],
         DemandeAcompte::class => ["Demande d'acompte", ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],
