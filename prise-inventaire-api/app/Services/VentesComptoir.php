@@ -114,6 +114,8 @@ class VentesComptoir
                 'lignes' => array_map(fn (array $l) => array_intersect_key($l, array_flip(['produit_id', 'quantite', 'prix_unitaire_ht'])), $lignes),
             ], $tenantId);
             $this->factures->emettre($facture, $auteur);
+            // Produits suivis par lot : les premiers lots à sortir (phase 2.8b).
+            app(LotsSeries::class)->venteComptoir($facture, $auteur);
             $reglement = $this->repartir($donnees['paiements'] ?? [], round((float) $facture->fresh()->reste_a_payer, 2), (bool) $client->de_passage, $devise['devise']);
             foreach ($reglement['paiements'] as $paiement) {
                 // Carte cadeau : vérifiée et verrouillée, le paiement ne passe pas par la caisse.

@@ -8,8 +8,11 @@ use App\Models\BonLivraisonLigne;
 use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
+use App\Models\Lot;
 use App\Models\MouvementVente;
+use App\Models\NumeroSerie;
 use App\Services\ClientsDePassage;
+use App\Services\LotsSeries;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -148,6 +151,12 @@ class BonLivraisonController extends Controller
             'lignes' => 'required|array',
             'lignes.*.id' => 'required|exists:bon_livraison_lignes,id',
             'lignes.*.quantite_livree' => 'required|integer|min:0',
+            // Produits suivis (phase 2.8b) : les lots qui sortent (sinon les premiers à périmer) et les numéros de série.
+            'lignes.*.lots' => 'nullable|array',
+            'lignes.*.lots.*.lot_id' => 'required|integer',
+            'lignes.*.lots.*.quantite' => 'required|numeric|gt:0',
+            'lignes.*.numeros_serie' => 'nullable|array|max:10000',
+            'lignes.*.numeros_serie.*' => 'nullable|string|max:100',
             // Signature électronique : image PNG ou JPEG encodée (data URL), nom du signataire.
             'signature_client' => ['nullable', 'string', 'max:500000', 'regex:#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#'],
             'signataire_nom' => ['nullable', 'string', 'max:150'],
@@ -157,8 +166,8 @@ class BonLivraisonController extends Controller
         $tenantId = auth()->user()->tenant_id ?? $request->attributes->get('tenant')->id;
 
         $result = DB::transaction(function () use ($bon, $validated, $request, $tenantId) {
-            foreach ($validated['lignes'] as $ligneData) {
-                $ligne = BonLivraisonLigne::find($ligneData['id']);
+            foreach ($validated['lignes'] as $index => $ligneData) {
+                $ligne = BonLivraisonLigne::with('produit')->find($ligneData['id']);
                 if ($ligne->bon_id !== $bon->id) {
                     continue;
                 }
@@ -177,6 +186,10 @@ class BonLivraisonController extends Controller
                     "Livraison BL {$bon->numero}",
                     $request->user()?->id
                 );
+                if ($ligne->produit?->suivi) {
+                    app(LotsSeries::class)->livrer($ligne, $ligne->produit, round($ligne->quantite_livree * $ligne->facteurStock(), 4), $ligneData['lots'] ?? null,
+                        $ligneData['numeros_serie'] ?? null, $bon->facture?->client_id, "lignes.{$index}", $request->user()?->id);
+                }
             }
 
             $signature = $validated['signature_client'] ?? null;
@@ -202,6 +215,26 @@ class BonLivraisonController extends Controller
         });
 
         return response()->json($result->fresh(['lignes', 'facture']));
+    }
+
+    /**
+     * Exemplaires à sortir : pour chaque ligne d'un produit suivi, ses lots qui ont du stock (le premier à périmer
+     * d'abord) ou ses numéros de série en stock, et le facteur de la ligne (unités de stock par unité livrée).
+     */
+    public function exemplaires(int $id, LotsSeries $lots): JsonResponse
+    {
+        $bon = BonLivraison::with('lignes.produit')->findOrFail($id);
+
+        return response()->json($bon->lignes->filter(fn (BonLivraisonLigne $l) => $l->produit?->suivi)->map(fn (BonLivraisonLigne $l) => [
+            'ligne_id' => $l->id,
+            'suivi' => $l->produit->suivi,
+            'facteur' => $l->facteurStock(),
+            'lots' => $l->produit->suivi === 'lot' ? $lots->lotsDisponibles($l->produit->id)->map(fn (Lot $lot) => [
+                'id' => $lot->id, 'numero' => $lot->numero, 'date_peremption' => $lot->date_peremption?->toDateString(), 'solde' => round((float) $lot->solde, 4),
+            ])->values() : [],
+            'series' => $l->produit->suivi === 'serie' ? NumeroSerie::query()->where('produit_id', $l->produit->id)->where('statut', NumeroSerie::EN_STOCK)
+                ->orderBy('numero')->limit(500)->pluck('numero') : [],
+        ])->values());
     }
 
     public function annuler(int $id): JsonResponse

@@ -16,9 +16,12 @@ import {
   updateLignesBL,
   marquerBLPret,
   enregistrerLivraison,
+  getExemplairesBL,
   annulerBL,
 } from '../services/api';
-import type { BonLivraison, BonLivraisonLigne } from '../services/api';
+import type { BonLivraison, BonLivraisonLigne, ExemplairesLigneBL } from '../services/api';
+import ExemplairesLivraison from '@/components/livraison/ExemplairesLivraison';
+import { numerosSaisis, premiersSortis } from '@/lib/lots';
 import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
@@ -50,6 +53,10 @@ export default function BonsLivraisonPage() {
   const [selectedBon, setSelectedBon] = useState<BonLivraison | null>(null);
   const [lignesPreparation, setLignesPreparation] = useState<{ id: number; quantite_preparee: number }[]>([]);
   const [lignesLivraison, setLignesLivraison] = useState<{ id: number; quantite_livree: number }[]>([]);
+  // Produits suivis (lots, numéros de série) : exemplaires disponibles par ligne, lots qui sortent, numéros livrés.
+  const [exemplaires, setExemplaires] = useState<Record<number, ExemplairesLigneBL>>({});
+  const [allocations, setAllocations] = useState<Record<number, Record<number, number>>>({});
+  const [seriesLivrees, setSeriesLivrees] = useState<Record<number, string>>({});
   const [notesLivraison, setNotesLivraison] = useState('');
   // Signature électronique du client, recueillie à la livraison.
   const [signature, setSignature] = useState<string | null>(null);
@@ -140,6 +147,14 @@ export default function BonsLivraisonPage() {
           quantite_livree: l.quantite_preparee || l.quantite_a_livrer,
         })) || []
       );
+      // Lots proposés : les premiers à périmer, pour la quantité préparée.
+      const disponibles = await getExemplairesBL(id).catch(() => [] as ExemplairesLigneBL[]);
+      setExemplaires(Object.fromEntries(disponibles.map(e => [e.ligne_id, e])));
+      setAllocations(Object.fromEntries(disponibles.filter(e => e.suivi === 'lot').map(e => {
+        const ligne = bon.lignes?.find((l: BonLivraisonLigne) => l.id === e.ligne_id);
+        return [e.ligne_id, premiersSortis(e.lots, ((ligne?.quantite_preparee || ligne?.quantite_a_livrer) ?? 0) * e.facteur)];
+      })));
+      setSeriesLivrees({});
       setNotesLivraison('');
       setSignature(null);
       setSignataire('');
@@ -163,7 +178,13 @@ export default function BonsLivraisonPage() {
     if (!selectedBon) return;
     try {
       await enregistrerLivraison(selectedBon.id, {
-        lignes: lignesLivraison,
+        lignes: lignesLivraison.map(l => {
+          const exemplaire = exemplaires[l.id];
+          if (exemplaire?.suivi === 'lot') {
+            return { ...l, lots: Object.entries(allocations[l.id] ?? {}).filter(([, q]) => q > 0).map(([lot, q]) => ({ lot_id: Number(lot), quantite: q })) };
+          }
+          return exemplaire?.suivi === 'serie' ? { ...l, numeros_serie: numerosSaisis(seriesLivrees[l.id] ?? '') } : l;
+        }),
         notes_livraison: notesLivraison || undefined,
         signature_client: signature ?? undefined,
         signataire_nom: signature ? signataire.trim() || undefined : undefined,
@@ -498,13 +519,15 @@ export default function BonsLivraisonPage() {
       {/* Modal livraison */}
       {showLivraisonModal && selectedBon && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[92vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Livraison - {selectedBon.numero}</h2>
             <div className="space-y-3">
               {selectedBon.lignes?.map((ligne) => {
                 const liv = lignesLivraison.find(l => l.id === ligne.id);
+                const exemplaire = exemplaires[ligne.id];
                 return (
-                  <div key={ligne.id} className="flex items-center justify-between gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div key={ligne.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
                       <p className="font-medium dark:text-white">{nomProduit(ligne)}</p>
                       <p className="text-sm text-gray-500">Préparé: {quantiteAvecUnite(ligne.quantite_preparee, ligne.unite)}</p>
@@ -520,10 +543,20 @@ export default function BonsLivraisonPage() {
                         if (index >= 0) {
                           newLignes[index].quantite_livree = parseInt(e.target.value) || 0;
                           setLignesLivraison(newLignes);
+                          // Lots proposés de nouveau pour la nouvelle quantité.
+                          if (exemplaire?.suivi === 'lot') {
+                            setAllocations(a => ({ ...a, [ligne.id]: premiersSortis(exemplaire.lots, newLignes[index].quantite_livree * exemplaire.facteur) }));
+                          }
                         }
                       }}
                       className="w-20 px-2 py-1 border rounded text-center dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                     />
+                  </div>
+                  {exemplaire && (
+                    <ExemplairesLivraison exemplaire={exemplaire} unites={(liv?.quantite_livree ?? 0) * exemplaire.facteur}
+                      allocations={allocations[ligne.id] ?? {}} onAllocations={a => setAllocations(actuelles => ({ ...actuelles, [ligne.id]: a }))}
+                      series={seriesLivrees[ligne.id] ?? ''} onSeries={texte => setSeriesLivrees(s => ({ ...s, [ligne.id]: texte }))} />
+                  )}
                   </div>
                 );
               })}

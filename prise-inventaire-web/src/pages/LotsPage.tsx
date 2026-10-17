@@ -6,8 +6,8 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { formatDateDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
 import {
-  exporterLots, getLot, getLots, getNumerosSerie, modifierLot,
-  type DetailLot, type LotRegistre, type NumeroSerieRegistre, type Page,
+  exporterLots, exporterRappelLot, getLot, getLots, getNumerosSerie, getRappelLot, modifierLot,
+  type DetailLot, type LotRegistre, type NumeroSerieRegistre, type Page, type SortieLot,
 } from '@/services/lots';
 
 type Onglet = 'lots' | 'series';
@@ -48,6 +48,8 @@ function FenetreLot({ id, modifiable, onClose, onModifie }: { id: number; modifi
   const { t, language } = useLanguage();
   const tl = t.lots;
   const [lot, setLot] = useState<DetailLot | null>(null);
+  // Rappel : les clients qui ont reçu le lot.
+  const [sorties, setSorties] = useState<SortieLot[]>([]);
   const [saisie, setSaisie] = useState({ date_peremption: '', notes: '' });
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
@@ -59,6 +61,7 @@ function FenetreLot({ id, modifiable, onClose, onModifie }: { id: number; modifi
       l => { if (actif) { setLot(l); setSaisie({ date_peremption: l.date_peremption ?? '', notes: l.notes ?? '' }); } },
       e => { if (actif) setErreur(messageErreur(e, tl.error)); },
     );
+    getRappelLot(id).then(r => { if (actif) setSorties(r.sorties); }, () => {});
     return () => { actif = false; };
   }, [id, tl.error]);
 
@@ -108,12 +111,14 @@ function FenetreLot({ id, modifiable, onClose, onModifie }: { id: number; modifi
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-700/50">
                       <tr>
-                        <th className={classeEntete}>{tl.receivedOn}</th>
+                        <th className={classeEntete}>{tl.date}</th>
                         <th className={classeEntete}>{tl.movements}</th>
-                        <th className={`${classeEntete} text-right`}>{tl.received}</th>
+                        <th className={`${classeEntete} text-right`}>{tl.quantity}</th>
                         <th className={classeEntete}>{tl.reception}</th>
                         <th className={classeEntete}>{tl.order}</th>
                         <th className={classeEntete}>{tl.sector}</th>
+                        <th className={classeEntete}>{tl.document}</th>
+                        <th className={classeEntete}>{tl.client}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y dark:divide-gray-700">
@@ -125,11 +130,53 @@ function FenetreLot({ id, modifiable, onClose, onModifie }: { id: number; modifi
                           <td className="px-3 py-2 font-mono text-xs">{m.reception?.numero ?? '—'}</td>
                           <td className="px-3 py-2 font-mono text-xs">{m.commande ?? '—'}</td>
                           <td className="px-3 py-2">{m.secteur ?? '—'}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{m.document ?? '—'}</td>
+                          <td className="px-3 py-2">{m.client ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <h3 className="text-sm font-semibold dark:text-white">{tl.recall}</h3>
+                  {sorties.length > 0 && (
+                    <button type="button" onClick={() => exporterRappelLot(id, lot.numero).catch(e => setErreur(messageErreur(e, tl.error)))}
+                      className="inline-flex items-center gap-1 px-2 py-1 border rounded text-xs text-gray-700 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <Download size={14} /> {tl.recallExport}
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{tl.recallHelp}</p>
+                {sorties.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{tl.recallEmpty}</p>
+                ) : (
+                  <div className="border dark:border-gray-700 rounded-lg overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                          <th className={classeEntete}>{tl.date}</th>
+                          <th className={classeEntete}>{tl.document}</th>
+                          <th className={classeEntete}>{tl.client}</th>
+                          <th className={classeEntete}>{tl.phone}</th>
+                          <th className={`${classeEntete} text-right`}>{tl.quantity}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y dark:divide-gray-700">
+                        {sorties.map((s, index) => (
+                          <tr key={index} className="dark:text-gray-200">
+                            <td className="px-3 py-2">{s.date ? formatDateDocument(s.date, language) : '—'}</td>
+                            <td className="px-3 py-2 font-mono text-xs">{s.document ?? '—'} <span className="font-sans text-gray-500">{tl.movementTypes[s.type] ?? s.type}</span></td>
+                            <td className="px-3 py-2">{s.client ? `${s.client.code} — ${s.client.raison_sociale}` : '—'}</td>
+                            <td className="px-3 py-2">{[s.client?.telephone, s.client?.email].filter(Boolean).join(' · ') || '—'}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{quantite(s.quantite)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -274,6 +321,8 @@ function OngletSeries() {
                 <th className={classeEntete}>{tl.supplier}</th>
                 <th className={classeEntete}>{tl.receivedOn}</th>
                 <th className={classeEntete}>{tl.reception}</th>
+                <th className={classeEntete}>{tl.client}</th>
+                <th className={classeEntete}>{tl.deliveredOn}</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
@@ -285,6 +334,8 @@ function OngletSeries() {
                   <td className="px-3 py-2">{s.fournisseur ?? '—'}</td>
                   <td className="px-3 py-2">{s.recu_le ? formatDateDocument(s.recu_le, language) : '—'}</td>
                   <td className="px-3 py-2 font-mono text-xs">{s.reception?.numero ?? '—'}</td>
+                  <td className="px-3 py-2">{s.client ?? '—'}</td>
+                  <td className="px-3 py-2">{s.livre_le ? formatDateDocument(s.livre_le, language) : '—'}{s.bon_livraison && <span className="block font-mono text-xs text-gray-500">{s.bon_livraison}</span>}</td>
                 </tr>
               ))}
             </tbody>

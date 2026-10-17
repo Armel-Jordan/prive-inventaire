@@ -23,7 +23,8 @@ class NumeroSerieController extends Controller
         $motif = filled($filtres['recherche'] ?? null) ? '%'.addcslashes(trim((string) $filtres['recherche']), '%_\\').'%' : null;
 
         $page = NumeroSerie::query()
-            ->with(['produit:id,numero,description', 'fournisseur:id,raison_sociale', 'receptionLigne:id,reception_id', 'receptionLigne.reception:id,numero'])
+            ->with(['produit:id,numero,description', 'fournisseur:id,raison_sociale', 'receptionLigne:id,reception_id', 'receptionLigne.reception:id,numero',
+                'client:id,code,raison_sociale', 'bonLivraisonLigne:id,bon_id', 'bonLivraisonLigne.bonLivraison:id,numero'])
             ->when($motif, fn (Builder $q) => $q->where(fn (Builder $r) => $r->where('numero', 'like', $motif)
                 ->orWhereHas('produit', fn (Builder $p) => $p->where('numero', 'like', $motif)->orWhere('description', 'like', $motif))))
             ->when($filtres['produit_id'] ?? null, fn (Builder $q, $produit) => $q->where('produit_id', $produit))
@@ -38,6 +39,10 @@ class NumeroSerieController extends Controller
             'fournisseur' => $s->fournisseur?->raison_sociale,
             'recu_le' => $s->recu_le?->toDateString(),
             'reception' => $s->receptionLigne?->reception?->only(['id', 'numero']),
+            // Sortie (phase 2.8b) : le client, la date et le bon de livraison.
+            'client' => $s->client ? "{$s->client->code} — {$s->client->raison_sociale}" : null,
+            'livre_le' => $s->livre_le?->toDateString(),
+            'bon_livraison' => $s->bonLivraisonLigne?->bonLivraison?->numero,
         ]);
 
         return response()->json($page);
