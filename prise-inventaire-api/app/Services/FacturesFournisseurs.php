@@ -12,6 +12,7 @@ use App\Models\Fournisseur;
 use App\Models\Reception;
 use App\Models\ReceptionArrivagesLigne;
 use App\Models\TenantParametres;
+use App\Services\Banque\Rapprochements;
 use App\Support\TauxTaxe;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -253,6 +254,7 @@ class FacturesFournisseurs
             if ($paiement->debourse) {
                 throw new DomainException("Ce paiement fait partie du déboursé {$paiement->debourse->numero} : annulez le déboursé.");
             }
+            app(Rapprochements::class)->verifierDocument('paiement_fournisseur', $paiement->id, 'Ce paiement');
             $paiement->delete();
             $facture->update(['montant_paye' => max(0, round((float) $facture->montant_paye - (float) $paiement->montant - (float) $paiement->escompte, 2))]);
 

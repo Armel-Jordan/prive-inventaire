@@ -10,6 +10,7 @@ use App\Models\DemandeAcompte;
 use App\Models\Encaissement;
 use App\Models\Facture;
 use App\Models\FacturePaiement;
+use App\Services\Banque\Rapprochements;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -214,6 +215,7 @@ class Acomptes
             throw new DomainException('Un acompte déjà appliqué ou remboursé ne se supprime plus.');
         }
         $this->verifierEncaissement($acompte);
+        app(Rapprochements::class)->verifierDocument('acompte', $acompte->id, 'Cet acompte');
         DB::transaction(function () use ($acompte) {
             if ($acompte->demande_id) {
                 DemandeAcompte::whereKey($acompte->demande_id)->where('acompte_id', $acompte->id)->get()

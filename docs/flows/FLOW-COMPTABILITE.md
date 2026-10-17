@@ -291,7 +291,34 @@ Plan de parité fripv2, phase 4.6 (« Transactions bancaires ») : les comptes b
 - **Faire le rapprochement bancaire** (`rapprocher`, même réglage ; pour le rapprochement à venir).
 - **Relier les comptes bancaires à la comptabilité** (`configurer`, comme la modification du plan comptable).
 
-À venir (4.6) : le rapprochement bancaire avec les relevés (pointage des mouvements, solde du relevé), puis l'import des relevés (CSV, OFX) et leur rapprochement avec les mouvements.
+**Rapprochement bancaire** (onglet Rapprochement), comme la « Conciliation bancaire » de fripv2, avec en plus le solde du relevé :
+- **Commencer** : pour un compte bancaire relié, la **date** et le **solde de fin** du relevé de la banque.
+  - Un seul rapprochement en cours par compte.
+  - Le relevé suit celui du dernier rapprochement terminé.
+  - Le **solde de départ** est le solde du relevé précédent (0 pour le premier, où l'on pointe aussi les soldes d'ouverture).
+- **Pointer** : les lignes du compte comptable datées au plus tard du relevé, pas encore pointées ailleurs, **quelle qu'en soit l'origine** (soldes d'ouverture, encaissements, déboursés, paiements, transactions bancaires, écritures saisies). On peut aussi les retirer, tout pointer ou tout retirer, et filtrer les non pointées.
+- **Calculs** :
+  - solde pointé = départ + entrées pointées − sorties pointées ;
+  - écart = solde du relevé − solde pointé ;
+  - mouvements en circulation (entrées, sorties non pointées) ;
+  - solde comptable à la date du relevé = solde pointé + entrées en circulation − sorties en circulation.
+- **Terminer** : seulement quand l'écart est nul. fripv2 ne compare jamais au relevé.
+- **Corriger le relevé** d'un rapprochement en cours (date, solde) : une date avancée libère les lignes postérieures.
+- **Supprimer** un rapprochement en cours : ses lignes sont libérées.
+- **Rouvrir** le dernier rapprochement terminé du compte.
+- **Rapport** (PDF) :
+  - entrées et sorties pointées ;
+  - entrées et sorties en circulation à la date du relevé, y compris celles pointées depuis par un rapprochement suivant ;
+  - la preuve des soldes.
+- **Verrous** : une ligne pointée ne bouge plus.
+  - L'écriture saisie qui la porte ne se modifie ni ne se supprime.
+  - Les soldes d'ouverture pointés ne changent plus.
+  - L'encaissement, le déboursé, la transaction bancaire, le paiement fournisseur ou l'acompte dont elle vient ne s'annule ni ne se supprime (« … : son mouvement est pointé dans le rapprochement bancaire du … »).
+  - Il faut d'abord retirer la ligne du rapprochement (le rouvrir s'il est terminé).
+- **Droits** : consulter avec le droit de voir la banque ; commencer, pointer, terminer, rouvrir et supprimer avec **Faire le rapprochement bancaire** (`banque.rapprocher`).
+- **Limite** : les montants sont ceux de la comptabilité, dans la devise de l'entreprise. Un compte bancaire en devise étrangère se rapproche donc en équivalent.
+
+À venir (4.6) : l'import des relevés (CSV, OFX) et leur rapprochement avec les mouvements.
 
 ### Protections du plan et des exercices
 
@@ -389,6 +416,10 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /banque/comptes/{id}/mouvements?du=&au=&recherche=` | Mouvements (lignes du compte comptable) avec le solde progressif et l'origine |
 | `GET` / `POST /banque/transactions` | Liste (`compte_bancaire_id`, `type`, `statut`, `date_debut`, `date_fin`, `recherche`) ; saisie (`compte_bancaire_id`, `date_transaction`, `type`, `compte_bancaire_destination_id`, `libelle`, `reference`, `montant`, `taux_change`, `notes`, `lignes[]` : `compte_comptable_id`, `libelle`, `montant`) |
 | `GET /banque/transactions/{id}`, `POST /banque/transactions/{id}/annuler` | Détail ; annulation (`motif`) |
+| `GET` / `POST /banque/comptes/{id}/rapprochements` | Rapprochements du compte ; commencer (`date_releve`, `solde_releve`, `notes`) |
+| `GET` / `PUT` / `DELETE /banque/rapprochements/{id}` | Détail (lignes, `pointee`, résumé : solde pointé, écart, en circulation, solde comptable) ; corriger le relevé ; supprimer (en cours) |
+| `POST /banque/rapprochements/{id}/pointer` | `{lignes: [ids], pointee}` : pointer ou retirer |
+| `POST /banque/rapprochements/{id}/terminer`, `/rouvrir` ; `GET …/pdf` | Terminer (écart nul) ; rouvrir le dernier terminé ; rapport |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -397,9 +428,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne` (et `CompteBancaire`, relié à son compte comptable).
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires}`, contrôleurs `App\Http\Controllers\Banque\*`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`, `TransactionBancaire`, `TransactionBancaireLigne`, `RapprochementBancaire` (et `CompteBancaire`, relié à son compte comptable ; `EcritureComptableLigne.rapprochement_id`).
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments` ; banque : `App\Services\Banque\{ComptesBancaires, TransactionsBancaires, Rapprochements, RapprochementPdf}`, contrôleurs `App\Http\Controllers\Banque\*`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
 - **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `BanquePage` (composants `banque/*`, service `src/services/banque.ts`), `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`, `2026_10_17_100065_creer_transactions_bancaires`, `2026_10_17_100066_creer_rapprochements_bancaires`.

@@ -11,6 +11,7 @@ use App\Models\Encaissement;
 use App\Models\EncaissementLigne;
 use App\Models\Facture;
 use App\Models\FacturePaiement;
+use App\Services\Banque\Rapprochements;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -208,6 +209,7 @@ class Encaissements
             if ($encaissement->statut === Encaissement::ANNULE) {
                 throw new DomainException("L'encaissement {$encaissement->numero} est déjà annulé.");
             }
+            app(Rapprochements::class)->verifierDocument('encaissement', $encaissement->id, "L'encaissement {$encaissement->numero}");
             $acompte = $encaissement->acompte_id ? Acompte::query()->whereKey($encaissement->acompte_id)->lockForUpdate()->first() : null;
             if ($acompte && ((float) $acompte->montant_applique > 0 || (float) $acompte->montant_rembourse > 0)) {
                 throw new DomainException("Le surplus de l'encaissement {$encaissement->numero}, laissé en acompte, a déjà été appliqué ou remboursé : l'encaissement ne s'annule plus.");

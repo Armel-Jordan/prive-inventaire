@@ -91,6 +91,7 @@ use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Banque\CompteBancaireController;
+use App\Http\Controllers\Banque\RapprochementBancaireController;
 use App\Http\Controllers\Banque\TransactionBancaireController;
 use App\Http\Controllers\Comptabilite\ComptabilisationController;
 use App\Http\Controllers\Comptabilite\CompteComptableController;
@@ -1006,6 +1007,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/transactions', [TransactionBancaireController::class, 'store']);
         Route::get('/transactions/{id}', [TransactionBancaireController::class, 'show'])->whereNumber('id');
         Route::post('/transactions/{id}/annuler', [TransactionBancaireController::class, 'annuler'])->whereNumber('id');
+        // Rapprochement bancaire : relevés d'un compte, pointage des mouvements, fin, réouverture, rapport.
+        Route::get('/comptes/{id}/rapprochements', [RapprochementBancaireController::class, 'index'])->whereNumber('id');
+        Route::post('/comptes/{id}/rapprochements', [RapprochementBancaireController::class, 'store'])->whereNumber('id');
+        Route::get('/rapprochements/{id}', [RapprochementBancaireController::class, 'show'])->whereNumber('id');
+        Route::put('/rapprochements/{id}', [RapprochementBancaireController::class, 'update'])->whereNumber('id');
+        Route::post('/rapprochements/{id}/pointer', [RapprochementBancaireController::class, 'pointer'])->whereNumber('id');
+        Route::post('/rapprochements/{id}/terminer', [RapprochementBancaireController::class, 'terminer'])->whereNumber('id');
+        Route::post('/rapprochements/{id}/rouvrir', [RapprochementBancaireController::class, 'rouvrir'])->whereNumber('id');
+        Route::delete('/rapprochements/{id}', [RapprochementBancaireController::class, 'destroy'])->whereNumber('id');
+        Route::get('/rapprochements/{id}/pdf', [RapprochementBancaireController::class, 'pdf'])->whereNumber('id');
     });
 
     // Mouvements d'inventaire et Localisations
