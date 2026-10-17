@@ -2,8 +2,9 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Eye, Package, CheckCircle, Truck, XCircle, PenLine } from 'lucide-react';
+import { Eye, Package, CheckCircle, Truck, XCircle, PenLine, Boxes } from 'lucide-react';
 import PadSignature from '@/components/PadSignature';
+import ColisBon from '@/components/livraison/ColisBon';
 import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -23,6 +24,9 @@ import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { formatDateHeure } from '@/lib/documents';
+
+/** Statuts où les colis se préparent : avant le départ en livraison. */
+const STATUTS_COLIS = ['cree', 'en_preparation', 'pret'];
 
 /** Produit d'une ligne de bon : sa désignation (et son numéro) plutôt que son identifiant interne. */
 function nomProduit(ligne: BonLivraisonLigne): string {
@@ -49,6 +53,8 @@ export default function BonsLivraisonPage() {
   // Signature électronique du client, recueillie à la livraison.
   const [signature, setSignature] = useState<string | null>(null);
   const [signataire, setSignataire] = useState('');
+  // Bon dont on prépare ou consulte les colis.
+  const [bonColis, setBonColis] = useState<number | null>(null);
 
   const loadBons = useCallback(async () => {
     try {
@@ -264,6 +270,19 @@ export default function BonsLivraisonPage() {
                       </button>
                       <BoutonPdf chemin={`/bons-livraison/${bon.id}/pdf`} nomFichier={`bon-livraison-${bon.numero}.pdf`} />
                       <BoutonCourriel type="bon_livraison" documentId={bon.id} />
+                      {((STATUTS_COLIS.includes(bon.statut) && peut('bons_livraison', 'preparer')) || (bon.colis_count ?? 0) > 0) && (
+                        <button
+                          onClick={() => setBonColis(bon.id)}
+                          className="relative p-1 text-amber-700 hover:bg-amber-50 rounded"
+                          title={t.parcels.button}
+                          aria-label={`${t.parcels.button} — ${bon.numero}`}
+                        >
+                          <Boxes size={18} />
+                          {(bon.colis_count ?? 0) > 0 && (
+                            <span className="absolute -top-1 -right-1 min-w-4 px-0.5 rounded-full bg-amber-600 text-[10px] leading-4 text-white">{bon.colis_count}</span>
+                          )}
+                        </button>
+                      )}
                       {bon.statut === 'cree' && (
                         <>
                           {peut('bons_livraison', 'preparer') && (
@@ -338,6 +357,10 @@ export default function BonsLivraisonPage() {
         )}
         <Pagination page={page} dernierePage={pagination.dernierePage} total={pagination.total} onPage={setPage} />
       </div>
+
+      {bonColis !== null && (
+        <ColisBon bonId={bonColis} peutPreparer={peut('bons_livraison', 'preparer')} onClose={() => { setBonColis(null); loadBons(); }} />
+      )}
 
       {/* Modal détail */}
       {showDetailModal && selectedBon && (

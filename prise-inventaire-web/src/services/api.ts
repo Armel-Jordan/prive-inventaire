@@ -1281,6 +1281,8 @@ export interface BonLivraison {
   signataire_nom?: string | null;
   signe_le?: string | null;
   a_signature?: boolean;
+  /** Nombre de colis du bon (dans les listes). */
+  colis_count?: number;
 }
 
 export interface BonLivraisonLigne {

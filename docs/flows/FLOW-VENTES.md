@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — séquences de livraison et feuille de route (§8.7b)
+> Dernière mise à jour : 2026-10-17 — colis des bons de livraison et étiquettes (§6.3d)
 
 ---
 
@@ -146,6 +146,7 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Démarrer préparation | ✅ | Statut `cree` |
 | Modifier quantités préparées | ✅ | Statut `en_preparation` |
 | Marquer prêt | ✅ | Statut `en_preparation` |
+| Préparer les colis | ✅ | Statuts `cree`, `en_preparation` ou `pret` — bouton Colis (§6.3d) |
 | Enregistrer livraison | ✅ | Statut `en_livraison` |
 
 ### Tournées
@@ -1252,6 +1253,42 @@ Seule une image PNG ou JPEG est acceptée (422 sinon).
 - **PDF du bon :** l'image, le nom et la date, au-dessus de la ligne « Reçu par le client ». Sans signature, la case reste à remplir à la main.
 
 Code : `BonLivraisonController::enregistrerLivraison` (validation), `DocumentsVentePdf::bonLivraison` (impression), composant `PadSignature` ; migration `2026_10_16_100043_signature_livraison`.
+
+### 6.3d Colis (préparation des boîtes)
+
+Plan de parité fripv2, phase 1.6 (« Préparation boîte ») : la marchandise d'un bon se range dans des colis, chacun avec son étiquette.
+
+**Préparer les colis :** le bouton **Colis** (boîtes) d'un bon ouvre la liste de ses colis et ce qui reste à emballer, ligne par ligne. **Nouveau colis** demande une quantité par ligne, puis, si on veut, un poids et une note (« Fragile »).
+- Un colis ne peut pas dépasser ce qui reste à emballer sur une ligne : le champ le refuse, l'API aussi (422 « Quantité trop grande : il reste N à mettre en colis sur cette ligne »).
+- Un colis vide est refusé.
+- **Nouveau colis** disparaît quand tout est emballé.
+
+**Numéro :** celui du bon suivi d'un rang sur trois chiffres (`BL-00010-001`, `BL-00010-002`…). Le rang suit le plus grand déjà pris : un colis retiré libère son numéro seulement s'il était le dernier.
+
+**Modifier, retirer :** le crayon change les quantités, le poids et la note. Toutes les quantités à 0 : le colis est retiré. La corbeille le retire aussi.
+
+**Quand :** les colis se préparent et se modifient tant que le bon n'est pas parti, aux statuts `cree`, `en_preparation` et `pret`. Ensuite ils restent consultables et imprimables, mais plus modifiables (422).
+
+**Stock :** il n'est pas touché. Comme la préparation, c'est de la logistique ; les mouvements restent ceux de la préparation et de la livraison.
+
+**Étiquettes :** **Imprimer les étiquettes** (ou l'imprimante d'un colis) ouvre une page d'étiquettes de 76 × 51 mm, une par colis :
+- le QR code du numéro du colis ;
+- le numéro et le rang (« Colis 1 / 2 ») ;
+- le client et le bon ;
+- le contenu et le poids.
+
+**Liste des bons :** une pastille sur le bouton Colis donne le nombre de colis (`colis_count`).
+
+**Droits :** consulter les colis suit la lecture des bons de livraison. Créer, modifier et retirer demandent **Bons de livraison → Préparer** (`bons_livraison.preparer`).
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| GET | `/api/bons-livraison/{id}/colis` | Colis, lignes du bon et quantités restantes |
+| POST | `/api/bons-livraison/{id}/colis` | Nouveau colis (`lignes[]` : `bon_livraison_ligne_id`, `quantite` ; `poids_kg`, `notes`) |
+| PUT | `/api/bons-livraison/{id}/colis/{colisId}` | Nouvelles quantités (toutes à 0 : colis retiré) |
+| DELETE | `/api/bons-livraison/{id}/colis/{colisId}` | Retirer un colis |
+
+Code : service `ColisLivraisons`, `ColisLivraisonController`, composant `livraison/ColisBon` ; tables `bl_colis` et `bl_colis_lignes`, migration `2026_10_16_100046_colis_livraison`.
 
 ### 6.4 Statuts des lignes
 

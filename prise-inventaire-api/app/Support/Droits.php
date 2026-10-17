@@ -156,6 +156,10 @@ class Droits
         'POST api/bons-livraison/{id}/pret' => ['bons_livraison', 'preparer'],
         'POST api/bons-livraison/{id}/livrer' => ['bons_livraison', 'livrer'],
         'POST api/bons-livraison/{id}/annuler' => ['bons_livraison', 'annuler'],
+        // Les colis se préparent avec le droit de préparer les bons.
+        'POST api/bons-livraison/{id}/colis' => ['bons_livraison', 'preparer'],
+        'PUT api/bons-livraison/{id}/colis/{colisId}' => ['bons_livraison', 'preparer'],
+        'DELETE api/bons-livraison/{id}/colis/{colisId}' => ['bons_livraison', 'preparer'],
         'POST api/commandes-fournisseur/{commande}/valider' => ['commandes_fournisseur', 'valider'],
         'POST api/commandes-fournisseur/{commande}/cloturer' => ['commandes_fournisseur', 'cloturer'],
         'POST api/commandes-fournisseur/{commande}/annuler' => ['commandes_fournisseur', 'annuler'],
