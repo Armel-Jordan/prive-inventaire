@@ -13,17 +13,34 @@ class NumeroSerie extends Model
 
     public const EN_STOCK = 'en_stock';
 
-    public const STATUTS = [self::EN_STOCK, 'livre', 'retourne', 'rebut'];
+    public const LIVRE = 'livre';
+
+    public const STATUTS = [self::EN_STOCK, self::LIVRE, 'retourne', 'rebut'];
 
     protected $table = 'numeros_serie';
 
-    protected $fillable = ['tenant_id', 'produit_id', 'numero', 'statut', 'reception_ligne_id', 'fournisseur_id', 'recu_le', 'notes'];
+    protected $fillable = [
+        'tenant_id', 'produit_id', 'numero', 'statut', 'reception_ligne_id', 'fournisseur_id', 'recu_le', 'notes',
+        // Sortie (phase 2.8b) : ligne de bon de livraison ou de vente au comptoir, client, date.
+        'bon_livraison_ligne_id', 'facture_ligne_id', 'client_id', 'livre_le',
+    ];
 
     protected function casts(): array
     {
         return [
             'recu_le' => 'date',
+            'livre_le' => 'date',
         ];
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class, 'client_id')->withTrashed();
+    }
+
+    public function bonLivraisonLigne(): BelongsTo
+    {
+        return $this->belongsTo(BonLivraisonLigne::class, 'bon_livraison_ligne_id');
     }
 
     public function produit(): BelongsTo

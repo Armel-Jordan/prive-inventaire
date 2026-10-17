@@ -4,6 +4,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import { fraisPourApi, type FraisSaisi } from '@/lib/coutsAnnexes';
 import { messageErreur } from '@/lib/erreurs';
+import { numerosSaisis } from '@/lib/lots';
 import { getFournisseursActifs, getLignesEnAttente, type ComFourEntete, type ComFourLigne, type Fournisseur } from '@/services/api';
 import { enregistrerReception, type ResultatReception, type SaisieReception } from '@/services/receptions';
 import CoutsAnnexes from '@/components/receptions/CoutsAnnexes';
@@ -36,8 +37,6 @@ const classeEntete = 'px-2 py-2 text-left text-xs font-medium text-gray-600 dark
 let compteur = 0;
 const nouvelleCle = () => `r${++compteur}`;
 
-/** Numéros de série saisis : séparés par des retours à la ligne, des espaces, des virgules ou des points-virgules. */
-const numerosSaisis = (texte: string) => texte.split(/[\s,;]+/).filter(Boolean);
 
 function attendues(commande: ComFourEntete, lignes: ComFourLigne[]): LigneAttendue[] {
   return lignes.filter((l): l is ComFourLigne & { id: number } => l.id !== undefined)

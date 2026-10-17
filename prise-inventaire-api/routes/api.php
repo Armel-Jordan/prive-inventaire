@@ -493,6 +493,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/', [LotController::class, 'index']);
         Route::get('/{id}', [LotController::class, 'show'])->whereNumber('id');
         Route::put('/{id}', [LotController::class, 'update'])->whereNumber('id');
+        // Rappel : qui a reçu le lot (livraisons, ventes au comptoir) ; CSV.
+        Route::get('/{id}/rappel', [LotController::class, 'rappel'])->whereNumber('id');
     });
     Route::get('/numeros-serie', [NumeroSerieController::class, 'index']);
 
@@ -916,6 +918,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}/lignes', [BonLivraisonController::class, 'updateLignes']);
         Route::post('/{id}/pret', [BonLivraisonController::class, 'marquerPret']);
         Route::post('/{id}/livrer', [BonLivraisonController::class, 'enregistrerLivraison']);
+        // Lots et numéros de série à sortir à la livraison.
+        Route::get('/{id}/exemplaires', [BonLivraisonController::class, 'exemplaires'])->whereNumber('id');
         Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
         // Colis du bon (préparation des boîtes) : liste, préparation, modification, suppression.
         Route::get('/{id}/colis', [ColisLivraisonController::class, 'index'])->whereNumber('id');

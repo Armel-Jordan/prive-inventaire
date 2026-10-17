@@ -28,7 +28,19 @@ export interface DetailLot extends LotRegistre {
     reception: { id: number; numero: string } | null;
     commande: string | null;
     secteur: string | null;
+    /** Sortie : le bon de livraison ou la facture de la vente au comptoir, et le client. */
+    document: string | null;
+    client: string | null;
   }[];
+}
+
+/** Rappel d'un lot : les clients qui l'ont reçu. */
+export interface SortieLot {
+  date: string | null;
+  document: string | null;
+  type: string;
+  quantite: number;
+  client: { id: number; code: string; raison_sociale: string; telephone: string | null; email: string | null } | null;
 }
 
 export interface NumeroSerieRegistre {
@@ -39,6 +51,9 @@ export interface NumeroSerieRegistre {
   fournisseur: string | null;
   recu_le: string | null;
   reception: { id: number; numero: string } | null;
+  client: string | null;
+  livre_le: string | null;
+  bon_livraison: string | null;
 }
 
 export interface Page<T> {
@@ -82,6 +97,20 @@ export async function exporterLots(filtres: FiltresLots = {}): Promise<void> {
   const lien = document.createElement('a');
   lien.href = URL.createObjectURL(fichier);
   lien.download = 'lots.csv';
+  lien.click();
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+}
+
+export function getRappelLot(id: number): Promise<{ lot: LotRegistre; sorties: SortieLot[] }> {
+  return apiFetch(`/lots/${id}/rappel`);
+}
+
+/** Rappel d'un lot en CSV (clients, documents, quantités, coordonnées). */
+export async function exporterRappelLot(id: number, numero: string): Promise<void> {
+  const fichier = await apiFetch<Blob>(`/lots/${id}/rappel?format=csv`, { responseType: 'blob', timeoutMs: 120000 });
+  const lien = document.createElement('a');
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = `rappel-lot-${numero}.csv`;
   lien.click();
   setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
 }

@@ -1712,8 +1712,23 @@ export async function marquerBLPret(id: number): Promise<BonLivraison> {
   return fetchApi(`/bons-livraison/${id}/pret`, { method: 'POST' });
 }
 
+/** Exemplaires à sortir d'une ligne de bon : ses lots (le premier à périmer d'abord) ou ses numéros de série en stock. */
+export interface ExemplairesLigneBL {
+  ligne_id: number;
+  suivi: 'lot' | 'serie';
+  /** Unités de stock par unité livrée (une caisse de 12 : 12). */
+  facteur: number;
+  lots: { id: number; numero: string; date_peremption: string | null; solde: number }[];
+  series: string[];
+}
+
+export async function getExemplairesBL(id: number): Promise<ExemplairesLigneBL[]> {
+  return fetchApi(`/bons-livraison/${id}/exemplaires`);
+}
+
 export async function enregistrerLivraison(id: number, data: {
-  lignes: { id: number; quantite_livree: number }[];
+  /** Produits suivis : les lots qui sortent (sinon les premiers à périmer) et les numéros de série livrés. */
+  lignes: { id: number; quantite_livree: number; lots?: { lot_id: number; quantite: number }[]; numeros_serie?: string[] }[];
   signature_client?: string;
   signataire_nom?: string;
   notes_livraison?: string;

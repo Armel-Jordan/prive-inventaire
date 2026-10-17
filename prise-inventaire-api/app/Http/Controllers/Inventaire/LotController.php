@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lot;
 use App\Models\LotMouvement;
 use App\Models\TachePlanifiee;
+use App\Services\LotsSeries;
 use App\Support\FichierCsv;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -51,7 +52,8 @@ class LotController extends Controller
     public function show(int $id): JsonResponse
     {
         $lot = $this->requete([], $this->jours())->with(['mouvements.receptionLigne' => fn ($q) => $q->with(['reception:id,numero,date_reception',
-            'ligneCommande:id,com_four_entete_id', 'ligneCommande.commande:id,numero', 'secteur:id,code,nom'])])->findOrFail($id);
+            'ligneCommande:id,com_four_entete_id', 'ligneCommande.commande:id,numero', 'secteur:id,code,nom']),
+            'mouvements.client:id,code,raison_sociale', 'mouvements.bonLivraisonLigne.bonLivraison:id,numero', 'mouvements.factureLigne.facture:id,numero'])->findOrFail($id);
 
         return response()->json($this->presenter($lot, $this->jours()) + [
             'notes' => $lot->notes,
@@ -63,8 +65,26 @@ class LotController extends Controller
                 'reception' => $m->receptionLigne?->reception?->only(['id', 'numero']),
                 'commande' => $m->receptionLigne?->ligneCommande?->commande?->numero,
                 'secteur' => $m->receptionLigne?->secteur?->code,
+                // Sortie : le bon de livraison ou la facture de la vente au comptoir, et le client.
+                'document' => $m->bonLivraisonLigne?->bonLivraison?->numero ?? $m->factureLigne?->facture?->numero,
+                'client' => $m->client ? "{$m->client->code} — {$m->client->raison_sociale}" : null,
             ])->values(),
         ]);
+    }
+
+    /** Rappel d'un lot : les clients qui l'ont reçu, avec le document, la date, la quantité et leurs coordonnées ; CSV. */
+    public function rappel(Request $request, int $id, LotsSeries $lots): JsonResponse|Response
+    {
+        $lot = Lot::query()->with('produit:id,numero,description,mesure')->findOrFail($id);
+        $sorties = $lots->rappel($lot);
+        if ($request->query('format') === 'csv') {
+            return FichierCsv::reponse("rappel-lot-{$lot->numero}.csv", ['date', 'document', 'client', 'nom', 'telephone', 'courriel', 'quantite'],
+                array_map(fn (array $s) => [$s['date'], $s['document'], $s['client']['code'] ?? '', $s['client']['raison_sociale'] ?? '',
+                    $s['client']['telephone'] ?? '', $s['client']['email'] ?? '', (float) $s['quantite']], $sorties));
+        }
+
+        return response()->json(['lot' => $this->presenter($lot->loadSum('journal as solde', 'quantite')
+            ->loadSum(['journal as recu' => fn ($q) => $q->where('type', LotMouvement::RECEPTION)], 'quantite'), $this->jours()), 'sorties' => $sorties]);
     }
 
     /** Correction de la péremption ou des notes d'un lot. */

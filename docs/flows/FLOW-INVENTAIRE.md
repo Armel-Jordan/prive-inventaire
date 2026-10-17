@@ -831,5 +831,32 @@ Code :
 - migration `2026_10_17_100078_suivi_lots_series` (colonnes `suivi` et `peremption` de `produits`, tables `lots`,
   `lot_mouvements`, `numeros_serie`, colonne `lot_id` des lignes de réception).
 
-Suite prévue (2.8b) : les livraisons consomment les lots (premier périmé, premier sorti) et les numéros de série,
-avec les retours et le rapport de rappel d'un lot (qui l'a reçu).
+### Sorties : livraisons, ventes au comptoir, rappel (phase 2.8b)
+
+- **Livraison d'un bon** : pour chaque ligne d'un produit suivi, la fenêtre de livraison propose les sorties.
+  - Produit suivi par lot : les lots qui sortent, proposés dans l'ordre « premier périmé, premier sorti » puis par plus
+    ancienne réception. Les quantités se modifient, et le bouton « Premier périmé d'abord » refait la répartition.
+  - Produit suivi par numéro de série : les numéros livrés, avec la liste de ceux en stock.
+  - Sans lots indiqués, l'API sort les premiers à périmer.
+  - Un lot ne sort pas plus que ce qu'il en reste, et un numéro doit être en stock. Ce que les lots ne couvrent pas
+    (stock reçu avant le suivi) sort sans lot, sans bloquer la livraison.
+  - Les numéros livrés passent au statut « livré », avec le client, la date et le bon.
+- **Vente au comptoir** : ses produits suivis par lot sortent des premiers lots à sortir. Les numéros de série ne se
+  saisissent pas au comptoir.
+- **Rappel d'un lot** (détail du lot, et CSV) : les livraisons et ventes au comptoir qui l'ont sorti, avec le
+  document, la date, la quantité et les coordonnées du client. Les mouvements du lot montrent aussi le document et le
+  client.
+- **Registre des numéros de série** : le client, la date et le bon de livraison des numéros livrés.
+- **Réception** : elle ne s'annule plus dès qu'un de ses lots a servi ou qu'un de ses numéros est sorti.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/bons-livraison/{id}/exemplaires` | Par ligne suivie : lots disponibles (ordre de sortie) ou numéros en stock, facteur de la ligne |
+| POST | `/bons-livraison/{id}/livrer` | Par ligne : `lots[]` (`lot_id`, `quantite` en unités de stock), `numeros_serie[]` |
+| GET | `/lots/{id}/rappel?format=csv` | Clients qui ont reçu le lot |
+
+Code : `LotsSeries` (`lotsDisponibles`, `premiersSortis`, `livrer`, `venteComptoir`, `rappel`), branché dans
+`BonLivraisonController` et `VentesComptoir` ; web `livraison/ExemplairesLivraison`, `lib/lots.ts` ; migration
+`2026_10_17_100079_lots_livraisons` (colonnes de sortie de `lot_mouvements` et `numeros_serie`).
+
+Suite prévue : les retours (clients et fournisseurs) des produits suivis.
