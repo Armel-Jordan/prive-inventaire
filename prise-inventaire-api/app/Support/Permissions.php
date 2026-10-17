@@ -106,6 +106,14 @@ class Permissions
                 'aide_fr' => "Accepter une commande en attente (dont celles de l'espace client) ou la refuser avec un motif.",
                 'aide_en' => 'Accept a pending order (including customer area orders) or decline it with a reason.'],
         ]],
+        'reliquats_clients' => ['onglet' => 'ventes', 'fr' => 'Reliquats clients', 'en' => 'Customer back orders', 'actions' => [
+            'commander' => ['base' => 'modifier', 'fr' => 'Commander des reliquats au fournisseur', 'en' => 'Order back orders from suppliers',
+                'aide_fr' => 'Créer les commandes fournisseur brouillons des reliquats inscrits, une par fournisseur.',
+                'aide_en' => 'Create the draft purchase orders of open back orders, one per supplier.'],
+            'facturer' => ['base' => 'modifier', 'fr' => 'Facturer des reliquats reçus', 'en' => 'Invoice received back orders',
+                'aide_fr' => 'Créer les factures brouillons des reliquats reçus, une par client.',
+                'aide_en' => 'Create the draft invoices of received back orders, one per customer.'],
+        ]],
         'factures' => ['onglet' => 'ventes', 'fr' => 'Factures', 'en' => 'Invoices', 'actions' => [
             'emettre' => ['base' => 'modifier', 'fr' => 'Émettre une facture', 'en' => 'Issue an invoice',
                 'aide_fr' => 'Émettre une facture brouillon : elle reçoit son numéro définitif et devient due.',

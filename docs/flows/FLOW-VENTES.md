@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — frais additionnels et de livraison (§5.13)
+> Dernière mise à jour : 2026-10-17 — reliquats clients (§5.14)
 
 ---
 
@@ -973,6 +973,66 @@ Plan de parité fripv2, phase 1.4 : les frais que fripv2 ajoute d'eux-mêmes aux
 **Données :** tables `frais` et `frais_produits` ; `clients.frais_livraison_id`.
 
 Code : service `App\Services\FraisDocuments`, migration `2026_10_16_100037_creer_frais_additionnels` ; web : page `FraisPage`, crochet `useFraisAutomatiques`, composant `FraisDocument`.
+
+### 5.14 Reliquats clients (Ventes → Reliquats clients)
+
+Plan de parité fripv2, phase 1.4 : la gestion des B/O client (back orders). Un reliquat note qu'un client attend un produit faute de stock ; il est commandé au fournisseur, suivi à la réception, puis facturé.
+
+**Noter un reliquat :**
+- depuis une commande client **acceptée** (ou facturée) : action « Noter des reliquats » de la liste des commandes. Pour chaque ligne, la quantité qui manque, au plus la quantité commandée moins les reliquats déjà notés. Prix, remise, devise et date souhaitée viennent de la commande ;
+- ou à la main : **Nouveau reliquat** (client, produit, quantité attendue, prix convenu, date souhaitée, notes).
+
+La commande client elle-même ne change pas.
+
+**États :**
+
+| État | Signification | Actions |
+|---|---|---|
+| `cree` (inscrit) | Pas encore commandé au fournisseur | Commander au fournisseur, Annuler, Supprimer |
+| `commande` | Sur une commande fournisseur | (suivi automatique) |
+| `recu_partiel` | Une partie est arrivée | (suivi automatique) |
+| `recu` | Tout est arrivé, ou la commande fournisseur a été close après une réception partielle | Facturer |
+| `facture` | Sur une facture | — |
+| `annule` | Le client ne l'attend plus | — |
+
+**Commander au fournisseur** (reliquats inscrits cochés) :
+- une **commande fournisseur brouillon par fournisseur** : celui choisi pour tous, sinon le **fournisseur principal** de chaque produit (422 si un produit n'en a pas) ;
+- une ligne par produit, à la somme des quantités ;
+- au **dernier prix payé** à ce fournisseur, sinon son prix d'achat convenu, sinon 0 ;
+- la commande se vérifie et se valide ensuite comme toute commande fournisseur.
+
+**Suivi automatique**, par la commande fournisseur :
+- chaque **réception** de la ligne se répartit sur ses reliquats, du plus ancien au plus récent : reçu en partie, puis reçu ;
+- commande **annulée**, **supprimée**, ou ligne retirée ou changée de produit dans le brouillon : ses reliquats qui n'ont rien reçu redeviennent **inscrits**, prêts à repartir chez un autre fournisseur ;
+- commande **close** sans tout recevoir : les reliquats qui ont reçu quelque chose passent **reçus** (ils se facturent à la quantité reçue) ; les autres redeviennent inscrits.
+
+**Facturer** (reliquats reçus cochés) :
+- une **facture brouillon par client** (et par devise) ;
+- une ligne par reliquat, à la **quantité reçue** et au prix convenu ;
+- taxes et échéance comme une facture saisie ;
+- elle s'émet ensuite depuis les factures ;
+- 422 si un reliquat choisi n'est pas reçu.
+
+| Route | Rôle |
+|---|---|
+| `GET /reliquats-clients` | Liste (`statut` ou `ouverts`, client, produit, commande, recherche), avec `resume` (nombre par état) |
+| `GET /reliquats-clients/depuis-commande/{id}` | Lignes d'une commande, avec ce qui en est déjà en reliquat |
+| `POST /reliquats-clients/depuis-commande/{id}` | Reliquats d'une commande : `lignes[]` (`ligne_id`, `quantite`) |
+| `POST /reliquats-clients` | Reliquat saisi à la main |
+| `PUT /reliquats-clients/{id}`, `POST /{id}/annuler`, `DELETE /{id}` | Modifier, annuler, supprimer un reliquat inscrit |
+| `POST /reliquats-clients/commander` | `ids[]`, `fournisseur_id` facultatif (action nommée « Commander des reliquats au fournisseur ») |
+| `POST /reliquats-clients/facturer` | `ids[]`, `date_facture` (action nommée « Facturer des reliquats reçus ») |
+
+**Droits** (module « Reliquats clients ») :
+- à la mise à jour, chaque groupe reçoit ceux des commandes client : un commercial note un reliquat comme il saisit une commande ;
+- « Commander » reprend le droit de créer une commande fournisseur ;
+- « Facturer » reprend le droit de créer une facture.
+
+**Données :** table `reliquats_clients` (quantités attendue, commandée, reçue ; liens vers la commande client, la ligne fournisseur, la facture).
+
+Code :
+- API : service `App\Services\ReliquatsClients` et création des factures dans `App\Services\FacturesVente` (partagée avec la saisie d'une facture), migration `2026_10_16_100038_creer_reliquats_clients` ;
+- web : page `ReliquatsClientsPage`, composant `reliquats/ReliquatsDepuisCommande`.
 
 ---
 

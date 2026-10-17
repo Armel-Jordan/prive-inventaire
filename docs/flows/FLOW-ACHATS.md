@@ -284,7 +284,8 @@ Permet de soumettre plusieurs réceptions en une seule requête (pour un flow mo
 Dès qu'une réception est validée :
 - elle est rangée dans le secteur assigné ;
 - elle ne crée pas de mouvement de stock : la prise d'inventaire suivante la compte comme une **entrée** de ce secteur (FLOW-PRISE-INVENTAIRE) ;
-- la marchandise qui repart chez le fournisseur passe par un retour fournisseur (§9).
+- la marchandise qui repart chez le fournisseur passe par un retour fournisseur (§9) ;
+- les **reliquats clients** de la ligne reçue se mettent à jour, du plus ancien au plus récent (FLOW-VENTES §5.14). Annuler, supprimer ou clore une commande, ou retirer une ligne d'un brouillon, met aussi à jour ses reliquats.
 
 ---
 

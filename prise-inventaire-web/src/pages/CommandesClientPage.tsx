@@ -2,7 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet } from 'lucide-react';
+import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet, Hourglass } from 'lucide-react';
+import ReliquatsDepuisCommande from '@/components/reliquats/ReliquatsDepuisCommande';
 import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
@@ -55,6 +56,8 @@ export default function CommandesClientPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
   const [showModal, setShowModal] = useState(false);
+  // Commande acceptée dont des produits manquent : reliquats à noter.
+  const [reliquatsDe, setReliquatsDe] = useState<number | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCommande, setSelectedCommande] = useState<ComClientEntete | null>(null);
   const [showRefusModal, setShowRefusModal] = useState(false);
@@ -431,6 +434,16 @@ export default function CommandesClientPage() {
                           </button>
                         )}</>
                       )}
+                      {['acceptee', 'facturee'].includes(cmd.statut) && peut('reliquats_clients', 'creer') && (
+                        <button
+                          onClick={() => setReliquatsDe(cmd.id)}
+                          className="p-1 text-sky-600 hover:bg-sky-50 rounded"
+                          title={t.backOrders.fromOrderAction}
+                          aria-label={`${t.backOrders.fromOrderAction} — ${cmd.numero}`}
+                        >
+                          <Hourglass size={18} />
+                        </button>
+                      )}
                       <BoutonChampsPersonnalises entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                     </div>
                   </td>
@@ -689,6 +702,13 @@ onChange={(e) => {
           commandeId={acomptePour.id}
           onClose={() => setAcomptePour(null)}
           onEnregistre={() => { setAcomptePour(null); toast(t.deposits.saved); }}
+        />
+      )}
+      {reliquatsDe !== null && (
+        <ReliquatsDepuisCommande
+          commandeId={reliquatsDe}
+          onClose={() => setReliquatsDe(null)}
+          onEnregistre={nombre => { setReliquatsDe(null); toast(t.backOrders.fromOrderSaved.replace('{n}', String(nombre))); }}
         />
       )}
       <Toasts toasts={toasts} onDismiss={dismiss} />

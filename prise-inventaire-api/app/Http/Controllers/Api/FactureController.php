@@ -15,8 +15,8 @@ use App\Models\FacturePaiement;
 use App\Services\Acomptes;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
+use App\Services\FacturesVente;
 use App\Services\TaxesDocument;
-use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +26,11 @@ use Illuminate\Validation\Rule;
 
 class FactureController extends Controller
 {
-    public function __construct(private readonly TaxesDocument $taxes, private readonly ConditionsPaiement $conditions) {}
+    public function __construct(
+        private readonly TaxesDocument $taxes,
+        private readonly ConditionsPaiement $conditions,
+        private readonly FacturesVente $factures,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -106,70 +110,8 @@ class FactureController extends Controller
         if (! $config || ! $config->auto_increment) {
             return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
         }
-        $client = Client::find($validated['client_id']);
-        $condition = $this->conditions->pourFacture($validated['condition_paiement_id'] ?? null, $client);
-        // Devise de la facture : celle demandée, sinon celle du client ; prix saisis dans cette devise.
-        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client);
-        $facture = DB::transaction(function () use ($validated, $tenantId, $condition, $devise) {
-            $numero = Configuration::consommerNumero('facture', $tenantId);
-
-            $montantHt = 0;
-            $montantTva = 0;
-            $montantTtc = 0;
-
-            // Taux par défaut de l'entreprise (paramètres) pour les lignes sans taux ni groupe de taxes.
-            $tauxDefaut = TauxTaxe::parDefaut();
-            $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc, $tauxDefaut) {
-                $remise = $l['remise_ligne'] ?? 0;
-                $ht = $l['quantite'] * $l['prix_unitaire_ht'] * (1 - $remise / 100);
-                // Groupe de taxes si la ligne en a un (ou groupe par défaut sans taux saisi), sinon taux unique.
-                $groupe = $this->taxes->groupePour($l);
-                $detail = $groupe ? $this->taxes->calculer($groupe, $ht) : null;
-                $tva = $detail ? $detail['taux_effectif'] : ($l['taux_tva'] ?? $tauxDefaut);
-                $tvaM = $detail ? $detail['total_taxes'] : $ht * ($tva / 100);
-                $ttc = $ht + $tvaM;
-                $montantHt += $ht;
-                $montantTva += $tvaM;
-                $montantTtc += $ttc;
-                $groupeId = $groupe?->id;
-
-                return compact('ht', 'tvaM', 'ttc', 'tva', 'remise', 'detail', 'groupeId') + $l;
-            }, $validated['lignes']);
-
-            $facture = Facture::create($devise + [
-                'tenant_id' => $tenantId,
-                'numero' => $numero,
-                'client_id' => $validated['client_id'],
-                'date_facture' => $validated['date_facture'],
-                // Sans échéance saisie, celle de la condition de paiement.
-                'date_echeance' => $validated['date_echeance'] ?? ($condition ? $this->conditions->echeance($condition, $validated['date_facture']) : null),
-                'condition_paiement_id' => $condition?->id,
-                'statut' => 'brouillon',
-                'montant_ht' => $montantHt,
-                'montant_tva' => $montantTva,
-                'montant_ttc' => $montantTtc,
-                'reste_a_payer' => $montantTtc,
-                'notes' => $validated['notes'] ?? null,
-            ]);
-
-            foreach ($lignesCalculees as $l) {
-                $ligne = FactureLigne::create([
-                    'facture_id' => $facture->id,
-                    'produit_id' => $l['produit_id'],
-                    'quantite' => $l['quantite'],
-                    'prix_unitaire_ht' => $l['prix_unitaire_ht'],
-                    'taux_tva' => $l['tva'],
-                    'groupe_taxe_id' => $l['groupeId'],
-                    'remise_ligne' => $l['remise'],
-                    'montant_ht' => $l['ht'],
-                    'montant_tva' => $l['tvaM'],
-                    'montant_ttc' => $l['ttc'],
-                ]);
-                $this->taxes->enregistrer('facture', $ligne->id, $l['detail']);
-            }
-
-            return $facture;
-        });
+        // Condition de paiement, devise, taxes par ligne : voir App\Services\FacturesVente.
+        $facture = $this->factures->creer($validated, $tenantId);
 
         return response()->json($facture->load(['client', 'lignes']), 201);
     }
