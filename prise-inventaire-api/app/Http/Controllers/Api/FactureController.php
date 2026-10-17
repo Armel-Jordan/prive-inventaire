@@ -12,7 +12,6 @@ use App\Models\Facture;
 use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
-use App\Services\Acomptes;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
@@ -206,7 +205,7 @@ class FactureController extends Controller
         return response()->json($facture->load(['lignes', 'echeances']), 201);
     }
 
-    public function emettre(int $id): JsonResponse
+    public function emettre(int $id, FacturesVente $factures): JsonResponse
     {
         $facture = Facture::findOrFail($id);
 
@@ -214,11 +213,7 @@ class FactureController extends Controller
             return response()->json(['message' => 'Cette facture ne peut pas être émise'], 422);
         }
 
-        $facture->statut = 'emise';
-        $facture->save();
-        $facture->client->updateEncours();
-        // Acomptes réservés à la commande de la facture : appliqués d'eux-mêmes à son paiement.
-        app(Acomptes::class)->appliquerReserves($facture, auth()->id());
+        $factures->emettre($facture, auth()->id());
 
         return response()->json($facture->fresh());
     }

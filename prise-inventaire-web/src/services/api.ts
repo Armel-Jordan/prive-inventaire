@@ -334,9 +334,11 @@ export interface ReglageTache {
   jour_du_mois: number | null;
   /** Exécution unique : AAAA-MM-JJTHH:MM dans le fuseau des tâches. */
   prochaine_execution?: string | null;
-  /** Paramètres prévus par la tâche (ex. « jours » : délai d'une alerte) ; les autres sont ignorés. */
-  parametres?: Record<string, number>;
+  /** Paramètres prévus par la tâche (« jours » : délai d'une alerte ; « emettre » : factures émises) ; les autres sont ignorés. */
+  parametres?: ParametresTache;
 }
+
+export interface ParametresTache { jours?: number; emettre?: boolean }
 
 export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'> {
   id: number;
@@ -346,7 +348,7 @@ export interface TachePlanifiee extends Omit<ReglageTache, 'prochaine_execution'
   prochaine_execution: string | null;
   derniere_execution: string | null;
   /** Paramètres réglables, valeurs par défaut comprises (vide si la tâche n'en a pas). */
-  parametres: Record<string, number>;
+  parametres: ParametresTache;
   /** Module de l'entreprise requis par la tâche (ventes, achats…), null si aucun. */
   module: string | null;
 }
@@ -1253,6 +1255,8 @@ export interface FactureLigne {
   montant_ht: number;
   montant_tva: number;
   montant_ttc: number;
+  /** Texte sous la désignation du produit (période d'un abonnement…). */
+  description?: string | null;
 }
 
 export interface FactureEcheance {

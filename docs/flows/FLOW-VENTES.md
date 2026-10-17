@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — chargement du camion (§8.9)
+> Dernière mise à jour : 2026-10-17 — abonnements clients et facturation récurrente (§5.16)
 
 ---
 
@@ -1172,6 +1172,64 @@ Plan de parité fripv2, phase 1.4 : la réservation de stock. Dans fripv2, une c
 | `GET /disponibilites` | Liste (`recherche`, `manques=1`, `tous=1`), avec `resume` (produits, en manque) |
 
 Code : service `App\Services\DisponibiliteProduits` ; web : page `DisponibilitesPage`.
+
+### 5.16 Abonnements clients (Ventes → Abonnements)
+
+Plan de parité fripv2, phase 1.8 (« Facturation des abonnements ») : un produit ou un service facturé à un client à intervalle régulier, sans refaire la facture à la main.
+
+**Un abonnement :**
+
+| Champ | Rôle |
+|---|---|
+| Client, produit, quantité | Ce qui est facturé à chaque échéance (une ligne de facture) |
+| Prix fixe | Coché : le prix saisi (dans la devise du client). Décoché : le **tarif du client** à la date de chaque échéance (liste de prix, remise, règles de prix), converti dans sa devise |
+| Fréquence | Mensuelle, trimestrielle, semestrielle ou annuelle |
+| Jour de facturation | De 1 à 28, pour tomber le même jour tous les mois ; au-delà du mois, le **mois de facturation** (par défaut celui du début) |
+| Début de la période | Jour (et mois, au-delà du mois) où commence la période couverte par la facture |
+| Facturer la période écoulée | La période recule d'un cycle : facturer le 5 l'usage du mois précédent |
+| Dates de début et de fin | Les échéances tombent entre les deux ; dix ans au plus (cinq ans proposés par défaut) |
+| Texte sur la facture | Ajouté sous le produit sur la facture (`facture_lignes.description`) ; variables `{mois}`, `{annee}`, `{debut_periode}`, `{fin_periode}`, remplacées par la période facturée |
+| Garder les factures en brouillon | Une facture qui contient cet abonnement reste en brouillon, même quand on émet les factures |
+
+**Échéances :** elles sont calculées à l'enregistrement, de la date de début à la date de fin. La première tombe à la date de début ou juste après.
+
+**Période couverte :** celle qui court à la date de l'échéance. Facturé le 1er, la période est le mois qui commence ; avec « période écoulée », c'est le mois précédent. L'aperçu de la saisie montre la première échéance, sa période, le texte rendu et le prix.
+
+**Modifier :** la quantité, le prix et le texte valent pour les prochaines factures. Changer le calendrier (fréquence, jour, mois, dates) recalcule les échéances pas encore facturées, après la dernière échéance facturée ; les échéances facturées restent. Une fois une échéance facturée, la date de début et le client ne changent plus (422).
+
+**Supprimer :** l'abonnement quitte la liste, ses échéances pas encore facturées aussi. Les factures déjà faites restent.
+
+**Statut :** actif ; bientôt échu (fin dans les 30 jours) ; échu (fin passée). La liste filtre par statut et cherche par client ou par numéro de facture.
+
+La liste donne, pour chaque abonnement :
+- le prix du jour et les totaux ramenés au mois et à l'année ;
+- la prochaine échéance et le nombre d'échéances en retard ;
+- les échéances dépliées : en retard d'abord, puis à venir, puis facturées, chacune avec sa facture.
+
+**Facturer les échéances dues** (tous les clients, ou « Facturer ce client » sur une ligne) : les échéances pas encore facturées jusqu'à la date choisie (aujourd'hui par défaut, un an au plus) deviennent de vraies factures.
+- une facture par client et par date d'échéance, **datée de l'échéance**, une ligne par abonnement ;
+- conditions de paiement et devise du client, taxes comme une facture saisie sans taux (groupe de taxes par défaut, sinon taux de l'entreprise), par `FacturesVente::creer` ;
+- en brouillon, ou **émises** si la case est cochée (statut émise, encours du client), sauf une facture qui contient un abonnement « brouillon » ;
+- une échéance facturée n'est jamais reprise ;
+- un prix ou un taux de change manquant est rapporté dans le bilan (client, date, message) sans arrêter les autres factures ;
+- la numérotation automatique des factures doit être active.
+
+**Relier une échéance** à une facture faite à la main pour elle (une facture du même client) : elle n'est plus facturée. Une échéance déjà reliée ne se relie pas une seconde fois.
+
+**Tâche planifiée** `facturation_abonnements` (inactive par défaut) : chaque jour, elle facture les échéances dues à ce jour, en brouillon ou émises selon son paramètre (FLOW-TACHES-PLANIFIEES).
+
+**Droits :** module **Abonnements clients** (copié des factures à sa création). Facturer et relier demandent l'action **Facturer les abonnements** (`abonnements_clients.facturer`), plus le droit de créer des factures, et de les émettre si on les émet.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/abonnements-clients` | Liste (`statut` : actif par défaut, bientot_echu, echu, tous ; `recherche`, `produit_id`, `client_id`) |
+| GET | `/abonnements-clients/{id}` | Abonnement et ses échéances |
+| POST / PUT / DELETE | `/abonnements-clients[/{id}]` | Saisie, modification (calendrier recalculé), suppression |
+| POST | `/abonnements-clients/apercu` | Première échéance, période, texte rendu, prix, nombre d'échéances |
+| POST | `/abonnements-clients/facturer` | Facturer (`jusquau`, `client_id`, `emettre`) ; bilan : factures, échéances, erreurs |
+| POST | `/abonnements-clients/{id}/echeances/{echeanceId}/relier` | Relier une échéance à une facture (`facture_id`) |
+
+Code : service `App\Services\AbonnementsClients`, `AbonnementClientController`, tâche `App\Taches\FacturerAbonnements`, `FacturesVente::emettre` (émission partagée avec `POST /factures/{id}/emettre`) ; web : page `AbonnementsClientsPage` ; migration `2026_10_17_100048_creer_abonnements_clients`.
 
 ---
 

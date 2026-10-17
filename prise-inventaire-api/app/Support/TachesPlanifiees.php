@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Taches\ExecuterTransfertsPlanifies;
+use App\Taches\FacturerAbonnements;
 use App\Taches\NettoyerNotifications;
 use App\Taches\RelancerDevisSansReponse;
 use App\Taches\RelancerFacturesEnRetard;
@@ -30,6 +31,7 @@ final class TachesPlanifiees
         'factures_impayees' => [SignalerFacturesImpayees::class, 'quotidienne', '07:00'],
         'relances_paiement' => [RelancerFacturesEnRetard::class, 'quotidienne', '08:00'],
         'relances_devis' => [RelancerDevisSansReponse::class, 'quotidienne', '08:30'],
+        'facturation_abonnements' => [FacturerAbonnements::class, 'quotidienne', '06:00'],
         'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
@@ -45,6 +47,8 @@ final class TachesPlanifiees
         'relances_paiement' => ['jours' => 15],
         // Délai sans réponse avant la 1re relance d'un devis, puis intervalle entre deux relances.
         'relances_devis' => ['jours' => 7],
+        // Factures d'abonnement créées émises plutôt qu'en brouillon.
+        'facturation_abonnements' => ['emettre' => false],
         'commandes_fournisseur_en_retard' => ['jours' => 0],
         'livraisons_en_retard' => ['jours' => 3],
         'controles_techniques' => ['jours' => 30],
@@ -55,6 +59,7 @@ final class TachesPlanifiees
         'factures_impayees' => 'ventes',
         'relances_paiement' => 'ventes',
         'relances_devis' => 'ventes',
+        'facturation_abonnements' => 'ventes',
         'commandes_fournisseur_en_retard' => 'achats',
         'livraisons_en_retard' => 'ventes',
         'controles_techniques' => 'ventes',
