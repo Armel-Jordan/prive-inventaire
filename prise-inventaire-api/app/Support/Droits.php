@@ -251,6 +251,9 @@ class Droits
         'POST api/banque/comptes/{id}/releves' => ['banque', 'rapprocher'],
         'DELETE api/banque/releves/{releve}' => ['banque', 'rapprocher'],
         'POST api/debourses/cheques/numeroter' => ['debourses', 'cheques'],
+        // Codes-barres : ajouter et retirer modifient le produit.
+        'POST api/produits/{produit}/codes-barres' => ['produits', 'modifier'],
+        'DELETE api/produits/{produit}/codes-barres/{id}' => ['produits', 'modifier'],
         // Virements : générer un lot, le télécharger (coordonnées bancaires), le marquer refusé.
         'POST api/debourses/virements/lots' => ['debourses', 'virements'],
         'GET api/debourses/virements/lots/{id}/fichier' => ['debourses', 'virements'],
