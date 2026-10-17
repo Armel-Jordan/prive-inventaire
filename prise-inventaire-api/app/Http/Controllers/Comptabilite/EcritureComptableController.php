@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Comptabilite;
 use App\Http\Controllers\Controller;
 use App\Models\EcritureComptable;
 use App\Models\EcritureComptableLigne;
+use App\Models\RecurrenceComptable;
 use App\Services\Comptabilite\Ecritures;
 use App\Support\FichierCsv;
 use App\Support\TenantRule;
@@ -34,6 +35,8 @@ class EcritureComptableController extends Controller
             'compte_id' => ['nullable', 'integer'],
             'source' => ['nullable', Rule::in(self::SOURCES)],
             'recherche' => ['nullable', 'string', 'max:100'],
+            // Numéro de récurrence : ses écritures seulement.
+            'recurrence' => ['nullable', 'integer'],
         ]);
         $page = EcritureComptable::with(['journal:id,code,libelle', 'lignes.compte:id,numero,libelle', 'createur:id,nom', 'periode.exercice', 'origine:id,numero'])
             ->when($filtres['du'] ?? null, fn ($q, $du) => $q->whereDate('date', '>=', $du))
@@ -41,6 +44,8 @@ class EcritureComptableController extends Controller
             ->when($filtres['journal_id'] ?? null, fn ($q, $id) => $q->where('journal_id', $id))
             ->when($filtres['compte_id'] ?? null, fn ($q, $id) => $q->whereHas('lignes', fn ($l) => $l->where('compte_id', $id)))
             ->when($filtres['source'] ?? null, fn ($q, $source) => $q->where('source', $source))
+            ->when($filtres['recurrence'] ?? null, fn ($q, $numero) => $q->where('source', EcritureComptable::RECURRENTE)
+                ->whereIn('source_id', RecurrenceComptable::query()->where('numero', $numero)->select('id')))
             ->when($filtres['recherche'] ?? null, fn ($q, $texte) => $q->where(fn ($r) => $r->where('libelle', 'like', "%{$texte}%")
                 ->orWhere('numero', 'like', "%{$texte}%")->orWhere('reference', 'like', "%{$texte}%")))
             ->orderByDesc('date')->orderByDesc('numero')
@@ -153,6 +158,9 @@ class EcritureComptableController extends Controller
             'createur' => $ecriture->createur?->nom,
             'contrepassation_de' => $ecriture->origine?->numero,
             'contrepassee_par' => $contrepasseePar,
+            // Numéro de la récurrence qui a créé l'écriture (écriture récurrente).
+            'recurrence' => $ecriture->source === EcritureComptable::RECURRENTE && $ecriture->source_id
+                ? RecurrenceComptable::query()->whereKey($ecriture->source_id)->value('numero') : null,
             'modifiable' => $this->ecritures->refusModification($ecriture) === null,
             'lignes' => $ecriture->lignes->map(fn (EcritureComptableLigne $ligne) => [
                 'id' => $ligne->id,

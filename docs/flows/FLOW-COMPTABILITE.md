@@ -17,6 +17,7 @@ Une comptabilité en partie double, dans le module **Finance** :
 - **Plan comptable** (**Finance → Plan comptable**) : les comptes de l'entreprise et leur hiérarchie.
 - **Exercices comptables** (**Finance → Exercices comptables**) : les années financières et leurs périodes ; de là, les **soldes d'ouverture**.
 - **Journal comptable** (**Finance → Journal comptable**) : les écritures, classées par journal.
+- **Écritures récurrentes** (**Finance → Écritures récurrentes**) : les écritures manuelles répétées à intervalle régulier (§4 bis).
 - **Grand livre**, **Balance** et **États financiers** (bilan, compte de résultat) (**Finance**) : les états tirés des écritures.
 
 Ce socle est générique. Une entreprise part d'un plan type (OHADA, France, Canada), d'un fichier, ou de rien, puis adapte son plan librement. Rien ne change pour les entreprises qui n'ont pas le module Finance.
@@ -25,7 +26,6 @@ Prochaines étapes du plan de parité :
 
 | Phase | Contenu |
 |---|---|
-| 4.2c | Écritures récurrentes, générées par une tâche planifiée |
 | 4.3 | Écritures générées automatiquement à partir des ventes, des achats et des paiements |
 | 4.8b | États aux formats réglementaires (SYSCOHADA, liasse française), en PDF |
 
@@ -167,6 +167,30 @@ Une écriture a un journal, une date, un libellé, une référence facultative (
 - **Liste** : filtres par dates (l'exercice en cours par défaut), journal, compte, origine (saisie, soldes d'ouverture, clôture, récurrente) et texte, 50 écritures par page. Une écriture se déplie pour montrer ses lignes.
 - **Export** : toutes les lignes de la période en CSV (date, journal, numéro, compte, libellés, référence, débit, crédit), pour le cabinet comptable.
 
+### Écritures récurrentes (Finance → Écritures récurrentes)
+
+Plan de parité fripv2, phase 4.2 (« Récurrence » et « Transactions récurrentes ») : une écriture qui revient à intervalle régulier (loyer, amortissement, abonnement) se saisit une fois puis se répète.
+
+- **Planifier** : bouton **Répéter** d'une écriture saisie à la main (ni contre-passation, ni écriture déjà récurrente). On indique :
+  - la première date ;
+  - le nombre de répétitions (1 à 120) ;
+  - la fréquence : journalière, hebdomadaire, tous les 14 jours, mensuelle, trimestrielle, semestrielle ou annuelle.
+
+  Les dates sont planifiées d'un coup. Un mois ou une année se compte depuis la première date : un 31 donne le dernier jour des mois plus courts, sans glisser ensuite (31/01, 28/02, 31/03, 30/04).
+- **Copie** : la récurrence copie le journal, le libellé, la référence et les lignes de l'écriture modèle. Le modèle peut ensuite changer ou disparaître sans toucher aux répétitions.
+- **Convertir** : chaque date échue devient une écriture (source « récurrente », numérotée dans son journal), en trois façons :
+  - le bouton **Convertir les dates échues** ;
+  - date par date ;
+  - la tâche planifiée **Écritures récurrentes** (Paramètres → Tâches planifiées, inactive par défaut, chaque jour à 5 h 30).
+
+  Une date refusée (période fermée, compte désactivé…) reste à convertir, et son motif est rapporté. Deux conversions simultanées ne créent pas deux écritures pour la même date.
+- **Suivi** :
+  - la liste montre, pour chaque récurrence, son numéro, son libellé, sa fréquence, son montant, les dates converties et échues, la prochaine date et son état (active, suspendue, terminée) ;
+  - une récurrence se déplie sur ses dates, avec l'écriture créée par chacune ;
+  - au journal, les écritures récurrentes portent le badge « Récurrence n° X », et le filtre `recurrence` les retrouve.
+- **Suspendre** et **reprendre** une récurrence. **Supprimer les dates restantes** retire les dates non converties. Une récurrence qui a déjà créé des écritures reste, arrêtée, pour que son numéro les désigne toujours ; sinon elle disparaît.
+- **Droits** : consulter avec le droit de voir la comptabilité ; planifier, convertir, suspendre et supprimer avec celui de saisir des écritures.
+
 ### Protections du plan et des exercices
 
 - Un compte qui a des écritures ne se supprime pas (il se désactive) et ne devient pas un en-tête.
@@ -248,9 +272,13 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/exercices/{id}/cloture` | Aperçu : produits, charges, résultat, compte de résultat, `bloquant` |
 | `POST /comptabilite/exercices/{id}/cloturer`, `/rouvrir` | Clôture, réouverture (administrateurs) |
 | `GET /comptabilite/journaux`, `POST`, `PUT` et `DELETE /comptabilite/journaux/{id}` | Journaux (créés au premier accès) |
-| `GET /comptabilite/ecritures?du=&au=&journal_id=&compte_id=&source=&recherche=&page=` | Écritures paginées, avec leurs lignes |
+| `GET /comptabilite/ecritures?du=&au=&journal_id=&compte_id=&source=&recurrence=&recherche=&page=` | Écritures paginées, avec leurs lignes et leur numéro de récurrence |
 | `GET /comptabilite/ecritures/{id}`, `POST /comptabilite/ecritures`, `PUT` et `DELETE /comptabilite/ecritures/{id}` | `{journal_id, date, libelle, reference, lignes: [{compte_id, libelle, debit, credit}]}` |
 | `POST /comptabilite/ecritures/{id}/contre-passer` | `{date}` |
+| `POST /comptabilite/ecritures/{id}/recurrence` | Répéter une écriture manuelle : `{date_debut, nombre, frequence}` |
+| `GET /comptabilite/recurrences` | Récurrences et leurs dates, nombre de dates échues |
+| `POST /comptabilite/recurrences/convertir` | Convertir les dates échues (ou `{echeances: [ids]}`, `{jusqu_au}`) ; `converties`, `erreurs` |
+| `PUT /comptabilite/recurrences/{id}`, `DELETE` | Suspendre ou reprendre (`{active}`) ; supprimer les dates restantes |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -259,9 +287,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`.
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers}`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`.
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences}` ; tâche `App\Taches\ConvertirEcrituresRecurrentes`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`.

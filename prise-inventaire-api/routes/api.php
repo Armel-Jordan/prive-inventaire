@@ -93,6 +93,7 @@ use App\Http\Controllers\Comptabilite\EcritureComptableController;
 use App\Http\Controllers\Comptabilite\EtatComptableController;
 use App\Http\Controllers\Comptabilite\ExerciceComptableController;
 use App\Http\Controllers\Comptabilite\JournalComptableController;
+use App\Http\Controllers\Comptabilite\RecurrenceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
@@ -931,6 +932,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/etats/bilan', [EtatComptableController::class, 'bilan']);
         Route::get('/etats/resultat', [EtatComptableController::class, 'compteResultat']);
         Route::get('/soldes-ouverture', [EtatComptableController::class, 'soldesOuverture']);
+        Route::get('/recurrences', [RecurrenceComptableController::class, 'index']);
 
         // Écritures : permissions de la comptabilité (saisir des écritures, plan et exercices, clôturer), voir
         // App\Support\Droits. Lectures : droit de consulter la comptabilité, et de voir les états.
@@ -941,6 +943,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/ecritures/{id}', [EcritureComptableController::class, 'update'])->whereNumber('id');
         Route::delete('/ecritures/{id}', [EcritureComptableController::class, 'destroy'])->whereNumber('id');
         Route::post('/ecritures/{id}/contre-passer', [EcritureComptableController::class, 'contrePasser'])->whereNumber('id');
+        // Écritures récurrentes : planifier la répétition d'une écriture manuelle, convertir les dates échues.
+        Route::post('/ecritures/{id}/recurrence', [RecurrenceComptableController::class, 'store'])->whereNumber('id');
+        Route::post('/recurrences/convertir', [RecurrenceComptableController::class, 'convertir']);
+        Route::put('/recurrences/{id}', [RecurrenceComptableController::class, 'update'])->whereNumber('id');
+        Route::delete('/recurrences/{id}', [RecurrenceComptableController::class, 'destroy'])->whereNumber('id');
         Route::put('/soldes-ouverture', [EtatComptableController::class, 'enregistrerSoldesOuverture']);
         Route::post('/comptes', [CompteComptableController::class, 'store']);
         Route::put('/comptes/{id}', [CompteComptableController::class, 'update'])->whereNumber('id');
