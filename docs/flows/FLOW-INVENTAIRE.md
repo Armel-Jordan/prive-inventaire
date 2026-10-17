@@ -19,6 +19,9 @@
 10. [Flow complet bout en bout](#10-flow-complet-bout-en-bout)
 11. [Statuts et transitions](#11-statuts-et-transitions)
 12. [Multi-tenant isolation](#12-multi-tenant-isolation)
+13. [Prises d'inventaire](#13-prises-dinventaire-sessions-de-comptage)
+14. [Historique des scans](#14-historique-des-scans-statistiques-comparaison-tableau-de-bord)
+15. [Codes-barres des produits](#15-codes-barres-des-produits-inventaire--produits)
 
 ---
 
@@ -570,3 +573,37 @@ auparavant tous les scans jusqu'à chaque date : ce cumul ne faisait que croîtr
 - mouvements de relocalisation de la période (arrivages = entrées, sorties).
 
 Il lisait auparavant d'anciennes tables vides.
+
+## 15. Codes-barres des produits (Inventaire → Produits)
+
+Plan de parité fripv2, phase 2.1 : un produit se lit par son numéro, ou par l'un de ses **codes-barres**.
+
+**Les codes d'un produit** (bouton **Codes-barres** sur chaque ligne de la liste des produits) :
+- **Types** : EAN-13, EAN-8, UPC-A, Code 128 ou interne. Le type se devine d'après le code (13, 12 ou 8 chiffres avec une clé juste ; sinon Code 128).
+- **Clé de contrôle** : celle d'un EAN ou d'un UPC est vérifiée. Le message donne le bon dernier chiffre.
+- **Quantité par lecture** : un code compte pour une quantité du produit. Le code du carton de 12 compte pour 12.
+- **Un code principal** par produit ; le premier code l'est d'office. Si l'on retire le principal, le plus ancien des autres le devient.
+- **Refusés** : un code déjà porté par un produit de l'entreprise ; le numéro d'un autre produit, car la lecture serait ambiguë.
+- La liste des produits se filtre aussi par code-barres, et la recherche globale (Ctrl+K) trouve un produit par l'un de ses codes.
+
+**À la lecture** (application mobile et saisie des scans) :
+- la validation d'un code lu (`POST /mobile/produit/valider`) répond par le numéro du produit actif, ou par celui du produit dont c'est un code-barres ;
+  - elle donne aussi `code_lu` et `quantite_par_lecture` ;
+  - le code d'un produit désactivé ne se lit pas ;
+- un scan enregistré avec un code-barres (`POST /scan/enregistrer`) compte pour son produit :
+  - le numéro du produit est noté, à la quantité multipliée par celle du code ;
+  - le code lu est gardé (`code_lu`) ;
+  - un numéro de produit reste tel quel ; un code inconnu aussi, comme avant.
+
+**Droits** : ceux des produits. Consulter avec le droit de les voir ; ajouter, modifier ou retirer un code avec le droit de les modifier.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET / POST | `/produits/{id}/codes-barres` | Codes du produit ; ajout (`code`, `type` facultatif, `quantite`, `principal`, `notes`) |
+| PUT / DELETE | `/produits/{id}/codes-barres/{code}` | Modifier ; retirer |
+
+Code :
+- `App\Support\CodesBarres` (types, détection, clés) ;
+- service `App\Services\CodesBarresProduits` (lecture, enregistrement), `ProduitCodeBarreController`, modèle `ProduitCodeBarre` ;
+- web : composant `produits/FenetreCodesBarres`, service `src/services/codesBarres.ts` ;
+- migration `2026_10_17_100071_creer_codes_barres_produits` (table `produit_codes_barres`, colonne `inventaire_scan.code_lu`).

@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProduitTenant extends Model
@@ -74,6 +75,12 @@ class ProduitTenant extends Model
     public function secteur(): BelongsTo
     {
         return $this->belongsTo(Secteur::class);
+    }
+
+    /** Codes-barres du produit, le principal d'abord. */
+    public function codesBarres(): HasMany
+    {
+        return $this->hasMany(ProduitCodeBarre::class, 'produit_id')->orderByDesc('principal')->orderBy('id');
     }
 
     public function fournisseurPrincipal(): BelongsTo

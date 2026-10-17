@@ -91,7 +91,9 @@ final class RechercheGlobale
             'produits' => [
                 'module' => null,
                 'cle' => 'numero',
-                'requete' => fn (string $motif) => ProduitTenant::query()->with('secteur:id,code')->where($contient(['numero', 'description', 'categorie'])($motif)),
+                'requete' => fn (string $motif) => ProduitTenant::query()->with('secteur:id,code')
+                    ->where(fn (Builder $q) => $q->where($contient(['numero', 'description', 'categorie'])($motif))
+                        ->orWhereHas('codesBarres', fn (Builder $c) => $c->where('code', 'like', $motif))),
                 'resultat' => fn (ProduitTenant $p) => [
                     'id' => $p->id,
                     'titre' => "{$p->numero} — {$p->description}",

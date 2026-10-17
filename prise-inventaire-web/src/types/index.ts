@@ -35,6 +35,8 @@ export interface Produit {
   groupe_emballage?: string | null;
   poids_kg?: number | string | null;
   volume_m3?: number | string | null;
+  /** Codes-barres du produit (le principal d'abord). */
+  codes_barres?: { id: number; code: string; type: string; quantite: string; principal: boolean }[];
 }
 
 export interface Secteur {

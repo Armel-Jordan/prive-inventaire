@@ -17,6 +17,8 @@ class ScanTenant extends Model
     protected $fillable = [
         'tenant_id',
         'numero',
+        // Code-barres lu, quand le scan a été rapporté au numéro de son produit.
+        'code_lu',
         'type',
         'quantite',
         'unite_mesure',

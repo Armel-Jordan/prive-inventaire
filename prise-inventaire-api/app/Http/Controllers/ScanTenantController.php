@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProduitTenant;
 use App\Models\ScanTenant;
 use App\Models\Secteur;
+use App\Services\CodesBarresProduits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -190,10 +192,24 @@ class ScanTenantController extends Controller
             'scanneur' => 'nullable|string|max:50',
         ]);
 
+        // Un code-barres plutôt qu'un numéro : le scan compte pour son produit, à la quantité du code (un carton).
+        $numero = $request->numero;
+        $quantite = $request->quantite;
+        $codeLu = null;
+        if (! ProduitTenant::query()->where('numero', $numero)->exists()) {
+            $lecture = app(CodesBarresProduits::class)->resoudre($numero);
+            if ($lecture && $lecture['code'] !== null) {
+                $codeLu = $lecture['code'];
+                $numero = $lecture['produit']->numero;
+                $quantite = round((float) $quantite * $lecture['quantite'], 3);
+            }
+        }
+
         $scan = ScanTenant::create([
-            'numero' => $request->numero,
+            'numero' => $numero,
+            'code_lu' => $codeLu,
             'type' => $request->type,
-            'quantite' => $request->quantite,
+            'quantite' => $quantite,
             'unite_mesure' => $request->unite_mesure ?? 'UN',
             'employe' => $request->employe,
             'secteur' => $request->secteur,

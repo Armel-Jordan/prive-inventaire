@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Configuration;
 use App\Models\ProduitTenant;
+use App\Services\CodesBarresProduits;
 use App\Support\TenantRule;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ class ProduitTenantController extends Controller
     public function index(Request $request): JsonResponse
     {
         $statut = $request->query('statut', 'actifs');
-        $produits = ProduitTenant::with('secteur')
+        $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal'])
             ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')
@@ -182,17 +183,16 @@ class ProduitTenantController extends Controller
             'numero' => 'required|string',
         ]);
 
-        $numero = $request->input('numero');
-        $produit = ProduitTenant::where('numero', $numero)
-            ->where('actif', true)
-            ->first();
+        // Le numéro d'un produit actif, sinon l'un de ses codes-barres (avec la quantité que compte une lecture).
+        $lecture = app(CodesBarresProduits::class)->resoudre((string) $request->input('numero'));
 
-        if (! $produit) {
+        if (! $lecture) {
             return response()->json([
                 'valide' => false,
                 'message' => 'Produit introuvable',
             ], 404);
         }
+        $produit = $lecture['produit'];
 
         return response()->json([
             'valide' => true,
@@ -200,6 +200,8 @@ class ProduitTenantController extends Controller
             'description' => $produit->description,
             'unite_mesure' => $produit->mesure,
             'type' => $produit->type,
+            'code_lu' => $lecture['code'],
+            'quantite_par_lecture' => $lecture['quantite'],
         ]);
     }
 }

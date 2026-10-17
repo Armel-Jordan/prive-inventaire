@@ -1,7 +1,8 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode } from 'lucide-react';
+import FenetreCodesBarres from '@/components/produits/FenetreCodesBarres';
 import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
@@ -69,6 +70,7 @@ export default function ProduitsPage() {
   const { canCreate, canEdit, canDelete, peut } = usePermissions();
   // Produit pour lequel on signale un besoin d'achat (suggestion d'achat).
   const [aSuggerer, setASuggerer] = useState<Produit | null>(null);
+  const [codesDe, setCodesDe] = useState<Produit | null>(null);
 
   async function loadData() {
     try {
@@ -106,7 +108,9 @@ export default function ProduitsPage() {
 
   const filtered = produits.filter(p => {
     const q = search.toLowerCase();
-    const matchSearch = p.numero.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+    // Le numéro, la description ou l'un des codes-barres.
+    const matchSearch = p.numero.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
+      || (p.codes_barres ?? []).some(c => c.code.toLowerCase().includes(q));
     const matchType = !filterType || p.type === filterType;
     const matchSecteur = !filterSecteur || String(p.secteur_id) === filterSecteur;
     return matchSearch && matchType && matchSecteur;
@@ -270,7 +274,7 @@ export default function ProduitsPage() {
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-48">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Rechercher par numéro ou description..."
+            <input type="text" placeholder="Rechercher par numéro, description ou code-barres..."
               value={search} onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500" />
           </div>
@@ -370,6 +374,10 @@ export default function ProduitsPage() {
                           <ShoppingCart size={16} />
                         </button>
                       )}
+                      <button onClick={() => setCodesDe(produit)} className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2"
+                        title={t.barcodes.button} aria-label={`${t.barcodes.button} — ${produit.numero}`}>
+                        <Barcode size={16} />
+                      </button>
                       {canEdit('produits') && (
                         <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                           <Edit2 size={16} />
@@ -535,6 +543,10 @@ export default function ProduitsPage() {
         onCancel={() => setConfirmId(null)}
       />
 
+      {codesDe && (
+        <FenetreCodesBarres produit={{ id: codesDe.id!, numero: codesDe.numero, description: codesDe.description }} modifiable={canEdit('produits')}
+          onClose={() => setCodesDe(null)} onModifie={loadData} />
+      )}
       {aSuggerer && (
         <SuggererAchat produit={{ id: aSuggerer.id!, numero: aSuggerer.numero, description: aSuggerer.description }}
           onClose={() => setASuggerer(null)} onFait={() => { setASuggerer(null); toast(t.purchaseSuggestions.suggested_, 'success'); }} />

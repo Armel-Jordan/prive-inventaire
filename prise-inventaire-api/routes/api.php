@@ -120,6 +120,7 @@ use App\Http\Controllers\Prix\CalculController as PrixCalculController;
 use App\Http\Controllers\Prix\GrilleController as PrixGrilleController;
 use App\Http\Controllers\Prix\ListeController as PrixListeController;
 use App\Http\Controllers\Prix\RegleController as PrixRegleController;
+use App\Http\Controllers\ProduitCodeBarreController;
 use App\Http\Controllers\ProduitTenantController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportController;
@@ -239,6 +240,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::get('/produits', [ProduitTenantController::class, 'index']);
     Route::post('/produits', [ProduitTenantController::class, 'store']);
     Route::get('/produits/{id}', [ProduitTenantController::class, 'show']);
+    // Codes-barres d'un produit (EAN, UPC, Code 128, internes ; quantité par lecture).
+    Route::get('/produits/{produit}/codes-barres', [ProduitCodeBarreController::class, 'index'])->whereNumber('produit');
+    Route::post('/produits/{produit}/codes-barres', [ProduitCodeBarreController::class, 'store'])->whereNumber('produit');
+    Route::put('/produits/{produit}/codes-barres/{id}', [ProduitCodeBarreController::class, 'update'])->whereNumber('produit')->whereNumber('id');
+    Route::delete('/produits/{produit}/codes-barres/{id}', [ProduitCodeBarreController::class, 'destroy'])->whereNumber('produit')->whereNumber('id');
     Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
     Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
 
