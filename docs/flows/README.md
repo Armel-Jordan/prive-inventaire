@@ -24,6 +24,7 @@
 | [FLOW-PIECES-JOINTES.md](./FLOW-PIECES-JOINTES.md) | Transverse | Pièces jointes des fiches et documents, stockage, sécurité |
 | [FLOW-TACHES-PLANIFIEES.md](./FLOW-TACHES-PLANIFIEES.md) | Transverse | Traitements automatiques, planificateur, historique des exécutions |
 | [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md) | Transverse | Recherche globale de l'en-tête (Ctrl+K) sur les fiches et documents |
+| [FLOW-RAPPORTS.md](./FLOW-RAPPORTS.md) | Transverse | Bibliothèque des rapports (ventes, clients, achats, inventaire, finance) à l'écran, en CSV, Excel et PDF |
 
 ## Le flow global de l'application
 
