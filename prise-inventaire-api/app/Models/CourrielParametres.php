@@ -24,6 +24,8 @@ class CourrielParametres extends Model
         'repondre_a',
         'copie_cachee',
         'signature',
+        // Boutons Accepter / Refuser dans les courriels des devis (voir App\Services\ReponsesDevis).
+        'devis_reponse_en_ligne',
     ];
 
     protected $hidden = ['smtp_mot_de_passe'];
@@ -33,6 +35,7 @@ class CourrielParametres extends Model
         return [
             'smtp_port' => 'integer',
             'smtp_mot_de_passe' => 'encrypted',
+            'devis_reponse_en_ligne' => 'boolean',
         ];
     }
 

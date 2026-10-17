@@ -22,7 +22,8 @@ final class Courriels
 
     /** Variables propres à chaque type ; celles de l'entreprise s'ajoutent à tous. */
     public const TYPES = [
-        'devis' => ['numero', 'date', 'date_validite', 'client_nom', 'client_code', 'contact_nom', 'montant_total'],
+        // lien_reponse : page où le client accepte ou refuse le devis (vide si la réponse en ligne n'est pas possible).
+        'devis' => ['numero', 'date', 'date_validite', 'client_nom', 'client_code', 'contact_nom', 'montant_total', 'lien_reponse'],
         'commande_client' => ['numero', 'date', 'date_livraison_souhaitee', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc'],
         'facture' => ['numero', 'date', 'date_echeance', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'montant_paye', 'reste_a_payer'],
         'avoir' => ['numero', 'date', 'numero_facture', 'motif', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'credit_disponible'],

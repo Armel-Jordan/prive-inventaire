@@ -18,6 +18,17 @@
                     <tr>
                         <td style="padding: 28px 32px;">
                             {!! $corps !!}
+                            @if(! empty($carte))
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0 8px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #f9fafb;">
+                                    <tr>
+                                        <td style="padding: 16px 20px; text-align: center;">
+                                            <p style="margin: 0 0 12px; font-weight: bold; color: #374151;">{{ $carte['titre'] }}</p>
+                                            <a href="{{ $carte['lien_accepter'] }}" style="display: inline-block; margin: 4px 6px; padding: 10px 18px; background-color: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">{{ $carte['accepter'] }}</a>
+                                            <a href="{{ $carte['lien_refuser'] }}" style="display: inline-block; margin: 4px 6px; padding: 9px 17px; background-color: #ffffff; color: #b91c1c; text-decoration: none; border: 1px solid #fca5a5; border-radius: 6px; font-weight: bold;">{{ $carte['refuser'] }}</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            @endif
                             @if($signature)
                                 <div style="margin-top: 20px; color: #374151;">{!! $signature !!}</div>
                             @endif

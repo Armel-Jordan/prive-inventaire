@@ -54,6 +54,8 @@ class CourrielParametresController extends Controller
             'repondre_a' => ['nullable', 'email', 'max:255'],
             'copie_cachee' => ['nullable', 'email', 'max:255'],
             'signature' => ['nullable', 'string', 'max:5000'],
+            // Boutons Accepter / Refuser dans les courriels des devis.
+            'devis_reponse_en_ligne' => ['sometimes', 'boolean'],
         ]);
 
         // Mot de passe laissé vide : celui déjà enregistré est conservé.
@@ -109,6 +111,7 @@ class CourrielParametresController extends Controller
             'repondre_a' => null,
             'copie_cachee' => null,
             'signature' => null,
+            'devis_reponse_en_ligne' => true,
         ], $parametres->toArray(), [
             // Le mot de passe n'est jamais renvoyé : on indique seulement s'il existe.
             'smtp_mot_de_passe_defini' => filled($parametres->getAttributes()['smtp_mot_de_passe'] ?? null),

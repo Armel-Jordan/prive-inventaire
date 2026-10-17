@@ -90,6 +90,7 @@ use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
 use App\Http\Controllers\MouvementTenantController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Portail\DevisEnLigneController;
 use App\Http\Controllers\Portail\PortailAuthController;
 use App\Http\Controllers\Portail\PortailCommandeController;
 use App\Http\Controllers\Prix\CalculController as PrixCalculController;
@@ -543,6 +544,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{devis}/accepter', [DevisController::class, 'accepter']);
         Route::post('/{devis}/refuser', [DevisController::class, 'refuser']);
         Route::post('/{devis}/convertir', [DevisController::class, 'convertirEnCommande']);
+        // Lien de réponse en ligne du devis (le partager revient à l'envoyer).
+        Route::post('/{devis}/lien-reponse', [DevisController::class, 'lienReponse']);
         Route::delete('/{devis}', [DevisController::class, 'destroy']);
     });
 
@@ -900,6 +903,14 @@ Route::prefix('portail/{slug}')->where(['slug' => '[A-Za-z0-9_-]+'])->group(func
     Route::post('/connexion', [PortailAuthController::class, 'connexion'])->middleware('throttle:10,1,portail-connexion');
     Route::post('/activation', [PortailAuthController::class, 'activation'])->middleware('throttle:10,1,portail-activation');
     Route::post('/mot-de-passe-oublie', [PortailAuthController::class, 'oublie'])->middleware('throttle:5,1,portail-oubli');
+});
+
+// Réponse en ligne à un devis, accès public par le lien du courriel : consulter, télécharger, accepter ou refuser.
+Route::prefix('devis-en-ligne/{jeton}')->where(['jeton' => '[A-Za-z0-9]{64}'])->group(function () {
+    Route::get('/', [DevisEnLigneController::class, 'show'])->middleware('throttle:60,1,devis-en-ligne');
+    Route::get('/pdf', [DevisEnLigneController::class, 'pdf'])->middleware('throttle:20,1,devis-en-ligne-pdf');
+    Route::post('/accepter', [DevisEnLigneController::class, 'accepter'])->middleware('throttle:10,1,devis-en-ligne-reponse');
+    Route::post('/refuser', [DevisEnLigneController::class, 'refuser'])->middleware('throttle:10,1,devis-en-ligne-reponse');
 });
 
 // Espace du client connecté au portail : session du portail uniquement (un jeton d'employé n'y est pas reconnu).

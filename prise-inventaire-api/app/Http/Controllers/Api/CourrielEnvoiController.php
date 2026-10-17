@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\EnvoyerCourriel;
 use App\Models\CourrielEnvoi;
 use App\Services\Courriels\EnvoiCourriel;
+use App\Services\Portail\AccesPortail;
 use App\Support\Courriels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,9 +24,14 @@ class CourrielEnvoiController extends Controller
             'type' => ['required', Rule::in(array_keys(Courriels::DOCUMENTS))],
             'document_id' => ['required', 'integer'],
             'langue' => ['nullable', Rule::in(Courriels::LANGUES)],
+            // Adresse du site de l'espace client connue du back-office : celle du lien de réponse d'un devis.
+            'origine' => ['nullable', 'string', 'max:255'],
         ]);
         $this->verifierModule($request, $donnees['type']);
         $document = $this->envois->document($donnees['type'], (int) $donnees['document_id']);
+        if ($donnees['type'] === 'devis' && filled($donnees['origine'] ?? null)) {
+            app(AccesPortail::class)->memoriserAdresse($donnees['origine']);
+        }
 
         return response()->json($this->envois->preparer($donnees['type'], $document, $donnees['langue'] ?? 'fr'));
     }

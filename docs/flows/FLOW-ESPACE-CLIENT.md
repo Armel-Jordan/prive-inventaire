@@ -1,7 +1,7 @@
 # ESPACE CLIENT — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — l'espace client devient un site à part (`prise-inventaire-client`), distinct du back-office. La phase 1.11 du plan de parité fripv2 l'avait créé comme une section `/portail` du back-office.
+> Dernière mise à jour : 2026-10-17 — page publique de réponse aux devis (`/devis/<jeton>`, FLOW-VENTES §3.7). 2026-10-16 : l'espace client devient un site à part (`prise-inventaire-client`), distinct du back-office. La phase 1.11 du plan de parité fripv2 l'avait créé comme une section `/portail` du back-office.
 
 ---
 
@@ -30,6 +30,8 @@ Le site porte le **nom et les coordonnées de l'entreprise**, jamais celui de l'
 **Comptes séparés :** les accès de l'espace client n'ont rien à voir avec les comptes des employés. Un client ne peut ni ouvrir le back-office, ni voir les données d'un autre client.
 
 L'espace client est **fermé** tant que l'entreprise ne l'ouvre pas : rien ne change pour une entreprise qui ne s'en sert pas.
+
+**Réponse aux devis :** le site sert aussi la page `/devis/<jeton>`, ouverte par le lien du courriel d'un devis. Le client y consulte le devis, télécharge le PDF, puis l'accepte ou le refuse, sans compte et même si l'espace client n'est pas ouvert (FLOW-VENTES §3.7).
 
 ---
 
@@ -198,6 +200,7 @@ Les routes de l'API gardent le préfixe `portail` : il n'apparaît dans aucune a
 | GET | `/portail/{code}` | Page de connexion : entreprise, coordonnées, message d'accueil (404 si l'espace n'est pas ouvert) |
 | POST | `/portail/{code}/connexion` | Connexion |
 | POST | `/portail/{code}/activation` | Mot de passe choisi depuis un lien |
+| GET, POST | `/devis-en-ligne/{jeton}`, `/pdf`, `/accepter`, `/refuser` | Réponse à un devis par son lien, sans session (FLOW-VENTES §3.7) |
 | POST | `/portail/{code}/mot-de-passe-oublie` | Demande de lien |
 | GET, PUT | `/espace-client/moi` | Accès, client (adresses), entreprise ; nom et téléphone |
 | PUT | `/espace-client/moi/mot-de-passe` | Changement de mot de passe |

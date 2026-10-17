@@ -27,11 +27,13 @@ class RenduCourriel
         $signature = CourrielParametres::first()?->signature;
         $nomFichier = $modele['nom_fichier'] ?? null;
         $objet = $this->ligne($this->variables->remplacer($modele['objet'], $valeurs));
+        $carte = $this->carteReponse($type, $modele['contenu'], $valeurs, $langue);
 
         $html = view('emails.courriel', [
             'langue' => $langue,
             'titre' => $objet,
             'corps' => $this->html($modele['contenu'], $valeurs, $surligner),
+            'carte' => $carte,
             'signature' => filled($signature) ? $this->html($signature, $valeurs, $surligner) : null,
             'entreprise' => [
                 'nom' => $valeurs['entreprise_nom'] ?? '',
@@ -44,6 +46,9 @@ class RenduCourriel
         ])->render();
 
         $texte = trim($this->variables->remplacer($modele['contenu'], $valeurs));
+        if ($carte) {
+            $texte .= "\n\n".$carte['titre']."\n".$carte['accepter'].' : '.$carte['lien_accepter']."\n".$carte['refuser'].' : '.$carte['lien_refuser'];
+        }
         if (filled($signature)) {
             $texte .= "\n\n".trim($this->variables->remplacer($signature, $valeurs));
         }
@@ -71,6 +76,27 @@ class RenduCourriel
         $nom = preg_replace('/\.pdf$/i', '', $nom);
 
         return Str::limit($nom !== '' ? $nom : $prefixe, 150, '').'.pdf';
+    }
+
+    /**
+     * Carte de réponse d'un devis (comme dans fripv2) : boutons Accepter et Refuser vers la page du lien de réponse.
+     * Absente si le devis n'a pas de lien, ou si le texte donne déjà le lien (variable {lien_reponse}).
+     */
+    private function carteReponse(string $type, string $contenu, array $valeurs, string $langue): ?array
+    {
+        $lien = (string) ($valeurs['lien_reponse'] ?? '');
+        if ($type !== 'devis' || $lien === '' || str_contains($contenu, '{lien_reponse}') || str_contains($contenu, $lien)) {
+            return null;
+        }
+        $en = $langue === 'en';
+
+        return [
+            'titre' => $en ? 'Reply to this quote online' : 'Répondez à ce devis en ligne',
+            'accepter' => $en ? 'Accept the quote' : 'Accepter le devis',
+            'refuser' => $en ? 'Decline the quote' : 'Refuser le devis',
+            'lien_accepter' => $lien.'?reponse=accepter',
+            'lien_refuser' => $lien.'?reponse=refuser',
+        ];
     }
 
     private function html(string $source, array $valeurs, bool $surligner): string

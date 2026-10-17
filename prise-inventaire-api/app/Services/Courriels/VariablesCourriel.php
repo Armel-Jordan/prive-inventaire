@@ -4,6 +4,7 @@ namespace App\Services\Courriels;
 
 use App\Models\Tenant;
 use App\Models\TenantParametres;
+use App\Services\ReponsesDevis;
 use App\Support\Courriels;
 use App\Support\TenantContext;
 use Carbon\Carbon;
@@ -77,6 +78,7 @@ class VariablesCourriel
                 'date' => $date($d->date_devis),
                 'date_validite' => $date($d->date_validite),
                 'montant_total' => $montant($d->montant_total),
+                'lien_reponse' => app(ReponsesDevis::class)->lien($d),
             ] + $this->client($d->client, $d),
             'commande_client' => [
                 'numero' => $d->numero,
@@ -204,6 +206,7 @@ class VariablesCourriel
             'niveau' => '1',
             'type_retour' => $this->typeRetour('remboursement', $langue),
             'numero_rma' => 'RMA-12345',
+            'lien_reponse' => 'https://clients.exemple.com/devis/…',
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));

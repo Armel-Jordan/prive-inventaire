@@ -270,6 +270,13 @@ export default function CourrielsConfiguration() {
               <Champ label={tc.signature} aide={tc.signatureHelp}>
                 <textarea rows={3} value={parametres.signature ?? ''} onChange={e => modifier({ signature: e.target.value })} maxLength={5000} className={classeChamp} />
               </Champ>
+              <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" checked={parametres.devis_reponse_en_ligne ?? true} onChange={e => modifier({ devis_reponse_en_ligne: e.target.checked })} className="mt-1 rounded" />
+                <span>
+                  <span className="font-medium">{tc.quoteOnlineAnswer}</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{tc.quoteOnlineAnswerHelp}</span>
+                </span>
+              </label>
 
               {admin && (
                 <button type="submit" disabled={enregistrement} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm">

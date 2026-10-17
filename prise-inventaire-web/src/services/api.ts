@@ -1,5 +1,6 @@
 import type { Employe, Produit, Secteur, InventaireScan, AdminUser } from '@/types';
 import { apiFetch, getAuthHeaders, API_BASE_URL, type ApiOptions } from './http';
+import { URL_ESPACE_CLIENT } from './portailClients';
 
 // Réexport pour compatibilité (des composants importent getAuthHeaders d'ici).
 export { getAuthHeaders };
@@ -2132,6 +2133,8 @@ export interface ParametresCourriel {
   repondre_a: string | null;
   copie_cachee: string | null;
   signature: string | null;
+  /** Boutons Accepter / Refuser dans les courriels des devis. */
+  devis_reponse_en_ligne?: boolean;
   adresse_plateforme?: string | null;
 }
 
@@ -2232,7 +2235,9 @@ export interface NouveauCourriel {
 }
 
 export async function preparerCourriel(type: TypeDocumentCourriel, documentId: number, langue: LangueCourriel): Promise<PreparationCourriel> {
-  return fetchApi(`/courriels/preparer?${new URLSearchParams({ type, document_id: String(documentId), langue })}`);
+  // Devis : l'adresse du site de l'espace client, où le client répond au devis en ligne.
+  const parametres = new URLSearchParams({ type, document_id: String(documentId), langue, ...(type === 'devis' ? { origine: URL_ESPACE_CLIENT } : {}) });
+  return fetchApi(`/courriels/preparer?${parametres}`);
 }
 
 export async function envoyerCourriel(courriel: NouveauCourriel): Promise<EnvoiCourriel> {
@@ -2298,6 +2303,12 @@ export interface DevisRecord extends CoordonneesPassage {
   /** Devise du devis (null : celle de l'entreprise) et son taux. */
   devise?: string | null;
   taux_change?: number | string;
+  /** Envoi au client, puis sa réponse : en ligne (nom, commentaire) ou notée à la main. */
+  envoye_le?: string | null;
+  reponse_le?: string | null;
+  reponse_en_ligne?: boolean;
+  reponse_nom?: string | null;
+  reponse_commentaire?: string | null;
 }
 
 export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {
@@ -2344,6 +2355,11 @@ export async function refuserDevis(id: number): Promise<{ message: string; devis
 
 export async function convertirDevisEnCommande(id: number): Promise<{ message: string; commande: ComClientEntete }> {
   return fetchApi(`/devis/${id}/convertir`, { method: 'POST' });
+}
+
+/** Lien de réponse en ligne du devis (le client l'accepte ou le refuse sur le site de l'espace client). */
+export async function lienReponseDevis(id: number): Promise<{ url: string; devis: DevisRecord }> {
+  return fetchApi(`/devis/${id}/lien-reponse`, { method: 'POST', body: JSON.stringify({ origine: URL_ESPACE_CLIENT }) });
 }
 
 export async function deleteDevis(id: number): Promise<{ message: string }> {

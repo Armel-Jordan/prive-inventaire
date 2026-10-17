@@ -15,4 +15,7 @@ export const couleursTypeNotification: Record<string, string> = {
   approbation_requise: 'bg-orange-500',
   alerte_stock: 'bg-red-500',
   planification_imminente: 'bg-blue-500',
+  // Réponse d'un client à un devis, donnée en ligne.
+  devis_accepte: 'bg-green-500',
+  devis_refuse: 'bg-red-500',
 };

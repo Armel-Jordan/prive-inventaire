@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-16 — rôles et permissions : groupes, permissions par écran et par action, exceptions par compte
+> Dernière mise à jour : 2026-10-17 — réponse en ligne aux devis (§12.1)
 
 ---
 
@@ -657,6 +657,7 @@ Onglet **Courriels** de la page Paramètres, envoi des documents par courriel et
 - SMTP : serveur, port (587 par défaut, 465 en SSL/TLS), chiffrement (STARTTLS exigé, SSL/TLS ou aucun), utilisateur, mot de passe.
 - Le mot de passe est chiffré en base avec la clé de l'application et n'est jamais renvoyé par l'API. Laissé vide à l'enregistrement, il est conservé.
 - Communs aux deux modes : nom de l'expéditeur (par défaut, le nom de l'entreprise), adresse de réponse (par défaut, le courriel de l'entreprise), copie cachée systématique pour l'archivage, signature ajoutée sous chaque courriel.
+- **Réponse en ligne aux devis** (activée par défaut) : les courriels des devis portent les boutons Accepter et Refuser ; le client répond sur le site de l'espace client (FLOW-VENTES §3.7).
 - **Tester l'envoi** : envoie un courriel de test avec les paramètres enregistrés. En cas d'échec, le message d'erreur du serveur est affiché.
 - Modifier ou tester le serveur est réservé aux administrateurs ; le test est limité à 5 par minute.
 
