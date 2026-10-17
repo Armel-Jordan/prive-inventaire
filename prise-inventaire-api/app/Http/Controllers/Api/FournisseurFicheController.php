@@ -176,7 +176,8 @@ class FournisseurFicheController extends Controller
     public function produits(int $id): JsonResponse
     {
         $fournisseur = Fournisseur::findOrFail($id);
-        $produits = $fournisseur->produits()->orderBy('produits.numero')->get(['produits.id', 'produits.numero', 'produits.description']);
+        $produits = $fournisseur->produits()->orderBy('produits.numero')
+            ->get(['produits.id', 'produits.numero', 'produits.description', 'produits.mesure', 'produits.unite_achat', 'produits.qte_par_unite_achat']);
 
         $derniers = $this->lignesAchetees($fournisseur)
             ->whereIn('com_four_ligne.produit_id', $produits->pluck('id'))
@@ -192,6 +193,12 @@ class FournisseurFicheController extends Controller
             'prix_achat' => $produit->pivot->prix_achat !== null ? (float) $produit->pivot->prix_achat : null,
             'delai_livraison' => $produit->pivot->delai_livraison !== null ? (int) $produit->pivot->delai_livraison : null,
             'fournisseur_principal' => (bool) $produit->pivot->fournisseur_principal,
+            // Conditionnement chez ce fournisseur (vide : celui du produit), et celui du produit.
+            'unite_achat' => $produit->pivot->unite_achat,
+            'qte_par_unite_achat' => $produit->pivot->qte_par_unite_achat !== null ? (int) $produit->pivot->qte_par_unite_achat : null,
+            'mesure' => $produit->mesure,
+            'unite_achat_produit' => $produit->unite_achat,
+            'qte_par_unite_achat_produit' => (int) ($produit->qte_par_unite_achat ?? 1),
             // Dernier prix payé, dans la devise de la commande.
             'dernier_prix' => isset($derniers[$produit->id]) ? (float) $derniers[$produit->id]->prix_unitaire : null,
             'dernier_prix_devise' => $derniers[$produit->id]->devise ?? null,
@@ -247,12 +254,20 @@ class FournisseurFicheController extends Controller
             'prix_achat' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'delai_livraison' => ['nullable', 'integer', 'min:0', 'max:3650'],
             'fournisseur_principal' => ['sometimes', 'boolean'],
+            // Conditionnement de ce fournisseur : son unité d'achat et les unités de stock qu'elle contient.
+            'unite_achat' => ['nullable', 'string', 'max:30'],
+            'qte_par_unite_achat' => ['nullable', 'integer', 'min:1', 'max:65535'],
         ];
     }
 
     private function pivot(array $donnees): array
     {
-        return array_intersect_key($donnees, array_flip(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal']));
+        $pivot = array_intersect_key($donnees, array_flip(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal', 'unite_achat', 'qte_par_unite_achat']));
+        if (array_key_exists('unite_achat', $pivot)) {
+            $pivot['unite_achat'] = mb_strtoupper(trim((string) $pivot['unite_achat'])) ?: null;
+        }
+
+        return $pivot;
     }
 
     /** Un produit n'a qu'un fournisseur principal : le marquer chez celui-ci le retire chez les autres. */

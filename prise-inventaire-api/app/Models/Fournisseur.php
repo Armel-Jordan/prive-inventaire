@@ -36,7 +36,7 @@ class Fournisseur extends Model
     {
         // Clés explicites : la table pivot porte « produit_id » (Laravel déduirait « produit_tenant_id »).
         return $this->belongsToMany(ProduitTenant::class, 'produit_fournisseur', 'fournisseur_id', 'produit_id')
-            ->withPivot(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal'])
+            ->withPivot(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal', 'unite_achat', 'qte_par_unite_achat'])
             ->withTimestamps();
     }
 

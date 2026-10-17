@@ -16,6 +16,9 @@ interface Edition {
   prix: string;
   delai: string;
   principal: boolean;
+  /** Conditionnement de ce fournisseur ; vides : celui du produit. */
+  unite: string;
+  facteur: string;
 }
 
 /**
@@ -55,8 +58,11 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
   function ouvrir(produit?: ProduitFourni) {
     setErreur('');
     setEdition(produit
-      ? { produitId: produit.produit_id, nouveau: false, reference: produit.reference_fournisseur ?? '', prix: produit.prix_achat?.toString() ?? '', delai: produit.delai_livraison?.toString() ?? '', principal: produit.fournisseur_principal }
-      : { produitId: null, nouveau: true, reference: '', prix: '', delai: '', principal: false });
+      ? {
+        produitId: produit.produit_id, nouveau: false, reference: produit.reference_fournisseur ?? '', prix: produit.prix_achat?.toString() ?? '', delai: produit.delai_livraison?.toString() ?? '',
+        principal: produit.fournisseur_principal, unite: produit.unite_achat ?? '', facteur: produit.qte_par_unite_achat?.toString() ?? '',
+      }
+      : { produitId: null, nouveau: true, reference: '', prix: '', delai: '', principal: false, unite: '', facteur: '' });
   }
 
   async function enregistrer(e: React.FormEvent) {
@@ -67,6 +73,8 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
       prix_achat: edition.prix.trim() === '' ? null : Number(edition.prix),
       delai_livraison: edition.delai.trim() === '' ? null : Number(edition.delai),
       fournisseur_principal: edition.principal,
+      unite_achat: edition.unite.trim().toUpperCase() || null,
+      qte_par_unite_achat: edition.facteur.trim() === '' ? null : Math.max(1, Math.floor(Number(edition.facteur)) || 1),
     };
     setOccupe(true);
     try {
@@ -90,6 +98,18 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
     }
   }
 
+  // Conditionnement de ce fournisseur, sinon celui du produit (en gris) ; rien pour un produit acheté à l'unité.
+  const libelleConditionnement = (unite: string | null | undefined, n: number | null | undefined, mesure: string | null | undefined) =>
+    (unite || (n ?? 1) > 1 ? tp.packagingOf.replace('{unite}', unite || '—').replace('{n}', String(n ?? 1)).replace('{mesure}', mesure || '') : null);
+  function conditionnement(p: ProduitFourni) {
+    const propre = p.unite_achat || p.qte_par_unite_achat
+      ? libelleConditionnement(p.unite_achat ?? p.unite_achat_produit, p.qte_par_unite_achat ?? p.qte_par_unite_achat_produit, p.mesure)
+      : null;
+    if (propre) return propre;
+    const duProduit = libelleConditionnement(p.unite_achat_produit, p.qte_par_unite_achat_produit, p.mesure);
+    return duProduit ? <span className="text-gray-500">{tp.packagingDefault.replace('{conditionnement}', duProduit)}</span> : '—';
+  }
+  const enEdition = produits?.find(p => p.produit_id === edition?.produitId);
   const dejaFournis = new Set(produits?.map(p => p.produit_id));
   const champ = 'w-full px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
 
@@ -106,6 +126,7 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
                 <th className="px-3 py-2 text-left font-medium">{tp.product}</th>
                 <th className="px-3 py-2 text-left font-medium">{tp.reference}</th>
                 <th className="px-3 py-2 text-right font-medium">{tp.price}</th>
+                <th className="px-3 py-2 text-left font-medium">{tp.packaging}</th>
                 <th className="px-3 py-2 text-right font-medium">{tp.leadTime}</th>
                 <th className="px-3 py-2 text-right font-medium">{tp.lastPrice}</th>
                 <th className="px-3 py-2"><span className="sr-only">{tc.edit}</span></th>
@@ -124,6 +145,7 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">{p.reference_fournisseur ?? '—'}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">{montant(p.prix_achat, deviseFournisseur)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{conditionnement(p)}</td>
                   <td className="px-3 py-2 text-right">{p.delai_livraison ?? '—'}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     {montant(p.dernier_prix, p.dernier_prix_devise)}
@@ -165,6 +187,16 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
               <input id={`${id}-prix`} type="number" min={0} step="0.01" value={edition.prix} onChange={e => setEdition({ ...edition, prix: e.target.value })} className={champ} />
             </div>
             <div>
+              <label htmlFor={`${id}-unite`} className="block text-sm font-medium mb-1 dark:text-gray-300">{tp.purchaseUnit}</label>
+              <input id={`${id}-unite`} maxLength={30} value={edition.unite} onChange={e => setEdition({ ...edition, unite: e.target.value })}
+                placeholder={enEdition?.unite_achat_produit ?? ''} className={champ} />
+            </div>
+            <div>
+              <label htmlFor={`${id}-facteur`} className="block text-sm font-medium mb-1 dark:text-gray-300">{tp.perPurchaseUnit.replace('{mesure}', enEdition?.mesure ?? catalogue.find(p => p.id === edition.produitId)?.mesure ?? '')}</label>
+              <input id={`${id}-facteur`} type="number" min={1} step="1" value={edition.facteur} onChange={e => setEdition({ ...edition, facteur: e.target.value })}
+                placeholder={String(enEdition?.qte_par_unite_achat_produit ?? catalogue.find(p => p.id === edition.produitId)?.qte_par_unite_achat ?? 1)} className={champ} />
+            </div>
+            <div>
               <label htmlFor={`${id}-delai`} className="block text-sm font-medium mb-1 dark:text-gray-300">{tp.leadTime}</label>
               <input id={`${id}-delai`} type="number" min={0} step="1" value={edition.delai} onChange={e => setEdition({ ...edition, delai: e.target.value })} className={champ} />
             </div>
@@ -176,6 +208,7 @@ export default function OngletProduitsFournis({ fournisseurId, devise, deviseFou
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">{tp.mainHint}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{tp.packagingHint}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setEdition(null)} className="px-4 py-2 text-sm border rounded-lg dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700">{tc.cancel}</button>
             <button type="submit" disabled={occupe || !edition.produitId} className="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50">{tc.save}</button>

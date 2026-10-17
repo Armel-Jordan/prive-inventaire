@@ -2239,7 +2239,7 @@ vend aussi dans d'autres unités : la caisse de 12, le carton, la palette.
   - il se facture dans son unité.
 
 **Limite** : un retour client dans une autre unité ne se relie pas à un retour fournisseur. Ce dernier se compte en
-unités de stock et se saisit sans lien, en attendant les unités d'achat (phase 2.2, suite).
+unités de stock et se saisit sans lien. Les unités d'achat de chaque fournisseur sont décrites dans FLOW-ACHATS (section 14).
 
 **PDF** : dès qu'une ligne du document est dans une unité de vente, chaque quantité dit son unité (« 2 CS », « 5 UN ») ;
 sinon le document ne change pas.

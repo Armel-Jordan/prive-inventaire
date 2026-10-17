@@ -177,19 +177,21 @@ class SuggestionsAchat
                         'created_by' => $auteur->id,
                     ]);
                 foreach ($groupe->groupBy('produit_id') as $produitId => $duProduit) {
-                    $quantite = (int) $duProduit->sum(fn (SuggestionAchat $s) => $s->quantite ?: $s->quantite_suggeree);
+                    // Les suggestions se comptent en unités de stock ; la commande, en unités d'achat entières.
+                    $besoin = (float) $duProduit->sum(fn (SuggestionAchat $s) => $s->quantite ?: $s->quantite_suggeree);
                     $ligne = $commande->lignes()->where('produit_id', $produitId)->first();
                     if ($ligne) {
+                        $quantite = UnitesAchat::enAchat($besoin, max(1, (int) $ligne->qte_par_unite_achat));
                         $ligne->update(['quantite_commandee' => $ligne->quantite_commandee + $quantite, 'montant_ligne' => ($ligne->quantite_commandee + $quantite) * (float) $ligne->prix_unitaire]);
                     } else {
                         $produit = $duProduit->first()->produit;
                         $prix = $this->reliquats->dernierPrix((int) $produitId, $fiche->id);
-                        $ligne = ComFourLigne::create([
+                        $conditionnement = app(UnitesAchat::class)->pour($produit, $fiche->id);
+                        $quantite = UnitesAchat::enAchat($besoin, $conditionnement['qte_par_unite_achat']);
+                        $ligne = ComFourLigne::create($conditionnement + [
                             'com_four_entete_id' => $commande->id,
                             'produit_id' => $produitId,
                             'quantite_commandee' => $quantite,
-                            'unite_achat' => $produit?->unite_achat,
-                            'qte_par_unite_achat' => $produit?->qte_par_unite_achat ?? 1,
                             'prix_unitaire' => $prix,
                             'montant_ligne' => $quantite * $prix,
                         ]);
@@ -207,13 +209,14 @@ class SuggestionsAchat
         });
     }
 
-    /** Quantités des commandes fournisseur en préparation (brouillons), par produit. */
+    /** Quantités des commandes fournisseur en préparation (brouillons), par produit, en unités de stock. */
     private function enPreparation(array $produits): Collection
     {
         return ComFourLigne::query()->join('com_four_entete', 'com_four_entete.id', '=', 'com_four_ligne.com_four_entete_id')
             ->whereIn('com_four_entete.id', ComFourEntete::where('statut', ComFourEntete::STATUT_BROUILLON)->select('id'))
             ->whereIn('com_four_ligne.produit_id', $produits)
-            ->groupBy('com_four_ligne.produit_id')->selectRaw('com_four_ligne.produit_id AS produit, SUM(com_four_ligne.quantite_commandee) AS quantite')
+            ->groupBy('com_four_ligne.produit_id')
+            ->selectRaw('com_four_ligne.produit_id AS produit, SUM(com_four_ligne.quantite_commandee * com_four_ligne.qte_par_unite_achat) AS quantite')
             ->pluck('quantite', 'produit');
     }
 }
