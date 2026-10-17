@@ -65,6 +65,7 @@ use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RelanceController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\RetourClientController;
+use App\Http\Controllers\Api\RetourFournisseurController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
@@ -507,6 +508,21 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/commande/{commande}/lignes', [ReceptionController::class, 'lignesEnAttente']);
         Route::post('/', [ReceptionController::class, 'store']);
         Route::post('/multiple', [ReceptionController::class, 'receptionMultiple']);
+    });
+
+    // Retours fournisseurs : marchandise renvoyée (reçue d'une commande, rapportée par un client, ou sans origine),
+    // expédiée puis close quand le fournisseur a répondu (crédit obtenu, remplacement reçu).
+    Route::prefix('retours-fournisseurs')->middleware('module:achats')->group(function () {
+        Route::get('/', [RetourFournisseurController::class, 'index']);
+        Route::get('/depuis-commande/{id}', [RetourFournisseurController::class, 'depuisCommande'])->whereNumber('id');
+        Route::get('/depuis-retour-client/{id}', [RetourFournisseurController::class, 'depuisRetourClient'])->whereNumber('id');
+        Route::get('/{id}', [RetourFournisseurController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/pdf', [RetourFournisseurController::class, 'pdf'])->whereNumber('id');
+        Route::post('/', [RetourFournisseurController::class, 'store']);
+        Route::put('/{id}', [RetourFournisseurController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/expedier', [RetourFournisseurController::class, 'expedier'])->whereNumber('id');
+        Route::post('/{id}/cloturer', [RetourFournisseurController::class, 'cloturer'])->whereNumber('id');
+        Route::delete('/{id}', [RetourFournisseurController::class, 'destroy'])->whereNumber('id');
     });
 
     // ============================================

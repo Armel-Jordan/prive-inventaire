@@ -135,6 +135,16 @@ class VariablesCourriel
                 // Une commande peut être passée dans la devise du fournisseur.
                 'montant_total' => $this->montant($d->montant_total, $langue, $d->devise && $d->devise !== $codeDevise ? $d->devise : $devise),
             ],
+            'retour_fournisseur' => [
+                'numero' => $d->numero,
+                'date' => $date($d->date_expedition ?? $d->date_retour),
+                'type_retour' => $this->typeRetour($d->type, $langue),
+                'numero_rma' => $d->numero_rma,
+                'fournisseur_nom' => $d->fournisseur?->raison_sociale,
+                'fournisseur_code' => $d->fournisseur?->code,
+                'contact_nom' => $d->fournisseur?->contact_nom,
+                'montant' => $montant($d->montant),
+            ],
             default => [],
         };
     }
@@ -164,7 +174,7 @@ class VariablesCourriel
     {
         $en = $langue === 'en';
         $jour = Carbon::today();
-        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'relance' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC'];
+        $prefixes = ['devis' => 'DEV', 'commande_client' => 'CMD', 'facture' => 'FAC', 'relance' => 'FAC', 'avoir' => 'AV', 'demande_acompte' => 'DA', 'bon_livraison' => 'BL', 'commande_fournisseur' => 'BC', 'retour_fournisseur' => 'RF'];
 
         $valeurs = [
             'numero' => ($prefixes[$type] ?? 'DOC').'-00001',
@@ -191,6 +201,8 @@ class VariablesCourriel
             'description' => $en ? 'Deposit before starting the work' : 'Acompte avant le début des travaux',
             'jours_retard' => '15',
             'niveau' => '1',
+            'type_retour' => $this->typeRetour('remboursement', $langue),
+            'numero_rma' => 'RMA-12345',
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));
@@ -204,6 +216,16 @@ class VariablesCourriel
             : number_format((float) $valeur, 2, ',', "\u{00A0}");
 
         return $texte."\u{00A0}".$devise;
+    }
+
+    /** Type d'un retour fournisseur, dans la langue du modèle. */
+    private function typeRetour(?string $type, string $langue): string
+    {
+        $libelles = $langue === 'en'
+            ? ['remboursement' => 'refund', 'remplacement' => 'replacement', 'consigne' => 'returnable container']
+            : ['remboursement' => 'remboursement', 'remplacement' => 'remplacement', 'consigne' => 'contenant consigné'];
+
+        return $libelles[$type] ?? (string) $type;
     }
 
     private function date(mixed $date, string $langue): ?string

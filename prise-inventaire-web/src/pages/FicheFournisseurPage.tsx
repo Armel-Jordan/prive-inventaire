@@ -122,7 +122,7 @@ export default function FicheFournisseurPage() {
           ))}
         </div>
         <div role="tabpanel" id={`${id}-panneau`} aria-labelledby={`${id}-onglet-${onglet}`} className="p-6">
-          {onglet === 'synthese' && <OngletSyntheseFournisseur fournisseurId={fournisseur.id} devise={devise} />}
+          {onglet === 'synthese' && <OngletSyntheseFournisseur fournisseurId={fournisseur.id} code={fournisseur.code} devise={devise} />}
           {onglet === 'historique' && <OngletHistoriqueFournisseur fournisseurId={fournisseur.id} devise={devise} />}
           {onglet === 'produits' && <OngletProduitsFournis fournisseurId={fournisseur.id} devise={devise} deviseFournisseur={fournisseur.devise} onCompte={compterProduits} />}
           {onglet === 'contacts' && (

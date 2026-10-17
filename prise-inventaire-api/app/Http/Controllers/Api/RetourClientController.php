@@ -117,10 +117,11 @@ class RetourClientController extends Controller
     /** Lignes du retour : celles à quantité nulle sont ignorées (l'écran envoie toutes les lignes de la facture). */
     private function valider(Request $request, bool $creation): array
     {
+        // L'application compte en UTC : un jour de marge laisse passer la date du jour de l'utilisateur, quel que soit son fuseau.
         $donnees = $request->validate([
             'client_id' => $creation ? ['required_without:facture_id', 'nullable', 'integer', TenantRule::exists('clients')] : 'prohibited',
             'facture_id' => $creation ? ['nullable', 'integer', TenantRule::exists('factures')] : 'prohibited',
-            'date_retour' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'date_retour' => 'required|date_format:Y-m-d|before_or_equal:tomorrow',
             'notes' => 'nullable|string|max:2000',
             'lignes' => 'required|array|min:1',
             'lignes.*.facture_ligne_id' => 'nullable|integer',

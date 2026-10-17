@@ -101,7 +101,7 @@ class RelancesTest extends TestCase
         $this->assertSame(2, $this->getJson("/api/relances/historique?client_id={$this->clientId}")->assertOk()->json('total'));
 
         $this->postJson("/api/factures/{$enRetard}/relances", ['mode' => 'pigeon', 'date' => '2026-10-16'])->assertUnprocessable()->assertJsonValidationErrors('mode');
-        $this->postJson("/api/factures/{$enRetard}/relances", ['mode' => 'courrier', 'date' => '2026-10-17'])->assertUnprocessable()->assertJsonValidationErrors('date');
+        $this->postJson("/api/factures/{$enRetard}/relances", ['mode' => 'courrier', 'date' => '2026-10-18'])->assertUnprocessable()->assertJsonValidationErrors('date');
     }
 
     public function test_relances_automatiques_delai_intervalle_et_maximum(): void

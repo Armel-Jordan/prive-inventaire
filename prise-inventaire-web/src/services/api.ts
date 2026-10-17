@@ -728,6 +728,8 @@ export interface SyntheseFournisseur {
   livraisons: { commandes_livrees: number; delai_moyen_jours: number | null; a_temps: number | null; taux_reception: number | null };
   achats_mensuels: { mois: string; montant: number }[];
   produits_les_plus_achetes: { produit_id: number; numero: string | null; description: string | null; quantite: number; montant: number; commandes: number; dernier_achat: string | null }[];
+  /** Retours au fournisseur, dans la devise de l'entreprise : crédits attendus et obtenus (avoirs), retours en cours. */
+  retours?: { credits_attendus: number; credits_obtenus: number; en_cours: number; brouillons: number };
 }
 
 export interface LigneHistoriqueFournisseur {
@@ -2067,7 +2069,7 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
 }
 
 // === COURRIELS (paramètres d'envoi et modèles) ===
-export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'bon_livraison' | 'commande_fournisseur' | 'general';
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'bon_livraison' | 'commande_fournisseur' | 'retour_fournisseur' | 'general';
 export type LangueCourriel = 'fr' | 'en';
 
 export interface ContenuModeleCourriel {

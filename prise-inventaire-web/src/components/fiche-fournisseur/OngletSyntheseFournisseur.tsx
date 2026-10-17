@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getSyntheseFournisseur, type SyntheseFournisseur } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { formatDate, formatMontant } from '@/components/fiche/format';
 
 function Carte({ titre, valeur, detail }: { titre: string; valeur: string; detail?: string }) {
@@ -15,9 +17,14 @@ function Carte({ titre, valeur, detail }: { titre: string; valeur: string; detai
   );
 }
 
-/** Synthèse des achats au fournisseur : montants, commandes, reste à recevoir, qualité des livraisons. */
-export default function OngletSyntheseFournisseur({ fournisseurId, devise }: { fournisseurId: number; devise: string }) {
+/**
+ * Synthèse des achats au fournisseur : montants, commandes, reste à recevoir, qualité des livraisons, retours et
+ * crédits obtenus (avoirs).
+ */
+export default function OngletSyntheseFournisseur({ fournisseurId, code, devise }: { fournisseurId: number; code: string; devise: string }) {
   const { t, language } = useLanguage();
+  const { peut } = usePermissions();
+  const tr = t.supplierReturns;
   const ts = t.supplierFile.summary;
   const [synthese, setSynthese] = useState<SyntheseFournisseur | null>(null);
   const [erreur, setErreur] = useState('');
@@ -59,6 +66,20 @@ export default function OngletSyntheseFournisseur({ fournisseurId, devise }: { f
             ? `${commandes.derniere.numero} · ${formatMontant(commandes.derniere.montant, commandes.derniere.devise ?? devise, language)}`
             : commandes.premiere ? `${ts.supplierSince} ${formatDate(commandes.premiere, language)}` : undefined} />
       </div>
+
+      {synthese.retours && peut('retours_fournisseurs', 'voir') && (synthese.retours.en_cours > 0 || synthese.retours.credits_obtenus > 0 || synthese.retours.credits_attendus > 0) && (
+        <section>
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{tr.supplierRecordTitle}</h3>
+            <Link to={`/retours-fournisseurs?recherche=${encodeURIComponent(code)}`} className="text-sm text-orange-700 hover:underline dark:text-orange-300">{tr.supplierRecordLink}</Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Carte titre={tr.creditsExpected} valeur={montant(synthese.retours.credits_attendus)} />
+            <Carte titre={tr.creditsObtained} valeur={montant(synthese.retours.credits_obtenus)} />
+            <Carte titre={tr.inProgress} valeur={String(synthese.retours.en_cours)} />
+          </div>
+        </section>
+      )}
 
       {commandes.nombre === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">{ts.noPurchases}</p>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArchiveRestore, CheckCircle2, Eye, FileText, PackageCheck, PackageX, Pencil, Plus, ReceiptText, Trash2, X } from 'lucide-react';
+import { ArchiveRestore, CheckCircle2, Eye, FileText, PackageCheck, PackageMinus, PackageX, Pencil, Plus, ReceiptText, Trash2, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { formatDateDocument, useMontantDocument } from '@/lib/documents';
@@ -34,6 +35,9 @@ export default function RetoursClientsPage() {
   const { t, language } = useLanguage();
   const tr = t.customerReturns;
   const { peut } = usePermissions();
+  // Renvoyer au fournisseur : seulement avec le module Achats.
+  const { tenant } = useAuth();
+  const achats = !Array.isArray(tenant?.modules) || tenant.modules.includes('achats');
   const montantDoc = useMontantDocument();
   const { toasts, toast, dismiss } = useToast();
   // Liens : recherche globale (/retours-clients?recherche=RC-00001), retour d'une facture (?facture=12).
@@ -139,6 +143,11 @@ export default function RetoursClientsPage() {
               className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={taille} /></button>
           )}
         </>
+      )}
+      {retour.statut === 'traite' && achats && peut('retours_fournisseurs', 'creer') && (
+        <Link to={`/retours-fournisseurs?retour_client=${retour.id}`} title={t.supplierReturns.sendBackToSupplier}
+          aria-label={`${t.supplierReturns.sendBackToSupplier} — ${retour.numero}`}
+          className="p-1 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded"><PackageMinus size={taille} /></Link>
       )}
       {retour.statut === 'traite' && retour.facture_id && !retour.avoir && peut('avoirs', 'creer') && (
         <button type="button" onClick={() => { void crediter(retour); }} title={tr.credit} aria-label={`${tr.credit} — ${retour.numero}`}

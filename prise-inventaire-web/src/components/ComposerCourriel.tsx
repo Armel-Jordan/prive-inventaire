@@ -20,6 +20,7 @@ const ROUTES_PDF: Record<TypeDocumentCourriel, string> = {
   relance: 'factures',
   bon_livraison: 'bons-livraison',
   commande_fournisseur: 'commandes-fournisseur',
+  retour_fournisseur: 'retours-fournisseurs',
 };
 
 const adresses = (texte: string) => texte.split(/[\s,;]+/).map(a => a.trim()).filter(Boolean);

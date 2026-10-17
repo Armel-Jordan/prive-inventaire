@@ -41,6 +41,7 @@ import CommandesClientPage from '@/pages/CommandesClientPage';
 import FacturesPage from '@/pages/FacturesPage';
 import NotesCreditPage from '@/pages/NotesCreditPage';
 import RetoursClientsPage from '@/pages/RetoursClientsPage';
+import RetoursFournisseursPage from '@/pages/RetoursFournisseursPage';
 import AcomptesPage from '@/pages/AcomptesPage';
 import DemandesAcomptePage from '@/pages/DemandesAcomptePage';
 import RelancesPage from '@/pages/RelancesPage';
@@ -150,6 +151,7 @@ function AppRoutes() {
         <Route path="factures" element={<FacturesPage />} />
         <Route path="notes-credit" element={<NotesCreditPage />} />
         <Route path="retours-clients" element={<RetoursClientsPage />} />
+        <Route path="retours-fournisseurs" element={<RetoursFournisseursPage />} />
         <Route path="acomptes" element={<AcomptesPage />} />
         <Route path="demandes-acompte" element={<DemandesAcomptePage />} />
         <Route path="comptes-clients" element={<ComptesClientsPage />} />

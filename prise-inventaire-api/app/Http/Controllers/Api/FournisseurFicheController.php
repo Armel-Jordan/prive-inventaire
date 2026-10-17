@@ -7,6 +7,8 @@ use App\Models\ComFourEntete;
 use App\Models\ComFourLigne;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
+use App\Models\RetourFournisseur;
+use App\Services\RetoursFournisseurs;
 use App\Support\TenantContext;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -107,6 +109,8 @@ class FournisseurFicheController extends Controller
             ],
             'achats_mensuels' => $mensuel,
             'produits_les_plus_achetes' => $this->produitsLesPlusAchetes($fournisseur),
+            // Retours au fournisseur : crédits attendus et obtenus (avoirs), retours en cours.
+            'retours' => app(RetoursFournisseurs::class)->resume(RetourFournisseur::where('fournisseur_id', $fournisseur->id)),
         ]);
     }
 
