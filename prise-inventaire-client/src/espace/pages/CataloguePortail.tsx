@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, PackageSearch, Search, ShoppingCart } from 'lucide-react';
+import { Check, Package, PackageSearch, Search, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import type { PageCatalogue, ProduitCatalogue } from '../api';
@@ -8,7 +8,36 @@ import { useDonnees, usePortail } from '../contexte';
 import { ChampQuantite, Chargement, Message, Pagination } from '../composants';
 import { montant, remplir } from '../format';
 
-/** Catalogue : produits proposés par l'entreprise, au prix du client. */
+/** Image principale d'un produit, lue avec la session ; sans image, un cadre vide garde la grille alignée. */
+function ImageProduit({ produit }: { produit: ProduitCatalogue }) {
+  const { appel } = usePortail();
+  const [adresse, setAdresse] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!produit.image) return;
+    let actif = true;
+    let url: string | null = null;
+    appel<Blob>(`/espace-client/produits/${produit.id}/image`, { fichier: true, accepte: 'image/*' })
+      .then(contenu => {
+        if (!actif) return;
+        url = URL.createObjectURL(contenu);
+        setAdresse(url);
+      })
+      .catch(() => {});
+    return () => {
+      actif = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [appel, produit.id, produit.image]);
+
+  return (
+    <div className="-mx-4 -mt-4 mb-3 h-40 rounded-t-xl bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+      {adresse ? <img src={adresse} alt="" className="max-h-full max-w-full object-contain" /> : <Package size={32} className="text-gray-300" aria-hidden="true" />}
+    </div>
+  );
+}
+
+/** Catalogue : produits proposés par l'entreprise, au prix du client, dans la langue du visiteur. */
 export default function CataloguePortail() {
   const { t, language } = useLanguage();
   const tp = t.portal;
@@ -32,16 +61,19 @@ export default function CataloguePortail() {
   }, [saisie]);
 
   const charger = useCallback(() => {
-    const filtres = new URLSearchParams({ page: String(page) });
+    // La langue choisie : les descriptions traduites de la fiche produit, sinon celles de la fiche.
+    const filtres = new URLSearchParams({ page: String(page), langue: language });
     if (recherche) filtres.set('recherche', recherche);
     if (categorie) filtres.set('categorie', categorie);
     return appel<PageCatalogue>(`/espace-client/catalogue?${filtres}`);
-  }, [appel, page, recherche, categorie]);
+  }, [appel, page, recherche, categorie, language]);
   const { donnees, erreur, chargement } = useDonnees(charger);
 
   const auPanier = useMemo(() => new Map(panier.map(a => [a.produit_id, a.quantite])), [panier]);
   const devise = moi?.entreprise.devise;
   const filtre = recherche !== '' || categorie !== '';
+  // Un cadre d'image sur chaque carte dès qu'un produit de la page en a une.
+  const avecImages = donnees?.data.some(p => p.image) ?? false;
 
   const ajouter = (produit: ProduitCatalogue) => {
     ajouterAuPanier({ produit_id: produit.id, numero: produit.numero, description: produit.description, mesure: produit.mesure, prix: produit.prix }, quantites[produit.id] ?? 1);
@@ -94,11 +126,20 @@ export default function CataloguePortail() {
             {donnees.data.map(produit => {
               const dansPanier = auPanier.get(produit.id);
               const remise = produit.prix !== null && produit.prix_liste !== null && produit.prix_liste > produit.prix;
+              const fabricant = [produit.fabricant, produit.reference_fabricant].filter(Boolean).join(' · ');
               return (
                 <article key={produit.id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col">
+                  {avecImages && <ImageProduit produit={produit} />}
                   <p className="text-xs text-gray-400 truncate">{produit.numero}{produit.categorie ? ` · ${produit.categorie}` : ''}</p>
                   <h2 className="font-medium mt-1 leading-snug">{produit.description}</h2>
+                  {fabricant && <p className="text-xs text-gray-500 mt-0.5" title={tp.manufacturer}>{fabricant}</p>}
                   {produit.mesure && <p className="text-xs text-gray-500 mt-0.5">{remplir(tp.unit, { mesure: produit.mesure })}</p>}
+                  {produit.description_longue && (
+                    <details className="mt-2 text-sm text-gray-600">
+                      <summary className="cursor-pointer text-xs font-medium text-blue-700">{tp.details}</summary>
+                      <p className="mt-1 whitespace-pre-line">{produit.description_longue}</p>
+                    </details>
+                  )}
                   <div className="mt-auto pt-3">
                     {produit.prix === null ? (
                       <p className="text-sm text-gray-500 italic">{tp.priceOnRequest}</p>

@@ -6,11 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\Facture;
+use App\Models\ProduitTenant;
+use App\Models\ProduitTraduction;
 use App\Services\DocumentsVentePdf;
 use App\Services\Portail\CommandesPortail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Portail client, côté commandes : catalogue au prix du client, prix du panier, commandes (passer, suivre,
@@ -26,9 +31,27 @@ class PortailCommandeController extends Controller
             'recherche' => ['nullable', 'string', 'max:100'],
             'categorie' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
+            // Langue du visiteur : les descriptions traduites de la fiche produit.
+            'langue' => ['nullable', Rule::in(ProduitTraduction::LANGUES)],
         ]);
 
-        return response()->json($this->commandes->catalogue($this->client($request), $filtres['recherche'] ?? null, $filtres['categorie'] ?? null, (int) ($filtres['page'] ?? 1)));
+        return response()->json($this->commandes->catalogue($this->client($request), $filtres['recherche'] ?? null, $filtres['categorie'] ?? null,
+            (int) ($filtres['page'] ?? 1), $filtres['langue'] ?? null));
+    }
+
+    /** Image principale d'un produit proposé au portail (une image jointe à sa fiche). */
+    public function image(Request $request, int $id): StreamedResponse
+    {
+        $this->client($request);
+        $produit = $this->commandes->produitsProposes()->whereKey($id)->whereNotNull('image_id')->with('image')->first();
+        $image = $produit?->image;
+        abort_unless($image && in_array($image->type_mime, ProduitTenant::TYPES_IMAGE, true), 404);
+        $stockage = Storage::disk($image->disque);
+        abort_unless($stockage->exists($image->chemin), 404);
+
+        return $stockage->response($image->chemin, null, [
+            'Content-Type' => $image->type_mime, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 
     /** Prix du panier (les règles de quantité s'appliquent). */

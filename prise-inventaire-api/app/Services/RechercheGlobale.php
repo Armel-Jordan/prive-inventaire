@@ -92,7 +92,7 @@ final class RechercheGlobale
                 'module' => null,
                 'cle' => 'numero',
                 'requete' => fn (string $motif) => ProduitTenant::query()->with('secteur:id,code')
-                    ->where(fn (Builder $q) => $q->where($contient(['numero', 'description', 'categorie'])($motif))
+                    ->where(fn (Builder $q) => $q->where($contient(['numero', 'description', 'categorie', 'reference_fabricant'])($motif))
                         ->orWhereHas('codesBarres', fn (Builder $c) => $c->where('code', 'like', $motif))),
                 'resultat' => fn (ProduitTenant $p) => [
                     'id' => $p->id,

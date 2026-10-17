@@ -61,6 +61,12 @@ export interface ProduitCatalogue {
   description: string;
   mesure: string | null;
   categorie: string | null;
+  /** Description longue (spécifications), dans la langue du visiteur quand la fiche est traduite. */
+  description_longue: string | null;
+  fabricant: string | null;
+  reference_fabricant: string | null;
+  /** Le produit a une image principale (lue par /espace-client/produits/{id}/image). */
+  image: boolean;
   /** Prix du client à l'unité ; null : prix sur demande (pas commandable en ligne). */
   prix: number | null;
   prix_liste: number | null;
@@ -199,8 +205,10 @@ export interface OptionsAppel {
   methode?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   corps?: unknown;
   jeton?: string | null;
-  /** Document à télécharger (PDF). */
+  /** Document à télécharger (PDF), ou image. */
   fichier?: boolean;
+  /** Type de fichier attendu (par défaut un PDF). */
+  accepte?: string;
 }
 
 const attendre = (essai: number) => new Promise(resolve => setTimeout(resolve, Math.min(1000 * 2 ** (essai - 1), 4000)));
@@ -209,8 +217,8 @@ const attendre = (essai: number) => new Promise(resolve => setTimeout(resolve, M
  * Requête vers l'API. Lève ApiError (réponse non 2xx, avec son corps) ou NetworkError (pas de réponse). Les
  * lectures sont retentées sur coupure réseau ou erreur serveur ; jamais une commande (pas de doublon).
  */
-export async function appelPortail<T>(chemin: string, { methode = 'GET', corps, jeton, fichier = false }: OptionsAppel = {}): Promise<T> {
-  const entetes: Record<string, string> = { Accept: fichier ? 'application/pdf' : 'application/json' };
+export async function appelPortail<T>(chemin: string, { methode = 'GET', corps, jeton, fichier = false, accepte = 'application/pdf' }: OptionsAppel = {}): Promise<T> {
+  const entetes: Record<string, string> = { Accept: fichier ? accepte : 'application/json' };
   if (corps !== undefined) entetes['Content-Type'] = 'application/json';
   if (jeton) entetes.Authorization = `Bearer ${jeton}`;
   const tentatives = methode === 'GET' ? 3 : 1;

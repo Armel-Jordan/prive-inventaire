@@ -1047,6 +1047,11 @@ export async function ouvrirPieceJointe(piece: PieceJointe): Promise<void> {
   }
 }
 
+/** Contenu d'une pièce jointe, pour l'afficher dans l'écran (aperçu d'une image). */
+export async function getContenuPieceJointe(id: number): Promise<Blob> {
+  return fetchApi<Blob>(`/pieces-jointes/${id}/fichier`, { responseType: 'blob', headers: { Accept: '*/*' }, timeoutMs: 120000 });
+}
+
 // === RECEPTIONS ===
 export interface ReceptionLigne {
   id: number;

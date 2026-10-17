@@ -15,6 +15,9 @@ class ProduitTenant extends Model
 
     protected $connection = 'mysql';
 
+    /** Images acceptées comme image principale de la fiche (pas de SVG : il peut porter du script). */
+    public const TYPES_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
     protected $table = 'produits';
 
     protected $fillable = [
@@ -39,6 +42,11 @@ class ProduitTenant extends Model
         'groupe_emballage',
         'poids_kg',
         'volume_m3',
+        // Fiche enrichie : fabricant et référence chez lui, description longue, image principale (une pièce jointe).
+        'fabricant_id',
+        'reference_fabricant',
+        'description_longue',
+        'image_id',
     ];
 
     protected function casts(): array
@@ -99,6 +107,31 @@ class ProduitTenant extends Model
     public function unites(): HasMany
     {
         return $this->hasMany(ProduitUnite::class, 'produit_id')->orderByDesc('par_defaut')->orderBy('facteur')->orderBy('id');
+    }
+
+    public function fabricant(): BelongsTo
+    {
+        return $this->belongsTo(Fabricant::class, 'fabricant_id')->withTrashed();
+    }
+
+    /** Descriptions dans d'autres langues. */
+    public function traductions(): HasMany
+    {
+        return $this->hasMany(ProduitTraduction::class, 'produit_id')->orderBy('langue');
+    }
+
+    /** Image principale : une image jointe à la fiche. */
+    public function image(): BelongsTo
+    {
+        return $this->belongsTo(PieceJointe::class, 'image_id');
+    }
+
+    /** Description dans une langue : sa traduction s'il y en a une, sinon celle de la fiche. */
+    public function descriptionEn(?string $langue, string $champ = 'description'): ?string
+    {
+        $traduction = $langue ? $this->traductions->firstWhere('langue', $langue) : null;
+
+        return ($traduction?->{$champ} ?: null) ?? $this->{$champ};
     }
 
     public function fournisseurPrincipal(): BelongsTo
