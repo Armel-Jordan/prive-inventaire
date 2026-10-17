@@ -280,6 +280,11 @@ class Permissions
         'gestion_prix' => ['onglet' => 'finance', 'fr' => 'Tarifs et prix', 'en' => 'Prices'],
 
         'produits' => ['onglet' => 'parametres', 'fr' => 'Produits', 'en' => 'Products'],
+        'etiquettes' => ['onglet' => 'parametres', 'fr' => 'Étiquettes', 'en' => 'Labels', 'crud' => ['voir'], 'actions' => [
+            'formats' => ['base' => 'modifier', 'fr' => "Gérer les formats d'étiquettes", 'en' => 'Manage label formats',
+                'aide_fr' => "Créer, modifier ou retirer un format d'étiquette (rouleau ou planche, taille, contenu).",
+                'aide_en' => 'Create, change or remove a label format (roll or sheet, size, content).'],
+        ]],
         'secteurs' => ['onglet' => 'parametres', 'fr' => 'Secteurs', 'en' => 'Sectors'],
         'employes' => ['onglet' => 'parametres', 'fr' => 'Employés', 'en' => 'Employees'],
         'fiches_employes' => ['onglet' => 'parametres', 'fr' => 'Fiches employés', 'en' => 'Employee records'],

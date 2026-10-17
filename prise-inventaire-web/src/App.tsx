@@ -12,6 +12,7 @@ import PrisesInventairePage from '@/pages/PrisesInventairePage';
 import PriseInventairePage from '@/pages/PriseInventairePage';
 import ValorisationInventairePage from '@/pages/ValorisationInventairePage';
 import ProduitsPage from '@/pages/ProduitsPage';
+import EtiquettesPage from '@/pages/EtiquettesPage';
 import SecteursPage from '@/pages/SecteursPage';
 import EmployesPage from '@/pages/EmployesPage';
 import RelocalisationPage from '@/pages/RelocalisationPage';
@@ -141,6 +142,7 @@ function AppRoutes() {
         <Route path="prises-inventaire/:id" element={<PriseInventairePage />} />
         <Route path="valorisation-inventaire" element={<ValorisationInventairePage />} />
         <Route path="produits" element={<ProduitsPage />} />
+        <Route path="etiquettes" element={<EtiquettesPage />} />
         <Route path="secteurs" element={<SecteursPage />} />
         <Route path="employes" element={<EmployesPage />} />
         <Route path="relocalisation" element={<RelocalisationPage />} />

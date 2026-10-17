@@ -17,6 +17,7 @@ use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
 use App\Models\Encaissement;
+use App\Models\EtiquetteFormat;
 use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\MouvementTenant;
@@ -45,6 +46,7 @@ class JournalModifications
      */
     public const MODELES = [
         ProduitTenant::class => ['Produit', ['create', 'update', 'delete']],
+        EtiquetteFormat::class => ["Format d'étiquette", ['create', 'update', 'delete']],
         Secteur::class => ['Secteur', ['create', 'update', 'delete']],
         EmployeTenant::class => ['Employé', ['create', 'update', 'delete']],
         AdminUser::class => ['Compte utilisateur', ['create', 'update', 'delete']],

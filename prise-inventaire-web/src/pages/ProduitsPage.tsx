@@ -1,7 +1,8 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags } from 'lucide-react';
 import FenetreCodesBarres from '@/components/produits/FenetreCodesBarres';
 import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
@@ -249,6 +250,13 @@ export default function ProduitsPage() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          {peut('etiquettes', 'voir') && filtered.some(p => p.actif !== false) && (
+            <Link to={`/etiquettes?produits=${filtered.filter(p => p.actif !== false).slice(0, 200).map(p => p.id).join(',')}`}
+              title={t.labels.printShownHelp}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <Tags size={18} /> {t.labels.printShown}
+            </Link>
+          )}
           <button onClick={exportToCSV} disabled={produits.length === 0}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <Download size={18} /> Exporter
@@ -378,6 +386,12 @@ export default function ProduitsPage() {
                         title={t.barcodes.button} aria-label={`${t.barcodes.button} — ${produit.numero}`}>
                         <Barcode size={16} />
                       </button>
+                      {produit.actif !== false && peut('etiquettes', 'voir') && (
+                        <Link to={`/etiquettes?produits=${produit.id}`} className="inline-block p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2 align-middle"
+                          title={t.labels.buttonHelp.replace('{numero}', produit.numero)} aria-label={`${t.labels.button} — ${produit.numero}`}>
+                          <Tags size={16} />
+                        </Link>
+                      )}
                       {canEdit('produits') && (
                         <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                           <Edit2 size={16} />

@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -162,6 +162,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
     items: [
       { path: '/pieces-jointes', label: t.attachments.title, icon: Paperclip, module: 'configuration' },
       { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
+      { path: '/etiquettes', label: t.labels.nav, icon: Tags, module: 'etiquettes' },
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
       { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
