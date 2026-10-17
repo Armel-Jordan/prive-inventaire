@@ -128,7 +128,8 @@ class ReleveBancaireTest extends TestCase
         $this->importer(self::CSV, $colonnes)->assertOk()->assertJsonPath('nouvelles', 6);
         $this->importer(self::CSV, $colonnes)->assertOk()->assertJsonPath('nouvelles', 0)->assertJsonPath('doublons', 6);
         $releve = $this->getJson("/api/banque/comptes/{$this->banque}/releve?du=2026-10-01&au=2026-10-31")->assertOk()->json();
-        $this->assertSame($colonnes, $releve['import_reglages']);
+        // Sans l'ordre des clés : MySQL trie celles d'une colonne JSON.
+        $this->assertEquals($colonnes, $releve['import_reglages']);
         $this->assertSame(6, $releve['resume']['non_reliee']);
 
         // Meilleures correspondances : 500 et 75 ; pas les chèques de 200 (deux mouvements possibles chacun).
