@@ -132,11 +132,11 @@ export async function rouvrirPeriode(id: number): Promise<PeriodeComptable> {
 export type TypeJournal = 'general' | 'ventes' | 'achats' | 'tresorerie' | 'ouverture';
 export type SourceEcriture = 'manuelle' | 'ouverture' | 'cloture' | 'recurrente'
   // Comptabilisation automatique, par type de document.
-  | 'facture' | 'avoir' | 'paiement_client' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur';
+  | 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur';
 
 /** Sources des écritures, dans l'ordre du filtre du journal. */
 export const SOURCES_ECRITURE: SourceEcriture[] = [
-  'manuelle', 'ouverture', 'cloture', 'recurrente', 'facture', 'avoir', 'paiement_client', 'acompte', 'remboursement_acompte',
+  'manuelle', 'ouverture', 'cloture', 'recurrente', 'facture', 'avoir', 'paiement_client', 'encaissement', 'acompte', 'remboursement_acompte',
   'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur',
 ];
 export const TYPES_JOURNAL: TypeJournal[] = ['general', 'ventes', 'achats', 'tresorerie', 'ouverture'];

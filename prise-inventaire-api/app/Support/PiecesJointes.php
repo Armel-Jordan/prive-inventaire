@@ -8,6 +8,7 @@ use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
+use App\Models\Encaissement;
 use App\Models\Facture;
 use App\Models\FactureFournisseur;
 use App\Models\Fournisseur;
@@ -29,6 +30,8 @@ final class PiecesJointes
         'devis' => [Devis::class, 'ventes'],
         'commande_client' => [ComClientEntete::class, 'ventes'],
         'facture' => [Facture::class, 'ventes'],
+        // Encaissement : la numérisation du chèque, l'avis de virement.
+        'encaissement' => [Encaissement::class, 'ventes'],
         'bon_livraison' => [BonLivraison::class, 'ventes'],
         'commande_fournisseur' => [ComFourEntete::class, 'achats'],
         // La facture reçue du fournisseur (PDF, photo) se joint à sa saisie.

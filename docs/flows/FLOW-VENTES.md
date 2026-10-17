@@ -135,6 +135,7 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Enregistrer paiement | ✅ | Statuts `emise` ou `partiellement_payee` |
 | Créditer (note de crédit) | ✅ | Statuts `emise`, `partiellement_payee` ou `payee` (§5.8) |
 | Payer avec un acompte | ✅ | Statuts `emise` ou `partiellement_payee`, acompte disponible du client (§5.9) |
+| Encaisser avec d'autres factures du client | ✅ | Statuts `emise` ou `partiellement_payee` : un encaissement réparti sur plusieurs factures (§7 quater) |
 | Créer BL | ✅ | Statut `emise`, si aucun BL existant |
 
 ### Bons de Livraison
@@ -1774,6 +1775,70 @@ La liste (`GET /relances`) exige le droit de consulter les relances.
 Code :
 - API : service `App\Services\Relances`, contrôleur `RelanceController`, tâche `App\Taches\RelancerFacturesEnRetard`, migration `2026_10_16_100033_creer_relances_paiement` ;
 - web : écran `RelancesPage`, service `src/services/relances.ts`.
+
+---
+
+## 7 quater. Encaissements (Ventes → Encaissements)
+
+Plan de parité fripv2, phase 4.4 (« Encaissement d'un client ») : l'argent reçu d'un client en une fois (un chèque, un virement…) se répartit sur plusieurs de ses factures.
+
+**Saisir un encaissement** (bouton **Nouvel encaissement**, ou bouton de la ligne d'un client dans Comptes clients) :
+- **Client, montant reçu, date, mode** (chèque, virement, espèces, carte, autre) **et référence** (n° de chèque, de virement).
+- **Devise** : celle du client par défaut. Seules ses factures dans cette devise sont proposées, avec leur taux de change.
+- **Factures dues** : émises ou en partie payées, avec un reste à payer. Elles sont listées l'échéance la plus ancienne d'abord, avec leur retard.
+- **Répartition** :
+  - à la main, facture par facture, au plus son reste ;
+  - case **Tout** : le reste entier de la facture ;
+  - bouton **Répartir automatiquement** : le montant reçu va aux factures dans l'ordre, la plus ancienne d'abord.
+- **Différence** entre le montant reçu et la répartition :
+  - **surplus** : il reste au crédit du client, en **acompte** (§5.9), qu'il pourra appliquer sur une autre facture ou se faire rembourser ;
+  - **sans aucune facture**, tout le montant est une **avance** du client ;
+  - **répartition supérieure au montant reçu** : refusée, sauf si la différence est **accordée en escompte**. L'escompte se partage entre les factures au prorata de leur part, et les factures sont alors réglées en entier.
+- **Crédits du client** : ses acomptes et notes de crédit encore disponibles sont rappelés ; ils s'appliquent depuis leurs écrans.
+- **Caisse** : sur un poste de caisse, l'encaissement entre dans la session ouverte (§5.19). La caisse attend les paiements des factures et le surplus.
+- **Contrôles** :
+  - factures du client, dues, dans la devise de l'encaissement, chacune une seule fois ;
+  - pas plus que le reste d'une facture ;
+  - pas de date avant celle d'une facture, ni plus tard que demain.
+- **Numéro** : `ENC-00001` (Paramètres → Numérotation). Il n'est consommé qu'à l'enregistrement.
+
+**Ce qui est enregistré :**
+- Chaque part devient un **paiement de sa facture**, au mode et à la référence de l'encaissement (à défaut, son numéro). Le reste à payer, le statut, les échéances, l'encours, le relevé et la caisse suivent comme pour tout paiement.
+- Le surplus devient un acompte du client, avec le numéro de l'encaissement en référence. Il suit l'encaissement : son montant, sa date et son mode ne se changent pas depuis l'écran Acomptes, et il ne s'y supprime pas.
+
+**Détail d'un encaissement** :
+- factures réglées (escompte compris) ;
+- surplus et ce qui en reste ;
+- **reçu** imprimable (PDF) : client, date, mode, référence, factures réglées, escompte, surplus, montant reçu ;
+- pièces jointes (chèque numérisé, avis de virement) ;
+- **corriger** : la référence et les notes (les paiements des factures suivent la référence). Le reste se corrige en annulant puis en refaisant l'encaissement.
+
+**Annuler un encaissement** (avec un motif) :
+- ses paiements sont retirés des factures, qui redeviennent dues d'autant (une facture sans plus aucun paiement redevient « émise ») ;
+- son surplus est supprimé ;
+- un encaissement dont le surplus a déjà été appliqué ou remboursé ne s'annule plus ;
+- l'encaissement reste dans la liste, barré, avec la date, l'auteur et le motif.
+
+**Liste** : recherche par numéro, référence, client ou facture ; filtres mode, statut et période ; totaux des encaissements valides (montant reçu, escompte, surplus) dans la devise de l'entreprise.
+
+**Comptabilité** : la comptabilisation automatique passe un encaissement en **une écriture**. L'argent reçu va en caisse ou en banque, l'escompte au débit ; chaque facture réglée est au crédit du client et le surplus au crédit des acomptes clients. Un encaissement annulé fait contre-passer son écriture (voir FLOW-COMPTABILITE).
+
+**Droits** : module **Encaissements** (`encaissements`), réglé pour chaque groupe comme l'enregistrement des paiements de factures.
+- **Consulter** : liste, détail, reçu ; les lectures de `/encaissements` sont contrôlées.
+- **Saisir** : créer.
+- **Corriger** : modifier.
+- **Annuler un encaissement** : `encaissements.annuler`.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/encaissements` | Liste (`recherche`, `client_id`, `mode`, `statut`, `date_debut`, `date_fin`) et `resume` |
+| GET | `/encaissements/a-regler?client_id=&devise=` | Factures dues du client dans la devise, total dû, crédits disponibles |
+| POST | `/encaissements` | Saisie (`client_id`, `date_encaissement`, `mode`, `reference`, `montant`, `devise`, `taux_change`, `notes`, `escompte`, `caisse_id`, `lignes[]` : `facture_id`, `montant`) |
+| GET / PUT | `/encaissements/{id}` | Détail ; correction (`reference`, `notes`) |
+| POST | `/encaissements/{id}/annuler` | Annulation (`motif`) |
+| GET | `/encaissements/{id}/pdf` | Reçu |
+
+Code : services `App\Services\Encaissements` et `EncaissementPdf`, `EncaissementController`, vue `pdf/recu-encaissement` ; web : page `EncaissementsPage`, composants `encaissements/FenetreEncaissement` et `encaissements/DetailEncaissement`, service `src/services/encaissements.ts` ; migration `2026_10_17_100063_creer_encaissements` (tables `encaissements`, `encaissement_lignes`, colonne `facture_paiements.encaissement_id`, droits du module).
 
 ---
 

@@ -59,6 +59,7 @@ class Droits
         'avoirs' => 'avoirs',
         'retours-clients' => 'retours_clients',
         'acomptes' => 'acomptes',
+        'encaissements' => 'encaissements',
         'demandes-acompte' => 'demandes_acompte',
         'caisses' => 'caisses',
         'point-de-vente' => 'point_de_vente',
@@ -92,6 +93,8 @@ class Droits
     private const LECTURES = [
         'comptabilite' => 'comptabilite',
         'comptes-clients' => 'comptes_clients',
+        // Encaissements des clients : l'argent reçu et sa répartition.
+        'encaissements' => 'encaissements',
         'relances' => 'relances',
         'portail-clients' => 'espace_client',
         // Sessions de caisse : montants des tiroirs.
@@ -168,6 +171,7 @@ class Droits
         'POST api/retours-clients/{id}/crediter' => ['avoirs', 'creer'],
         'POST api/acomptes/{id}/appliquer' => ['acomptes', 'appliquer'],
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
+        'POST api/encaissements/{id}/annuler' => ['encaissements', 'annuler'],
         'POST api/demandes-acompte/{id}/envoyer' => ['demandes_acompte', 'envoyer'],
         'POST api/demandes-acompte/{id}/encaisser' => ['demandes_acompte', 'encaisser'],
         // Grilles de prix fournisseur : importer (la simulation aussi) ; profils d'import (seul type : prix fournisseur).

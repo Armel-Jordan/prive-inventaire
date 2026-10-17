@@ -162,6 +162,11 @@ class Permissions
             'encaisser' => ['base' => 'modifier', 'fr' => 'Enregistrer un paiement', 'en' => 'Record a payment',
                 'aide_fr' => 'Enregistrer un paiement reçu sur une facture.', 'aide_en' => 'Record a payment received on an invoice.'],
         ]],
+        'encaissements' => ['onglet' => 'ventes', 'fr' => 'Encaissements', 'en' => 'Customer payments', 'crud' => ['voir', 'creer', 'modifier'], 'actions' => [
+            'annuler' => ['base' => 'modifier', 'fr' => 'Annuler un encaissement', 'en' => 'Cancel a customer payment',
+                'aide_fr' => "Annuler un encaissement saisi par erreur : ses paiements sont retirés des factures, et le surplus laissé en acompte est supprimé s'il n'a pas servi.",
+                'aide_en' => 'Cancel a customer payment entered by mistake: its payments are removed from the invoices, and the surplus left as a deposit is deleted if unused.'],
+        ]],
         'avoirs' => ['onglet' => 'ventes', 'fr' => 'Notes de crédit', 'en' => 'Credit notes', 'actions' => [
             'emettre' => ['base' => 'modifier', 'fr' => 'Émettre une note de crédit', 'en' => 'Issue a credit note',
                 'aide_fr' => 'Émettre une note de crédit brouillon : elle reçoit son numéro et réduit ce qui reste dû de sa facture.',

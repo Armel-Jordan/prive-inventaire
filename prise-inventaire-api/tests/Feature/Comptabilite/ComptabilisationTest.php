@@ -186,6 +186,41 @@ class ComptabilisationTest extends TestCase
         $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('contre_passations', 0);
     }
 
+    public function test_encaissement_comptabilise_en_une_ecriture_puis_contre_passe(): void
+    {
+        $this->regler();
+        $premiere = $this->facture('2026-10-10', 10);
+        $seconde = $this->facture('2026-10-11', 2);
+        // Un chèque de 1 500 pour les deux factures (1 192,50 + 200) : 107,50 restent au crédit du client.
+        $cheque = $this->postJson('/api/encaissements', [
+            'client_id' => $this->client, 'date_encaissement' => '2026-10-14', 'mode' => 'cheque', 'reference' => 'CHQ-5', 'montant' => 1500,
+            'lignes' => [['facture_id' => $premiere['id'], 'montant' => 1192.5], ['facture_id' => $seconde['id'], 'montant' => 200]],
+        ])->assertCreated()->json();
+        // 30 en espèces pour solder les 38,50 restants : 8,50 d'escompte.
+        $especes = $this->postJson('/api/encaissements', [
+            'client_id' => $this->client, 'date_encaissement' => '2026-10-15', 'mode' => 'especes', 'montant' => 30, 'escompte' => true,
+            'lignes' => [['facture_id' => $seconde['id'], 'montant' => 38.5]],
+        ])->assertCreated()->json();
+        // Une avance annulée avant d'être comptabilisée ne passe pas au journal.
+        $avance = $this->postJson('/api/encaissements', ['client_id' => $this->client, 'date_encaissement' => '2026-10-15', 'mode' => 'virement', 'montant' => 50])
+            ->assertCreated()->json('id');
+        $this->postJson("/api/encaissements/{$avance}/annuler")->assertOk();
+
+        // Les paiements et le surplus d'un encaissement passent avec lui, en une écriture.
+        $apercu = collect($this->getJson('/api/comptabilite/comptabilisation/apercu')->assertOk()->json('types'))->keyBy('type');
+        $this->assertEquals([0, 2, 1538.5, 0], [$apercu['paiement_client']['nombre'], $apercu['encaissement']['nombre'], $apercu['encaissement']['montant'], $apercu['acompte']['nombre']]);
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 4)->assertJsonPath('par_type.encaissement', 2);
+        $this->assertSame(['BQ', [['521', 1500.0, 0.0], ['411', 0.0, 1192.5], ['411', 0.0, 200.0], ['419', 0.0, 107.5]], '2026-10-14'], $this->ecriture('encaissement', $cheque['id']));
+        $this->assertSame(['CA', [['571', 30.0, 0.0], ['673', 8.5, 0.0], ['411', 0.0, 38.5]], '2026-10-15'], $this->ecriture('encaissement', $especes['id']));
+        $this->getJson('/api/comptabilite/ecritures?source=encaissement')->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('data.0.modifiable', false);
+
+        // Annulé ensuite : son écriture est contre-passée à la date de l'annulation.
+        $this->postJson("/api/encaissements/{$cheque['id']}/annuler", ['motif' => 'Chèque refusé'])->assertOk();
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('creees', 0)->assertJsonPath('contre_passations', 1);
+        $this->assertSame(['BQ', [['521', 0.0, 1500.0], ['411', 1192.5, 0.0], ['411', 200.0, 0.0], ['419', 107.5, 0.0]], '2026-10-16'], $this->ecriture('encaissement', $cheque['id'], true));
+        $this->postJson('/api/comptabilite/comptabilisation')->assertOk()->assertJsonPath('contre_passations', 0);
+    }
+
     public function test_refus_tache_droits_et_isolation(): void
     {
         $this->regler();

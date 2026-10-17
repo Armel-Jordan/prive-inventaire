@@ -9,7 +9,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { IconePieceJointe } from '@/components/PiecesJointes';
 import { formatTaille } from '@/lib/utils';
 
-const ENTITES: EntitePieceJointe[] = ['client', 'fournisseur', 'produit', 'employe', 'devis', 'commande_client', 'facture', 'bon_livraison', 'commande_fournisseur', 'facture_fournisseur'];
+const ENTITES: EntitePieceJointe[] = ['client', 'fournisseur', 'produit', 'employe', 'devis', 'commande_client', 'facture', 'bon_livraison', 'commande_fournisseur', 'facture_fournisseur', 'encaissement'];
 
 /** Toutes les pièces jointes de l'entreprise : recherche, filtre par type de fiche, ouverture, nettoyage. */
 export default function PiecesJointesPage() {
