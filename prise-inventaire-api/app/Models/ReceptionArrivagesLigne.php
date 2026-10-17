@@ -14,21 +14,32 @@ class ReceptionArrivagesLigne extends Model
     protected $table = 'reception_arrivages_ligne';
 
     protected $fillable = [
+        'reception_id',
         'com_four_ligne_id',
         'date_reception',
         'quantite_recue',
+        'cout_unitaire',
         'secteur_id',
         'lot_numero',
         'date_peremption',
         'notes',
         'received_by',
+        'annulee',
     ];
 
     protected $casts = [
         'date_reception' => 'date',
         'date_peremption' => 'date',
         'quantite_recue' => 'integer',
+        'cout_unitaire' => 'decimal:4',
+        'annulee' => 'boolean',
     ];
+
+    /** Document de la réception (vide pour les réceptions enregistrées avant leur numérotation). */
+    public function reception(): BelongsTo
+    {
+        return $this->belongsTo(Reception::class);
+    }
 
     public function ligneCommande(): BelongsTo
     {

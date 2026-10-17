@@ -522,6 +522,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/commande/{commande}/lignes', [ReceptionController::class, 'lignesEnAttente']);
         Route::post('/', [ReceptionController::class, 'store']);
         Route::post('/multiple', [ReceptionController::class, 'receptionMultiple']);
+        // Réceptions documentées (phase 3.3) : historique, détail, correction (date, références, coûts), annulation, PDF.
+        Route::get('/documents', [ReceptionController::class, 'documents']);
+        Route::get('/documents/{id}', [ReceptionController::class, 'document'])->whereNumber('id');
+        Route::put('/documents/{id}', [ReceptionController::class, 'modifier'])->whereNumber('id');
+        Route::post('/documents/{id}/annuler', [ReceptionController::class, 'annuler'])->whereNumber('id');
+        Route::get('/documents/{id}/pdf', [ReceptionController::class, 'pdf'])->whereNumber('id');
     });
 
     // Retours fournisseurs : marchandise renvoyée (reçue d'une commande, rapportée par un client, ou sans origine),

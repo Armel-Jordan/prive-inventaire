@@ -83,7 +83,11 @@ class Permissions
                 'aide_fr' => "Signaler depuis un produit qu'il faut le commander, sans pouvoir passer de commande soi-même.",
                 'aide_en' => 'Flag from a product that it must be ordered, without being able to place an order yourself.'],
         ]],
-        'receptions' => ['onglet' => 'achats', 'fr' => 'Réceptions', 'en' => 'Receipts'],
+        'receptions' => ['onglet' => 'achats', 'fr' => 'Réceptions', 'en' => 'Receipts', 'actions' => [
+            'annuler' => ['base' => 'supprimer', 'fr' => 'Annuler une réception', 'en' => 'Cancel a receipt',
+                'aide_fr' => 'Annuler une réception saisie par erreur : ses quantités sont retirées des commandes fournisseur et des reliquats clients.',
+                'aide_en' => 'Cancel a receipt entered by mistake: its quantities are removed from the purchase orders and customer back orders.'],
+        ]],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',
                 'aide_fr' => 'Expédier un retour brouillon : il reçoit son numéro, et ce qui était en stock sort de son secteur.',

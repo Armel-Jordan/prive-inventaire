@@ -90,6 +90,7 @@ class Configuration extends Model
         'demande_acompte' => ['prefixe' => 'DA', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'retour_client' => ['prefixe' => 'RC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'retour_fournisseur' => ['prefixe' => 'RF', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
+        'reception' => ['prefixe' => 'REC', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'bon_livraison' => ['prefixe' => 'BL', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
         'contrat_location' => ['prefixe' => 'CT', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],

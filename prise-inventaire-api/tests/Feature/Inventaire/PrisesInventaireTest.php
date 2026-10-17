@@ -195,6 +195,44 @@ class PrisesInventaireTest extends TestCase
         $this->assertEquals([15, 15, 0, 5, 5, 'conforme'], [$ligne['quantite_comptee'], $ligne['quantite_reference'], $ligne['ecart'], $ligne['entrees_depuis'], $ligne['sorties_depuis'], $ligne['statut']]);
     }
 
+    public function test_les_receptions_comptent_en_unites_de_stock_sans_les_annulees(): void
+    {
+        $this->travelTo('2026-10-16 08:00:00');
+        $premiere = $this->nouvellePrise([$this->a]);
+        $this->scan('CIM-50', 15, 'A-01', '2026-10-16 09:00:00');
+        $this->travelTo('2026-10-16 12:00:00');
+        $this->postJson("/api/prises-inventaire/{$premiere}/valider")->assertOk();
+
+        // 2 cartons de 12 rangés dans le secteur, et une réception de 5 cartons annulée ensuite.
+        $this->travelTo('2026-10-16 16:00:00');
+        $this->chez(function () {
+            $fournisseur = Fournisseur::create(['code' => 'F1', 'raison_sociale' => 'Fournisseur']);
+            $commande = ComFourEntete::create([
+                'numero' => 'BC-0001', 'fournisseur_id' => $fournisseur->id, 'date_commande' => now()->toDateString(),
+                'statut' => ComFourEntete::STATUT_ENVOYEE, 'montant_total' => 0, 'created_by' => $this->admin->id,
+            ]);
+            $ligne = ComFourLigne::create([
+                'com_four_entete_id' => $commande->id, 'produit_id' => ProduitTenant::where('numero', 'CIM-50')->value('id'),
+                'quantite_commandee' => 10, 'quantite_recue' => 0, 'unite_achat' => 'Carton', 'qte_par_unite_achat' => 12, 'prix_unitaire' => 12,
+            ]);
+            foreach ([[2, false], [5, true]] as [$quantite, $annulee]) {
+                DB::table('reception_arrivages_ligne')->insert([
+                    'com_four_ligne_id' => $ligne->id, 'date_reception' => now()->toDateString(), 'quantite_recue' => $quantite, 'annulee' => $annulee,
+                    'secteur_id' => $this->a->id, 'received_by' => $this->admin->id, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        });
+
+        $this->travelTo('2026-10-17 08:00:00');
+        $seconde = $this->nouvellePrise([$this->a]);
+        $this->scan('CIM-50', 39, 'A-01', '2026-10-17 09:00:00');
+        $this->travelTo('2026-10-17 10:00:00');
+
+        // L'écart de 24 avec le dernier inventaire s'explique par les entrées connues : 2 cartons de 12, sans l'annulée.
+        $ligne = $this->lignes($seconde)['A-01|CIM-50'];
+        $this->assertEquals([39, 15, 24, 24], [$ligne['quantite_comptee'], $ligne['quantite_reference'], $ligne['ecart'], $ligne['entrees_depuis']]);
+    }
+
     public function test_annulation_export_et_isolation(): void
     {
         $this->travelTo('2026-10-16 08:00:00');
