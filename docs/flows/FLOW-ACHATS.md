@@ -794,6 +794,7 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
 - **Corriger** : modifier.
 - **Annuler un déboursé** : `debourses.annuler`.
 - **Imprimer les chèques** : `debourses.cheques` (réglé comme la saisie d'un déboursé).
+- **Générer les fichiers de virement** : `debourses.virements` (même réglage) ; il faut aussi ce droit pour télécharger un fichier (coordonnées bancaires) ou marquer un lot refusé.
 
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -805,6 +806,10 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
 | GET | `/debourses/{id}/pdf` | Avis de paiement |
 | POST | `/debourses/cheques/numeroter` | `{debourses: [ids]}` : numéroter les chèques (prochain numéro du chéquier, ou la référence) ; `cheques[]` : `id`, `numero`, `cheque`, `nouveau` |
 | GET | `/debourses/cheques/pdf?debourses=1,2&langue=fr\|en` | Les chèques numérotés, un par page |
+| GET | `/debourses/virements?statut=a_transmettre\|emis\|refuse&compte_bancaire_id=` | Déboursés par virement (compte du fournisseur, `alertes`) et comptes de l'entreprise (`prochain_lot`, `virement_format`) |
+| GET / POST | `/debourses/virements/lots` | Lots ; générer (`compte_bancaire_id`, `debourses[]`, `format` sepa\|csv, `date_execution`, `numero`, `emetteur`) |
+| GET | `/debourses/virements/lots/{id}/fichier` | Le fichier du lot, tel qu'il a été transmis |
+| POST | `/debourses/virements/lots/{id}/refuser` | Lot refusé par la banque (`motif`) : ses déboursés redeviennent à transmettre |
 
 Code : services `App\Services\Debourses` et `AvisPaiementPdf`, `DebourseController`, vue `pdf/avis-paiement` ; web : page `DeboursesPage`, composants `debourses/FenetreDebourse` et `debourses/DetailDebourse`, service `src/services/debourses.ts` ; migration `2026_10_17_100064_creer_debourses` (tables `debourses`, `debourse_lignes`, colonnes `facture_fournisseur_paiements.escompte` et `.debourse_id`, `parametres_comptables.compte_escomptes_obtenus_id`, droits du module).
 
@@ -841,6 +846,43 @@ Comme le « Rapport d'impression de chèque » de fripv2 : le chèque d'un débo
 - les centimes en chiffres ; le franc CFA sans centimes.
 
 Code : service `App\Services\Cheques`, `ChequeController`, vue `pdf/cheque` ; migration `2026_10_17_100069_cheques_debourses` (`comptes_bancaires.prochain_cheque`, `debourses.cheque_imprime_le` et `cheque_imprime_par`, action `debourses.cheques`).
+
+### Virements aux fournisseurs (Achats → Virements)
+
+Comme la « Gestion des TFE » de fripv2 : les déboursés payés par virement partent à la banque en lots, dans un fichier à déposer sur son portail.
+
+**Onglets** :
+- **À transmettre** : les déboursés par virement, valides, avec un montant, dans aucun lot (ou dans un lot refusé) ;
+- **Transmis**, **Refusés** ;
+- **Lots** : l'historique.
+- Filtre : le compte bancaire de l'entreprise.
+
+**Le compte crédité** est le compte principal actif du fournisseur (fiche du fournisseur, Coordonnées bancaires), sinon son premier compte actif. Il est retenu sur le déboursé à l'envoi.
+
+**Alertes** avant d'envoyer :
+- pas de compte bancaire de l'entreprise sur le déboursé ;
+- pas de compte du fournisseur, ou ni IBAN ni numéro ;
+- IBAN invalide (clé vérifiée) ;
+- **coordonnées bancaires modifiées depuis moins de 30 jours** (date et auteur) : c'est le premier signe d'une fraude au virement, à vérifier auprès du fournisseur.
+
+**Générer un lot** (cocher les déboursés, puis **Générer le fichier**) :
+- un lot part d'un seul compte bancaire de l'entreprise, dans une seule devise ;
+- **format** :
+  - **SEPA** (pain.001.001.03, XML, IBAN exigés, BIC si connu ; niveau de service SEPA et frais partagés SLEV en euros, SHAR sinon) ;
+  - **CSV** (point-virgule, montants au point, sans BOM : IBAN ou numéro de compte) ;
+- **date d'exécution** : demain par défaut, pas dans le passé ;
+- **numéro de lot** : le prochain du compte, modifiable s'il est libre ;
+- **identifiant d'émetteur** (facultatif, donné par la banque) ;
+- le format et l'émetteur sont retenus sur le compte pour les lots suivants.
+- **Tout est vérifié avant d'écrire le fichier**. S'il manque quoi que ce soit, rien n'est créé et la liste des problèmes s'affiche. fripv2 écarte la ligne et continue ; ici, on corrige ou on décoche.
+- Le fichier est téléchargé aussitôt et **gardé tel quel** : on le retélécharge à l'identique depuis l'onglet Lots.
+- Chaque virement porte le numéro du déboursé (référence de bout en bout) et ses factures (libellé).
+
+**Après l'envoi** :
+- un déboursé transmis ne s'annule pas tant que son lot n'est pas marqué refusé (un virement transmis peut encore être exécuté) ;
+- **Refusé par la banque** (avec un motif) : le lot est noté refusé (date, auteur), et ses déboursés redeviennent à transmettre pour un nouveau lot.
+
+Code : service `App\Services\Virements`, `VirementController`, modèle `VirementLot` ; web : page `VirementsPage`, composant `virements/FenetreLotVirements`, service `src/services/virements.ts` ; migration `2026_10_17_100070_creer_virements_fournisseurs` (`comptes_bancaires.virement_format`, `virement_emetteur`, `prochain_lot` ; table `virements_lots` ; `debourses.virement_lot_id`, `virement_statut`, `virement_compte_id` ; action `debourses.virements`).
 
 ### Paiements dus (Achats → Paiements dus)
 

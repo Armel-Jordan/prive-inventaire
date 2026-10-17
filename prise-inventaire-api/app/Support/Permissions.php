@@ -103,6 +103,9 @@ class Permissions
             'cheques' => ['base' => 'creer', 'fr' => 'Imprimer les chèques', 'en' => 'Print cheques',
                 'aide_fr' => 'Numéroter et imprimer les chèques des déboursés payés par chèque, sur le chéquier de leur compte bancaire.',
                 'aide_en' => 'Number and print the cheques of disbursements paid by cheque, from the chequebook of their bank account.'],
+            'virements' => ['base' => 'creer', 'fr' => 'Générer les fichiers de virement', 'en' => 'Generate transfer files',
+                'aide_fr' => 'Transmettre les déboursés payés par virement en un fichier SEPA ou CSV pour la banque, le télécharger, le marquer refusé.',
+                'aide_en' => 'Send disbursements paid by transfer to the bank in a SEPA or CSV file, download it, mark it refused.'],
         ]],
         'retours_fournisseurs' => ['onglet' => 'achats', 'fr' => 'Retours fournisseurs', 'en' => 'Supplier returns', 'actions' => [
             'expedier' => ['base' => 'modifier', 'fr' => 'Expédier un retour fournisseur', 'en' => 'Ship a supplier return',

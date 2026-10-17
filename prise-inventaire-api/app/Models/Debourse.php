@@ -27,7 +27,7 @@ class Debourse extends Model
     protected $fillable = [
         'tenant_id', 'numero', 'fournisseur_id', 'date_debourse', 'mode', 'reference', 'devise', 'taux_change', 'montant',
         'montant_applique', 'escompte', 'compte_bancaire_id', 'notes', 'statut', 'enregistre_par', 'annule_le', 'annule_par', 'motif_annulation',
-        'cheque_imprime_le', 'cheque_imprime_par',
+        'cheque_imprime_le', 'cheque_imprime_par', 'virement_lot_id', 'virement_statut', 'virement_compte_id',
     ];
 
     protected $casts = [
@@ -51,6 +51,12 @@ class Debourse extends Model
     }
 
     /** Compte bancaire par lequel passe l'argent (vide : le compte de banque des réglages de comptabilisation). */
+    /** Lot de virements transmis à la banque (paiement par virement). */
+    public function virementLot(): BelongsTo
+    {
+        return $this->belongsTo(VirementLot::class, 'virement_lot_id');
+    }
+
     public function compteBancaire(): BelongsTo
     {
         return $this->belongsTo(CompteBancaire::class)->withTrashed();

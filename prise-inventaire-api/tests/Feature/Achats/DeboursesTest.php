@@ -198,7 +198,7 @@ class DeboursesTest extends TestCase
         // Catalogue : le module et ses actions.
         $this->agir($this->admin);
         $modules = collect(collect($this->getJson('/api/permissions/catalogue')->assertOk()->json('onglets'))->firstWhere('cle', 'achats')['modules'])->keyBy('cle');
-        $this->assertSame(['debourses.voir', 'debourses.creer', 'debourses.modifier', 'debourses.annuler', 'debourses.cheques'], array_column($modules['debourses']['permissions'], 'code'));
+        $this->assertSame(['debourses.voir', 'debourses.creer', 'debourses.modifier', 'debourses.annuler', 'debourses.cheques', 'debourses.virements'], array_column($modules['debourses']['permissions'], 'code'));
 
         // Une autre entreprise ne voit ni n'annule ces déboursés.
         $autre = Tenant::factory()->create(['modules' => ['achats']]);

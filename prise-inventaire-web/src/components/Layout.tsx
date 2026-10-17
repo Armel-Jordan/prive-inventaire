@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -101,6 +101,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/factures-fournisseurs', label: t.supplierInvoices.nav, icon: FileInput, module: 'factures_fournisseurs' },
       { path: '/debourses', label: t.supplierPayments.nav, icon: BanknoteArrowUp, module: 'debourses' },
       { path: '/paiements-dus', label: t.paymentsDue.nav, icon: CalendarClock, module: 'debourses' },
+      { path: '/virements', label: t.transfers.nav, icon: Send, module: 'debourses' },
     ],
   },
   {
