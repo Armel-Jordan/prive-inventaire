@@ -11,6 +11,8 @@ use App\Models\Devis;
 use App\Models\DevisLigne;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
+use App\Services\Portail\AccesPortail;
+use App\Services\ReponsesDevis;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -171,6 +173,7 @@ class DevisController extends Controller
         }
 
         $devis->statut = Devis::STATUT_ENVOYE;
+        $devis->envoye_le = now();
         $devis->save();
 
         return response()->json(['message' => 'Devis envoyé.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
@@ -187,8 +190,8 @@ class DevisController extends Controller
             return response()->json(['message' => "Ce devis a expiré le {$devis->date_validite->format('d/m/Y')} : faites-en un nouveau."], 422);
         }
 
-        $devis->statut = Devis::STATUT_ACCEPTE;
-        $devis->save();
+        // Réponse notée par un employé (le client a répondu autrement qu'en ligne).
+        $devis->fill(['statut' => Devis::STATUT_ACCEPTE, 'reponse_le' => now(), 'reponse_en_ligne' => false, 'reponse_nom' => null])->save();
 
         return response()->json(['message' => 'Devis accepté.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
     }
@@ -199,10 +202,33 @@ class DevisController extends Controller
             return response()->json(['message' => 'Seuls les devis envoyés peuvent être refusés.'], 422);
         }
 
-        $devis->statut = Devis::STATUT_REFUSE;
-        $devis->save();
+        $devis->fill(['statut' => Devis::STATUT_REFUSE, 'reponse_le' => now(), 'reponse_en_ligne' => false, 'reponse_nom' => null])->save();
 
         return response()->json(['message' => 'Devis refusé.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
+    }
+
+    /**
+     * Lien de réponse en ligne du devis, à transmettre au client : il l'accepte ou le refuse sur le site de l'espace
+     * client. Le partager revient à l'envoyer (un brouillon passe à Envoyé).
+     */
+    public function lienReponse(Request $request, Devis $devis, ReponsesDevis $reponses, AccesPortail $acces): JsonResponse
+    {
+        $donnees = $request->validate(['origine' => ['nullable', 'string', 'max:255']]);
+        if (! $reponses->ouvert($devis)) {
+            return response()->json(['message' => 'Ce devis ne peut plus recevoir de réponse (déjà décidé ou expiré).'], 422);
+        }
+        if (! $reponses->active()) {
+            return response()->json(['message' => 'La réponse en ligne aux devis est désactivée dans les paramètres des courriels.'], 422);
+        }
+        // Adresse du site de l'espace client connue du back-office, comme pour les invitations au portail.
+        $acces->memoriserAdresse($donnees['origine'] ?? null);
+        $lien = $reponses->lien($devis);
+        if (! $lien) {
+            return response()->json(['message' => "Adresse du site de l'espace client inconnue : réglez-la dans Ventes → Espace client."], 422);
+        }
+        $reponses->marquerEnvoye($devis->id);
+
+        return response()->json(['url' => $lien, 'devis' => $devis->fresh()->load(['client', 'lignes.produit'])]);
     }
 
     public function convertirEnCommande(Request $request, Devis $devis): JsonResponse

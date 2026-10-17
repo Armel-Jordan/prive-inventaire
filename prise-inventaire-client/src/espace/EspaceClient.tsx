@@ -26,7 +26,7 @@ type Indisponible = 'introuvable' | 'ferme' | 'reseau';
 /** Code d'entreprise : lettres, chiffres, tirets et soulignés (comme côté API). */
 const CODE_VALIDE = /^[a-z0-9_-]{1,64}$/;
 /** Adresses des écrans : jamais prises pour un code d'entreprise. */
-const RESERVES = new Set(['connexion', 'activation', 'panier', 'commandes', 'factures', 'profil']);
+const RESERVES = new Set(['connexion', 'activation', 'panier', 'commandes', 'factures', 'profil', 'devis']);
 
 /**
  * Espace client : le site des clients des entreprises, distinct du back-office. L'entreprise se désigne par

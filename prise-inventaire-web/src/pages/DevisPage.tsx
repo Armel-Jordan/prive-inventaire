@@ -2,13 +2,13 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
 import {
   getDevis, createDevis, updateDevis, deleteDevis,
-  envoyerDevis, accepterDevis, refuserDevis, convertirDevisEnCommande,
+  envoyerDevis, accepterDevis, refuserDevis, convertirDevisEnCommande, lienReponseDevis,
   getClientsActifs, getProduits, getConfiguration,
 } from '../services/api';
 import type { DevisRecord, Client } from '../services/api';
@@ -32,7 +32,11 @@ export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut } = usePermissions();
   const deviseEntreprise = useCodeDevise();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const tr = t.quoteAnswer;
+  // Lien de réponse en ligne affiché pour être transmis au client.
+  const [lienReponse, setLienReponse] = useState<{ numero: string; url: string; copie: boolean } | null>(null);
+  const dateHeure = (iso: string) => new Date(iso).toLocaleString(language === 'en' ? 'en-US' : 'fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [devisList, setDevisList] = useState<DevisRecord[]>([]);
@@ -172,6 +176,25 @@ export default function DevisPage() {
       alert(`Devis converti en commande ${commande.numero}.`);
       loadData();
     } catch (e) { signalerErreur(e, 'Erreur lors de la conversion'); }
+  };
+
+  // Lien où le client répond au devis ; le partager revient à l'envoyer.
+  const handleLienReponse = async (devis: DevisRecord) => {
+    try {
+      const { url } = await lienReponseDevis(devis.id);
+      setLienReponse({ numero: devis.numero, url, copie: false });
+      loadData();
+    } catch (e) { signalerErreur(e, 'Lien de réponse indisponible'); }
+  };
+
+  const copierLien = async () => {
+    if (!lienReponse) return;
+    try {
+      await navigator.clipboard.writeText(lienReponse.url);
+      setLienReponse({ ...lienReponse, copie: true });
+    } catch {
+      // Copie refusée par le navigateur : le lien reste sélectionnable dans le champ.
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -314,6 +337,7 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total, devis.devise)}</td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(devis.statut)}
+                    {devis.reponse_en_ligne && <span className="block mt-1 text-xs text-gray-500">{tr.online}</span>}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
                   </td>
                   <td className="px-4 py-3">
@@ -322,6 +346,9 @@ export default function DevisPage() {
                       <button onClick={() => { setSelectedDevis(devis); setShowDetailModal(true); }} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Voir"><Eye size={16} /></button>
                       <BoutonPdf chemin={`/devis/${devis.id}/pdf`} nomFichier={`devis-${devis.numero}.pdf`} taille={16} />
                       <BoutonCourriel type="devis" documentId={devis.id} taille={16} />
+                      {['brouillon', 'envoye'].includes(devis.statut) && peut('devis', 'envoyer') && (
+                        <button onClick={() => handleLienReponse(devis)} className="p-1 text-teal-600 hover:bg-teal-50 rounded" title={tr.shareLinkHelp} aria-label={`${tr.shareLink} — ${devis.numero}`}><Link2 size={16} /></button>
+                      )}
                       {devis.statut === 'brouillon' && (
                         <>
                           <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>
@@ -436,6 +463,30 @@ export default function DevisPage() {
         </div>
       )}
 
+      {/* Lien de réponse en ligne, à transmettre au client */}
+      {lienReponse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label={tr.linkTitle.replace('{numero}', lienReponse.numero)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold dark:text-white">{tr.linkTitle.replace('{numero}', lienReponse.numero)}</h2>
+              <button onClick={() => setLienReponse(null)} aria-label={tr.close}><X size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{tr.linkHelp}</p>
+            <div className="flex gap-2">
+              <input readOnly value={lienReponse.url} onFocus={e => e.target.select()} aria-label={tr.shareLink}
+                className="flex-1 min-w-0 px-3 py-2 border rounded-lg text-sm font-mono dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              <button type="button" onClick={copierLien} className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+                <Copy size={14} /> {tr.copy}
+              </button>
+            </div>
+            {lienReponse.copie && <p className="text-xs text-green-700 dark:text-green-400 mt-2" role="status">{tr.copied}</p>}
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setLienReponse(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-white">{tr.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal détail */}
       {showDetailModal && selectedDevis && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -469,6 +520,20 @@ export default function DevisPage() {
                 <span>{montant(selectedDevis.montant_total, selectedDevis.devise)}</span>
               </div>
               {selectedDevis.notes && <p className="text-sm text-gray-500">Notes: {selectedDevis.notes}</p>}
+              {(selectedDevis.envoye_le || selectedDevis.reponse_le) && (
+                <div className="border-t pt-3 text-sm space-y-1">
+                  {selectedDevis.envoye_le && <p className="text-gray-500">{tr.sentOn.replace('{date}', dateHeure(selectedDevis.envoye_le))}</p>}
+                  {selectedDevis.reponse_le && ['accepte', 'refuse'].includes(selectedDevis.statut) && (
+                    <p className="font-medium">
+                      {(selectedDevis.statut === 'accepte'
+                        ? (selectedDevis.reponse_en_ligne ? tr.acceptedOnline : tr.acceptedManually)
+                        : (selectedDevis.reponse_en_ligne ? tr.declinedOnline : tr.declinedManually)).replace('{date}', dateHeure(selectedDevis.reponse_le))}
+                      {selectedDevis.reponse_nom && ` ${tr.by.replace('{nom}', selectedDevis.reponse_nom)}`}
+                    </p>
+                  )}
+                  {selectedDevis.reponse_commentaire && <p className="text-gray-600"><span className="text-gray-500">{tr.comment} :</span> {selectedDevis.reponse_commentaire}</p>}
+                </div>
+              )}
             </div>
             <div className="flex justify-end mt-4">
               <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Fermer</button>

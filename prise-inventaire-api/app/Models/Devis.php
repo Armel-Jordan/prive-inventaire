@@ -28,12 +28,21 @@ class Devis extends Model
         'taux_change',
         // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
+        // Envoi au client et réponse, en ligne ou notée par un employé (voir App\Services\ReponsesDevis).
+        'envoye_le', 'reponse_le', 'reponse_en_ligne', 'reponse_nom', 'reponse_commentaire',
     ];
+
+    /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
+    protected $hidden = ['reponse_jeton', 'reponse_jeton_hash'];
 
     protected $casts = [
         'date_devis' => 'date',
         'date_validite' => 'date',
         'montant_total' => 'decimal:2',
+        'envoye_le' => 'datetime',
+        'reponse_le' => 'datetime',
+        'reponse_en_ligne' => 'boolean',
+        'reponse_jeton' => 'encrypted',
     ];
 
     const STATUT_BROUILLON = 'brouillon';

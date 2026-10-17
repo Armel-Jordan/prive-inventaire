@@ -10,6 +10,7 @@ use App\Services\BonCommandePdf;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
 use App\Services\Relances;
+use App\Services\ReponsesDevis;
 use App\Services\RetourFournisseurPdf;
 use App\Support\Courriels;
 use Illuminate\Database\Eloquent\Model;
@@ -145,6 +146,10 @@ class EnvoiCourriel
             // Une relance envoyée est notée sur sa facture.
             if ($envoi->type === 'relance') {
                 app(Relances::class)->apresEnvoiCourriel($envoi);
+            }
+            // Un devis envoyé au client passe « envoyé » (comme dans fripv2) : il peut alors recevoir sa réponse.
+            if ($envoi->type === 'devis') {
+                app(ReponsesDevis::class)->marquerEnvoye((int) $envoi->document_id);
             }
         } catch (ModelNotFoundException) {
             $envoi->fill(['statut' => CourrielEnvoi::ECHEC, 'erreur' => 'Le document à joindre est introuvable (supprimé ?).']);

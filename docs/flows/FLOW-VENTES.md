@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — prix du client proposés sur les lignes (FLOW-PRIX §4.1)
+> Dernière mise à jour : 2026-10-17 — réponse en ligne du client aux devis (§3.7)
 
 ---
 
@@ -267,6 +267,8 @@ Un devis accepté peut être **converti en commande client** directement — san
 | `statut` | État actuel |
 | `montant_total` | Somme des lignes (calculé auto) |
 | `notes` | Notes pour le client |
+| `envoye_le` | Date d'envoi au client (bouton Envoyer, courriel, lien de réponse partagé) |
+| `reponse_le`, `reponse_en_ligne`, `reponse_nom`, `reponse_commentaire` | Réponse du client : date, donnée en ligne ou notée à la main, nom et commentaire (§3.7) |
 
 **Lignes (DevisLigne)**
 
@@ -282,7 +284,7 @@ Un devis accepté peut être **converti en commande client** directement — san
 | Statut | Signification | Actions disponibles |
 |--------|---------------|---------------------|
 | `brouillon` | En rédaction | Modifier ✏️, Envoyer ✉️, Supprimer 🗑️ |
-| `envoye` | Envoyé au client | Accepter ✅, Refuser ❌ |
+| `envoye` | Envoyé au client (bouton, courriel ou lien de réponse) | Accepter ✅, Refuser ❌ ; le client peut répondre en ligne (§3.7) |
 | `accepte` | Client a accepté | Convertir en commande 📄 |
 | `refuse` | Client a refusé | Lecture seule |
 | `expire` | Date de validité dépassée | Lecture seule |
@@ -324,6 +326,46 @@ Quand on convertit un devis accepté :
 
 - **Expiration.** Un devis envoyé dont la date de validité est passée devient `expire` au chargement de la liste, et on ne peut plus l'accepter (422 avec la date d'expiration).
 - Les prix dans le devis sont libres — ils ne sont pas forcément les mêmes que les prix catalogues.
+
+### 3.7 Réponse en ligne du client
+
+Plan de parité fripv2, phase 1.3 : comme dans fripv2, le courriel du devis porte une **carte de réponse** avec deux boutons, **Accepter le devis** et **Refuser le devis**. Le client répond sur une page du site de l'espace client, sans compte, et le devis passe à Accepté ou Refusé.
+
+**Envoi :**
+- envoyer le devis par courriel fait passer un brouillon à `envoye` (comme dans fripv2) et note la date d'envoi (`envoye_le`), comme le bouton Envoyer ;
+- la carte s'ajoute sous le texte du courriel tant que le devis peut recevoir une réponse (brouillon ou envoyé, pas expiré). Elle est absente si le texte donne déjà le lien (variable `{lien_reponse}`) ;
+- le bouton **Lien de réponse** de la liste (droit « Envoyer un devis ») donne le même lien, à transmettre autrement (messagerie, SMS…). Le partager fait aussi passer le brouillon à `envoye`.
+
+**Le lien :**
+- il est le même à chaque envoi : un courriel déjà envoyé reste valable ;
+- il mène à `<site de l'espace client>/devis/<jeton>`. L'adresse du site est `ESPACE_CLIENT_URL`, sinon celle que le back-office transmet (comme pour les invitations de l'espace client) ;
+- seul le lien donne accès au devis. Le jeton (64 caractères) est enregistré chiffré, avec son empreinte pour le retrouver, et n'est jamais renvoyé par l'API ;
+- la page fonctionne même si l'espace client de l'entreprise n'est pas ouvert. Elle ne répond plus si l'entreprise est désactivée ou n'a plus le module Ventes.
+
+**La page du client :**
+- entreprise, numéro, dates, client (nom noté pour un client de passage), lignes, total hors taxes, notes, téléchargement du PDF ;
+- **Accepter** : nom obligatoire, commentaire facultatif ; **Refuser** : nom et raison facultatifs ;
+- un devis déjà décidé affiche sa réponse ; un devis expiré le dit, et une réponse tardive le fait passer à `expire`.
+
+**Au back-office :**
+- la liste marque « en ligne » sous le statut ; le détail montre la date d'envoi, la réponse (en ligne ou notée à la main), le nom et le commentaire du client ;
+- une **notification** (« Devis accepté en ligne » ou « Devis refusé en ligne ») mène à la liste des devis ;
+- Accepter et Refuser notent aussi la date de réponse quand un employé les utilise.
+
+**Réglage :** Paramètres → Courriels, « Réponse en ligne aux devis » (activé par défaut). Désactivé, les courriels n'ont plus de carte et le bouton Lien de réponse est refusé ; les liens déjà envoyés continuent de fonctionner.
+
+| Route | Rôle |
+|---|---|
+| `POST /devis/{id}/lien-reponse` | Lien de réponse (`origine` : adresse du site de l'espace client connue du back-office) ; droit `devis.envoyer` |
+| `GET /devis-en-ligne/{jeton}` | Page publique : entreprise, devis, réponse, `peut_repondre` (60 par minute) |
+| `GET /devis-en-ligne/{jeton}/pdf` | PDF du devis (20 par minute) |
+| `POST /devis-en-ligne/{jeton}/accepter` | `nom` (obligatoire), `commentaire` (10 réponses par minute) |
+| `POST /devis-en-ligne/{jeton}/refuser` | `nom`, `commentaire` (facultatifs) |
+
+Code :
+- API : service `App\Services\ReponsesDevis`, contrôleur `App\Http\Controllers\Portail\DevisEnLigneController`, carte dans `RenduCourriel` et la vue `emails/courriel`, migration `2026_10_16_100040_reponse_en_ligne_devis` ;
+- espace client : page `espace/pages/ReponseDevis` (route `/devis/:jeton`, hors de l'espace connecté) ;
+- back-office : bouton Lien de réponse et détail de la réponse dans `DevisPage`.
 
 ---
 

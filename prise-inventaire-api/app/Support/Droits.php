@@ -148,6 +148,7 @@ class Droits
         'POST api/devis/{devis}/accepter' => ['devis', 'decider'],
         'POST api/devis/{devis}/refuser' => ['devis', 'decider'],
         'POST api/devis/{devis}/convertir' => ['devis', 'convertir'],
+        'POST api/devis/{devis}/lien-reponse' => ['devis', 'envoyer'],
         'POST api/bons-livraison/{id}/preparer' => ['bons_livraison', 'preparer'],
         'POST api/bons-livraison/{id}/pret' => ['bons_livraison', 'preparer'],
         'POST api/bons-livraison/{id}/livrer' => ['bons_livraison', 'livrer'],
