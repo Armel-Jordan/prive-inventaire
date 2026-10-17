@@ -51,6 +51,7 @@ class Droits
         'commandes-client' => 'commandes_client',
         'reliquats-clients' => 'reliquats_clients',
         'abonnements-clients' => 'abonnements_clients',
+        'contrats-location' => 'contrats_location',
         'factures' => 'factures',
         'avoirs' => 'avoirs',
         'retours-clients' => 'retours_clients',
@@ -141,6 +142,10 @@ class Droits
         // Facturer les abonnements (créer les factures, aussi contrôlé par le contrôleur) ; relier une échéance.
         'POST api/abonnements-clients/facturer' => ['abonnements_clients', 'facturer'],
         'POST api/abonnements-clients/{id}/echeances/{echeanceId}/relier' => ['abonnements_clients', 'facturer'],
+        // Contrats de location : facturer (prix de contrat, loyers ; droits des factures contrôlés aussi), renouveler.
+        'POST api/contrats-location/{id}/facturer' => ['contrats_location', 'facturer'],
+        'POST api/contrats-location/facturer-loyers' => ['contrats_location', 'facturer'],
+        'POST api/contrats-location/{id}/renouveler' => ['contrats_location', 'renouveler'],
         'POST api/retours-clients/{id}/crediter' => ['avoirs', 'creer'],
         'POST api/acomptes/{id}/appliquer' => ['acomptes', 'appliquer'],
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],

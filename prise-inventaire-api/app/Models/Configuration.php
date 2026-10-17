@@ -92,6 +92,7 @@ class Configuration extends Model
         'retour_fournisseur' => ['prefixe' => 'RF', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'bon_livraison' => ['prefixe' => 'BL', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
         'tournee' => ['prefixe' => 'T', 'longueur' => 4, 'separateur' => '', 'auto_increment' => true],
+        'contrat_location' => ['prefixe' => 'CT', 'longueur' => 5, 'separateur' => '-', 'auto_increment' => true],
     ];
 
     /**

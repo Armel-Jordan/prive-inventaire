@@ -45,6 +45,7 @@ import RetoursFournisseursPage from '@/pages/RetoursFournisseursPage';
 import FraisPage from '@/pages/FraisPage';
 import ReliquatsClientsPage from '@/pages/ReliquatsClientsPage';
 import AbonnementsClientsPage from '@/pages/AbonnementsClientsPage';
+import ContratsLocationPage from '@/pages/ContratsLocationPage';
 import DisponibilitesPage from '@/pages/DisponibilitesPage';
 import AcomptesPage from '@/pages/AcomptesPage';
 import DemandesAcomptePage from '@/pages/DemandesAcomptePage';
@@ -159,6 +160,7 @@ function AppRoutes() {
         <Route path="frais" element={<FraisPage />} />
         <Route path="reliquats-clients" element={<ReliquatsClientsPage />} />
         <Route path="abonnements-clients" element={<AbonnementsClientsPage />} />
+        <Route path="contrats-location" element={<ContratsLocationPage />} />
         <Route path="disponibilites" element={<DisponibilitesPage />} />
         <Route path="acomptes" element={<AcomptesPage />} />
         <Route path="demandes-acompte" element={<DemandesAcomptePage />} />

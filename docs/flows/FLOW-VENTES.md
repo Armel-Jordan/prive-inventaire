@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — abonnements clients et facturation récurrente (§5.16)
+> Dernière mise à jour : 2026-10-17 — contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
 
 ---
 
@@ -1230,6 +1230,62 @@ La liste donne, pour chaque abonnement :
 | POST | `/abonnements-clients/{id}/echeances/{echeanceId}/relier` | Relier une échéance à une facture (`facture_id`) |
 
 Code : service `App\Services\AbonnementsClients`, `AbonnementClientController`, tâche `App\Taches\FacturerAbonnements`, `FacturesVente::emettre` (émission partagée avec `POST /factures/{id}/emettre`) ; web : page `AbonnementsClientsPage` ; migration `2026_10_17_100048_creer_abonnements_clients`.
+
+### 5.17 Contrats de location (Ventes → Contrats de location)
+
+Plan de parité fripv2, phase 1.8 (« Contrats de location », « Types de location ») : des produits loués à un client sur une période. Bouteilles de gaz, palettes, échafaudages, matériel : tout ce qui se loue et se rend.
+
+**Un contrat :**
+
+| Élément | Rôle |
+|---|---|
+| Numéro | Automatique, `CT-00001` (Paramètres → Numérotation, entité « Contrats de location ») |
+| Client, dates de début et de fin | La période du contrat |
+| Type de location | Facultatif (référentiel, FLOW-PARAMETRES §11). Il préremplit le rythme, le jour, le mode de facturation et la fin (début + durée) |
+| Rythme des loyers, jour (1 à 28), à l'avance ou après coup | Quand les loyers se facturent, et quelle période ils couvrent |
+| Prochaine facturation | Calculée depuis la date de début et le jour ; modifiable |
+| Lignes | Produit, quantité louée, unités exemptées (comprises dans un forfait), **prix de contrat** (facturé une fois : contenu, caution, mise en service) et **loyer** (par unité et par période), dans la devise du client |
+| Actif | Un contrat inactif n'est plus facturé ni renouvelé |
+| Renouvellement automatique, hausses (%) | Le contrat suivant est créé à la fin, prix de contrat et loyers augmentés des taux |
+
+**Facturer le contrat :** une facture brouillon des prix de contrat pas encore facturés (texte « Contrat CT-… » sous chaque produit).
+- Chaque ligne n'est facturée qu'une fois ; une ligne facturée ne change plus et ne se retire plus (422).
+- Pour louer davantage, on ajoute une ligne ; elle fait une facture complémentaire.
+- Un contrat jamais facturé se supprime ; sinon on le désactive.
+
+**Loyers** (« Facturer les loyers dus », ou la tâche `facturation_locations`) : jusqu'à la date choisie, pour chaque contrat actif dont la prochaine facturation est arrivée (et pas après la fin), une facture par période, datée de la facturation prévue.
+- Une ligne par produit : unités louées, moins les exemptées et les rendues, au loyer de la ligne.
+- Texte sous chaque produit : « Location du … au … — contrat CT-… ».
+- Période : celle qui commence à la date de facturation (à l'avance), ou celle qui vient de finir (après coup).
+- La prochaine facturation avance alors d'une période ; une période sans unité à louer passe sans facture.
+- En brouillon, ou émises si on le demande ; une erreur (taux de change manquant) est rapportée sans arrêter les autres contrats.
+
+**Retour :** des unités rendues (quantité, date) ne paient plus de loyer à partir de la facturation suivante. On ne rend pas plus que ce qui est chez le client.
+
+**Renouveler :** le contrat suivant reprend le client, le type, le rythme et les produits encore chez le client (un produit par ligne, aux prix de la ligne la plus récente). Il commence le lendemain de la fin, pour la durée du type, sinon la même durée. Il garde le lien avec le précédent (« Renouvelle » / « Renouvelé par »). Un contrat ne se renouvelle qu'une fois.
+- À la main : mêmes prix, à revoir avant de le facturer.
+- Automatique (tâche `renouvellement_contrats`, pour les contrats actifs marqués « renouvellement automatique » arrivés à leur fin) : prix augmentés des taux, et facture brouillon des prix de contrat du nouveau contrat.
+
+**Factures du contrat :** `factures.contrat_location_id` relie les factures de prix de contrat et de loyers à leur contrat ; la fiche du contrat les liste.
+
+**Imprimer :** le contrat en PDF : loueur et client, période, rythme, produits (quantités, prix de contrat, loyer), totaux, signatures.
+
+**Droits :** module **Contrats de location**, copié des factures à sa création.
+- Facturer le contrat et les loyers demandent **Facturer les contrats de location** (`contrats_location.facturer`), plus le droit de créer des factures (et de les émettre si on les émet).
+- Renouveler à la main demande **Renouveler un contrat de location** (`contrats_location.renouveler`).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/contrats-location` | Liste (`statut` : actifs par défaut, inactifs, tous ; `recherche`, `client_id`, `fin_avant`) avec loyer par période, unités louées, lignes à facturer |
+| GET | `/contrats-location/{id}` | Contrat, lignes, factures, contrats précédent et suivant |
+| POST / PUT / DELETE | `/contrats-location[/{id}]` | Saisie (lignes facturées figées), suppression d'un contrat jamais facturé |
+| POST | `/contrats-location/{id}/facturer` | Facture des prix de contrat pas encore facturés |
+| POST | `/contrats-location/facturer-loyers` | Loyers dus (`jusquau`, `client_id`, `emettre`) ; bilan |
+| POST | `/contrats-location/{id}/lignes/{ligneId}/retour` | Retour d'unités (`quantite`, `date_retour`) |
+| POST | `/contrats-location/{id}/renouveler` | Contrat suivant |
+| GET | `/contrats-location/{id}/pdf` | Contrat imprimé |
+
+Code : services `App\Services\ContratsLocation` et `ContratLocationPdf`, `ContratLocationController`, tâches `FacturerLocations` et `RenouvelerContrats`, vue `pdf/contrat-location` ; web : page `ContratsLocationPage`, référentiel `types_location` ; migration `2026_10_17_100049_creer_contrats_location`.
 
 ---
 

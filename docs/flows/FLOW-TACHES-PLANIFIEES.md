@@ -1,7 +1,7 @@
 # TÂCHES PLANIFIÉES — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — facturation des abonnements (`facturation_abonnements`) ; relances des devis (`relances_devis`). 2026-10-16 : alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
+> Dernière mise à jour : 2026-10-17 — loyers et renouvellement des contrats de location (`facturation_locations`, `renouvellement_contrats`) ; facturation des abonnements (`facturation_abonnements`) ; relances des devis (`relances_devis`). 2026-10-16 : alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
 >
 > Historique : 2026-10-15 — création (plan de parité fripv2, phase 0.10)
 
@@ -21,6 +21,8 @@ Des traitements automatiques prédéfinis par l'application. Chaque entreprise l
 | `relances_paiement` | Chaque jour à 08:00 | Envoie le courriel de relance (modèle « relance », facture jointe) pour chaque facture en retard d'au moins **N jours** (15) dont la dernière relance date d'au moins N jours ; 3 relances automatiques au plus par facture, seulement aux clients qui ont une adresse de courriel (FLOW-VENTES §7 ter) |
 | `relances_devis` | Chaque jour à 08:30 | Envoie le courriel « Relance de devis » (devis joint, boutons Accepter et Refuser) pour chaque devis envoyé resté sans réponse depuis au moins **N jours** (7), comptés depuis l'envoi ou la dernière relance, tant qu'il est valable ; 3 relances au plus par devis, seulement aux clients qui ont une adresse de courriel (FLOW-VENTES §3.8) |
 | `facturation_abonnements` | Chaque jour à 06:00 | Crée les factures des échéances d'abonnement dues à ce jour : une par client et par date d'échéance, datée de l'échéance. En brouillon, ou **émises** si le paramètre `emettre` est coché (sauf une facture qui contient un abonnement marqué brouillon). Un prix ou un taux de change manquant est noté dans le résultat sans arrêter les autres factures ; numérotation automatique des factures requise (FLOW-VENTES §5.16) |
+| `facturation_locations` | Chaque jour à 06:10 | Crée les factures des loyers dus à ce jour sur les contrats de location actifs : une par contrat et par période, datée de la facturation prévue ; la prochaine facturation avance d'une période, jusqu'à la fin du contrat. En brouillon, ou **émises** si le paramètre `emettre` est coché (FLOW-VENTES §5.17) |
+| `renouvellement_contrats` | Chaque jour à 05:50 | Renouvelle les contrats de location actifs marqués « renouvellement automatique », pas encore renouvelés, arrivés à leur fin : contrat suivant pour la même durée, prix augmentés de leurs taux, facture brouillon des prix de contrat (FLOW-VENTES §5.17) |
 | `commandes_fournisseur_en_retard` | Chaque jour à 07:00 | Notifie les commandes fournisseur envoyées ou partiellement reçues dont la livraison prévue est dépassée de plus de **N jours** (0 : dès le lendemain) |
 | `livraisons_en_retard` | Chaque jour à 07:00 | Notifie les bons de livraison pas encore livrés (créés, en préparation, prêts, en livraison) plus de **N jours** (3) après leur création |
 | `controles_techniques` | Chaque jour à 07:00 | Prévient **N jours** (30) avant l'expiration du contrôle technique d'un camion actif, et une fois la date dépassée |
@@ -32,7 +34,7 @@ Ajouter une tâche : une classe dans `app/Taches` (interface `App\Taches\Tache`)
 Les tâches qui notifient (stock, transferts imminents, factures, commandes, livraisons, contrôles techniques) se règlent aussi dans **Paramètres → Réglage des alertes**, un écran plus simple : activer, régler le délai en jours, **Vérifier maintenant**, voir la fréquence et la dernière vérification. La fréquence, l'heure et l'historique restent dans les tâches planifiées. L'écran remplace une page factice (valeurs codées en dur, sauvegarde simulée), auparavant rangée sous Finance et donc invisible sans ce module.
 
 - **Délai (N jours)** : paramètre `jours` de la tâche, entre 0 et 365. Seuls les paramètres prévus par le catalogue sont enregistrés ; les autres sont ignorés.
-- **Factures émises** : paramètre `emettre` (oui ou non) de la facturation des abonnements, une case dans le réglage de la tâche.
+- **Factures émises** : paramètre `emettre` (oui ou non) de la facturation des abonnements et des loyers, une case dans le réglage de la tâche.
 - **Modules** : une alerte n'est proposée que si l'entreprise a le module correspondant (Ventes pour les factures, les livraisons et les camions ; Achats pour les commandes fournisseur).
 - **Pas de doublon** : une alerte n'est pas renvoyée tant que la notification précédente sur le même document n'est pas lue (`Notification::alerterUneFois`). Pour un contrôle technique, une nouvelle date donne lieu à une nouvelle alerte.
 - Chaque notification mène à l'écran concerné (factures, commandes fournisseur, bons de livraison, camions).

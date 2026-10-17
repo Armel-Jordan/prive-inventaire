@@ -618,6 +618,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Entrepôts | Lieux de stockage : entrepôt, magasin, véhicule, dépôt, avec adresse et responsable | Code unique, un seul entrepôt « par défaut ». Les secteurs y seront rattachés avec la fonctionnalité multi-entrepôts |
 | Transporteurs | Coordonnées, numéro de compte, lien de suivi des colis | Le lien peut contenir `{numero}`, remplacé par le numéro du colis ; il doit commencer par http:// ou https:// |
 | Itinéraires | Itinéraires réguliers de livraison ou de visite, rattachables à un territoire | Code unique, territoire de la même entreprise |
+| Types de location | Modèles des contrats de location : durée (mois), rythme des loyers (mensuel à annuel), jour de facturation, loyer à l'avance ou après coup ; choisis sur un contrat, ils en préremplissent le rythme et la fin (FLOW-VENTES §5.17) | Code unique (en majuscules), durée de 1 à 120 mois, jour de 1 à 28 |
 | Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
 | Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
 | Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types). Les raisons « Retour client » et « Retour fournisseur » qualifient les lignes des retours clients et fournisseurs, et deviennent obligatoires dès qu'il y en a une (FLOW-VENTES §5.12, FLOW-ACHATS §9) |
@@ -641,7 +642,7 @@ Une seule API générique :
 | DELETE | `/api/referentiels/{type}/{id}` | Suppression (refusée si la fiche est utilisée) |
 | GET | `/api/referentiels/devises/{id}/historique` | Historique des taux d'une devise |
 
-`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
+`{type}` : `unites`, `unite_conversions`, `categories`, `fabricants`, `modes_paiement`, `conditions_paiement`, `comptes_bancaires`, `devises`, `entrepots`, `transporteurs`, `itineraires`, `types_location`, `territoires`, `representants`, `raisons`, `statuts_personnalises`. Les types et leurs règles sont déclarés dans `App\Support\Referentiels` : ajouter un référentiel = une entrée dans ce catalogue, avec son modèle et sa table.
 
 ### 11.3 Droits
 

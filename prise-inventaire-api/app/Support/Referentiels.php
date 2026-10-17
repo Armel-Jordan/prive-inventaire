@@ -16,8 +16,10 @@ use App\Models\Representant;
 use App\Models\StatutPersonnalise;
 use App\Models\Territoire;
 use App\Models\Transporteur;
+use App\Models\TypeLocation;
 use App\Models\Unite;
 use App\Models\UniteConversion;
+use App\Services\AbonnementsClients;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
 
@@ -229,6 +231,22 @@ final class Referentiels
                 ],
                 'ordre' => ['code', 'asc'],
                 'avec' => ['territoire:id,code,nom'],
+            ],
+
+            // Modèles de contrats de location : durée, rythme et jour des loyers, à l'avance ou après coup.
+            'types_location' => [
+                'modele' => TypeLocation::class,
+                'regles' => fn (?int $id) => [
+                    'code' => ['required', 'string', 'max:20', TenantRule::unique('types_location', 'code', $id)],
+                    'nom' => ['required', 'string', 'max:100'],
+                    'duree_mois' => ['required', 'integer', 'min:1', 'max:120'],
+                    'frequence' => ['required', Rule::in(array_keys(AbonnementsClients::FREQUENCES))],
+                    'jour_facturation' => ['required', 'integer', 'between:1,28'],
+                    'a_echoir' => ['boolean'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => ['code', 'asc'],
+                'majuscules' => ['code'],
             ],
 
             'representants' => [
