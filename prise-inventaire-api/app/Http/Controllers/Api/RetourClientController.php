@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Facture;
 use App\Models\RetourClient;
 use App\Models\RetourClientLigne;
+use App\Services\LotsSeries;
 use App\Services\RetoursClients;
 use App\Support\TenantRule;
 use DomainException;
@@ -20,6 +21,18 @@ use Illuminate\Validation\Rule;
 class RetourClientController extends Controller
 {
     public function __construct(private readonly RetoursClients $retours) {}
+
+    /** Produits suivis d'un retour : les lots sortis chez le client d'abord, les numéros de série qui lui ont été livrés. */
+    public function exemplaires(Request $request, LotsSeries $lots): JsonResponse
+    {
+        $filtres = $request->validate([
+            'client_id' => ['required', 'integer', TenantRule::exists('clients')],
+            'produits' => ['required', 'array', 'max:200'],
+            'produits.*' => ['integer'],
+        ]);
+
+        return response()->json($lots->exemplaires(array_map('intval', $filtres['produits']), (int) $filtres['client_id']));
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -131,6 +144,10 @@ class RetourClientController extends Controller
             'lignes.*.traitement' => ['required', Rule::in(RetourClientLigne::TRAITEMENTS)],
             'lignes.*.secteur_id' => ['nullable', 'integer', TenantRule::exists('secteurs')->whereNull('deleted_at')],
             'lignes.*.notes' => 'nullable|string|max:255',
+            // Produit suivi (phase 2.8c) : le lot qui revient, les numéros de série rapportés.
+            'lignes.*.lot_id' => 'nullable|integer',
+            'lignes.*.numeros_serie' => 'nullable|array|max:10000',
+            'lignes.*.numeros_serie.*' => 'nullable|string|max:100',
         ], [
             'date_retour.before_or_equal' => 'Le retour ne peut pas être daté dans le futur.',
             'lignes.*.raison_id.exists' => 'Choisissez une raison de retour active.',

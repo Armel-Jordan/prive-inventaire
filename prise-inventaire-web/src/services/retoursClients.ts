@@ -25,6 +25,9 @@ export interface RetourClientLigne {
   /** Arrivage créé par la remise en stock. */
   mouvement_id: number | null;
   notes: string | null;
+  /** Produit suivi : le lot revenu, les numéros de série rapportés. */
+  lot_id?: number | null;
+  numeros_serie?: string[] | null;
 }
 
 export interface RetourClient {
@@ -63,6 +66,8 @@ export interface LigneRetournable {
   quantite_facturee: number;
   /** Unité facturée (la caisse de 12) ; vide : l'unité de stock. */
   unite?: string | null;
+  /** Unités de stock par unité facturée. */
+  facteur?: number;
   quantite_retournee: number;
   reste: number;
 }
@@ -81,6 +86,9 @@ export interface SaisieLigneRetour {
   traitement: TraitementRetour;
   secteur_id?: number | null;
   notes?: string | null;
+  /** Produit suivi : le lot qui revient (vide : le dernier livré au client), les numéros de série rapportés. */
+  lot_id?: number | null;
+  numeros_serie?: string[];
 }
 
 export interface SaisieRetour {

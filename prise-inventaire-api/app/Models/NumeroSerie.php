@@ -15,7 +15,13 @@ class NumeroSerie extends Model
 
     public const LIVRE = 'livre';
 
-    public const STATUTS = [self::EN_STOCK, self::LIVRE, 'retourne', 'rebut'];
+    /** Renvoyé au fournisseur. */
+    public const RETOURNE = 'retourne';
+
+    /** Rapporté par le client puis mis au rebut. */
+    public const REBUT = 'rebut';
+
+    public const STATUTS = [self::EN_STOCK, self::LIVRE, self::RETOURNE, self::REBUT];
 
     protected $table = 'numeros_serie';
 

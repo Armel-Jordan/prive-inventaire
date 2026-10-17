@@ -859,4 +859,26 @@ Code : `LotsSeries` (`lotsDisponibles`, `premiersSortis`, `livrer`, `venteCompto
 `BonLivraisonController` et `VentesComptoir` ; web `livraison/ExemplairesLivraison`, `lib/lots.ts` ; migration
 `2026_10_17_100079_lots_livraisons` (colonnes de sortie de `lot_mouvements` et `numeros_serie`).
 
-Suite prévue : les retours (clients et fournisseurs) des produits suivis.
+### Retours (phase 2.8c)
+
+- **Retour client** : pour chaque ligne d'un produit suivi, l'éditeur propose le lot qui revient (les lots sortis
+  chez ce client d'abord, avec ce qu'il en a reçu) et les numéros de série qui lui ont été livrés.
+  - Sans lot choisi, la marchandise remise en stock revient dans le dernier lot sorti chez ce client pour ce produit.
+  - Les numéros remis en stock redeviennent « en stock », sans client ; ceux mis au rebut passent « au rebut ».
+  - Un numéro qui n'a pas été livré à ce client est refusé au traitement.
+- **Retour fournisseur** : pour chaque ligne qui sort d'un secteur, le lot qui repart (sinon les premiers à périmer)
+  et les numéros renvoyés.
+  - Les numéros renvoyés doivent être en stock et passent « retourné ».
+  - Un lot choisi sans assez de stock est refusé, sur le champ du lot.
+- Le journal des lots note les retours (« retour client » +, « retour fournisseur » −).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/retours-clients/exemplaires?client_id=&produits[]=` | Lots sortis chez le client, numéros qui lui ont été livrés |
+| GET | `/retours-fournisseurs/exemplaires?produits[]=` | Lots qui ont du stock, numéros en stock |
+| POST / PUT | `/retours-clients`, `/retours-fournisseurs` | Par ligne : `lot_id`, `numeros_serie[]` |
+
+Code : `LotsSeries` (`retourClient`, `retourFournisseur`, `exemplaires`, `dernierLotLivre`), branché dans
+`RetoursClients::traiter` et `RetoursFournisseurs::expedier` ; web `lots/ExemplairesRetour` dans les deux éditeurs de
+retour ; migration `2026_10_17_100080_lots_retours` (colonnes `lot_id` et `numeros_serie` des lignes de retour,
+lignes de retour dans `lot_mouvements`).

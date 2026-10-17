@@ -7,6 +7,7 @@ use App\Models\ComFourEntete;
 use App\Models\RetourClient;
 use App\Models\RetourFournisseur;
 use App\Services\DevisesVente;
+use App\Services\LotsSeries;
 use App\Services\RetourFournisseurPdf;
 use App\Services\RetoursFournisseurs;
 use App\Support\TenantRule;
@@ -23,6 +24,17 @@ use Illuminate\Validation\Rule;
 class RetourFournisseurController extends Controller
 {
     public function __construct(private readonly RetoursFournisseurs $retours) {}
+
+    /** Produits suivis d'un retour : les lots qui ont du stock (le premier à périmer d'abord), les numéros en stock. */
+    public function exemplaires(Request $request, LotsSeries $lots): JsonResponse
+    {
+        $filtres = $request->validate([
+            'produits' => ['required', 'array', 'max:200'],
+            'produits.*' => ['integer'],
+        ]);
+
+        return response()->json($lots->exemplaires(array_map('intval', $filtres['produits']), null));
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -170,6 +182,10 @@ class RetourFournisseurController extends Controller
             'lignes.*.prix_unitaire' => 'nullable|numeric|min:0',
             'lignes.*.raison_id' => ['nullable', 'integer', TenantRule::exists('raisons')->where('type', 'retour_fournisseur')->where('actif', true)->whereNull('deleted_at')],
             'lignes.*.secteur_id' => ['nullable', 'integer', TenantRule::exists('secteurs')->whereNull('deleted_at')],
+            // Produit suivi (phase 2.8c) : le lot qui repart (sinon les premiers à périmer), les numéros de série renvoyés.
+            'lignes.*.lot_id' => 'nullable|integer',
+            'lignes.*.numeros_serie' => 'nullable|array|max:10000',
+            'lignes.*.numeros_serie.*' => 'nullable|string|max:100',
             'lignes.*.notes' => 'nullable|string|max:255',
         ], [
             'fournisseur_id.exists' => 'Choisissez un fournisseur actif.',

@@ -21,6 +21,12 @@ class LotMouvement extends Model
     /** Sortie d'une vente au comptoir (phase 2.8b). */
     public const VENTE_COMPTOIR = 'vente_comptoir';
 
+    /** Retour d'un client remis en stock (phase 2.8c). */
+    public const RETOUR_CLIENT = 'retour_client';
+
+    /** Retour au fournisseur (phase 2.8c). */
+    public const RETOUR_FOURNISSEUR = 'retour_fournisseur';
+
     /** Sorties chez un client : ce que retrouve un rappel. */
     public const SORTIES_CLIENT = [self::LIVRAISON, self::VENTE_COMPTOIR];
 
@@ -30,6 +36,8 @@ class LotMouvement extends Model
         'tenant_id', 'lot_id', 'type', 'quantite', 'reception_ligne_id', 'date_mouvement', 'cree_par',
         // Sortie : la ligne de bon de livraison ou de vente au comptoir, et le client qui a reçu le lot.
         'bon_livraison_ligne_id', 'facture_ligne_id', 'client_id',
+        // Retours (phase 2.8c) : la ligne de retour client ou fournisseur.
+        'retour_client_ligne_id', 'retour_fournisseur_ligne_id',
     ];
 
     protected function casts(): array

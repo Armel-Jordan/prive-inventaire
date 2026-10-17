@@ -115,6 +115,27 @@ export async function exporterRappelLot(id: number, numero: string): Promise<voi
   setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
 }
 
+/**
+ * Exemplaires proposés pour un retour : les lots du produit (sortis chez le client d'abord, avec ce qu'il a reçu ;
+ * ou ceux qui ont du stock, le premier à périmer d'abord) et les numéros de série (livrés au client ; ou en stock).
+ */
+export interface ExemplairesProduit {
+  produit_id: number;
+  suivi: 'lot' | 'serie';
+  lots: { id: number; numero: string; date_peremption: string | null; recu_par_client?: number | null; solde?: number }[];
+  series: string[];
+}
+
+const produitsEnParametres = (produits: number[]) => produits.map(id => `produits[]=${id}`).join('&');
+
+export function getExemplairesRetourClient(clientId: number, produits: number[]): Promise<ExemplairesProduit[]> {
+  return apiFetch(`/retours-clients/exemplaires?client_id=${clientId}&${produitsEnParametres(produits)}`);
+}
+
+export function getExemplairesRetourFournisseur(produits: number[]): Promise<ExemplairesProduit[]> {
+  return apiFetch(`/retours-fournisseurs/exemplaires?${produitsEnParametres(produits)}`);
+}
+
 export function getNumerosSerie(filtres: { recherche?: string; statut?: string; page?: number } = {}): Promise<Page<NumeroSerieRegistre>> {
   return apiFetch(`/numeros-serie?${parametres(filtres)}`);
 }

@@ -16,11 +16,14 @@ class RetourFournisseurLigne extends Model
     protected $fillable = [
         'retour_fournisseur_id', 'com_four_ligne_id', 'retour_client_ligne_id', 'produit_id', 'quantite', 'prix_unitaire',
         'raison_id', 'secteur_id', 'mouvement_id', 'mouvement_remplacement_id', 'notes',
+        // Produit suivi (phase 2.8c) : le lot qui repart, les numéros de série renvoyés.
+        'lot_id', 'numeros_serie',
     ];
 
     protected $casts = [
         'quantite' => 'integer',
         'prix_unitaire' => 'decimal:2',
+        'numeros_serie' => 'array',
     ];
 
     public function retour(): BelongsTo
