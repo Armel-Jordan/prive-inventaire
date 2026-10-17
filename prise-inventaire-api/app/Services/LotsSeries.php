@@ -12,6 +12,9 @@ use App\Models\LotMouvement;
 use App\Models\NumeroSerie;
 use App\Models\ProduitTenant;
 use App\Models\ReceptionArrivagesLigne;
+use App\Models\RetourClient;
+use App\Models\RetourClientLigne;
+use App\Models\RetourFournisseur;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -323,6 +326,134 @@ class LotsSeries
                 'quantite' => round(-$m->quantite, 4),
                 'client' => $m->client?->only(['id', 'code', 'raison_sociale', 'telephone', 'email']),
             ])->values()->all();
+    }
+
+    /** Dernier lot d'un produit sorti chez un client (livraison, vente au comptoir) : celui qui revient par défaut. */
+    public function dernierLotLivre(int $produitId, ?int $clientId): ?int
+    {
+        return $clientId === null ? null : LotMouvement::query()->whereIn('type', LotMouvement::SORTIES_CLIENT)->where('client_id', $clientId)
+            ->whereHas('lot', fn ($q) => $q->where('produit_id', $produitId))
+            ->orderByDesc('date_mouvement')->orderByDesc('id')->value('lot_id');
+    }
+
+    /** Lot indiqué sur une ligne de retour : un lot du produit (sinon refusé). */
+    public function verifierLotDuProduit(?int $lotId, int $produitId, string $champ): void
+    {
+        if ($lotId !== null && ! Lot::query()->whereKey($lotId)->where('produit_id', $produitId)->exists()) {
+            throw ValidationException::withMessages([$champ => "Ce lot n'est pas un lot du produit."]);
+        }
+    }
+
+    /**
+     * Retour client traité : la marchandise remise en stock revient dans son lot (celui indiqué, sinon le dernier sorti
+     * chez ce client pour ce produit) ; les numéros de série indiqués doivent avoir été livrés à ce client : remis en
+     * stock, ils redeviennent « en stock » ; mis au rebut, ils passent au rebut.
+     */
+    public function retourClient(RetourClient $retour, ?int $auteurId): void
+    {
+        foreach ($retour->lignes as $index => $ligne) {
+            $produit = $ligne->produit;
+            $unites = round($ligne->quantite * $ligne->facteurStock(), 4);
+            if ($produit?->suivi === 'lot' && $ligne->traitement === RetourClientLigne::REMISE_EN_STOCK) {
+                $lotId = $ligne->lot_id ?? $this->dernierLotLivre($produit->id, $retour->client_id);
+                if ($lotId !== null) {
+                    LotMouvement::create(['lot_id' => $lotId, 'type' => LotMouvement::RETOUR_CLIENT, 'quantite' => $unites, 'retour_client_ligne_id' => $ligne->id,
+                        'client_id' => $retour->client_id, 'date_mouvement' => $retour->date_retour ?? today(), 'cree_par' => $auteurId]);
+                    $ligne->update(['lot_id' => $lotId]);
+                }
+            } elseif ($produit?->suivi === 'serie' && $ligne->numeros_serie) {
+                $champ = "lignes.{$index}.numeros_serie";
+                $numeros = $this->numeros(['numeros_serie' => $ligne->numeros_serie]);
+                if (count($numeros) > $unites) {
+                    throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$unites} unité(s) retournée(s)."]);
+                }
+                $series = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->lockForUpdate()->get()
+                    ->keyBy(fn (NumeroSerie $s) => mb_strtolower($s->numero));
+                foreach ($numeros as $numero) {
+                    $serie = $series->get(mb_strtolower($numero));
+                    if (! $serie || $serie->statut !== NumeroSerie::LIVRE || ($serie->client_id && $serie->client_id !== $retour->client_id)) {
+                        throw ValidationException::withMessages([$champ => "Le numéro de série {$numero} de {$produit->numero} n'a pas été livré à ce client."]);
+                    }
+                }
+                $remis = $ligne->traitement === RetourClientLigne::REMISE_EN_STOCK;
+                NumeroSerie::query()->whereIn('id', $series->pluck('id'))->update($remis
+                    ? ['statut' => NumeroSerie::EN_STOCK, 'client_id' => null, 'livre_le' => null, 'bon_livraison_ligne_id' => null, 'facture_ligne_id' => null]
+                    : ['statut' => NumeroSerie::REBUT]);
+            }
+        }
+    }
+
+    /**
+     * Retour fournisseur expédié : ce qui sort d'un secteur sort de son lot (celui indiqué, sinon les premiers à
+     * périmer) ; les numéros de série indiqués doivent être en stock et passent à « retourné ».
+     */
+    public function retourFournisseur(RetourFournisseur $retour, string $jour, ?int $auteurId): void
+    {
+        foreach ($retour->lignes as $index => $ligne) {
+            $produit = $ligne->produit;
+            if (! $ligne->secteur_id || ! $produit?->suivi) {
+                continue;
+            }
+            // Une ligne reprise d'une commande fournisseur est en unités d'achat.
+            $unites = (float) $ligne->quantite * ($ligne->com_four_ligne_id ? max(1, (int) $ligne->ligneCommande?->qte_par_unite_achat) : 1);
+            $champ = "lignes.{$index}";
+            if ($produit->suivi === 'lot') {
+                $verrouilles = Lot::query()->where('produit_id', $produit->id)->lockForUpdate()->pluck('id');
+                $disponibles = $this->lotsDisponibles($produit->id)->whereIn('id', $verrouilles)->keyBy('id');
+                try {
+                    $allocations = $ligne->lot_id
+                        ? $this->allocationsSaisies([['lot_id' => $ligne->lot_id, 'quantite' => $unites]], $disponibles, $unites, $produit, $champ)
+                        : $this->premiersSortis($disponibles->values(), $unites);
+                } catch (ValidationException $erreur) {
+                    // Le lot se choisit sur la ligne : l'erreur va à son champ.
+                    throw ValidationException::withMessages(["{$champ}.lot_id" => collect($erreur->errors())->flatten()->first()]);
+                }
+                foreach ($allocations as [$lotId, $quantite]) {
+                    LotMouvement::create(['lot_id' => $lotId, 'type' => LotMouvement::RETOUR_FOURNISSEUR, 'quantite' => -$quantite, 'retour_fournisseur_ligne_id' => $ligne->id,
+                        'date_mouvement' => $jour, 'cree_par' => $auteurId]);
+                }
+            } elseif ($ligne->numeros_serie) {
+                $series = $this->seriesEnStock($produit, $ligne->numeros_serie, $unites, "{$champ}.numeros_serie");
+                NumeroSerie::query()->whereIn('id', $series->pluck('id'))->update(['statut' => NumeroSerie::RETOURNE]);
+            }
+        }
+    }
+
+    /**
+     * Exemplaires proposés pour des produits suivis : pour un retour client, les lots du produit (ceux sortis chez le
+     * client d'abord, avec la quantité qu'il a reçue) et les numéros livrés au client ; pour une sortie (retour
+     * fournisseur), les lots qui ont du stock (le premier à périmer d'abord) et les numéros en stock.
+     *
+     * @param  list<int>  $produits
+     */
+    public function exemplaires(array $produits, ?int $clientId): array
+    {
+        $resultat = [];
+        foreach (ProduitTenant::query()->whereIn('id', $produits)->whereNotNull('suivi')->get(['id', 'suivi']) as $produit) {
+            if ($produit->suivi === 'lot') {
+                if ($clientId !== null) {
+                    $recus = LotMouvement::query()->whereIn('type', LotMouvement::SORTIES_CLIENT)->where('client_id', $clientId)
+                        ->whereHas('lot', fn ($q) => $q->where('produit_id', $produit->id))->groupBy('lot_id')
+                        ->selectRaw('lot_id, -SUM(quantite) AS quantite')->pluck('quantite', 'lot_id');
+                    $lots = Lot::query()->where('produit_id', $produit->id)->orderBy('numero')->get()
+                        ->sortBy(fn (Lot $lot) => isset($recus[$lot->id]) ? 0 : 1)->values()
+                        ->map(fn (Lot $lot) => ['id' => $lot->id, 'numero' => $lot->numero, 'date_peremption' => $lot->date_peremption?->toDateString(),
+                            'recu_par_client' => isset($recus[$lot->id]) ? round((float) $recus[$lot->id], 4) : null]);
+                } else {
+                    $lots = $this->lotsDisponibles($produit->id)->map(fn (Lot $lot) => ['id' => $lot->id, 'numero' => $lot->numero,
+                        'date_peremption' => $lot->date_peremption?->toDateString(), 'solde' => round((float) $lot->solde, 4)]);
+                }
+                $resultat[] = ['produit_id' => $produit->id, 'suivi' => 'lot', 'lots' => $lots->values()->all(), 'series' => []];
+            } else {
+                $series = NumeroSerie::query()->where('produit_id', $produit->id)
+                    ->when($clientId !== null, fn ($q) => $q->where('statut', NumeroSerie::LIVRE)->where('client_id', $clientId),
+                        fn ($q) => $q->where('statut', NumeroSerie::EN_STOCK))
+                    ->orderBy('numero')->limit(500)->pluck('numero')->all();
+                $resultat[] = ['produit_id' => $produit->id, 'suivi' => 'serie', 'lots' => [], 'series' => $series];
+            }
+        }
+
+        return $resultat;
     }
 
     /** Le suivi d'un produit ne change plus dès que des lots ou des numéros de série lui sont enregistrés. */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -11,6 +11,9 @@ import {
   type PropositionRetour, type RetourClient, type SaisieLigneRetour,
 } from '@/services/retoursClients';
 import type { Produit, Secteur } from '@/types';
+import ExemplairesRetour from '@/components/lots/ExemplairesRetour';
+import { numerosSaisis } from '@/lib/lots';
+import { getExemplairesRetourClient, type ExemplairesProduit } from '@/services/lots';
 
 /** Une ligne de l'écran : ce qui revient d'un produit, une part remise en stock (dans un secteur), une part au rebut. */
 interface LigneEdition {
@@ -21,6 +24,10 @@ interface LigneEdition {
   secteur_id: string;
   rebut: string;
   raison_id: string;
+  /** Produit suivi : le lot qui revient (vide : le dernier livré au client), numéros remis en stock et mis au rebut. */
+  lot_id: string;
+  series: string;
+  seriesRebut: string;
 }
 
 const classeChamp = 'px-2 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
@@ -81,12 +88,15 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
       const parCle = new Map<string, LigneEdition>();
       for (const l of brouillon?.lignes ?? []) {
         const cle = l.facture_ligne_id ? `f${l.facture_ligne_id}` : `p${l.produit_id}`;
-        const ligne = parCle.get(cle) ?? { cle, facture_ligne_id: l.facture_ligne_id ?? undefined, produit_id: String(l.produit_id), enStock: '0', secteur_id: '', rebut: '0', raison_id: '' };
+        const ligne = parCle.get(cle) ?? { cle, facture_ligne_id: l.facture_ligne_id ?? undefined, produit_id: String(l.produit_id), enStock: '0', secteur_id: '', rebut: '0', raison_id: '', lot_id: '', series: '', seriesRebut: '' };
         if (l.traitement === 'remise_en_stock') {
           ligne.enStock = String(entier(ligne.enStock) + l.quantite);
           ligne.secteur_id = l.secteur_id ? String(l.secteur_id) : ligne.secteur_id;
+          ligne.lot_id = l.lot_id ? String(l.lot_id) : ligne.lot_id;
+          ligne.series = (l.numeros_serie ?? []).join('\n');
         } else {
           ligne.rebut = String(entier(ligne.rebut) + l.quantite);
+          ligne.seriesRebut = (l.numeros_serie ?? []).join('\n');
         }
         ligne.raison_id = ligne.raison_id || (l.raison_id ? String(l.raison_id) : '');
         parCle.set(cle, ligne);
@@ -94,11 +104,11 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
       if (prop) {
         setLignes(prop.lignes.map(l => parCle.get(`f${l.facture_ligne_id}`) ?? {
           cle: `f${l.facture_ligne_id}`, facture_ligne_id: l.facture_ligne_id, produit_id: String(l.produit_id),
-          enStock: '0', secteur_id: l.secteur_id ? String(l.secteur_id) : '', rebut: '0', raison_id: '',
+          enStock: '0', secteur_id: l.secteur_id ? String(l.secteur_id) : '', rebut: '0', raison_id: '', lot_id: '', series: '', seriesRebut: '',
         }));
       } else {
         const existantes = [...parCle.values()];
-        setLignes(existantes.length > 0 ? existantes : [{ cle: nouvelleCle(), produit_id: '', enStock: '1', secteur_id: '', rebut: '0', raison_id: '' }]);
+        setLignes(existantes.length > 0 ? existantes : [{ cle: nouvelleCle(), produit_id: '', enStock: '1', secteur_id: '', rebut: '0', raison_id: '', lot_id: '', series: '', seriesRebut: '' }]);
       }
       setCharge(true);
     }, e => { if (actif) setErreur(messageErreur(e, tr.error)); });
@@ -106,6 +116,17 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
   }, [factureId, brouillon, tr.error]);
 
   const restes = useMemo(() => new Map((proposition?.lignes ?? []).map(l => [l.facture_ligne_id, l])), [proposition]);
+  // Produits suivis : lots sortis chez le client et numéros qui lui ont été livrés.
+  const [exemplaires, setExemplaires] = useState<Map<number, ExemplairesProduit>>(new Map());
+  const clientDuRetour = proposition?.facture.client_id ?? brouillon?.client_id ?? (clientId ? Number(clientId) : null);
+  const produitsDuRetour = [...new Set(lignes.map(l => Number(l.produit_id)).filter(id => id > 0))].sort((a, b) => a - b).join(',');
+  useEffect(() => {
+    if (!clientDuRetour || !produitsDuRetour) return;
+    let actif = true;
+    getExemplairesRetourClient(clientDuRetour, produitsDuRetour.split(',').map(Number))
+      .then(liste => { if (actif) setExemplaires(new Map(liste.map(e => [e.produit_id, e]))); }, () => {});
+    return () => { actif = false; };
+  }, [clientDuRetour, produitsDuRetour]);
   const produitsParId = useMemo(() => new Map(produits.map(p => [String(p.id), p])), [produits]);
   const raisonExigee = raisons.length > 0;
 
@@ -152,8 +173,9 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
       const produit = ligne.facture_ligne_id ? { facture_ligne_id: ligne.facture_ligne_id } : { produit_id: Number(ligne.produit_id) };
       const raison = ligne.raison_id ? Number(ligne.raison_id) : null;
       return [
-        ...(enStock > 0 ? [{ ...produit, quantite: enStock, traitement: 'remise_en_stock' as const, secteur_id: Number(ligne.secteur_id), raison_id: raison }] : []),
-        ...(rebut > 0 ? [{ ...produit, quantite: rebut, traitement: 'rebut' as const, raison_id: raison }] : []),
+        ...(enStock > 0 ? [{ ...produit, quantite: enStock, traitement: 'remise_en_stock' as const, secteur_id: Number(ligne.secteur_id), raison_id: raison,
+          lot_id: ligne.lot_id ? Number(ligne.lot_id) : null, numeros_serie: numerosSaisis(ligne.series) }] : []),
+        ...(rebut > 0 ? [{ ...produit, quantite: rebut, traitement: 'rebut' as const, raison_id: raison, numeros_serie: numerosSaisis(ligne.seriesRebut) }] : []),
       ];
     });
     const saisie = { date_retour: entete.date_retour, notes: entete.notes.trim() || null, lignes: saisieLignes };
@@ -257,13 +279,17 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
                   </tr>
                 </thead>
                 <tbody>
-                  {calcul.map(({ ligne, enStock, facturee, depasse, sansSecteur, sansRaison, sansProduit }) => {
+                  {calcul.map(({ ligne, enStock, rebut, facturee, depasse, sansSecteur, sansRaison, sansProduit }) => {
                     const produit = facturee?.produit ?? (ligne.produit_id ? produitsParId.get(ligne.produit_id) : undefined)
                       ?? brouillon?.lignes?.find(l => String(l.produit_id) === ligne.produit_id)?.produit;
                     const nom = produit?.description ?? (ligne.produit_id ? `#${ligne.produit_id}` : tr.product);
                     const epuisee = facturee !== undefined && facturee.reste <= 0;
+                    const exemplaire = exemplaires.get(Number(ligne.produit_id));
+                    // Quantités en unités de stock (une caisse de 12 rapportée : 12 numéros).
+                    const facteur = facturee?.facteur ?? 1;
                     return (
-                      <tr key={ligne.cle} className={`border-b dark:border-gray-700 ${epuisee ? 'opacity-60' : ''}`}>
+                      <Fragment key={ligne.cle}>
+                      <tr className={`border-b dark:border-gray-700 ${epuisee ? 'opacity-60' : ''}`}>
                         <td className="py-2 pr-3">
                           {factureId || brouillon ? (
                             <>
@@ -295,13 +321,23 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
                           </td>
                         )}
                       </tr>
+                      {exemplaire && enStock + rebut > 0 && (
+                        <tr className="border-b dark:border-gray-700">
+                          <td colSpan={7} className="pb-2 pr-3">
+                            <ExemplairesRetour exemplaire={exemplaire} client lotId={ligne.lot_id} onLot={v => changer(ligne.cle, 'lot_id', v)}
+                              series={ligne.series} onSeries={v => changer(ligne.cle, 'series', v)} attendus={Math.round(enStock * facteur)}
+                              seriesRebut={ligne.seriesRebut} onSeriesRebut={v => changer(ligne.cle, 'seriesRebut', v)} attendusRebut={Math.round(rebut * facteur)} />
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
             {!factureId && !brouillon?.facture_id && (
-              <button type="button" onClick={() => setLignes(ls => [...ls, { cle: nouvelleCle(), produit_id: '', enStock: '1', secteur_id: '', rebut: '0', raison_id: '' }])}
+              <button type="button" onClick={() => setLignes(ls => [...ls, { cle: nouvelleCle(), produit_id: '', enStock: '1', secteur_id: '', rebut: '0', raison_id: '', lot_id: '', series: '', seriesRebut: '' }])}
                 className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                 <Plus size={16} /> {tr.addProduct}
               </button>

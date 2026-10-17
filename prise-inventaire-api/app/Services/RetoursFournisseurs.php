@@ -71,6 +71,8 @@ class RetoursFournisseurs
                 'quantite_retournee' => $repartis[$ligne->id] ?? 0,
                 'reste' => max(0, (int) $ligne->quantite_recue - ($repartis[$ligne->id] ?? 0)),
                 'prix_unitaire' => (float) $ligne->prix_unitaire,
+                // Unités de stock par unité d'achat (numéros de série attendus d'un carton de 6 : 6).
+                'facteur' => max(1, (int) $ligne->qte_par_unite_achat),
                 'secteur_id' => $ligne->receptions->firstWhere('secteur_id', '!=', null)?->secteur_id ?? $ligne->produit?->secteur_id,
             ])->values()->all(),
         ];
@@ -232,6 +234,8 @@ class RetoursFournisseurs
                 $mouvement = $this->mouvement($retour, $ligne, MouvementTenant::TYPE_SORTIE, $ligne->secteur, "Retour fournisseur {$retour->numero}".($ligne->raison ? " : {$ligne->raison->libelle}" : ''), $auteur, $moment);
                 $ligne->update(['mouvement_id' => $mouvement->id]);
             }
+            // Produits suivis : lots et numéros de série qui repartent (phase 2.8c).
+            app(LotsSeries::class)->retourFournisseur($retour, $jour, $auteur?->id);
             $retour->fill(['statut' => RetourFournisseur::EXPEDIE, 'date_expedition' => $jour, 'expedie_par' => $auteur?->id])->save();
 
             return $retour;
@@ -345,6 +349,8 @@ class RetoursFournisseurs
             if ($raisonExigee && empty($saisie['raison_id'])) {
                 throw ValidationException::withMessages(["lignes.{$index}.raison_id" => 'Choisissez la raison du retour.']);
             }
+            $lotId = isset($saisie['lot_id']) ? (int) $saisie['lot_id'] : null;
+            app(LotsSeries::class)->verifierLotDuProduit($lotId, $produitId, "lignes.{$index}.lot_id");
             $preparees[] = $origine + [
                 'produit_id' => $produitId,
                 'quantite' => (int) $saisie['quantite'],
@@ -352,6 +358,9 @@ class RetoursFournisseurs
                 'raison_id' => $saisie['raison_id'] ?? null,
                 'secteur_id' => empty($saisie['secteur_id']) ? null : (int) $saisie['secteur_id'],
                 'notes' => $saisie['notes'] ?? null,
+                // Produit suivi (phase 2.8c) : le lot qui repart, les numéros de série renvoyés.
+                'lot_id' => $lotId,
+                'numeros_serie' => app(LotsSeries::class)->numeros($saisie) ?: null,
             ];
         }
         if ($commande) {

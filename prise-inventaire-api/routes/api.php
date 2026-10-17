@@ -626,6 +626,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/', [RetourFournisseurController::class, 'index']);
         Route::get('/depuis-commande/{id}', [RetourFournisseurController::class, 'depuisCommande'])->whereNumber('id');
         Route::get('/depuis-retour-client/{id}', [RetourFournisseurController::class, 'depuisRetourClient'])->whereNumber('id');
+        // Produits suivis : lots et numéros de série qui peuvent repartir.
+        Route::get('/exemplaires', [RetourFournisseurController::class, 'exemplaires']);
         Route::get('/{id}', [RetourFournisseurController::class, 'show'])->whereNumber('id');
         Route::get('/{id}/pdf', [RetourFournisseurController::class, 'pdf'])->whereNumber('id');
         Route::post('/', [RetourFournisseurController::class, 'store']);
@@ -804,6 +806,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     // Retours clients : marchandise rapportée, remise en stock ou mise au rebut, puis note de crédit du retour.
     Route::prefix('retours-clients')->middleware('module:ventes')->group(function () {
         Route::get('/', [RetourClientController::class, 'index']);
+        // Produits suivis : lots et numéros de série que le client peut rapporter.
+        Route::get('/exemplaires', [RetourClientController::class, 'exemplaires']);
         Route::get('/{id}', [RetourClientController::class, 'show'])->whereNumber('id');
         Route::post('/', [RetourClientController::class, 'store']);
         Route::put('/{id}', [RetourClientController::class, 'update'])->whereNumber('id');

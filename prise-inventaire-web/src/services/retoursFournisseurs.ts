@@ -29,6 +29,9 @@ export interface RetourFournisseurLigne {
   mouvement_id: number | null;
   mouvement_remplacement_id: number | null;
   notes: string | null;
+  /** Produit suivi : le lot qui repart, les numéros de série renvoyés. */
+  lot_id?: number | null;
+  numeros_serie?: string[] | null;
 }
 
 export interface RetourFournisseur {
@@ -83,6 +86,8 @@ export interface PropositionCommande {
     quantite_retournee: number;
     reste: number;
     prix_unitaire: number;
+    /** Unités de stock par unité d'achat. */
+    facteur?: number;
     secteur_id: number | null;
   }[];
 }
@@ -113,6 +118,9 @@ export interface SaisieLigneRetourFournisseur {
   prix_unitaire: number;
   raison_id?: number | null;
   secteur_id?: number | null;
+  /** Produit suivi : le lot qui repart (vide : les premiers à périmer), les numéros de série renvoyés. */
+  lot_id?: number | null;
+  numeros_serie?: string[];
 }
 
 export interface SaisieRetourFournisseur {

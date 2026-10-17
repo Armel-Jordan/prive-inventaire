@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -12,6 +12,9 @@ import {
   type SaisieLigneRetourFournisseur, type TypeRetourFournisseur,
 } from '@/services/retoursFournisseurs';
 import type { Produit, Secteur } from '@/types';
+import ExemplairesRetour from '@/components/lots/ExemplairesRetour';
+import { numerosSaisis } from '@/lib/lots';
+import { getExemplairesRetourFournisseur, type ExemplairesProduit } from '@/services/lots';
 
 /** Origine d'un nouveau retour : une commande reçue, un retour client traité, ou aucune. */
 export type OrigineRetourFournisseur = { commandeId: number } | { retourClientId: number } | null;
@@ -26,6 +29,9 @@ interface LigneEdition {
   prix: string;
   secteur_id: string;
   raison_id: string;
+  /** Produit suivi : le lot qui repart (vide : les premiers à périmer), les numéros de série renvoyés. */
+  lot_id: string;
+  series: string;
 }
 
 const classeChamp = 'px-2 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
@@ -102,6 +108,7 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
           cle, com_four_ligne_id: l.com_four_ligne_id ?? undefined, retour_client_ligne_id: l.retour_client_ligne_id ?? undefined,
           produit_id: String(l.produit_id), quantite: String(l.quantite), prix: String(Number(l.prix_unitaire)),
           secteur_id: l.secteur_id ? String(l.secteur_id) : '', raison_id: l.raison_id ? String(l.raison_id) : '',
+          lot_id: l.lot_id ? String(l.lot_id) : '', series: (l.numeros_serie ?? []).join('\n'),
         });
       }
       if (propCommande) {
@@ -109,17 +116,17 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
         setDevise({ devise: propCommande.devise.devise ?? '', taux: String(propCommande.devise.taux_change) });
         setLignes(propCommande.lignes.map(l => existantes.get(`c${l.com_four_ligne_id}`) ?? {
           cle: `c${l.com_four_ligne_id}`, com_four_ligne_id: l.com_four_ligne_id, produit_id: String(l.produit_id),
-          quantite: '0', prix: String(l.prix_unitaire), secteur_id: l.secteur_id ? String(l.secteur_id) : '', raison_id: '',
+          quantite: '0', prix: String(l.prix_unitaire), secteur_id: l.secteur_id ? String(l.secteur_id) : '', raison_id: '', lot_id: '', series: '',
         }));
       } else if (propClient) {
         if (!brouillon && propClient.fournisseur_propose_id) setFournisseurId(String(propClient.fournisseur_propose_id));
         setLignes(propClient.lignes.map(l => existantes.get(`r${l.retour_client_ligne_id}`) ?? {
           cle: `r${l.retour_client_ligne_id}`, retour_client_ligne_id: l.retour_client_ligne_id, produit_id: String(l.produit_id),
-          quantite: String(brouillon ? 0 : l.quantite_proposee), prix: '', secteur_id: l.secteur_id ? String(l.secteur_id) : '', raison_id: '',
+          quantite: String(brouillon ? 0 : l.quantite_proposee), prix: '', secteur_id: l.secteur_id ? String(l.secteur_id) : '', raison_id: '', lot_id: '', series: '',
         }));
       } else {
         const libres = [...existantes.values()];
-        setLignes(libres.length > 0 ? libres : [{ cle: nouvelleCle(), produit_id: '', quantite: '1', prix: '', secteur_id: '', raison_id: '' }]);
+        setLignes(libres.length > 0 ? libres : [{ cle: nouvelleCle(), produit_id: '', quantite: '1', prix: '', secteur_id: '', raison_id: '', lot_id: '', series: '' }]);
       }
       setCharge(true);
     }, e => { if (actif) setErreur(messageErreur(e, tr.error)); });
@@ -159,6 +166,16 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
   const produitsParId = useMemo(() => new Map(produits.map(p => [String(p.id), p])), [produits]);
   const raisonExigee = raisons.length > 0;
   const deviseDocument = devise.devise && devise.devise !== reference ? devise.devise : null;
+  // Produits suivis : lots qui ont du stock (le premier à périmer d'abord) et numéros en stock.
+  const [exemplaires, setExemplaires] = useState<Map<number, ExemplairesProduit>>(new Map());
+  const produitsDuRetour = [...new Set(lignes.map(l => Number(l.produit_id)).filter(id => id > 0))].sort((a, b) => a - b).join(',');
+  useEffect(() => {
+    if (!produitsDuRetour) return;
+    let actif = true;
+    getExemplairesRetourFournisseur(produitsDuRetour.split(',').map(Number))
+      .then(liste => { if (actif) setExemplaires(new Map(liste.map(e => [e.produit_id, e]))); }, () => {});
+    return () => { actif = false; };
+  }, [produitsDuRetour]);
 
   const calcul = lignes.map(ligne => {
     const quantite = entier(ligne.quantite);
@@ -204,6 +221,8 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
       prix_unitaire: prix,
       secteur_id: ligne.secteur_id ? Number(ligne.secteur_id) : null,
       raison_id: ligne.raison_id ? Number(ligne.raison_id) : null,
+      lot_id: ligne.lot_id ? Number(ligne.lot_id) : null,
+      numeros_serie: numerosSaisis(ligne.series),
     }));
     const saisie = {
       fournisseur_id: Number(fournisseurId),
@@ -310,15 +329,19 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
                   </tr>
                 </thead>
                 <tbody>
-                  {calcul.map(({ ligne, reste, origine: o, depasse, sansRaison, sansProduit, total: totalLigne }) => {
+                  {calcul.map(({ ligne, quantite, reste, origine: o, depasse, sansRaison, sansProduit, total: totalLigne }) => {
                     const produit = o?.produit ?? (ligne.produit_id ? produitsParId.get(ligne.produit_id) : undefined)
                       ?? brouillon?.lignes?.find(l => String(l.produit_id) === ligne.produit_id)?.produit;
                     const nom = produit?.description ?? (ligne.produit_id ? `#${ligne.produit_id}` : tr.product);
                     const detailOrigine = o && 'quantite_recue' in o
                       ? tr.receivedReturned.replace('{recue}', String(o.quantite_recue)).replace('{retournee}', String(o.quantite_retournee))
                       : o && 'traitement' in o ? `${tr.fromCustomer.replace('{quantite}', String(o.quantite_retournee_client))} · ${tr.customerTreatments[o.traitement]}` : '';
+                    const exemplaire = ligne.secteur_id ? exemplaires.get(Number(ligne.produit_id)) : undefined;
+                    // En unités de stock : une ligne de commande se compte en unités d'achat.
+                    const facteur = o && 'facteur' in o ? (o.facteur ?? 1) : 1;
                     return (
-                      <tr key={ligne.cle} className={`border-b dark:border-gray-700 ${reste === 0 ? 'opacity-60' : ''}`}>
+                      <Fragment key={ligne.cle}>
+                      <tr className={`border-b dark:border-gray-700 ${reste === 0 ? 'opacity-60' : ''}`}>
                         <td className="py-2 pr-3">
                           {sansOrigine && !brouillon ? (
                             <select value={ligne.produit_id} onChange={e => changer(ligne.cle, 'produit_id', e.target.value)} aria-label={tr.product}
@@ -370,6 +393,16 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
                           </td>
                         )}
                       </tr>
+                      {/* Produit suivi qui sort du stock : le lot, ou les numéros de série renvoyés. */}
+                      {exemplaire && quantite > 0 && (
+                        <tr className="border-b dark:border-gray-700">
+                          <td colSpan={8} className="pb-2 pr-3">
+                            <ExemplairesRetour exemplaire={exemplaire} client={false} lotId={ligne.lot_id} onLot={v => changer(ligne.cle, 'lot_id', v)}
+                              series={ligne.series} onSeries={v => changer(ligne.cle, 'series', v)} attendus={Math.round(quantite * facteur)} />
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -377,7 +410,7 @@ export default function EditeurRetourFournisseur({ origine, brouillon, onClose, 
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               {sansOrigine && !brouillon ? (
-                <button type="button" onClick={() => setLignes(ls => [...ls, { cle: nouvelleCle(), produit_id: '', quantite: '1', prix: '', secteur_id: '', raison_id: '' }])}
+                <button type="button" onClick={() => setLignes(ls => [...ls, { cle: nouvelleCle(), produit_id: '', quantite: '1', prix: '', secteur_id: '', raison_id: '', lot_id: '', series: '' }])}
                   className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                   <Plus size={16} /> {tr.addProduct}
                 </button>

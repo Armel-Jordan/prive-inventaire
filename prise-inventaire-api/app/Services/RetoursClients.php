@@ -61,6 +61,8 @@ class RetoursClients
                 'quantite_facturee' => (int) $ligne->quantite,
                 // Unité facturée (la caisse de 12) ; vide : l'unité de stock.
                 'unite' => $ligne->unite,
+                // Unités de stock par unité facturée (numéros de série attendus d'une caisse de 12 : 12).
+                'facteur' => $ligne->facteurStock(),
                 'quantite_retournee' => $retournes[$ligne->id] ?? 0,
                 'reste' => max(0, (int) $ligne->quantite - ($retournes[$ligne->id] ?? 0)),
             ])->values()->all(),
@@ -162,6 +164,8 @@ class RetoursClients
                 ]);
                 $ligne->update(['mouvement_id' => $mouvement->id]);
             }
+            // Produits suivis : lots remis en stock, numéros de série revenus (phase 2.8c).
+            app(LotsSeries::class)->retourClient($retour, $auteur?->id);
             $retour->fill(['statut' => RetourClient::TRAITE, 'traite_le' => now(), 'traite_par' => $auteur?->id])->save();
 
             return $retour;
@@ -250,6 +254,8 @@ class RetoursClients
             if ($raisonExigee && empty($saisie['raison_id'])) {
                 throw ValidationException::withMessages(["lignes.{$index}.raison_id" => 'Choisissez la raison du retour.']);
             }
+            $lotId = isset($saisie['lot_id']) ? (int) $saisie['lot_id'] : null;
+            app(LotsSeries::class)->verifierLotDuProduit($lotId, $produitId, "lignes.{$index}.lot_id");
             $preparees[] = [
                 'facture_ligne_id' => $facture ? $ligne->id : null,
                 'produit_id' => $produitId,
@@ -261,6 +267,8 @@ class RetoursClients
                 'traitement' => $traitement,
                 'secteur_id' => $traitement === RetourClientLigne::REMISE_EN_STOCK ? (int) $saisie['secteur_id'] : null,
                 'notes' => $saisie['notes'] ?? null,
+                'lot_id' => $lotId,
+                'numeros_serie' => app(LotsSeries::class)->numeros($saisie) ?: null,
             ];
         }
         if ($facture) {
