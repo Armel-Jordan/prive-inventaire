@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Download, Wallet } from 'lucide-react';
+import ChampCompteBancaire from '@/components/banque/ChampCompteBancaire';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, formatDateDocument, useMontantDocument } from '@/lib/documents';
@@ -37,7 +38,7 @@ export default function PaiementsDusPage() {
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
   const [selection, setSelection] = useState<number[]>([]);
-  const [paiement, setPaiement] = useState<{ date: string; mode: ModeDebourse; reference: string; escompte: boolean } | null>(null);
+  const [paiement, setPaiement] = useState<{ date: string; mode: ModeDebourse; reference: string; escompte: boolean; compteBancaire: string } | null>(null);
   const [enCours, setEnCours] = useState(false);
   const peutPayer = peut('debourses', 'creer');
 
@@ -82,6 +83,7 @@ export default function PaiementsDusPage() {
     try {
       const resultat = await payerSelection({
         factures: selection, date_debourse: paiement.date, mode: paiement.mode, reference: paiement.reference.trim() || null, escompte: paiement.escompte,
+        compte_bancaire_id: paiement.mode !== 'especes' && paiement.compteBancaire ? Number(paiement.compteBancaire) : undefined,
       });
       setMessage(resultat.message);
       setPaiement(null);
@@ -145,7 +147,7 @@ export default function PaiementsDusPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 text-blue-900 dark:text-blue-100">
             <span>{tp.selected.replace('{n}', String(choisies.length)).replace('{net}', netChoisi)}</span>
             {!paiement && (
-              <button type="button" onClick={() => setPaiement({ date: filtres.payer_le ?? aujourdhui(), mode: 'virement', reference: '', escompte: true })}
+              <button type="button" onClick={() => setPaiement({ date: filtres.payer_le ?? aujourdhui(), mode: 'virement', reference: '', escompte: true, compteBancaire: '' })}
                 className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700"><Wallet size={14} /> {tp.paySelection}</button>
             )}
           </div>
@@ -162,6 +164,9 @@ export default function PaiementsDusPage() {
               <label className="text-xs text-gray-600 dark:text-gray-300">{tp.reference}
                 <input value={paiement.reference} maxLength={100} onChange={e => setPaiement({ ...paiement, reference: e.target.value })} className={`${classeChamp} block`} />
               </label>
+              {paiement.mode !== 'especes' && (
+                <ChampCompteBancaire valeur={paiement.compteBancaire} onChange={v => setPaiement(p => (p ? { ...p, compteBancaire: v } : p))} className="min-w-[200px]" />
+              )}
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 pb-2">
                 <input type="checkbox" checked={paiement.escompte} onChange={e => setPaiement({ ...paiement, escompte: e.target.checked })} /> {tp.applyDiscounts}
               </label>

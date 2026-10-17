@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Acompte;
 use App\Models\Avoir;
 use App\Models\Client;
+use App\Models\CompteBancaire;
 use App\Models\Configuration;
 use App\Models\Encaissement;
 use App\Models\EncaissementLigne;
@@ -39,7 +40,7 @@ class Encaissements
         return [
             'client:id,code,raison_sociale,devise',
             'lignes.facture:id,numero,date_facture,date_echeance,montant_ttc,montant_paye,reste_a_payer,statut,devise',
-            'acompte', 'auteur:id,nom', 'auteurAnnulation:id,nom',
+            'acompte', 'compteBancaire:id,nom,banque', 'auteur:id,nom', 'auteurAnnulation:id,nom',
         ];
     }
 
@@ -85,6 +86,7 @@ class Encaissements
     {
         $client = Client::findOrFail((int) $donnees['client_id']);
         $devise = app(DevisesVente::class)->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, $client);
+        $compteBancaire = $this->compteBancaire($donnees['compte_bancaire_id'] ?? null);
         $date = Carbon::parse($donnees['date_encaissement'])->toDateString();
         $montant = round((float) $donnees['montant'], 2);
         // Les lignes à zéro ne comptent pas (factures proposées, rien porté dessus).
@@ -105,7 +107,7 @@ class Encaissements
         }
         $surplus = max(0.0, $ecart);
 
-        return DB::transaction(function () use ($donnees, $tenantId, $auteur, $client, $devise, $date, $montant, $lignes, $applique, $escompte, $surplus) {
+        return DB::transaction(function () use ($donnees, $tenantId, $auteur, $client, $devise, $date, $montant, $lignes, $applique, $escompte, $surplus, $compteBancaire) {
             $session = $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null);
             // Verrous sur les factures, dans l'ordre : deux encaissements simultanés ne paient pas deux fois le même reste.
             $factures = Facture::query()->whereIn('id', $lignes->pluck('facture_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
@@ -126,6 +128,7 @@ class Encaissements
                 'escompte' => $escompte,
                 'surplus' => $surplus,
                 'caisse_session_id' => $session,
+                'compte_bancaire_id' => $compteBancaire?->id,
                 'notes' => $this->texte($donnees['notes'] ?? null),
                 'statut' => Encaissement::VALIDE,
                 'enregistre_par' => $auteur,
@@ -289,6 +292,17 @@ class Encaissements
         }
 
         return $parts;
+    }
+
+    /** Compte bancaire choisi : actif, sinon refusé ; vide : aucun (le compte de banque des réglages en comptabilité). */
+    private function compteBancaire(mixed $id): ?CompteBancaire
+    {
+        if (empty($id)) {
+            return null;
+        }
+
+        return CompteBancaire::query()->where('actif', true)->find((int) $id)
+            ?? throw ValidationException::withMessages(['compte_bancaire_id' => 'Choisissez un compte bancaire actif.']);
     }
 
     private function numero(int $tenantId): string

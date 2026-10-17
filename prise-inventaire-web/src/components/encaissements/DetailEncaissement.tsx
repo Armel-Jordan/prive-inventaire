@@ -80,6 +80,7 @@ export default function DetailEncaissement({ id, onClose, onModifie }: { id: num
               <div>
                 <p className="text-xs text-gray-500">{te.mode}</p>
                 <p className="font-medium">{te.modes[encaissement.mode] ?? encaissement.mode}{encaissement.reference ? ` — ${encaissement.reference}` : ''}</p>
+                {encaissement.compte_bancaire && <p className="text-xs text-gray-500">{encaissement.compte_bancaire.nom}</p>}
                 {encaissement.auteur && <p className="text-xs text-gray-500">{te.recordedBy.replace('{nom}', encaissement.auteur.nom)}</p>}
               </div>
             </div>

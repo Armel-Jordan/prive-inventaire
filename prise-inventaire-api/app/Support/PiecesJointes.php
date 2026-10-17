@@ -14,6 +14,7 @@ use App\Models\Facture;
 use App\Models\FactureFournisseur;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
+use App\Models\TransactionBancaire;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -39,6 +40,8 @@ final class PiecesJointes
         'facture_fournisseur' => [FactureFournisseur::class, 'achats'],
         // Déboursé : la copie du chèque, l'avis de virement.
         'debourse' => [Debourse::class, 'achats'],
+        // Transaction bancaire : l'avis de la banque, le justificatif des frais.
+        'transaction_bancaire' => [TransactionBancaire::class, 'finance'],
     ];
 
     /** Types que le navigateur peut afficher sans risque ; les autres sont toujours téléchargés. */

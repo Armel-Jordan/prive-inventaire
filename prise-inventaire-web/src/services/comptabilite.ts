@@ -132,12 +132,13 @@ export async function rouvrirPeriode(id: number): Promise<PeriodeComptable> {
 export type TypeJournal = 'general' | 'ventes' | 'achats' | 'tresorerie' | 'ouverture';
 export type SourceEcriture = 'manuelle' | 'ouverture' | 'cloture' | 'recurrente'
   // Comptabilisation automatique, par type de document.
-  | 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse';
+  | 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir' | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse'
+  | 'transaction_bancaire';
 
 /** Sources des écritures, dans l'ordre du filtre du journal. */
 export const SOURCES_ECRITURE: SourceEcriture[] = [
   'manuelle', 'ouverture', 'cloture', 'recurrente', 'facture', 'avoir', 'paiement_client', 'encaissement', 'acompte', 'remboursement_acompte',
-  'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur', 'debourse',
+  'remboursement_avoir', 'facture_fournisseur', 'paiement_fournisseur', 'debourse', 'transaction_bancaire',
 ];
 export const TYPES_JOURNAL: TypeJournal[] = ['general', 'ventes', 'achats', 'tresorerie', 'ouverture'];
 
@@ -306,7 +307,7 @@ export async function contrePasserEcriture(id: number, date: string): Promise<Ec
 // ── Comptabilisation automatique ───────────────────────────────────────────────
 
 export type TypeDocumentComptable = 'facture' | 'avoir' | 'paiement_client' | 'encaissement' | 'acompte' | 'remboursement_acompte' | 'remboursement_avoir'
-  | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse';
+  | 'facture_fournisseur' | 'paiement_fournisseur' | 'debourse' | 'transaction_bancaire';
 
 export const CHAMPS_JOURNAUX = ['journal_ventes_id', 'journal_achats_id', 'journal_banque_id', 'journal_caisse_id', 'journal_od_id'] as const;
 export const CHAMPS_COMPTES = [

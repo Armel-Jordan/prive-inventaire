@@ -26,7 +26,7 @@ class Encaissement extends Model
 
     protected $fillable = [
         'tenant_id', 'numero', 'client_id', 'date_encaissement', 'mode', 'reference', 'devise', 'taux_change', 'montant',
-        'montant_applique', 'escompte', 'surplus', 'acompte_id', 'caisse_session_id', 'notes', 'statut', 'enregistre_par',
+        'montant_applique', 'escompte', 'surplus', 'acompte_id', 'caisse_session_id', 'compte_bancaire_id', 'notes', 'statut', 'enregistre_par',
         'annule_le', 'annule_par', 'motif_annulation',
     ];
 
@@ -54,6 +54,12 @@ class Encaissement extends Model
     public function acompte(): BelongsTo
     {
         return $this->belongsTo(Acompte::class);
+    }
+
+    /** Compte bancaire par lequel passe l'argent (vide : le compte de banque des réglages de comptabilisation). */
+    public function compteBancaire(): BelongsTo
+    {
+        return $this->belongsTo(CompteBancaire::class)->withTrashed();
     }
 
     public function auteur(): BelongsTo

@@ -761,6 +761,7 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
   - La case **Tout** règle le reste : l'escompte offert, et l'argent pour le solde.
   - L'escompte se corrige à la main (le fournisseur peut en accorder un autre).
 - **Montant du déboursé** : l'argent versé, somme des parts payées. Un escompte seul ne fait pas un déboursé.
+- **Compte bancaire** (sauf en espèces) : celui d'où sort l'argent, le compte « par défaut » proposé ; aussi au paiement d'une sélection depuis les paiements dus. La comptabilisation le passe au compte comptable de ce compte bancaire (voir FLOW-COMPTABILITE, Banque).
 - **Contrôles** :
   - factures du fournisseur, enregistrées (pas annulées), dans la devise du déboursé, chacune une seule fois ;
   - pas de date avant celle d'une facture, ni plus tard que demain.

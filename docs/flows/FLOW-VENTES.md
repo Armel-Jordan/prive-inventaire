@@ -1796,6 +1796,7 @@ Plan de parité fripv2, phase 4.4 (« Encaissement d'un client ») : l'argent re
   - **répartition supérieure au montant reçu** : refusée, sauf si la différence est **accordée en escompte**. L'escompte se partage entre les factures au prorata de leur part, et les factures sont alors réglées en entier.
 - **Crédits du client** : ses acomptes et notes de crédit encore disponibles sont rappelés ; ils s'appliquent depuis leurs écrans.
 - **Caisse** : sur un poste de caisse, l'encaissement entre dans la session ouverte (§5.19). La caisse attend les paiements des factures et le surplus.
+- **Compte bancaire** (sauf en espèces) : celui par lequel passe l'argent, le compte « par défaut » proposé. La comptabilisation le passe au compte comptable de ce compte bancaire (voir FLOW-COMPTABILITE, Banque).
 - **Contrôles** :
   - factures du client, dues, dans la devise de l'encaissement, chacune une seule fois ;
   - pas plus que le reste d'une facture ;

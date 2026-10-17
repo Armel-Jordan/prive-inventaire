@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Eraser, Wand2, X } from 'lucide-react';
 import ChampDevise from '@/components/ChampDevise';
+import ChampCompteBancaire from '@/components/banque/ChampCompteBancaire';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -36,6 +37,7 @@ export default function FenetreEncaissement({ clientId, onClose, onEnregistre }:
     // Sur un poste de caisse, l'argent comptant est proposé.
     mode: (encaissement.caisse ? 'especes' : 'cheque') as ModeEncaissement,
     reference: '',
+    compteBancaire: '',
     montant: '',
     notes: '',
     devise: '',
@@ -107,6 +109,7 @@ export default function FenetreEncaissement({ clientId, onClose, onEnregistre }:
         notes: saisie.notes.trim() || null,
         escompte: ecart < 0 && escompte,
         caisse_id,
+        compte_bancaire_id: saisie.mode !== 'especes' && saisie.compteBancaire ? Number(saisie.compteBancaire) : undefined,
         lignes: factures.filter(f => centimes(parts[f.id] ?? '') > 0).map(f => ({ facture_id: f.id, montant: centimes(parts[f.id]) / 100 })),
       }));
       onEnregistre(resultat);
@@ -160,6 +163,9 @@ export default function FenetreEncaissement({ clientId, onClose, onEnregistre }:
           <label className="block text-xs text-gray-500 dark:text-gray-400">{te.reference}
             <input value={saisie.reference} maxLength={100} placeholder={te.referenceHelp} onChange={e => setSaisie({ ...saisie, reference: e.target.value })} className={classeChamp} />
           </label>
+          {saisie.mode !== 'especes' && (
+            <ChampCompteBancaire valeur={saisie.compteBancaire} onChange={v => setSaisie(s => ({ ...s, compteBancaire: v }))} />
+          )}
           {saisie.client_id && (
             <div className="sm:col-span-2">
               <ChampDevise valeur={{ devise: saisie.devise, taux: saisie.taux }} onChange={v => setSaisie(s => ({ ...s, devise: v.devise, taux: v.taux }))} />

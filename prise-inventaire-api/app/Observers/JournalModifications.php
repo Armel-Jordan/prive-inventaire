@@ -24,6 +24,7 @@ use App\Models\ScanTenant;
 use App\Models\Secteur;
 use App\Models\TenantParametres;
 use App\Models\TenantTaxe;
+use App\Models\TransactionBancaire;
 use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Throwable;
@@ -56,6 +57,7 @@ class JournalModifications
         Acompte::class => ['Acompte', ['create', 'update', 'delete']],
         Encaissement::class => ['Encaissement', ['create', 'update', 'delete']],
         Debourse::class => ['Déboursé', ['create', 'update', 'delete']],
+        TransactionBancaire::class => ['Transaction bancaire', ['create', 'update', 'delete']],
         DemandeAcompte::class => ["Demande d'acompte", ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],

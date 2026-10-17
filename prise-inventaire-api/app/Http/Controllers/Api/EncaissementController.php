@@ -80,6 +80,8 @@ class EncaissementController extends Controller
             'escompte' => 'sometimes|boolean',
             // Caisse du poste : l'encaissement entre dans sa session ouverte (refusé si elle est fermée).
             'caisse_id' => 'nullable|integer',
+            // Compte bancaire par lequel passe l'argent (chèque, virement, carte).
+            'compte_bancaire_id' => 'nullable|integer',
             'lignes' => 'nullable|array|max:200',
             'lignes.*.facture_id' => 'required|integer',
             'lignes.*.montant' => 'required|numeric|min:0',

@@ -105,7 +105,7 @@ class Soldes
                 ->orWhere('e.reference', 'like', "%{$recherche}%")))
             ->orderBy('e.date')->orderBy('e.numero')->orderBy('ecritures_comptables_lignes.ordre')
             ->select([
-                'e.id as ecriture_id', 'e.date', 'e.numero', 'e.libelle as libelle_ecriture', 'e.reference', 'j.code as journal',
+                'e.id as ecriture_id', 'e.date', 'e.numero', 'e.libelle as libelle_ecriture', 'e.reference', 'e.source', 'j.code as journal',
                 'c.numero as compte', 'ecritures_comptables_lignes.libelle', 'ecritures_comptables_lignes.debit', 'ecritures_comptables_lignes.credit',
             ]);
 
@@ -130,6 +130,8 @@ class Soldes
                 'compte' => $ligne->compte,
                 'libelle' => $ligne->libelle ?: $ligne->libelle_ecriture,
                 'reference' => $ligne->reference,
+                // Origine de l'écriture (saisie manuelle, facture, encaissement, transaction bancaire…).
+                'source' => $ligne->source,
                 'debit' => $debit,
                 'credit' => $credit,
                 'solde' => $solde,

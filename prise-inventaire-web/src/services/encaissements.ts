@@ -39,6 +39,8 @@ export interface Encaissement {
   acompte_id: number | null;
   acompte?: { id: number; montant: string; montant_applique: string; montant_rembourse: string; disponible: number } | null;
   caisse_session_id: number | null;
+  compte_bancaire_id?: number | null;
+  compte_bancaire?: { id: number; nom: string; banque: string } | null;
   notes: string | null;
   statut: StatutEncaissement;
   auteur?: { id: number; nom: string } | null;
@@ -100,6 +102,8 @@ export interface SaisieEncaissement {
   escompte?: boolean;
   /** Caisse du poste : l'encaissement entre dans sa session ouverte. */
   caisse_id?: number;
+  /** Compte bancaire par lequel passe l'argent (chèque, virement, carte). */
+  compte_bancaire_id?: number;
   lignes: { facture_id: number; montant: number }[];
 }
 
