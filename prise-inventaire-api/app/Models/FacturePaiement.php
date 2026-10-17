@@ -15,6 +15,8 @@ class FacturePaiement extends Model
     protected $fillable = [
         'facture_id', 'echeance_id', 'acompte_id', 'date_paiement', 'montant', 'escompte',
         'mode_paiement', 'reference', 'notes', 'enregistre_par', 'caisse_session_id', 'montant_recu', 'carte_cadeau_id',
+        // Encaissement réparti sur plusieurs factures dont le paiement est une part.
+        'encaissement_id',
     ];
 
     protected $casts = [

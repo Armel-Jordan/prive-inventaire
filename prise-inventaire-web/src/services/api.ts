@@ -953,7 +953,7 @@ export async function deleteCommandeFournisseur(id: number): Promise<void> {
 // === PIÈCES JOINTES ===
 export type EntitePieceJointe =
   | 'client' | 'fournisseur' | 'produit' | 'employe'
-  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'facture_fournisseur';
+  | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'facture_fournisseur' | 'encaissement';
 
 export interface PieceJointe {
   id: number;

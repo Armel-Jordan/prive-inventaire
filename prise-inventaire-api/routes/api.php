@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\DemandeAcompteController;
 use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\DisponibiliteController;
 use App\Http\Controllers\Api\DocumentPdfController;
+use App\Http\Controllers\Api\EncaissementController;
 use App\Http\Controllers\Api\FactureController;
 use App\Http\Controllers\Api\FactureFournisseurController;
 use App\Http\Controllers\Api\FournisseurController;
@@ -748,6 +749,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [AcompteController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/appliquer', [AcompteController::class, 'appliquer'])->whereNumber('id');
         Route::post('/{id}/rembourser', [AcompteController::class, 'rembourser'])->whereNumber('id');
+    });
+
+    // Encaissements : l'argent reçu d'un client en une fois, réparti sur plusieurs de ses factures (surplus en acompte).
+    Route::prefix('encaissements')->middleware('module:ventes')->group(function () {
+        Route::get('/', [EncaissementController::class, 'index']);
+        Route::get('/a-regler', [EncaissementController::class, 'aRegler']);
+        Route::post('/', [EncaissementController::class, 'store']);
+        Route::get('/{id}', [EncaissementController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [EncaissementController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/annuler', [EncaissementController::class, 'annuler'])->whereNumber('id');
+        Route::get('/{id}/pdf', [EncaissementController::class, 'pdf'])->whereNumber('id');
     });
 
     // Demandes d'acompte : dépôt demandé au client ; la marquer payée enregistre l'acompte.

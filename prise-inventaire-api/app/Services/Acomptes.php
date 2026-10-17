@@ -7,6 +7,7 @@ use App\Models\AcompteRemboursement;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\DemandeAcompte;
+use App\Models\Encaissement;
 use App\Models\Facture;
 use App\Models\FacturePaiement;
 use DomainException;
@@ -77,6 +78,10 @@ class Acomptes
         if ($utilise && ($change('date_acompte', $acompte->date_acompte->toDateString()) || $change('mode', $acompte->mode)
             || (array_key_exists('montant', $donnees) && abs((float) $donnees['montant'] - (float) $acompte->montant) > self::TOLERANCE))) {
             throw new DomainException('Un acompte déjà appliqué ou remboursé ne change plus de date, de mode ni de montant.');
+        }
+        if ($change('date_acompte', $acompte->date_acompte->toDateString()) || $change('mode', $acompte->mode)
+            || (array_key_exists('montant', $donnees) && abs((float) $donnees['montant'] - (float) $acompte->montant) > self::TOLERANCE)) {
+            $this->verifierEncaissement($acompte);
         }
         if (array_key_exists('commande_id', $donnees)) {
             $this->verifierCommande((int) $acompte->client_id, $donnees['commande_id']);
@@ -208,6 +213,7 @@ class Acomptes
         if ((float) $acompte->montant_applique > 0 || (float) $acompte->montant_rembourse > 0) {
             throw new DomainException('Un acompte déjà appliqué ou remboursé ne se supprime plus.');
         }
+        $this->verifierEncaissement($acompte);
         DB::transaction(function () use ($acompte) {
             if ($acompte->demande_id) {
                 DemandeAcompte::whereKey($acompte->demande_id)->where('acompte_id', $acompte->id)->get()
@@ -227,6 +233,15 @@ class Acomptes
         $acompte->montant_applique = $acompte->applications()->sum('montant');
         $acompte->montant_rembourse = $acompte->remboursements()->sum('montant');
         $acompte->save();
+    }
+
+    /** Surplus d'un encaissement : il suit l'encaissement (date, mode, montant) et disparaît avec son annulation. */
+    private function verifierEncaissement(Acompte $acompte): void
+    {
+        $numero = Encaissement::query()->where('acompte_id', $acompte->id)->value('numero');
+        if ($numero) {
+            throw new DomainException("Cet acompte est le surplus de l'encaissement {$numero} : il se corrige en annulant l'encaissement.");
+        }
     }
 
     /** Une commande à laquelle réserver un acompte : du même client, ni refusée ni annulée. */

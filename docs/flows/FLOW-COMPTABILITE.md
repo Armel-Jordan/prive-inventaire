@@ -217,6 +217,7 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
 | Facture de vente émise | Ventes | Clients (TTC) | Ventes par catégorie (HT), taxes collectées par taxe |
 | Note de crédit émise | Ventes | Ventes (HT), taxes collectées | Clients (TTC) |
 | Paiement d'un client | Caisse ou banque selon le mode | Caisse ou banque ; acompte appliqué : acomptes clients ; carte cadeau : cartes cadeaux (journal des opérations diverses) ; escompte accordé | Clients (paiement et escompte) |
+| Encaissement réparti sur plusieurs factures | Caisse ou banque selon le mode | Caisse ou banque (argent reçu) ; escompte accordé | Clients (une ligne par facture) ; surplus : acomptes clients |
 | Acompte reçu | Caisse ou banque | Caisse ou banque | Acomptes clients |
 | Remboursement d'acompte | Caisse ou banque | Acomptes clients | Caisse ou banque |
 | Remboursement de note de crédit | Caisse ou banque | Clients | Caisse ou banque |
@@ -226,7 +227,8 @@ Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements pass
 **Règles :**
 - Une écriture générée porte le type de son document en source (filtre « Origine » du journal) et le numéro du document en référence.
 - Elle ne se modifie pas depuis le journal : le document se corrige, ou l'écriture se contre-passe.
-- **Un document se comptabilise une fois.** Une facture fournisseur annulée, un paiement fournisseur annulé ou un acompte supprimé après coup font **contre-passer** leur écriture, à la date de l'annulation (aujourd'hui pour une suppression).
+- **Un document se comptabilise une fois.** Une facture fournisseur annulée, un paiement fournisseur annulé, un acompte supprimé ou un encaissement annulé après coup font **contre-passer** leur écriture, à la date de l'annulation (aujourd'hui pour une suppression).
+- **Encaissement** : ses paiements de factures et son surplus passent avec lui, en une seule écriture ; ils ne passent pas aussi comme paiements ou acomptes. Un encaissement annulé avant d'être comptabilisé ne passe pas au journal.
 - **Refus** : un document dans une période fermée, ou qui demande un compte non réglé, reste à comptabiliser, et son motif est rapporté (« Compte « Taxes collectées » non réglé »). Les autres passent.
 - **Aperçu** : nombre et montant des documents à comptabiliser par type sur la période, écritures à contre-passer, réglages manquants.
 - Une seule comptabilisation à la fois par entreprise.

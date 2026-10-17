@@ -9,6 +9,7 @@ use App\Models\AvoirRemboursement;
 use App\Models\CompteComptable;
 use App\Models\DocumentTaxe;
 use App\Models\EcritureComptable;
+use App\Models\Encaissement;
 use App\Models\Facture;
 use App\Models\FactureFournisseur;
 use App\Models\FactureFournisseurPaiement;
@@ -33,12 +34,14 @@ use Illuminate\Validation\ValidationException;
  *    taxe) au crédit ; note de crédit émise : l'inverse ;
  *  - paiement d'un client : caisse ou banque selon le mode (acompte appliqué : acomptes clients ; carte cadeau : cartes
  *    cadeaux), escompte accordé au débit, client au crédit ; acompte reçu, remboursements d'acompte et de note de crédit ;
+ *  - encaissement réparti sur plusieurs factures (phase 4.4) : une écriture, l'argent reçu en caisse ou en banque, chaque
+ *    facture réglée au crédit du client, le surplus au crédit des acomptes clients ;
  *  - facture fournisseur : achats (HT, par catégorie) et taxes déductibles au débit, fournisseur au crédit ; paiement
  *    d'un fournisseur ;
  *  - montants dans la devise de l'entreprise, au taux du document ; le compte du tiers prend la somme des contreparties
  *    arrondies (pas d'écart d'arrondi) ;
  *  - un document se comptabilise une fois (source et source_id de l'écriture) ; annulé ou supprimé ensuite (facture
- *    fournisseur, paiement fournisseur, acompte), son écriture est contre-passée ;
+ *    fournisseur, paiement fournisseur, acompte, encaissement), son écriture est contre-passée ;
  *  - seuls les documents datés à partir de la date de début réglée se comptabilisent ; un document refusé (période
  *    fermée, compte non réglé) reste à comptabiliser et son motif est rapporté.
  *
@@ -51,6 +54,7 @@ class Comptabilisation
         'facture' => 'Factures de vente',
         'avoir' => 'Notes de crédit',
         'paiement_client' => 'Paiements des clients',
+        'encaissement' => 'Encaissements des clients',
         'acompte' => 'Acomptes reçus',
         'remboursement_acompte' => "Remboursements d'acomptes",
         'remboursement_avoir' => 'Remboursements de notes de crédit',
@@ -229,8 +233,12 @@ class Comptabilisation
         [$requete, $date] = match ($type) {
             'facture' => [Facture::query()->whereIn('statut', ['emise', 'partiellement_payee', 'payee'])->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_facture'],
             'avoir' => [Avoir::query()->whereIn('statut', Avoir::EMISES)->where('montant_ttc', '!=', 0)->with(['client', 'lignes.produit']), 'date_avoir'],
-            'paiement_client' => [FacturePaiement::query()->whereHas('facture')->where(fn ($q) => $q->where('montant', '>', 0)->orWhere('escompte', '>', 0))->with('facture.client'), 'date_paiement'],
-            'acompte' => [Acompte::query()->where('montant', '>', 0)->with('client'), 'date_acompte'],
+            'paiement_client' => [FacturePaiement::query()->whereHas('facture')->whereNull('encaissement_id')
+                ->where(fn ($q) => $q->where('montant', '>', 0)->orWhere('escompte', '>', 0))->with('facture.client'), 'date_paiement'],
+            'encaissement' => [Encaissement::query()->where('statut', Encaissement::VALIDE)->with(['client', 'lignes.facture']), 'date_encaissement'],
+            'acompte' => [Acompte::query()->where('montant', '>', 0)
+                ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('encaissements')->whereColumn('encaissements.acompte_id', 'acomptes.id'))
+                ->with('client'), 'date_acompte'],
             'remboursement_acompte' => [AcompteRemboursement::query()->whereHas('acompte')->where('montant', '>', 0)->with('acompte.client'), 'date_remboursement'],
             'remboursement_avoir' => [AvoirRemboursement::query()->whereHas('avoir')->where('montant', '>', 0)->with('avoir.client'), 'date_remboursement'],
             'facture_fournisseur' => [FactureFournisseur::query()->where('statut', FactureFournisseur::ENREGISTREE)->where('montant_ttc', '!=', 0)->with(['fournisseur', 'lignes.produit']), 'date_facture'],
@@ -248,14 +256,14 @@ class Comptabilisation
     }
 
     /**
-     * Écritures dont le document a été annulé (facture fournisseur) ou supprimé (paiement fournisseur, acompte), pas
-     * encore contre-passées, avec la date de leur contre-passation (celle de l'annulation, sinon aujourd'hui).
+     * Écritures dont le document a été annulé (facture fournisseur, encaissement) ou supprimé (paiement fournisseur,
+     * acompte), pas encore contre-passées, avec la date de leur contre-passation (celle de l'annulation, sinon aujourd'hui).
      *
      * @return Collection<int, array{0: EcritureComptable, 1: string}>
      */
     private function aContrePasser(): Collection
     {
-        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte'])
+        $ecritures = EcritureComptable::query()->whereIn('source', ['facture_fournisseur', 'paiement_fournisseur', 'acompte', 'encaissement'])
             ->whereNull('contrepassation_de')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ecritures_comptables as inverses')
                 ->whereColumn('inverses.contrepassation_de', 'ecritures_comptables.id'))
@@ -264,6 +272,7 @@ class Comptabilisation
             'facture_fournisseur' => FactureFournisseur::query()->whereIn('id', $ecritures->where('source', 'facture_fournisseur')->pluck('source_id'))->get()->keyBy('id'),
             'paiement_fournisseur' => FactureFournisseurPaiement::query()->whereIn('id', $ecritures->where('source', 'paiement_fournisseur')->pluck('source_id'))->pluck('id', 'id'),
             'acompte' => Acompte::query()->whereIn('id', $ecritures->where('source', 'acompte')->pluck('source_id'))->pluck('id', 'id'),
+            'encaissement' => Encaissement::query()->whereIn('id', $ecritures->where('source', 'encaissement')->pluck('source_id'))->get()->keyBy('id'),
         ];
         $aujourdhui = today()->toDateString();
 
@@ -271,6 +280,9 @@ class Comptabilisation
             $document = $existants[$ecriture->source]->get($ecriture->source_id);
             if ($ecriture->source === 'facture_fournisseur' && $document) {
                 return $document->statut === FactureFournisseur::ANNULEE ? [$ecriture, $document->annulee_le?->toDateString() ?? $aujourdhui] : null;
+            }
+            if ($ecriture->source === 'encaissement' && $document) {
+                return $document->statut === Encaissement::ANNULE ? [$ecriture, $document->annule_le?->toDateString() ?? $aujourdhui] : null;
             }
 
             return $document ? null : [$ecriture, $aujourdhui];
@@ -284,6 +296,7 @@ class Comptabilisation
             'facture' => $this->ecritureVente($document, $p, false),
             'avoir' => $this->ecritureVente($document, $p, true),
             'paiement_client' => $this->ecriturePaiementClient($document, $p),
+            'encaissement' => $this->ecritureEncaissement($document, $p),
             'acompte' => $this->ecritureTresorerie($p, $document->mode, $document->date_acompte, $this->montant($document->montant, $document->taux_change),
                 $this->compte($p, 'compte_acomptes_id'), true, 'Acompte de '.$this->tiers($document->client), $document->reference),
             'remboursement_acompte' => $this->ecritureTresorerie($p, $document->mode, $document->date_remboursement,
@@ -378,6 +391,44 @@ class Comptabilisation
             'libelle' => mb_substr("Paiement de {$facture->numero} — ".$this->tiers($facture->client, $facture), 0, 255),
             'reference' => $paiement->reference ?: $facture->numero,
             'lignes' => $lignes,
+        ];
+    }
+
+    /**
+     * Encaissement d'un client, en une écriture : l'argent reçu en caisse ou en banque selon le mode et l'escompte
+     * accordé au débit ; chaque facture réglée au crédit du client, le surplus au crédit des acomptes clients. Les parts
+     * des factures sont au taux de leur facture, le surplus au taux de l'encaissement.
+     */
+    private function ecritureEncaissement(Encaissement $encaissement, ParametreComptable $p): array
+    {
+        [$tresorerie, $journal] = $this->tresorerie($p, $encaissement->mode);
+        $argent = 0.0;
+        $escompte = 0.0;
+        $credits = [];
+        foreach ($encaissement->lignes as $ligne) {
+            $taux = $ligne->facture?->taux_change;
+            $paye = $this->montant((float) $ligne->montant - (float) $ligne->escompte, $taux);
+            $part = $this->montant($ligne->escompte, $taux);
+            $argent += $paye;
+            $escompte += $part;
+            $credits[] = $this->ligne($this->compte($p, 'compte_clients_id'), round($paye + $part, 2), true, $ligne->facture?->numero);
+        }
+        $surplus = $this->montant($encaissement->surplus, $encaissement->taux_change);
+        if ($surplus > 0) {
+            $argent += $surplus;
+            $credits[] = $this->ligne($this->compte($p, 'compte_acomptes_id'), $surplus, true, 'Surplus laissé en acompte');
+        }
+        $debits = array_values(array_filter([
+            round($argent, 2) > 0 ? $this->ligne($tresorerie, round($argent, 2), false, null) : null,
+            round($escompte, 2) > 0 ? $this->ligne($this->compte($p, 'compte_escomptes_id'), round($escompte, 2), false, 'Escompte accordé') : null,
+        ]));
+
+        return [
+            'journal_id' => $journal,
+            'date' => $encaissement->date_encaissement->toDateString(),
+            'libelle' => mb_substr("Encaissement {$encaissement->numero} — ".$this->tiers($encaissement->client), 0, 255),
+            'reference' => $encaissement->reference ?: $encaissement->numero,
+            'lignes' => [...$debits, ...$credits],
         ];
     }
 
@@ -491,6 +542,7 @@ class Comptabilisation
         return match ($type) {
             'facture', 'avoir', 'facture_fournisseur' => $this->montant($document->montant_ttc, $document->taux_change),
             'paiement_client' => $this->montant((float) $document->montant + (float) $document->escompte, $document->facture?->taux_change),
+            'encaissement' => $this->montant((float) $document->montant + (float) $document->escompte, $document->taux_change),
             'acompte' => $this->montant($document->montant, $document->taux_change),
             'remboursement_acompte' => $this->montant($document->montant, $document->acompte?->taux_change),
             'remboursement_avoir' => $this->montant($document->montant, $document->avoir?->taux_change),
@@ -504,6 +556,7 @@ class Comptabilisation
         return match ($type) {
             'facture', 'avoir', 'facture_fournisseur' => (string) $document->numero,
             'paiement_client' => 'Paiement de '.$document->facture?->numero,
+            'encaissement' => 'Encaissement '.$document->numero,
             'acompte' => trim('Acompte '.($document->numero ?? '#'.$document->id)),
             'remboursement_acompte' => 'Remboursement d\'acompte #'.$document->id,
             'remboursement_avoir' => 'Remboursement de '.$document->avoir?->numero,

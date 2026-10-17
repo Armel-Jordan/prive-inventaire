@@ -131,6 +131,9 @@ class Facture extends Model
             $this->statut = (float) $this->montant_paye > 0 || (float) $this->montant_credite <= 0 ? 'payee' : 'creditee';
         } elseif ($this->montant_paye > 0) {
             $this->statut = 'partiellement_payee';
+        } elseif (in_array($this->statut, ['payee', 'partiellement_payee', 'creditee'], true)) {
+            // Plus aucun paiement (retirés avec leur encaissement annulé) : la facture redevient due.
+            $this->statut = 'emise';
         }
         $this->save();
         $this->repartirSurEcheances();

@@ -14,6 +14,7 @@ use App\Models\Configuration;
 use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
+use App\Models\Encaissement;
 use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\MouvementTenant;
@@ -52,6 +53,7 @@ class JournalModifications
         Facture::class => ['Facture', ['create', 'update', 'delete']],
         Avoir::class => ['Note de crédit', ['create', 'update', 'delete']],
         Acompte::class => ['Acompte', ['create', 'update', 'delete']],
+        Encaissement::class => ['Encaissement', ['create', 'update', 'delete']],
         DemandeAcompte::class => ["Demande d'acompte", ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],

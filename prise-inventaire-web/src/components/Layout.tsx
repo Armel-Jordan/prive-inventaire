@@ -118,6 +118,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/consignations', label: t.consignment.nav, icon: PackageOpen, module: 'consignations' },
       { path: '/notes-credit', label: t.creditNotes.nav, icon: ReceiptText, module: 'avoirs' },
       { path: '/retours-clients', label: t.customerReturns.nav, icon: ArchiveRestore, module: 'retours_clients' },
+      { path: '/encaissements', label: t.customerPayments.nav, icon: Coins, module: 'encaissements' },
       { path: '/acomptes', label: t.deposits.nav, icon: Wallet, module: 'acomptes' },
       { path: '/demandes-acompte', label: t.depositRequests.nav, icon: FileClock, module: 'demandes_acompte' },
       { path: '/point-de-vente', label: t.pointOfSale.nav, icon: ShoppingBasket, module: 'point_de_vente' },

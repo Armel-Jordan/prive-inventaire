@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, FileText, HandCoins, X } from 'lucide-react';
+import { Banknote, Download, FileText, HandCoins, X } from 'lucide-react';
 import {
   getAnalyseComptesClients, exporterAnalyseComptesClients, getReleveClient, exporterReleveClient, TRANCHES,
   type AnalyseComptesClients, type CompteClient, type ReleveClient, type Tranche,
 } from '@/services/comptesClients';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import FenetreEncaissement from '@/components/encaissements/FenetreEncaissement';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
 // Plus le retard est ancien, plus la case est marquée.
@@ -33,13 +35,17 @@ export default function ComptesClientsPage() {
   const [analyse, setAnalyse] = useState<AnalyseComptesClients | null>(null);
   const [erreur, setErreur] = useState('');
   const [releve, setReleve] = useState<{ client: CompteClient; du: string; au: string; donnees: ReleveClient | null } | null>(null);
+  const { peut } = usePermissions();
+  // Encaissement saisi depuis la ligne d'un client ; la liste se recharge ensuite.
+  const [encaisserPour, setEncaisserPour] = useState<CompteClient | null>(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (!date) return;
     let actif = true;
     getAnalyseComptesClients(date).then(a => { if (actif) { setAnalyse(a); setErreur(''); } }).catch(e => { if (actif) setErreur(messageErreur(e, tr.error)); });
     return () => { actif = false; };
-  }, [date, tr.error]);
+  }, [date, tr.error, version]);
 
   const clientReleve = releve?.client.client_id;
   const releveDu = releve?.du;
@@ -147,6 +153,10 @@ export default function ComptesClientsPage() {
                     </>
                   )}
                   <td className="px-3 py-2 text-right">
+                    {peut('encaissements', 'creer') && (
+                      <button onClick={() => setEncaisserPour(client)} aria-label={`${t.customerPayments.collect} — ${client.raison_sociale}`} title={t.customerPayments.collect}
+                        className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"><Banknote size={16} /></button>
+                    )}
                     <button onClick={() => ouvrirReleve(client)} aria-label={`${tr.statement} — ${client.raison_sociale}`} title={tr.statement}
                       className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded"><FileText size={16} /></button>
                   </td>
@@ -171,6 +181,11 @@ export default function ComptesClientsPage() {
             )}
           </table>
         </div>
+      )}
+
+      {encaisserPour && (
+        <FenetreEncaissement clientId={encaisserPour.client_id} onClose={() => setEncaisserPour(null)}
+          onEnregistre={() => { setEncaisserPour(null); setVersion(v => v + 1); }} />
       )}
 
       {releve && (
