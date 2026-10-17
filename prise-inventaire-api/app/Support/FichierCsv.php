@@ -13,6 +13,20 @@ final class FichierCsv
      */
     public static function reponse(string $nom, array $entetes, iterable $lignes): Response
     {
+        return response(self::contenu($entetes, $lignes), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$nom.'"',
+        ]);
+    }
+
+    /**
+     * Le fichier lui-même (pièce jointe d'un courriel…).
+     *
+     * @param  list<string>  $entetes
+     * @param  iterable<array<int, mixed>>  $lignes
+     */
+    public static function contenu(array $entetes, iterable $lignes): string
+    {
         $flux = fopen('php://temp', 'r+');
         fwrite($flux, "\xEF\xBB\xBF");
         fputcsv($flux, $entetes, ';');
@@ -21,10 +35,7 @@ final class FichierCsv
         }
         rewind($flux);
 
-        return response(stream_get_contents($flux), 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$nom.'"',
-        ]);
+        return stream_get_contents($flux);
     }
 
     public static function montant(float $valeur): string

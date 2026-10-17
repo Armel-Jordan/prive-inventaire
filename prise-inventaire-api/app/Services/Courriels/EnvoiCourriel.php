@@ -9,6 +9,9 @@ use App\Models\CourrielEnvoi;
 use App\Models\CourrielModele;
 use App\Models\CourrielParametres;
 use App\Models\FournisseurContact;
+use App\Rapports\Catalogue;
+use App\Rapports\Production;
+use App\Rapports\Rapport;
 use App\Services\BonCommandePdf;
 use App\Services\CommandesFournisseur;
 use App\Services\DemandesAcompte;
@@ -20,16 +23,19 @@ use App\Services\RetourFournisseurPdf;
 use App\Support\Courriels;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 /**
  * Envoi d'un document par courriel : pré-remplissage depuis le modèle de l'entreprise (ou le
  * modèle par défaut), mise en file avec le courriel rendu tel qu'il partira, puis envoi avec le
  * PDF du document régénéré à chaque tentative. Un échec est enregistré, jamais propagé.
+ * Un rapport de la bibliothèque part de la même façon, refait lui aussi à chaque tentative.
  */
 class EnvoiCourriel
 {
@@ -53,6 +59,7 @@ class EnvoiCourriel
         private readonly DocumentsVentePdf $documents,
         private readonly BonCommandePdf $bonCommande,
         private readonly RetourFournisseurPdf $bonRetour,
+        private readonly Production $production,
     ) {}
 
     /** Document source d'un envoi, dans l'entreprise courante. */
@@ -96,15 +103,67 @@ class EnvoiCourriel
             'nom_fichier' => $modele['nom_fichier'],
         ], $valeurs, $langue);
 
+        return $this->mettreEnFile($type, $modele, $rendu, $donnees, $auteur, [
+            'document_id' => $document->getKey(),
+            'document_numero' => $document->numero,
+            'piece_jointe' => ($donnees['joindre_pdf'] ?? true) ? $rendu['nom_fichier'] : null,
+        ]);
+    }
+
+    /** Champs de la fenêtre de rédaction d'un rapport, variables déjà remplacées ; l'adresse donnée est proposée. */
+    public function preparerRapport(Rapport $rapport, array $valeurs, string $langue, ?string $adresse): array
+    {
+        $modele = $this->modele('rapport', $langue);
+        $variables = $this->variablesRapport($rapport, $valeurs, $langue);
+
+        return [
+            'type' => 'rapport',
+            'document_id' => null,
+            'document_numero' => $variables['rapport'],
+            'langue' => $langue,
+            'modele_personnalise' => $modele['personnalise'],
+            'destinataires' => $this->adresses([$adresse]),
+            'statut_document' => null,
+            'objet' => $this->variables->remplacer($modele['objet'], $variables),
+            'contenu' => $this->variables->remplacer($modele['contenu'], $variables),
+            'piece_jointe' => null,
+        ];
+    }
+
+    /**
+     * Met en file l'envoi d'un rapport. Le rapport joint (code, valeurs des paramètres, format, langue, fuseau) est
+     * gardé pour être refait à chaque tentative ; un envoi programmé note son id (document_id).
+     *
+     * @param  array{valeurs: array, format: string, fuseau?: ?string}  $piece
+     */
+    public function creerRapport(Rapport $rapport, array $piece, array $donnees, ?int $auteur, ?int $programmeId = null): CourrielEnvoi
+    {
+        $langue = $donnees['langue'];
+        $modele = $this->modele('rapport', $langue);
+        $variables = $this->variablesRapport($rapport, $piece['valeurs'], $langue);
+        $rendu = $this->rendu->rendre('rapport', ['objet' => $donnees['objet'], 'contenu' => $donnees['contenu'], 'nom_fichier' => null], $variables, $langue);
+
+        return $this->mettreEnFile('rapport', $modele, $rendu, $donnees, $auteur, [
+            'document_id' => $programmeId,
+            'document_numero' => Str::limit($variables['rapport'], 50, ''),
+            'piece_jointe' => $this->production->nomFichier($rapport, $piece['format']),
+            'rapport' => [
+                'code' => $rapport->code(), 'valeurs' => $piece['valeurs'], 'format' => $piece['format'],
+                'langue' => $langue, 'fuseau' => $piece['fuseau'] ?? null,
+            ],
+        ]);
+    }
+
+    /** Courriel rendu enregistré dans la file, avec l'expéditeur, les copies et l'adresse de réponse de l'entreprise. */
+    private function mettreEnFile(string $type, array $modele, array $rendu, array $donnees, ?int $auteur, array $source): CourrielEnvoi
+    {
         $parametres = CourrielParametres::first();
         $expediteur = $this->mailer->expediteur($parametres);
         // La copie cachée systématique des paramètres s'ajoute à celles saisies.
         $copiesCachees = $this->adresses([...($donnees['copies_cachees'] ?? []), $parametres?->copie_cachee]);
 
-        return CourrielEnvoi::create([
+        return CourrielEnvoi::create($source + [
             'type' => $type,
-            'document_id' => $document->getKey(),
-            'document_numero' => $document->numero,
             'destinataires' => $this->adresses($donnees['destinataires']),
             'copies' => $this->adresses($donnees['copies'] ?? []) ?: null,
             'copies_cachees' => $copiesCachees ?: null,
@@ -114,11 +173,42 @@ class EnvoiCourriel
             'objet' => $rendu['objet'],
             'corps_html' => $rendu['html'],
             'corps_texte' => $rendu['texte'],
-            'piece_jointe' => ($donnees['joindre_pdf'] ?? true) ? $rendu['nom_fichier'] : null,
             'accuse_lecture' => (bool) $modele['accuse_lecture'],
             'statut' => CourrielEnvoi::EN_ATTENTE,
             'envoye_par' => $auteur,
         ]);
+    }
+
+    /** Variables d'un courriel de rapport : son titre, sa période, ses paramètres lisibles et la date du jour. */
+    private function variablesRapport(Rapport $rapport, array $valeurs, string $langue): array
+    {
+        $rapport->langue = $langue;
+        $en = $langue === 'en';
+        $date = fn ($jour) => Carbon::parse($jour)->format($en ? 'Y-m-d' : 'd/m/Y');
+        $parametres = [];
+        foreach ($this->production->parametresLisibles($rapport, $valeurs) as $libelle => $valeur) {
+            $parametres[] = $libelle.($en ? ': ' : ' : ').$valeur;
+        }
+
+        return array_merge($this->variables->pour('rapport', null, $langue), [
+            'rapport' => $rapport->texte($rapport->titre()),
+            'periode' => isset($valeurs['du'], $valeurs['au'])
+                ? ($en ? 'from '.$date($valeurs['du']).' to '.$date($valeurs['au']) : 'du '.$date($valeurs['du']).' au '.$date($valeurs['au']))
+                : '',
+            'parametres' => implode("\n", $parametres),
+            'date_rapport' => $date(today()),
+        ]);
+    }
+
+    /** Le rapport joint à un envoi, refait d'après ce qui a été gardé (nom de fichier compris). */
+    private function fichierRapport(CourrielEnvoi $envoi): array
+    {
+        $piece = $envoi->rapport ?? [];
+        $rapport = Catalogue::tous()->get($piece['code'] ?? '') ?? throw new RuntimeException('Rapport inconnu : '.($piece['code'] ?? '?').'.');
+        $rapport->langue = $piece['langue'] ?? 'fr';
+        $fichier = $this->production->fichier($rapport, $piece['valeurs'] ?? [], $piece['format'] ?? 'pdf', $piece['fuseau'] ?? null);
+
+        return ['nom' => $envoi->piece_jointe ?: $fichier['nom']] + $fichier;
     }
 
     /**
@@ -140,9 +230,11 @@ class EnvoiCourriel
         $envoi->fill(['expediteur_adresse' => $expediteur['adresse'], 'expediteur_nom' => $expediteur['nom']]);
 
         try {
-            $fichiers = $envoi->piece_jointe
-                ? [['nom' => $envoi->piece_jointe, 'contenu' => $this->pdf($envoi->type, $this->document($envoi->type, (int) $envoi->document_id))]]
-                : [];
+            $fichiers = match (true) {
+                $envoi->type === 'rapport' => [$this->fichierRapport($envoi)],
+                filled($envoi->piece_jointe) => [['nom' => $envoi->piece_jointe, 'contenu' => $this->pdf($envoi->type, $this->document($envoi->type, (int) $envoi->document_id))]],
+                default => [],
+            };
 
             $this->mailer->mailer($parametres)
                 ->to($envoi->destinataires)

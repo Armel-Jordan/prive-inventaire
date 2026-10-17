@@ -47,6 +47,7 @@ class CourrielEnvoi extends Model
         'envoye_le',
         'erreur',
         'envoye_par',
+        'rapport',
     ];
 
     protected function casts(): array
@@ -59,6 +60,21 @@ class CourrielEnvoi extends Model
             'tentatives' => 'integer',
             'dernier_essai' => 'datetime',
             'envoye_le' => 'datetime',
+            'rapport' => 'array',
+        ];
+    }
+
+    /** L'envoi tel que l'API le présente (historique, compte rendu d'un envoi). */
+    public function resume(): array
+    {
+        return $this->only([
+            'id', 'type', 'document_id', 'document_numero', 'destinataires', 'copies', 'copies_cachees',
+            'expediteur_adresse', 'expediteur_nom', 'repondre_a', 'objet', 'piece_jointe', 'statut', 'tentatives', 'erreur',
+        ]) + [
+            'dernier_essai' => $this->dernier_essai?->toIso8601String(),
+            'envoye_le' => $this->envoye_le?->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'auteur' => $this->auteur?->nom,
         ];
     }
 

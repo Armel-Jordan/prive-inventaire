@@ -71,12 +71,14 @@ class CourrielEnvoiController extends Controller
         return response()->json($this->presenter($envoi->refresh()->load('auteur:id,nom')), 201);
     }
 
-    /** Historique, du plus récent au plus ancien ; filtrable par document et par statut. */
+    /** Historique, du plus récent au plus ancien ; filtrable par document, par rapport joint et par statut. */
     public function index(Request $request): JsonResponse
     {
         $filtres = $request->validate([
             'type' => ['nullable', Rule::in(Courriels::types())],
             'document_id' => ['nullable', 'integer'],
+            // Code d'un rapport de la bibliothèque : ses envois.
+            'rapport' => ['nullable', 'string', 'max:60'],
             'statut' => ['nullable', Rule::in(CourrielEnvoi::STATUTS)],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
@@ -84,6 +86,7 @@ class CourrielEnvoiController extends Controller
         $envois = CourrielEnvoi::with('auteur:id,nom')
             ->when($filtres['type'] ?? null, fn ($q, $type) => $q->where('type', $type))
             ->when($filtres['document_id'] ?? null, fn ($q, $id) => $q->where('document_id', $id))
+            ->when($filtres['rapport'] ?? null, fn ($q, $code) => $q->where('rapport->code', $code))
             ->when($filtres['statut'] ?? null, fn ($q, $statut) => $q->where('statut', $statut))
             ->latest('id')
             ->paginate($filtres['per_page'] ?? 20);
@@ -117,15 +120,7 @@ class CourrielEnvoiController extends Controller
 
     private function presenter(CourrielEnvoi $envoi): array
     {
-        return $envoi->only([
-            'id', 'type', 'document_id', 'document_numero', 'destinataires', 'copies', 'copies_cachees',
-            'expediteur_adresse', 'expediteur_nom', 'repondre_a', 'objet', 'piece_jointe', 'statut', 'tentatives', 'erreur',
-        ]) + [
-            'dernier_essai' => $envoi->dernier_essai?->toIso8601String(),
-            'envoye_le' => $envoi->envoye_le?->toIso8601String(),
-            'created_at' => $envoi->created_at?->toIso8601String(),
-            'auteur' => $envoi->auteur?->nom,
-        ];
+        return $envoi->resume();
     }
 
     /** Le document dépend d'un module (ventes, achats) que l'entreprise doit avoir activé. */

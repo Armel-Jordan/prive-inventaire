@@ -218,6 +218,14 @@ class VariablesCourriel
             'type_retour' => $this->typeRetour('remboursement', $langue),
             'numero_rma' => 'RMA-12345',
             'lien_reponse' => 'https://clients.exemple.com/devis/…',
+            'rapport' => $en ? 'Sales by period' : 'Ventes par période',
+            'periode' => $en
+                ? 'from '.$this->date($jour->copy()->startOfMonth(), $langue).' to '.$this->date($jour, $langue)
+                : 'du '.$this->date($jour->copy()->startOfMonth(), $langue).' au '.$this->date($jour, $langue),
+            'parametres' => $en
+                ? 'From: '.$this->date($jour->copy()->startOfMonth(), $langue)."\nTo: ".$this->date($jour, $langue)
+                : 'Du : '.$this->date($jour->copy()->startOfMonth(), $langue)."\nAu : ".$this->date($jour, $langue),
+            'date_rapport' => $this->date($jour, $langue),
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));

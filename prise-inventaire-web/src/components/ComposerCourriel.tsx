@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, Paperclip, RotateCw } from 'lucide-react';
 import {
   preparerCourriel, envoyerCourriel, getEnvoisCourriel, reessayerEnvoiCourriel, ouvrirPdf,
-  type TypeDocumentCourriel, type LangueCourriel, type EnvoiCourriel,
+  type TypeDocumentCourriel, type LangueCourriel, type EnvoiCourriel, type PreparationCourriel,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -35,14 +35,51 @@ interface CompteRendu {
   envoi?: EnvoiCourriel;
 }
 
+/** Champs saisis dans la fenêtre. */
+export interface CourrielSaisi {
+  langue: LangueCourriel;
+  objet: string;
+  contenu: string;
+  destinataires: string[];
+  copies: string[];
+  copies_cachees: string[];
+}
+
+/**
+ * Envoi d'autre chose qu'un document (un rapport de la bibliothèque…) : titre de la fenêtre, pré-remplissage, envoi,
+ * envois précédents et pièce jointe. L'appelant mémorise `preparer` et `historique` (useCallback).
+ */
+export interface SourceCourriel {
+  titre: string;
+  preparer: (langue: LangueCourriel) => Promise<PreparationCourriel>;
+  envoyer: (courriel: CourrielSaisi) => Promise<EnvoiCourriel>;
+  historique: () => Promise<EnvoiCourriel[]>;
+  /** À la place de la case « Joindre le PDF » (ex. le format du rapport joint). */
+  pieceJointe?: ReactNode;
+  /** Texte quand rien n'a encore été envoyé (par défaut : « Aucun envoi pour ce document »). */
+  aucunEnvoi?: string;
+}
+
+type ProprietesComposer = { onClose: () => void } & (
+  | { type: TypeDocumentCourriel; documentId: number; source?: undefined }
+  | { source: SourceCourriel; type?: undefined; documentId?: undefined }
+);
+
 /**
  * Fenêtre d'envoi d'un document par courriel : pré-remplie depuis le modèle de l'entreprise
  * (destinataire, objet, texte, PDF joint), modifiable avant l'envoi ; liste des envois précédents.
+ * Elle envoie aussi ce que décrit une source (un rapport…).
  */
-export default function ComposerCourriel({ type, documentId, onClose }: { type: TypeDocumentCourriel; documentId: number; onClose: () => void }) {
+export default function ComposerCourriel(props: ProprietesComposer) {
+  const { onClose } = props;
   const { t, language } = useLanguage();
   const tc = t.emails;
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
+  // Document envoyé (aucun quand une source décrit l'envoi).
+  const typeDocument = props.source ? undefined : props.type;
+  const idDocument = props.source ? undefined : props.documentId;
+  const preparerSource = props.source?.preparer;
+  const historiqueSource = props.source?.historique;
 
   const [langue, setLangue] = useState<LangueCourriel>(language);
   const [chargement, setChargement] = useState(true);
@@ -65,8 +102,12 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
 
   // Pré-remplissage, à nouveau quand la langue du modèle change (les destinataires saisis sont gardés).
   useEffect(() => {
+    const preparation = preparerSource
+      ? preparerSource(langue)
+      : typeDocument && idDocument !== undefined ? preparerCourriel(typeDocument, idDocument, langue) : null;
+    if (!preparation) return;
     let actif = true;
-    preparerCourriel(type, documentId, langue)
+    preparation
       .then(p => {
         if (!actif) return;
         setNumero(p.document_numero);
@@ -80,12 +121,13 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
       .catch(erreur => { if (actif) setCompteRendu({ erreur: true, texte: messageErreur(erreur) }); })
       .finally(() => { if (actif) setChargement(false); });
     return () => { actif = false; };
-  }, [type, documentId, langue, messageErreur]);
+  }, [typeDocument, idDocument, preparerSource, langue, messageErreur]);
 
-  const chargerHistorique = useCallback(
-    () => getEnvoisCourriel({ type, document_id: documentId }).then(page => page.data),
-    [type, documentId],
-  );
+  const chargerHistorique = useCallback((): Promise<EnvoiCourriel[]> => {
+    if (historiqueSource) return historiqueSource();
+    if (!typeDocument || idDocument === undefined) return Promise.resolve([]);
+    return getEnvoisCourriel({ type: typeDocument, document_id: idDocument }).then(page => page.data);
+  }, [typeDocument, idDocument, historiqueSource]);
 
   useEffect(() => {
     let actif = true;
@@ -115,18 +157,25 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
 
   const envoyer = (e: React.FormEvent) => {
     e.preventDefault();
-    executer(() => envoyerCourriel({
-      type, document_id: documentId, langue, objet, contenu,
+    const saisi: CourrielSaisi = {
+      langue, objet, contenu,
       destinataires: adresses(destinataires),
       copies: adresses(copies),
       copies_cachees: adresses(copiesCachees),
-      joindre_pdf: joindrePdf && pieceJointe !== null,
-    }));
+    };
+    if (props.source) {
+      const { source } = props;
+      executer(() => source.envoyer(saisi));
+      return;
+    }
+    const { type, documentId } = props;
+    executer(() => envoyerCourriel({ type, document_id: documentId, ...saisi, joindre_pdf: joindrePdf && pieceJointe !== null }));
   };
 
   function voirPdf() {
-    const route = ROUTES_PDF[type];
-    ouvrirPdf(`/${route}/${documentId}/pdf`, pieceJointe ?? `${route}.pdf`).catch(() => alert(t.documents.pdfError));
+    if (props.source) return;
+    const route = ROUTES_PDF[props.type];
+    ouvrirPdf(`/${route}/${props.documentId}/pdf`, pieceJointe ?? `${route}.pdf`).catch(() => alert(t.documents.pdfError));
   }
 
   // Une fois le courriel parti (ou en file), la fenêtre ne renvoie plus : la relance se fait sur ce même courriel.
@@ -134,14 +183,15 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
   const envoiEchoue = compteRendu?.envoi?.statut === 'echec' ? compteRendu.envoi : null;
   const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '');
   // Un document au brouillon que l'envoi fait changer de statut (devis, bon de commande) : la fenêtre le dit avant.
-  const remarqueBrouillon = statutDocument === 'brouillon' && !termine ? (tc.draftNotes as Partial<Record<TypeDocumentCourriel, string>>)[type] : undefined;
+  const remarqueBrouillon = typeDocument && statutDocument === 'brouillon' && !termine ? (tc.draftNotes as Partial<Record<TypeDocumentCourriel, string>>)[typeDocument] : undefined;
+  const titre = props.source ? props.source.titre : `${tc.types[props.type]} ${numero}`;
 
   return createPortal(
     // Les clics restent dans la fenêtre (la ligne du tableau en dessous a parfois ses propres actions).
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => e.stopPropagation()}>
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-3xl max-h-[92vh] overflow-y-auto text-left">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold dark:text-white">{tc.sendByEmail} — {tc.types[type]} {numero}</h3>
+          <h3 className="text-lg font-bold dark:text-white">{tc.sendByEmail} — {titre}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title={tc.close}>
             <X size={18} />
           </button>
@@ -203,7 +253,7 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
                 <p className="text-xs text-gray-500 mt-1">{tc.formattingHelp}</p>
               </div>
 
-              {pieceJointe && (
+              {props.source ? props.source.pieceJointe : pieceJointe && (
                 <div className="flex flex-wrap items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm">
                   <label className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
                     <input type="checkbox" checked={joindrePdf} onChange={e => setJoindrePdf(e.target.checked)} className="rounded" aria-label={tc.attachPdf} />
@@ -243,7 +293,7 @@ export default function ComposerCourriel({ type, documentId, onClose }: { type: 
         <div className="mt-6 border-t dark:border-gray-700 pt-4">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{tc.previousSends}</p>
           {historique.length === 0 ? (
-            <p className="text-xs text-gray-500">{tc.noPreviousSends}</p>
+            <p className="text-xs text-gray-500">{props.source?.aucunEnvoi ?? tc.noPreviousSends}</p>
           ) : (
             <ul className="space-y-1.5">
               {historique.map(envoi => (

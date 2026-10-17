@@ -69,7 +69,10 @@ class CourrielsConfigurationTest extends TestCase
     {
         $types = collect($this->getJson('/api/courriels/catalogue')->assertOk()->assertJsonPath('langues', ['fr', 'en'])->json('types'))->keyBy('type');
 
-        $this->assertEqualsCanonicalizing(['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'relance_devis', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur', 'general'], $types->keys()->all());
+        $this->assertEqualsCanonicalizing(['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'relance_devis', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur', 'rapport', 'general'], $types->keys()->all());
+        // Rapport de la bibliothèque : son fichier (PDF, Excel ou CSV) est nommé d'office.
+        $this->assertSame(['rapport', 'periode', 'parametres', 'date_rapport'], array_slice($types['rapport']['variables'], 0, 4));
+        $this->assertFalse($types['rapport']['piece_jointe']);
         $this->assertContains('credit_disponible', $types['avoir']['variables']);
         $this->assertTrue($types['avoir']['piece_jointe']);
         $this->assertContains('montant_ttc', $types['facture']['variables']);

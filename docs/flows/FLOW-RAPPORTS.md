@@ -1,11 +1,10 @@
 # Flow — Bibliothèque des rapports
 
-> Plan de parité fripv2, phase 5.1 (bibliothèque) et sorties de fichiers de la phase 5.2. L'envoi par courriel et la
-> planification des rapports viendront ensuite.
+> Plan de parité fripv2, phases 5.1 (bibliothèque) et 5.2 (fichiers, envoi par courriel, envois programmés).
 
 Menu Inventaire → **Bibliothèque de rapports** (`/bibliotheque-rapports`). Les rapports sont rangés par domaine :
-ventes, clients, achats, inventaire, finance. On choisit un rapport, on règle ses paramètres, puis on l'affiche ou on
-le télécharge.
+ventes, clients, achats, inventaire, finance. On choisit un rapport, on règle ses paramètres, puis on l'affiche, on le
+télécharge, on l'envoie par courriel ou on programme son envoi. L'onglet **Envois programmés** liste ces envois.
 
 ## Droits
 
@@ -13,6 +12,10 @@ le télécharge.
 - Chaque rapport demande en plus le droit de voir son module (colonne « Droit » ci-dessous). Un rapport non permis
   n'apparaît pas, et son adresse répond « introuvable ».
 - Les domaines ventes, clients et finance demandent le module Ventes de l'entreprise ; les achats, le module Achats.
+- Actions du module des rapports :
+  - « Envoyer un rapport par courriel » suit au départ le droit de voir les rapports ;
+  - « Programmer l'envoi des rapports » suit au départ celui de les modifier : administrateurs et responsables, pas
+    la lecture seule.
 
 ## Rapports
 
@@ -46,10 +49,62 @@ La période va par défaut du premier jour du mois à aujourd'hui ; une période
 - **Langue** : les titres, paramètres, colonnes et libellés (statuts, modes de paiement) suivent la langue de l'écran,
   français ou anglais ; une semaine s'écrit `2026-S42` en français et `2026-W42` en anglais.
 
+## Envoi par courriel
+
+Le bouton « Envoyer par courriel » ouvre la fenêtre d'envoi des documents :
+
+- elle est pré-remplie avec le modèle « Rapport » de l'entreprise (Paramètres → Courriels), en français ou en
+  anglais. Ses variables : `{rapport}` (titre), `{periode}`, `{parametres}` (une ligne par paramètre) et
+  `{date_rapport}` ;
+- l'adresse du compte est proposée ; copies et copies cachées sont possibles ;
+- on choisit le format joint : PDF, Excel ou CSV.
+
+L'envoi entre dans l'historique des courriels (type « Rapport »). Le fichier est refait à chaque tentative, sur les
+mêmes paramètres, et un envoi en échec se relance comme les autres.
+
+## Envois programmés
+
+Un envoi programmé fait partir un rapport par courriel :
+
+- **Fréquence** : chaque jour, chaque semaine (un jour de la semaine) ou chaque mois (un jour du mois ; 29, 30 ou 31
+  donnent le dernier jour des mois plus courts).
+- **Période** : relative, calculée au jour de l'envoi :
+  - la veille, les 7 derniers jours, la semaine précédente (lundi à dimanche) ;
+  - le mois en cours, le mois précédent, le trimestre précédent ;
+  - l'année en cours, l'année précédente.
+
+  Elle est proposée d'après la fréquence : la veille, la semaine précédente, le mois précédent. Les autres
+  paramètres du rapport sont gardés tels quels.
+- **Format, langue et destinataires** : jusqu'à 20 adresses ; le courriel suit le modèle « Rapport » de la langue
+  choisie.
+- **Premier envoi** : le premier jour prévu après aujourd'hui. « Envoyer maintenant » l'envoie tout de suite, sans
+  changer cette date.
+- **Responsable** : le compte qui règle l'envoi (création ou modification). À chaque envoi, il doit être actif,
+  pouvoir encore ouvrir le rapport et programmer des envois. Sinon l'envoi est refusé :
+  - le motif est noté sur l'envoi programmé ;
+  - l'exécution de la tâche est en erreur ;
+  - l'envoi est reporté à la date suivante.
+
+  Le reprendre à son nom suffit à le relancer.
+- **Visibilité** : on ne voit et ne règle que les envois des rapports que l'on peut ouvrir.
+
+La tâche planifiée « Envoi des rapports programmés » (chaque jour à 6 h 30 par défaut) fait partir les envois du jour.
+Après un arrêt du serveur, elle envoie aussi ceux qu'elle a manqués, une seule fois.
+
+Le premier envoi programmé l'active si personne ne l'a encore réglée. Une tâche désactivée exprès le reste, et
+l'onglet le signale.
+
 | Méthode | Route | Rôle |
 |---|---|---|
 | GET | `/rapports/bibliotheque?langue=` | Catalogue permis : domaines, rapports, paramètres (valeurs par défaut, options), catégories de produits |
 | GET | `/rapports/bibliotheque/{code}?langue=&format=json\|csv\|xlsx\|pdf&fuseau=&…` | Un rapport : colonnes (clé, libellé, type, total), lignes, totaux ; ou le fichier |
+| GET | `/rapports/bibliotheque/{code}/courriel?langue=&parametres[…]=` | Pré-remplissage du courriel (droit d'envoyer) |
+| POST | `/rapports/bibliotheque/{code}/courriel` | Envoi : `parametres`, `format`, `langue`, destinataires, copies, objet, contenu |
+| GET | `/rapports/programmes?langue=` | Envois programmés visibles, périodes relatives, tâche active ou non |
+| POST / PUT | `/rapports/programmes[/{id}]?langue=` | `code`, `nom`, `parametres`, `periode`, `format`, `langue`, `destinataires`, `frequence`, `jour`, `actif` |
+| DELETE | `/rapports/programmes/{id}` | Suppression |
+| POST | `/rapports/programmes/{id}/envoyer` | Envoi immédiat |
+| GET | `/courriels/envois?type=rapport&rapport={code}` | Historique des envois d'un rapport |
 
 ## Ajouter un rapport
 
@@ -59,12 +114,27 @@ La période va par défaut du premier jour du mois à aujourd'hui ; une période
 
 Types de paramètres : `date`, `entier` (min, max), `choix` (options), `client`, `fournisseur`, `categorie` (de
 produits). Types de colonnes : `texte`, `date`, `entier`, `quantite`, `montant`, `pourcentage` ; `total => true` ajoute
-la colonne aux totaux. Les règles de validation et les valeurs par défaut se déduisent des paramètres.
+la colonne aux totaux. Les règles de validation et les valeurs par défaut se déduisent des paramètres. Un rapport
+qui a les paramètres `du` et `au` reçoit, programmé, sa période relative.
 
 Code :
-- API : `App\Rapports\*` (`Rapport`, `RapportVentes`, `Catalogue` et les rapports), `RapportBibliothequeController`,
-  `App\Support\ClasseurXlsx` (classeur Excel minimal, sans dépendance), vue `pdf/rapport.blade.php` ;
-- droits : `Droits::PARTICULIERES` (`rapports.voir` sur les deux adresses), droit du module de chaque rapport dans
-  `Catalogue::pour` ;
-- web : `BibliothequeRapportsPage`, `services/bibliothequeRapports.ts`, traductions `reportsLibrary` ;
-- tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`.
+- API :
+  - `App\Rapports\*` : `Rapport`, `RapportVentes`, `Catalogue` et les rapports ; `Production` (données et fichiers,
+    les mêmes au téléchargement et en pièce jointe) ; `Programmation` (périodes relatives, dates d'envoi, envoi) ;
+  - `RapportBibliothequeController`, `RapportProgrammeController` ;
+  - `App\Support\ClasseurXlsx` (classeur Excel minimal, sans dépendance) ; vue `pdf/rapport.blade.php` ;
+  - courriel de type `rapport` dans `EnvoiCourriel` (`preparerRapport`, `creerRapport`, fichier refait à l'envoi) ;
+  - modèle `RapportProgramme` ; tâche `App\Taches\EnvoyerRapportsProgrammes` (`rapports_programmes`).
+- Droits :
+  - `Droits::PARTICULIERES` : `rapports.voir`, `rapports.envoyer`, `rapports.programmer` ;
+  - droit du module de chaque rapport dans `Catalogue::pour`.
+- Migration `2026_10_17_100081_rapports_courriel_programmes` :
+  - colonne `rapport` de `courriel_envois` ;
+  - table `rapports_programmes` ;
+  - actions des groupes.
+- Web :
+  - `BibliothequeRapportsPage` ;
+  - `components/rapports` : `ChampParametre`, `CourrielRapport`, `FenetreProgramme`, `EnvoisProgrammes` ;
+  - `ComposerCourriel` (source d'envoi autre qu'un document) ;
+  - `services/bibliothequeRapports.ts`, `lib/programmesRapports.ts`, traductions `reportsLibrary`.
+- Tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`, `EnvoiRapportsTest.php`.
