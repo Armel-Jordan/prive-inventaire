@@ -9,6 +9,7 @@ use App\Models\ComFourEntete;
 use App\Models\Devis;
 use App\Models\EmployeTenant;
 use App\Models\Facture;
+use App\Models\FactureFournisseur;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,8 @@ final class PiecesJointes
         'facture' => [Facture::class, 'ventes'],
         'bon_livraison' => [BonLivraison::class, 'ventes'],
         'commande_fournisseur' => [ComFourEntete::class, 'achats'],
+        // La facture reçue du fournisseur (PDF, photo) se joint à sa saisie.
+        'facture_fournisseur' => [FactureFournisseur::class, 'achats'],
     ];
 
     /** Types que le navigateur peut afficher sans risque ; les autres sont toujours téléchargés. */

@@ -42,6 +42,7 @@ import FacturesPage from '@/pages/FacturesPage';
 import NotesCreditPage from '@/pages/NotesCreditPage';
 import RetoursClientsPage from '@/pages/RetoursClientsPage';
 import RetoursFournisseursPage from '@/pages/RetoursFournisseursPage';
+import FacturesFournisseursPage from '@/pages/FacturesFournisseursPage';
 import FraisPage from '@/pages/FraisPage';
 import ReliquatsClientsPage from '@/pages/ReliquatsClientsPage';
 import AbonnementsClientsPage from '@/pages/AbonnementsClientsPage';
@@ -162,6 +163,7 @@ function AppRoutes() {
         <Route path="notes-credit" element={<NotesCreditPage />} />
         <Route path="retours-clients" element={<RetoursClientsPage />} />
         <Route path="retours-fournisseurs" element={<RetoursFournisseursPage />} />
+        <Route path="factures-fournisseurs" element={<FacturesFournisseursPage />} />
         <Route path="frais" element={<FraisPage />} />
         <Route path="reliquats-clients" element={<ReliquatsClientsPage />} />
         <Route path="abonnements-clients" element={<AbonnementsClientsPage />} />

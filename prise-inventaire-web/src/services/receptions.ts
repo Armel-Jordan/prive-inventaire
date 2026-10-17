@@ -50,6 +50,9 @@ export interface ReceptionDocument {
   connaissement: string | null;
   notes: string | null;
   statut: StatutReception;
+  /** Facture fournisseur qui règle la réception (« facturée »). */
+  facture_fournisseur_id?: number | null;
+  facture_fournisseur?: { id: number; numero: string; numero_fournisseur?: string | null } | null;
   auteur?: { id: number; nom: string } | null;
   annulee_le: string | null;
   auteur_annulation?: { id: number; nom: string } | null;
@@ -104,6 +107,8 @@ export interface FiltresReceptions {
   recherche?: string;
   fournisseur_id?: number;
   statut?: StatutReception | '';
+  /** Réceptions facturées (1) ou à facturer (0). */
+  facturee?: 0 | 1 | '';
   date_debut?: string;
   date_fin?: string;
   page?: number;

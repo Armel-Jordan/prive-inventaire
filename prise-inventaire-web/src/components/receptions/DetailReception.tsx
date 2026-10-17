@@ -101,6 +101,11 @@ export default function DetailReception({ id, onClose, onModifiee }: { id: numbe
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold dark:text-white">{tr.title} {reception?.numero}</h2>
             {reception && <BadgeStatutReception statut={reception.statut} libelle={tr.statuses[reception.statut] ?? reception.statut} />}
+            {reception?.facture_fournisseur && (
+              <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+                {t.supplierInvoices.invoiced} {reception.facture_fournisseur.numero}
+              </span>
+            )}
             {reception && <BoutonPdf chemin={`/receptions/documents/${reception.id}/pdf`} nomFichier={`reception-${reception.numero}.pdf`} taille={18} />}
           </div>
           <button type="button" onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label={tr.close}><X size={20} /></button>
