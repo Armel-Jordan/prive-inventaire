@@ -265,6 +265,11 @@ class Permissions
                 'aide_fr' => 'Choisir le compte comptable et le journal de chaque compte bancaire.',
                 'aide_en' => 'Choose the ledger account and journal of each bank account.'],
         ]],
+        'budgets' => ['onglet' => 'finance', 'fr' => 'Budgets', 'en' => 'Budgets', 'crud' => ['voir'], 'actions' => [
+            'saisir' => ['base' => 'modifier', 'fr' => 'Modifier les montants du budget', 'en' => 'Change budget amounts',
+                'aide_fr' => 'Saisir, répartir et copier les montants du budget, et choisir les comptes budgétés.',
+                'aide_en' => 'Enter, spread and copy budget amounts, and choose the budgeted accounts.'],
+        ]],
         'previsions_stock' => ['onglet' => 'finance', 'fr' => 'Prévisions de stock', 'en' => 'Stock forecasts', 'crud' => ['voir']],
         'gestion_prix' => ['onglet' => 'finance', 'fr' => 'Tarifs et prix', 'en' => 'Prices'],
 

@@ -7,6 +7,7 @@ use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Avoir;
 use App\Models\BonLivraison;
+use App\Models\BudgetComptable;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
@@ -58,6 +59,8 @@ class JournalModifications
         Encaissement::class => ['Encaissement', ['create', 'update', 'delete']],
         Debourse::class => ['Déboursé', ['create', 'update', 'delete']],
         TransactionBancaire::class => ['Transaction bancaire', ['create', 'update', 'delete']],
+        // Chaque cellule du budget saisie, modifiée ou retirée (la copie d'un budget y est inscrite une fois).
+        BudgetComptable::class => ['Budget', ['create', 'update', 'delete']],
         DemandeAcompte::class => ["Demande d'acompte", ['create', 'update', 'delete']],
         BonLivraison::class => ['Bon de livraison', ['create', 'update', 'delete']],
         TenantParametres::class => ['Paramètres', ['create', 'update', 'delete']],

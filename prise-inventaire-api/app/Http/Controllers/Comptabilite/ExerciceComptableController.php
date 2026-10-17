@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Comptabilite;
 
 use App\Http\Controllers\Controller;
+use App\Models\BudgetComptable;
 use App\Models\EcritureComptable;
 use App\Models\ExerciceComptable;
 use App\Models\PeriodeComptable;
@@ -76,6 +77,10 @@ class ExerciceComptableController extends Controller
             if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
                 return response()->json(['message' => 'Cet exercice a des écritures : ses dates et son découpage ne peuvent plus changer.'], 422);
             }
+            // Le budget est saisi par période : les recréer le perdrait.
+            if (BudgetComptable::where('exercice_id', $exercice->id)->exists()) {
+                return response()->json(['message' => 'Cet exercice a un budget : ses dates et son découpage ne peuvent plus changer.'], 422);
+            }
             if ($erreur = $this->exercices->controlerDates($debut, $fin, $exercice)) {
                 return response()->json(['message' => $erreur, 'errors' => ['date_fin' => [$erreur]]], 422);
             }
@@ -103,6 +108,9 @@ class ExerciceComptableController extends Controller
         }
         if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
             return response()->json(['message' => 'Cet exercice a des écritures : il ne peut pas être supprimé.'], 422);
+        }
+        if (BudgetComptable::where('exercice_id', $exercice->id)->exists()) {
+            return response()->json(['message' => 'Cet exercice a un budget : il ne peut pas être supprimé.'], 422);
         }
         DB::transaction(function () use ($exercice) {
             $exercice->periodes()->delete();
