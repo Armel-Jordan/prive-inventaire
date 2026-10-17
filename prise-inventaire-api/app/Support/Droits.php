@@ -34,6 +34,7 @@ class Droits
     private const MODULES = [
         'produits' => 'produits',
         'etiquettes' => 'etiquettes',
+        'lots' => 'lots',
         'secteurs' => 'secteurs',
         'scan' => 'inventaires',
         'prises-inventaire' => 'inventaires',
@@ -112,6 +113,9 @@ class Droits
         'cartes-cadeaux' => 'cartes_cadeaux',
         // Étiquettes : les formats, pour qui peut imprimer.
         'etiquettes' => 'etiquettes',
+        // Lots et numéros de série : registre, péremptions, provenance.
+        'lots' => 'lots',
+        'numeros-serie' => 'lots',
     ];
 
     /** États comptables : il faut le droit de voir les états. */

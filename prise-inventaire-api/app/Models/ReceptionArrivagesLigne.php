@@ -23,6 +23,8 @@ class ReceptionArrivagesLigne extends Model
         'secteur_id',
         'lot_numero',
         'date_peremption',
+        // Lot reçu, pour un produit suivi par lot (phase 2.8).
+        'lot_id',
         'notes',
         'received_by',
         'annulee',
@@ -46,6 +48,11 @@ class ReceptionArrivagesLigne extends Model
     public function ligneCommande(): BelongsTo
     {
         return $this->belongsTo(ComFourLigne::class, 'com_four_ligne_id');
+    }
+
+    public function lot(): BelongsTo
+    {
+        return $this->belongsTo(Lot::class, 'lot_id');
     }
 
     public function secteur(): BelongsTo

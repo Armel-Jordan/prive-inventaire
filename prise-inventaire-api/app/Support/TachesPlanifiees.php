@@ -16,6 +16,7 @@ use App\Taches\SignalerCommandesFournisseurEnRetard;
 use App\Taches\SignalerControlesTechniques;
 use App\Taches\SignalerFacturesImpayees;
 use App\Taches\SignalerLivraisonsEnRetard;
+use App\Taches\SignalerPeremptions;
 use App\Taches\SignalerTransfertsImminents;
 
 /**
@@ -41,6 +42,7 @@ final class TachesPlanifiees
         'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
+        'peremptions' => [SignalerPeremptions::class, 'quotidienne', '07:00'],
         'ecritures_recurrentes' => [ConvertirEcrituresRecurrentes::class, 'quotidienne', '05:30'],
         'comptabilisation' => [ComptabiliserDocuments::class, 'quotidienne', '23:30'],
     ];
@@ -62,6 +64,8 @@ final class TachesPlanifiees
         'commandes_fournisseur_en_retard' => ['jours' => 0],
         'livraisons_en_retard' => ['jours' => 3],
         'controles_techniques' => ['jours' => 30],
+        // Préavis avant la péremption d'un lot (aussi le seuil « à surveiller » du registre des lots).
+        'peremptions' => ['jours' => 30],
     ];
 
     /** Module requis par une tâche : sans lui, l'écran des alertes ne la propose pas. */

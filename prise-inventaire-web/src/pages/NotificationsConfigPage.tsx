@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, AlertTriangle, CalendarClock, CreditCard, ShoppingCart, Truck, ClipboardCheck, Play, Timer } from 'lucide-react';
+import { Bell, AlertTriangle, CalendarClock, CreditCard, ShoppingCart, Truck, ClipboardCheck, Play, Timer, Hourglass } from 'lucide-react';
 import {
   getTachesPlanifiees, modifierTachePlanifiee, executerTachePlanifiee,
   type EtatTachesPlanifiees, type TachePlanifiee, type ReglageTache,
@@ -19,6 +19,7 @@ const ALERTES: { code: string; icone: typeof Bell; couleur: string }[] = [
   { code: 'commandes_fournisseur_en_retard', icone: ShoppingCart, couleur: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30' },
   { code: 'livraisons_en_retard', icone: Truck, couleur: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30' },
   { code: 'controles_techniques', icone: ClipboardCheck, couleur: 'text-teal-600 bg-teal-50 dark:bg-teal-900/30' },
+  { code: 'peremptions', icone: Hourglass, couleur: 'text-rose-600 bg-rose-50 dark:bg-rose-900/30' },
 ];
 
 /**

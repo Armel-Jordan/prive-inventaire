@@ -15,6 +15,9 @@ class ProduitTenant extends Model
 
     protected $connection = 'mysql';
 
+    /** Suivi des exemplaires : par lot (numéro de lot à la réception) ou par numéro de série (un par unité). */
+    public const SUIVIS = ['lot', 'serie'];
+
     /** Images acceptées comme image principale de la fiche (pas de SVG : il peut porter du script). */
     public const TYPES_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -47,6 +50,9 @@ class ProduitTenant extends Model
         'reference_fabricant',
         'description_longue',
         'image_id',
+        // Suivi des exemplaires (phase 2.8) : vide, « lot » ou « serie » ; péremption exigée pour un lot.
+        'suivi',
+        'peremption',
     ];
 
     protected function casts(): array
@@ -59,6 +65,7 @@ class ProduitTenant extends Model
             'qte_par_unite_achat' => 'integer',
             'poids_kg' => 'decimal:4',
             'volume_m3' => 'decimal:6',
+            'peremption' => 'boolean',
         ];
     }
 
