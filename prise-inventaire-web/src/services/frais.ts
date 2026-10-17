@@ -28,6 +28,8 @@ export interface Frais {
   sur_factures: boolean;
   actif: boolean;
   produits?: ProduitFrais[];
+  /** Frais « par produit » appliqué aussi à toute matière dangereuse. */
+  matieres_dangereuses?: boolean;
 }
 
 export interface SaisieFrais {
@@ -42,6 +44,7 @@ export interface SaisieFrais {
   sur_factures: boolean;
   actif: boolean;
   produits: number[];
+  matieres_dangereuses: boolean;
 }
 
 /** Ligne de frais proposée pour le document en cours (dans sa devise). */

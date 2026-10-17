@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — signature électronique à la livraison (§6.3c)
+> Dernière mise à jour : 2026-10-17 — charge des tournées et document des matières dangereuses (§8.8)
 
 ---
 
@@ -1523,6 +1523,33 @@ Le bouton 🗑️ est disponible dans le tableau des tournées, uniquement pour 
 ### 8.7 Réorganiser l'ordre de livraison
 
 `PUT /tournees/{id}/ordre` permet de changer l'ordre des BL dans la tournée (pour optimiser le trajet). Seulement pour les tournées `planifiee`.
+
+### 8.8 Charge du camion et matières dangereuses
+
+Plan de parité fripv2, phase 1.6 : le « rapport de dangerosité » d'un camion, sur les tournées.
+
+**Charge estimée :**
+- le détail d'une tournée (`GET /tournees/{id}`) donne `poids_total_kg`, le poids des produits encore à livrer de ses bons (quantité préparée, sinon prévue, moins livrée, multipliée par le poids unitaire du produit) ;
+- l'écran l'affiche avec la capacité du camion, en rouge au-delà ;
+- un produit sans poids compte pour zéro.
+
+**Matières dangereuses :**
+- un produit est une matière dangereuse quand il a un **numéro ONU** ou une **classe de danger** (fiche produit, FLOW-PARAMETRES §2.2) ;
+- le détail de la tournée donne `matieres_dangereuses`, le nombre de lignes dangereuses encore à livrer.
+
+**Document de transport** (`GET /tournees/{id}/matieres-dangereuses`, PDF) : le bouton « Document matières dangereuses » du détail de la tournée le produit. Il est à remettre au conducteur.
+
+Il contient :
+- l'entreprise (expéditeur), le téléphone d'urgence (bandeau), la date, le véhicule, la zone et les classes à bord ;
+- une ligne par produit dangereux encore à livrer, dans l'ordre de livraison : N° ONU, désignation, classe, groupe d'emballage, bon et client, quantité, masse brute (quantité × poids unitaire) ;
+- la masse brute totale, signalée incomplète si un produit n'a pas de poids ;
+- la déclaration de l'expéditeur (celle de l'entreprise, sinon une déclaration générale) et les signatures de l'expéditeur et du conducteur.
+
+Sans matière dangereuse à bord, la réponse est 422. Le document ne bloque rien et ne contrôle aucune quantité limite : comme dans fripv2, c'est un document, pas une règle.
+
+Le téléphone d'urgence et la déclaration se règlent dans Paramètres → Entreprise, selon la réglementation du pays (au Canada, par exemple, le numéro de CANUTEC).
+
+Code : service `App\Services\MatieresDangereusesPdf`, vue `pdf/matieres-dangereuses`, migration `2026_10_16_100044_matieres_dangereuses`.
 
 ---
 

@@ -42,6 +42,8 @@ class Frais extends Model
     protected $fillable = [
         'tenant_id', 'libelle', 'produit_id', 'mode', 'valeur', 'application', 'repetition',
         'sur_devis', 'sur_commandes', 'sur_factures', 'actif',
+        // Frais « par produit » appliqué aussi à toute matière dangereuse (numéro ONU ou classe renseignés).
+        'matieres_dangereuses',
     ];
 
     protected $casts = [
@@ -50,6 +52,7 @@ class Frais extends Model
         'sur_commandes' => 'boolean',
         'sur_factures' => 'boolean',
         'actif' => 'boolean',
+        'matieres_dangereuses' => 'boolean',
     ];
 
     public function produit(): BelongsTo

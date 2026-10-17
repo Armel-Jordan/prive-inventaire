@@ -30,6 +30,12 @@ class ProduitTenant extends Model
         'actif',
         'seuil_alerte',
         'fournisseur_principal_id',
+        // Transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids et volume unitaires.
+        'numero_onu',
+        'classe_danger',
+        'groupe_emballage',
+        'poids_kg',
+        'volume_m3',
     ];
 
     protected function casts(): array
@@ -39,7 +45,15 @@ class ProduitTenant extends Model
             'actif' => 'boolean',
             'seuil_alerte' => 'decimal:2',
             'qte_par_unite_achat' => 'integer',
+            'poids_kg' => 'decimal:4',
+            'volume_m3' => 'decimal:6',
         ];
+    }
+
+    /** Matière dangereuse : numéro ONU ou classe de danger renseignés (et pas seulement des zéros), comme dans fripv2. */
+    public function estDangereux(): bool
+    {
+        return (bool) preg_match('/[1-9]/', (string) $this->numero_onu.(string) $this->classe_danger);
     }
 
     /**

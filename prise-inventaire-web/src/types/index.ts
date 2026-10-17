@@ -29,6 +29,12 @@ export interface Produit {
   secteur?: Secteur;
   /** Prix de vente du catalogue (chaîne décimale renvoyée par l'API), proposé sur les lignes de documents. */
   prix_unitaire?: number | string | null;
+  /** Transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids (kg) et volume (m³) unitaires. */
+  numero_onu?: string | null;
+  classe_danger?: string | null;
+  groupe_emballage?: string | null;
+  poids_kg?: number | string | null;
+  volume_m3?: number | string | null;
 }
 
 export interface Secteur {

@@ -27,6 +27,9 @@ class TenantParametres extends Model
         'delai_livraison_jours',
         'stock_alerte_email',
         'stock_seuil_defaut',
+        // Document de transport des matières dangereuses : téléphone d'urgence et déclaration (selon le pays).
+        'md_telephone_urgence',
+        'md_declaration',
     ];
 
     protected $casts = [

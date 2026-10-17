@@ -10,6 +10,7 @@ import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface ProduitForm {
   numero: string;
@@ -19,9 +20,21 @@ interface ProduitForm {
   qte_par_unite_achat: number;
   type: string;
   secteur_id: string;
+  // Transport : saisis comme du texte, envoyés vides (null) ou en nombre.
+  numero_onu: string;
+  classe_danger: string;
+  groupe_emballage: string;
+  poids_kg: string;
+  volume_m3: string;
 }
 
-const emptyForm: ProduitForm = { numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '' };
+const emptyForm: ProduitForm = {
+  numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '',
+  numero_onu: '', classe_danger: '', groupe_emballage: '', poids_kg: '', volume_m3: '',
+};
+
+/** Matière dangereuse : numéro ONU ou classe renseignés (et pas seulement des zéros), comme côté API. */
+const estDangereux = (p: Produit) => /[1-9]/.test(`${p.numero_onu ?? ''}${p.classe_danger ?? ''}`);
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -33,6 +46,8 @@ interface ConfigNumero {
 }
 
 export default function ProduitsPage() {
+  const { t } = useLanguage();
+  const th = t.hazmat;
   const [produits, setProduits] = useState<Produit[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +124,11 @@ export default function ProduitsPage() {
       qte_par_unite_achat: produit.qte_par_unite_achat ?? 1,
       type: produit.type || '',
       secteur_id: produit.secteur_id?.toString() || '',
+      numero_onu: produit.numero_onu ?? '',
+      classe_danger: produit.classe_danger ?? '',
+      groupe_emballage: produit.groupe_emballage ?? '',
+      poids_kg: produit.poids_kg != null ? String(Number(produit.poids_kg)) : '',
+      volume_m3: produit.volume_m3 != null ? String(Number(produit.volume_m3)) : '',
     });
     setEditingId(produit.id!);
     setShowModal(true);
@@ -122,6 +142,11 @@ export default function ProduitsPage() {
         secteur_id: form.secteur_id ? parseInt(form.secteur_id) : undefined,
         unite_achat: form.unite_achat || null,
         qte_par_unite_achat: form.qte_par_unite_achat,
+        numero_onu: form.numero_onu.trim() || null,
+        classe_danger: form.classe_danger.trim() || null,
+        groupe_emballage: form.groupe_emballage || null,
+        poids_kg: form.poids_kg === '' ? null : Number(form.poids_kg),
+        volume_m3: form.volume_m3 === '' ? null : Number(form.volume_m3),
       };
       if (editingId) {
         await updateProduit(editingId, payload);
@@ -304,6 +329,11 @@ export default function ProduitsPage() {
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
                     <td className="px-4 py-3 text-sm dark:text-gray-200">
                       {produit.description}
+                      {estDangereux(produit) && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" title={th.dangerous}>
+                          {[produit.numero_onu, produit.classe_danger && `${th.classShort} ${produit.classe_danger}`].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
                       {produit.actif === false && (
                         <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
                       )}
@@ -436,6 +466,44 @@ export default function ProduitsPage() {
                     1 {form.unite_achat} = {form.qte_par_unite_achat} {form.mesure}
                   </p>
                 )}
+              </div>
+              <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{th.transport}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="produit-poids" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{th.weight}</label>
+                    <input id="produit-poids" type="number" min={0} step="any" value={form.poids_kg} onChange={e => setForm({ ...form, poids_kg: e.target.value })}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+                  </div>
+                  <div>
+                    <label htmlFor="produit-volume" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{th.volume}</label>
+                    <input id="produit-volume" type="number" min={0} step="any" value={form.volume_m3} onChange={e => setForm({ ...form, volume_m3: e.target.value })}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+                  </div>
+                  <div>
+                    <label htmlFor="produit-onu" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{th.unNumber}</label>
+                    <input id="produit-onu" value={form.numero_onu} onChange={e => setForm({ ...form, numero_onu: e.target.value.toUpperCase() })} maxLength={10}
+                      placeholder="UN1203" className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="produit-classe" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{th.hazardClass}</label>
+                      <input id="produit-classe" value={form.classe_danger} onChange={e => setForm({ ...form, classe_danger: e.target.value.toUpperCase() })} maxLength={10}
+                        placeholder="3" className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm" />
+                    </div>
+                    <div>
+                      <label htmlFor="produit-groupe" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{th.packingGroup}</label>
+                      <select id="produit-groupe" value={form.groupe_emballage} onChange={e => setForm({ ...form, groupe_emballage: e.target.value })}
+                        className="w-full px-2 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm">
+                        <option value="">—</option>
+                        <option value="I">I</option>
+                        <option value="II">II</option>
+                        <option value="III">III</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{th.help}</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)}
