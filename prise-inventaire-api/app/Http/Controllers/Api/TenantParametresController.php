@@ -45,6 +45,8 @@ class TenantParametresController extends Controller
             'delai_livraison_jours' => 'nullable|integer|min:0|max:365',
             'stock_alerte_email' => 'nullable|email|max:255',
             'stock_seuil_defaut' => 'nullable|integer|min:0',
+            'md_telephone_urgence' => 'nullable|string|max:60',
+            'md_declaration' => 'nullable|string|max:2000',
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;

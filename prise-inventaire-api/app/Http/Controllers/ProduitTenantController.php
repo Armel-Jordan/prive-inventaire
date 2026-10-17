@@ -8,6 +8,7 @@ use App\Support\TenantRule;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProduitTenantController extends Controller
 {
@@ -42,6 +43,33 @@ class ProduitTenantController extends Controller
         };
     }
 
+    /** Champs de transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids et volume unitaires. */
+    private function reglesTransport(): array
+    {
+        return [
+            'numero_onu' => ['nullable', 'string', 'max:10', 'regex:/^(UN|NA)? ?[0-9]{4}$/i'],
+            'classe_danger' => ['nullable', 'string', 'max:10', 'regex:/^[1-9]([.][1-6])?[A-Za-z]?$/'],
+            'groupe_emballage' => ['nullable', Rule::in(['I', 'II', 'III'])],
+            'poids_kg' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'volume_m3' => ['nullable', 'numeric', 'min:0', 'max:999999'],
+        ];
+    }
+
+    /** Champs de transport transmis, mis en forme : « UN1203 », classe en majuscules. */
+    private function transport(Request $request): array
+    {
+        $valeurs = $request->only(array_keys($this->reglesTransport()));
+        if (filled($valeurs['numero_onu'] ?? null)) {
+            $prefixe = str_starts_with(strtoupper(trim($valeurs['numero_onu'])), 'NA') ? 'NA' : 'UN';
+            $valeurs['numero_onu'] = $prefixe.preg_replace('/[^0-9]/', '', $valeurs['numero_onu']);
+        }
+        if (filled($valeurs['classe_danger'] ?? null)) {
+            $valeurs['classe_danger'] = strtoupper(trim($valeurs['classe_danger']));
+        }
+
+        return $valeurs;
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -54,6 +82,7 @@ class ProduitTenantController extends Controller
             'secteur_id' => ['required', TenantRule::exists('secteurs')],
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
+            ...$this->reglesTransport(),
         ]);
 
         // Générer le numéro automatiquement si non fourni
@@ -82,7 +111,7 @@ class ProduitTenantController extends Controller
             'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
             'prix_unitaire' => $request->prix_unitaire,
-        ]);
+        ] + $this->transport($request));
 
         $produit->load('secteur');
 
@@ -115,9 +144,13 @@ class ProduitTenantController extends Controller
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
             'actif' => 'sometimes|boolean',
+            ...$this->reglesTransport(),
         ]);
 
-        $produit->fill($request->only(['numero', 'description', 'mesure', 'unite_achat', 'qte_par_unite_achat', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']));
+        $produit->fill(array_merge(
+            $request->only(['numero', 'description', 'mesure', 'unite_achat', 'qte_par_unite_achat', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']),
+            $this->transport($request),
+        ));
         $produit->save();
 
         return response()->json([

@@ -1,6 +1,7 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle } from 'lucide-react';
+import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '@/i18n/useLanguage';
 import {
   getTournees,
   getTournee,
@@ -13,6 +14,7 @@ import {
   deleteTournee,
   getBonsLivraison,
   getConfiguration,
+  ouvrirPdf,
 } from '../services/api';
 import type { Tournee, Camion, BonLivraison } from '../services/api';
 import Pagination from '@/components/Pagination';
@@ -27,6 +29,9 @@ const bonsAjoutables = () => getBonsLivraison({ statut: 'pret', sans_tournee: tr
 export default function TourneesPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
   const { peut } = usePermissions();
+  const { t } = useLanguage();
+  const th = t.hazmat;
+  const kg = (valeur: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(valeur);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [tournees, setTournees] = useState<Tournee[]>([]);
@@ -494,6 +499,30 @@ export default function TourneesPage() {
                   </div>
                 )}
               </div>
+
+              {/* Charge estimée du camion et document des matières dangereuses à bord. */}
+              {(selectedTournee.poids_total_kg ?? 0) > 0 || (selectedTournee.matieres_dangereuses ?? 0) > 0 ? (() => {
+                const poids = selectedTournee.poids_total_kg ?? 0;
+                const capacite = Number(selectedTournee.camion?.capacite_kg) || 0;
+                const surcharge = capacite > 0 && poids > capacite;
+                return (
+                  <div className="border-t pt-3 text-sm space-y-2 dark:border-gray-700">
+                    {poids > 0 && (
+                      <p className={surcharge ? 'text-red-600 font-medium' : 'text-gray-700 dark:text-gray-300'}>
+                        {th.load.replace('{poids}', kg(poids))}{capacite > 0 && ` ${th.capacity.replace('{capacite}', kg(capacite))}`}{surcharge && ` — ${th.overload}`}
+                      </p>
+                    )}
+                    {(selectedTournee.matieres_dangereuses ?? 0) > 0 && (
+                      <button type="button" title={th.documentHelp}
+                        onClick={() => { ouvrirPdf(`/tournees/${selectedTournee.id}/matieres-dangereuses`, `matieres-dangereuses-${selectedTournee.numero}.pdf`).catch(e => signaler(e, th.document)); }}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30">
+                        <AlertTriangle size={14} /> {th.document}
+                        <span className="text-xs text-red-600 dark:text-red-400">({th.onBoard.replace('{n}', String(selectedTournee.matieres_dangereuses))})</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })() : null}
 
               {selectedTournee.tournee_bons && selectedTournee.tournee_bons.length > 0 && (
                 <div className="border-t pt-4 dark:border-gray-700">

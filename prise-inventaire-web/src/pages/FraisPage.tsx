@@ -13,7 +13,7 @@ import type { Produit } from '@/types';
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
 const VIDE: SaisieFrais = {
   libelle: '', produit_id: 0, mode: 'montant', valeur: 0, application: 'document', repetition: 'document',
-  sur_devis: true, sur_commandes: true, sur_factures: true, actif: true, produits: [],
+  sur_devis: true, sur_commandes: true, sur_factures: true, actif: true, produits: [], matieres_dangereuses: false,
 };
 
 /**
@@ -100,7 +100,7 @@ export default function FraisPage() {
                 </td>
                 <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
                   {tf.applications[f.application]}
-                  {f.application === 'produits' && <span className="block text-xs text-gray-500">{(f.produits ?? []).map(p => p.description).join(', ')}</span>}
+                  {f.application === 'produits' && <span className="block text-xs text-gray-500">{[...(f.matieres_dangereuses ? [t.hazmat.dangerous] : []), ...(f.produits ?? []).map(p => p.description)].join(', ')}</span>}
                 </td>
                 <td className="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                   {[f.sur_devis && tf.quotes, f.sur_commandes && tf.orders, f.sur_factures && tf.invoices].filter(Boolean).join(', ')}
@@ -114,7 +114,7 @@ export default function FraisPage() {
                       <button type="button" title={tf.edit} aria-label={`${tf.edit} — ${f.libelle}`}
                         onClick={() => setEdition({ id: f.id, saisie: {
                           libelle: f.libelle, produit_id: f.produit_id, mode: f.mode, valeur: Number(f.valeur), application: f.application, repetition: f.repetition,
-                          sur_devis: f.sur_devis, sur_commandes: f.sur_commandes, sur_factures: f.sur_factures, actif: f.actif, produits: (f.produits ?? []).map(p => p.id),
+                          sur_devis: f.sur_devis, sur_commandes: f.sur_commandes, sur_factures: f.sur_factures, actif: f.actif, produits: (f.produits ?? []).map(p => p.id), matieres_dangereuses: !!f.matieres_dangereuses,
                         } })}
                         className="p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded"><Pencil size={18} /></button>
                       <button type="button" onClick={() => { void supprimer(f); }} title={tf.delete} aria-label={`${tf.delete} — ${f.libelle}`}
@@ -226,6 +226,10 @@ function FormulaireFrais({ id, initial, produits, onClose, onEnregistre }: {
         {saisie.application === 'produits' && (
           <fieldset className="border rounded-lg p-3 dark:border-gray-600">
             <legend className="px-1 text-xs text-gray-500 dark:text-gray-400">{tf.triggeringProducts.replace('{n}', String(saisie.produits.length))}</legend>
+            <label className="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-200 mb-2">
+              <input type="checkbox" className="mt-0.5" checked={saisie.matieres_dangereuses} onChange={e => changer('matieres_dangereuses', e.target.checked)} />
+              <span>{t.hazmat.feeAuto}<span className="block text-xs text-gray-500 dark:text-gray-400">{t.hazmat.feeAutoHelp}</span></span>
+            </label>
             <input type="search" value={filtre} onChange={e => setFiltre(e.target.value)} placeholder={tf.searchProduct} aria-label={tf.searchProduct} className={`${classeChamp} mb-2`} />
             <div className="max-h-48 overflow-y-auto space-y-1">
               {filtres.map(p => (

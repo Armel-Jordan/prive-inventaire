@@ -4,6 +4,7 @@ import { getConfigurations, updateConfiguration, getParametres, updateParametres
 import { ApiError } from '@/services/http';
 import GroupesTaxes from '@/components/GroupesTaxes';
 import CourrielsConfiguration from '@/components/CourrielsConfiguration';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface FormatConfig {
   entite: string;
@@ -64,6 +65,7 @@ const MAIN_TABS: { id: MainTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function ConfigurationPage() {
+  const { t } = useLanguage();
   const [mainTab, setMainTab] = useState<MainTab>('numeros');
   const [configs, setConfigs] = useState<FormatConfig[]>(DEFAULT_CONFIGS);
   const [activeEntity, setActiveEntity] = useState<string>('produit');
@@ -367,6 +369,23 @@ export default function ConfigurationPage() {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-4">Ces informations apparaîtront sur vos PDFs (bons de commande, factures).</p>
+          <div className="mt-6 border-t pt-4 dark:border-gray-700">
+            <h3 className="text-sm font-semibold dark:text-white">{t.hazmat.settingsTitle}</h3>
+            <p className="text-xs text-gray-500 mb-3">{t.hazmat.settingsHelp}</p>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label htmlFor="md-telephone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.hazmat.emergencyPhone}</label>
+                <input id="md-telephone" type="text" value={parametres.md_telephone_urgence || ''} onChange={(e) => setParam('md_telephone_urgence', e.target.value)} maxLength={60}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+              <div>
+                <label htmlFor="md-declaration" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.hazmat.declaration}</label>
+                <textarea id="md-declaration" value={parametres.md_declaration || ''} onChange={(e) => setParam('md_declaration', e.target.value)} rows={3} maxLength={2000}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                <p className="text-xs text-gray-500 mt-1">{t.hazmat.declarationHelp}</p>
+              </div>
+            </div>
+          </div>
           <div className="mt-6">
             <button onClick={handleSaveParametres} disabled={saving} className="flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50">
               <Save size={16} /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}

@@ -87,10 +87,12 @@ class FraisController extends Controller
             'sur_commandes' => 'boolean',
             'sur_factures' => 'boolean',
             'actif' => 'boolean',
-            'produits' => ['nullable', 'array', Rule::requiredIf($request->input('application') === Frais::PRODUITS)],
+            'matieres_dangereuses' => 'boolean',
+            // Sans produits choisis, un frais « par produit » doit viser les matières dangereuses.
+            'produits' => ['nullable', 'array', Rule::requiredIf($request->input('application') === Frais::PRODUITS && ! $request->boolean('matieres_dangereuses'))],
             'produits.*' => ['integer', 'distinct', TenantRule::exists('produits')->whereNull('deleted_at')],
         ], [
-            'produits.required' => 'Choisissez les produits qui déclenchent ce frais.',
+            'produits.required' => 'Choisissez les produits qui déclenchent ce frais (ou appliquez-le aux matières dangereuses).',
             'valeur.max' => 'Un pourcentage ne dépasse pas 100.',
         ]);
         if (! ($donnees['sur_devis'] ?? true) && ! ($donnees['sur_commandes'] ?? true) && ! ($donnees['sur_factures'] ?? true)) {
@@ -118,6 +120,7 @@ class FraisController extends Controller
                 'sur_commandes' => $donnees['sur_commandes'] ?? true,
                 'sur_factures' => $donnees['sur_factures'] ?? true,
                 'actif' => $donnees['actif'] ?? true,
+                'matieres_dangereuses' => $donnees['application'] === Frais::PRODUITS && ($donnees['matieres_dangereuses'] ?? false),
             ])->save();
             $frais->produits()->sync($donnees['application'] === Frais::PRODUITS ? ($donnees['produits'] ?? []) : []);
             // Un frais qui n'est plus de livraison quitte les fiches clients.

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Frais;
+use App\Models\ProduitTenant;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,13 +46,18 @@ class FraisDocuments
         if ($marchandise->isEmpty()) {
             return [];
         }
+        // Matières dangereuses du document, pour les frais qui s'y appliquent d'office.
+        $dangereux = $frais->contains('matieres_dangereuses', true)
+            ? ProduitTenant::whereIn('id', $marchandise->pluck('produit_id'))->get(['id', 'numero_onu', 'classe_danger'])
+                ->filter(fn (ProduitTenant $p) => $p->estDangereux())->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : [];
 
         $proposes = [];
         foreach ($frais as $f) {
             if (! $f->produit || $f->produit->trashed() || $f->produit->actif === false || in_array($f->produit_id, $presents, true)) {
                 continue;
             }
-            $concernees = $this->lignesConcernees($f, $marchandise, $client);
+            $concernees = $this->lignesConcernees($f, $marchandise, $client, $dangereux);
             if ($concernees->isEmpty()) {
                 continue;
             }
@@ -80,10 +86,11 @@ class FraisDocuments
     }
 
     /** Lignes de marchandise qui déclenchent le frais. */
-    private function lignesConcernees(Frais $frais, Collection $marchandise, ?Client $client): Collection
+    private function lignesConcernees(Frais $frais, Collection $marchandise, ?Client $client, array $dangereux = []): Collection
     {
         return match ($frais->application) {
-            Frais::PRODUITS => $marchandise->filter(fn (array $l) => $frais->produits->contains('id', (int) $l['produit_id']))->values(),
+            Frais::PRODUITS => $marchandise->filter(fn (array $l) => $frais->produits->contains('id', (int) $l['produit_id'])
+                || ($frais->matieres_dangereuses && in_array((int) $l['produit_id'], $dangereux, true)))->values(),
             Frais::LIVRAISON => $client && (int) $client->frais_livraison_id === $frais->id ? $marchandise : collect(),
             default => $marchandise,
         };

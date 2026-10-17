@@ -84,7 +84,7 @@ class FraisAdditionnelsTest extends TestCase
         $this->frais(['libelle' => 'Taxe', 'produit_id' => $this->produits['DGR'], 'mode' => 'pourcentage', 'valeur' => 150])
             ->assertUnprocessable()->assertJsonPath('errors.valeur', ['Un pourcentage ne dépasse pas 100.']);
         $this->frais(['libelle' => 'Dangereux', 'produit_id' => $this->produits['DGR'], 'valeur' => 3, 'application' => 'produits'])
-            ->assertUnprocessable()->assertJsonPath('errors.produits', ['Choisissez les produits qui déclenchent ce frais.']);
+            ->assertUnprocessable()->assertJsonPath('errors.produits', ['Choisissez les produits qui déclenchent ce frais (ou appliquez-le aux matières dangereuses).']);
         $this->frais(['libelle' => 'Dangereux', 'produit_id' => $this->produits['DGR'], 'valeur' => 3, 'application' => 'produits', 'produits' => [$this->produits['DGR']]])
             ->assertUnprocessable()->assertJsonPath('errors.produits', ['Le produit du frais ne peut pas le déclencher lui-même.']);
         $this->frais(['libelle' => 'Nulle part', 'produit_id' => $this->produits['EMB'], 'valeur' => 1, 'sur_devis' => false, 'sur_commandes' => false, 'sur_factures' => false])

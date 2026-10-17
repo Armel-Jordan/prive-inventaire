@@ -1,7 +1,7 @@
 # PARAMÈTRES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — réponse en ligne aux devis (§12.1)
+> Dernière mise à jour : 2026-10-17 — transport : poids, volume et matières dangereuses des produits (§2.2), frais des matières dangereuses (§12 bis)
 
 ---
 
@@ -66,6 +66,10 @@ Le produit est l'entité centrale de tout le système.
 | `qte_par_unite_achat` | integer | Quantité par conditionnement (ex: 12) |
 | `type` | string | Catégorie du produit |
 | `secteur_id` | FK | Secteur de stockage par défaut |
+| `poids_kg`, `volume_m3` | décimal | Transport : poids et volume unitaires (charge estimée des tournées) |
+| `numero_onu`, `classe_danger`, `groupe_emballage` | string | Matière dangereuse : numéro ONU (« UN1203 »), classe (« 3 », « 2.1 »), groupe d'emballage (I, II, III) |
+
+Un produit avec un numéro ONU ou une classe de danger est une **matière dangereuse** : une pastille rouge le signale dans la liste ; il figure au document de transport des tournées (FLOW-VENTES §8.8) et déclenche les frais réglés pour les matières dangereuses (§12 bis). Le téléphone d'urgence et la déclaration de ce document se règlent dans **Paramètres → Entreprise**.
 
 ### 2.3 Flow de création d'un produit
 
@@ -734,6 +738,7 @@ Code : `App\Services\Courriels\EnvoiCourriel`, `App\Jobs\EnvoyerCourriel`, `App\
 
 - Créer d'abord le **produit** du frais (un service, avec sa taxe), puis le frais qui pointe vers lui.
 - Un frais **de livraison** se choisit ensuite dans la fiche de chaque client concerné.
+- Un frais **par produit** peut s'appliquer aussi à **toutes les matières dangereuses** (case à cocher) : comme dans fripv2, il suit alors les produits qui ont un numéro ONU ou une classe de danger, sans les choisir un par un.
 
 ---
 

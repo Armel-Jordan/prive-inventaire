@@ -8,9 +8,11 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
+use App\Services\MatieresDangereusesPdf;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class TourneeController extends Controller
@@ -46,7 +48,34 @@ class TourneeController extends Controller
      */
     private function detail(Tournee $tournee): Tournee
     {
-        return $tournee->fresh(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes']);
+        $tournee = $tournee->fresh(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes.produit']);
+        // Charge estimée (poids des produits encore à livrer) et matières dangereuses à bord.
+        $poids = 0.0;
+        $dangereuses = 0;
+        foreach ($tournee->tourneeBons as $lien) {
+            if (! $lien->bonLivraison || $lien->bonLivraison->statut === 'annule') {
+                continue;
+            }
+            foreach ($lien->bonLivraison->lignes as $ligne) {
+                $quantite = max(0, (int) ($ligne->quantite_preparee ?: $ligne->quantite_a_livrer) - (int) $ligne->quantite_livree);
+                $poids += $quantite * (float) ($ligne->produit?->poids_kg ?? 0);
+                $dangereuses += $quantite > 0 && $ligne->produit?->estDangereux() ? 1 : 0;
+            }
+        }
+
+        return $tournee->setAttribute('poids_total_kg', round($poids, 2))->setAttribute('matieres_dangereuses', $dangereuses);
+    }
+
+    /** Document de transport des matières dangereuses de la tournée (PDF), s'il y en a à bord. */
+    public function matieresDangereuses(int $id, MatieresDangereusesPdf $documents): Response|JsonResponse
+    {
+        $tournee = Tournee::with('camion')->findOrFail($id);
+        $lignes = $documents->lignes($tournee);
+        if ($lignes->isEmpty()) {
+            return response()->json(['message' => 'Aucune matière dangereuse à transporter dans cette tournée.'], 422);
+        }
+
+        return $documents->pdf($tournee, $lignes)->stream("matieres-dangereuses-{$tournee->numero}.pdf");
     }
 
     public function store(Request $request): JsonResponse

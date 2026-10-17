@@ -1315,6 +1315,9 @@ export interface Tournee {
   heure_depart?: string;
   heure_retour?: string;
   tournee_bons?: TourneeBon[];
+  /** Détail : charge estimée (poids des produits encore à livrer) et lignes de matières dangereuses à bord. */
+  poids_total_kg?: number;
+  matieres_dangereuses?: number;
 }
 
 export interface TourneeBon {
@@ -1936,6 +1939,9 @@ export interface TenantParametres {
   delai_livraison_jours?: number;
   stock_alerte_email?: string;
   stock_seuil_defaut?: number;
+  /** Document de transport des matières dangereuses : téléphone d'urgence et déclaration de l'expéditeur. */
+  md_telephone_urgence?: string | null;
+  md_declaration?: string | null;
 }
 
 export interface TenantTaxe {
