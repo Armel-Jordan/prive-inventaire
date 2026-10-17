@@ -50,6 +50,7 @@ class Droits
         'clients' => 'clients',
         'commandes-client' => 'commandes_client',
         'reliquats-clients' => 'reliquats_clients',
+        'abonnements-clients' => 'abonnements_clients',
         'factures' => 'factures',
         'avoirs' => 'avoirs',
         'retours-clients' => 'retours_clients',
@@ -118,6 +119,8 @@ class Droits
         'PUT api/balises/affectations',
         'POST api/clients/{client}/favori',
         'DELETE api/clients/{client}/favori',
+        // Aperçu d'un abonnement avant de l'enregistrer : un calcul, rien n'est écrit.
+        'POST api/abonnements-clients/apercu',
     ];
 
     /** Routes rattachées à une autre règle que celle de leur préfixe (dont les actions nommées). */
@@ -135,6 +138,9 @@ class Droits
         'POST api/reliquats-clients/depuis-commande/{id}' => ['reliquats_clients', 'creer'],
         'POST api/reliquats-clients/commander' => ['reliquats_clients', 'commander'],
         'POST api/reliquats-clients/facturer' => ['reliquats_clients', 'facturer'],
+        // Facturer les abonnements (créer les factures, aussi contrôlé par le contrôleur) ; relier une échéance.
+        'POST api/abonnements-clients/facturer' => ['abonnements_clients', 'facturer'],
+        'POST api/abonnements-clients/{id}/echeances/{echeanceId}/relier' => ['abonnements_clients', 'facturer'],
         'POST api/retours-clients/{id}/crediter' => ['avoirs', 'creer'],
         'POST api/acomptes/{id}/appliquer' => ['acomptes', 'appliquer'],
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],

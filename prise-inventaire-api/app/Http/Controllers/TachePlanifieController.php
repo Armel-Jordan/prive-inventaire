@@ -42,6 +42,8 @@ class TachePlanifieController extends Controller
             // Paramètres prévus par le catalogue pour cette tâche (ex. délai d'une alerte, en jours).
             'parametres' => ['nullable', 'array'],
             'parametres.jours' => ['sometimes', 'integer', 'between:0,365'],
+            // Facturation des abonnements : factures créées émises plutôt qu'en brouillon.
+            'parametres.emettre' => ['sometimes', 'boolean'],
         ], [
             'heure.regex' => 'L\'heure doit être au format HH:MM.',
             'jours_semaine.required_if' => 'Choisissez au moins un jour de la semaine.',

@@ -238,7 +238,8 @@ class DocumentsVentePdf
     {
         return [
             'reference' => $ligne->produit?->numero ?? '-',
-            'designation' => $ligne->produit?->description ?? 'Produit #'.$ligne->produit_id,
+            // Désignation du produit, et le texte propre à la ligne s'il y en a un (période d'un abonnement…).
+            'designation' => implode("\n", array_filter([$ligne->produit?->description ?? 'Produit #'.$ligne->produit_id, $ligne->description ?? null])),
             'quantite' => $ligne->quantite,
             'prix_unitaire' => (float) $prixUnitaire,
             'remise' => (float) $remise,

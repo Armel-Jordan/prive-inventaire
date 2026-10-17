@@ -505,7 +505,10 @@ export default function FacturesPage() {
                     <tbody>
                       {selectedFacture.lignes.map((ligne, idx) => (
                         <tr key={idx} className="dark:text-gray-300">
-                          <td className="py-1">{ligne.produit?.description ?? `Produit #${ligne.produit_id}`}</td>
+                          <td className="py-1">
+                            {ligne.produit?.description ?? `Produit #${ligne.produit_id}`}
+                            {ligne.description && <span className="block text-xs text-gray-500">{ligne.description}</span>}
+                          </td>
                           <td className="py-1 text-right">{ligne.quantite}</td>
                           <td className="py-1 text-right">{montant(Number(ligne.prix_unitaire_ht ?? 0), selectedFacture?.devise)}</td>
                           <td className="py-1 text-right">{montant(Number(ligne.montant_ht ?? 0), selectedFacture?.devise)}</td>

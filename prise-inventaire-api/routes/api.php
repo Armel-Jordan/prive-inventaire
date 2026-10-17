@@ -24,6 +24,7 @@ Route::get('/health', function () {
 use App\Http\Controllers\AccesCompteController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AlerteStockController;
+use App\Http\Controllers\Api\AbonnementClientController;
 use App\Http\Controllers\Api\AcompteController;
 use App\Http\Controllers\Api\AvoirController;
 use App\Http\Controllers\Api\BaliseController;
@@ -651,6 +652,18 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}', [ReliquatClientController::class, 'update'])->whereNumber('id');
         Route::post('/{id}/annuler', [ReliquatClientController::class, 'annuler'])->whereNumber('id');
         Route::delete('/{id}', [ReliquatClientController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Abonnements clients : produits facturés à intervalle régulier, échéances, facturation des échéances dues.
+    Route::prefix('abonnements-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [AbonnementClientController::class, 'index']);
+        Route::post('/apercu', [AbonnementClientController::class, 'apercu']);
+        Route::post('/facturer', [AbonnementClientController::class, 'facturer']);
+        Route::post('/', [AbonnementClientController::class, 'store']);
+        Route::get('/{id}', [AbonnementClientController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [AbonnementClientController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [AbonnementClientController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/echeances/{echeanceId}/relier', [AbonnementClientController::class, 'relier'])->whereNumber(['id', 'echeanceId']);
     });
 
     // Retours clients : marchandise rapportée, remise en stock ou mise au rebut, puis note de crédit du retour.

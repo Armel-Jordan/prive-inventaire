@@ -25,7 +25,7 @@ class FacturesVente
      * Facture brouillon numérotée. La numérotation automatique des factures doit être active (contrôlée par
      * l'appelant).
      *
-     * @param  array{client_id: int, date_facture: string, date_echeance?: ?string, condition_paiement_id?: ?int, devise?: ?string, taux_change?: mixed, notes?: ?string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht: float|string, taux_tva?: mixed, groupe_taxe_id?: ?int, remise_ligne?: mixed}>}  $donnees
+     * @param  array{client_id: int, date_facture: string, date_echeance?: ?string, condition_paiement_id?: ?int, devise?: ?string, taux_change?: mixed, notes?: ?string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht: float|string, taux_tva?: mixed, groupe_taxe_id?: ?int, remise_ligne?: mixed, description?: ?string}>}  $donnees
      */
     public function creer(array $donnees, int $tenantId): Facture
     {
@@ -90,11 +90,23 @@ class FacturesVente
                     'montant_ht' => $l['ht'],
                     'montant_tva' => $l['tvaM'],
                     'montant_ttc' => $l['ttc'],
+                    // Texte sous la désignation du produit (la période d'un abonnement, par exemple).
+                    'description' => $l['description'] ?? null,
                 ]);
                 $this->taxes->enregistrer('facture', $ligne->id, $l['detail']);
             }
 
             return $facture;
         });
+    }
+
+    /** Émet une facture brouillon : statut émise, encours du client, acomptes réservés à sa commande appliqués. */
+    public function emettre(Facture $facture, ?int $auteur): void
+    {
+        $facture->statut = 'emise';
+        $facture->save();
+        $facture->client->updateEncours();
+        // Acomptes réservés à la commande de la facture : appliqués d'eux-mêmes à son paiement.
+        app(Acomptes::class)->appliquerReserves($facture, $auteur);
     }
 }

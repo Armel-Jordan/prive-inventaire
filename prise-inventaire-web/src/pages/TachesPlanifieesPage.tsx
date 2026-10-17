@@ -141,6 +141,9 @@ export default function TachesPlanifieesPage() {
                       {ts.delayValue.replace('{libelle}', ts.tasks[tache.code]?.delay ?? ts.delay).replace('{jours}', String(tache.parametres.jours))}
                     </p>
                   )}
+                  {tache.parametres?.emettre !== undefined && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{tache.parametres.emettre ? ts.invoicesIssued : ts.invoicesDraft}</p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <label className="inline-flex items-center cursor-pointer" title={ts.active}>
@@ -294,6 +297,13 @@ export default function TachesPlanifieesPage() {
                   value={edition.reglage.parametres?.jours ?? edition.tache.parametres.jours}
                   onChange={e => modifierReglage({ parametres: { ...edition.reglage.parametres, jours: Number(e.target.value) } })} />
               </div>
+            )}
+            {edition.tache.parametres?.emettre !== undefined && (
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                <input type="checkbox" checked={Boolean(edition.reglage.parametres?.emettre ?? edition.tache.parametres.emettre)}
+                  onChange={e => modifierReglage({ parametres: { ...edition.reglage.parametres, emettre: e.target.checked } })} />
+                {ts.issueInvoices}
+              </label>
             )}
             {etat && <p className="text-xs text-gray-500">{ts.timezone.replace('{fuseau}', etat.fuseau)}</p>}
 

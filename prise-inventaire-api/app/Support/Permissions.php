@@ -106,6 +106,11 @@ class Permissions
                 'aide_fr' => "Accepter une commande en attente (dont celles de l'espace client) ou la refuser avec un motif.",
                 'aide_en' => 'Accept a pending order (including customer area orders) or decline it with a reason.'],
         ]],
+        'abonnements_clients' => ['onglet' => 'ventes', 'fr' => 'Abonnements clients', 'en' => 'Customer subscriptions', 'actions' => [
+            'facturer' => ['base' => 'creer', 'fr' => 'Facturer les abonnements', 'en' => 'Invoice subscriptions',
+                'aide_fr' => 'Créer les factures des échéances dues (en brouillon ou émises) et relier une échéance à une facture existante. Demande aussi le droit de créer des factures.',
+                'aide_en' => 'Create the invoices of due billing dates (draft or issued) and link a billing date to an existing invoice. Also requires the right to create invoices.'],
+        ]],
         'reliquats_clients' => ['onglet' => 'ventes', 'fr' => 'Reliquats clients', 'en' => 'Customer back orders', 'actions' => [
             'commander' => ['base' => 'modifier', 'fr' => 'Commander des reliquats au fournisseur', 'en' => 'Order back orders from suppliers',
                 'aide_fr' => 'Créer les commandes fournisseur brouillons des reliquats inscrits, une par fournisseur.',
