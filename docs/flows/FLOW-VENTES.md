@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — facturation à l'usage (§5.16) ; contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
+> Dernière mise à jour : 2026-10-17 — consignation chez le client (§5.18) ; facturation à l'usage (§5.16) ; contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
 
 ---
 
@@ -1296,6 +1296,57 @@ Plan de parité fripv2, phase 1.8 (« Contrats de location », « Types de locat
 | GET | `/contrats-location/{id}/pdf` | Contrat imprimé |
 
 Code : services `App\Services\ContratsLocation` et `ContratLocationPdf`, `ContratLocationController`, tâches `FacturerLocations` et `RenouvelerContrats`, vue `pdf/contrat-location` ; web : page `ContratsLocationPage`, référentiel `types_location` ; migration `2026_10_17_100049_creer_contrats_location`.
+
+### 5.18 Consignation chez le client (Ventes → Consignations)
+
+Plan de parité fripv2, phase 1.9 (« Relevé de consignation », « Consignations chez les clients ») : de la marchandise déposée chez un client (prêt, démonstration, stock de dépannage) reste à l'entreprise jusqu'à ce qu'il la consomme ou la rende.
+
+**Bon de dépôt** (onglet Bons de dépôt) : un document **sans montant** (ce n'est pas une vente), numéroté `CS-00001` (Paramètres → Numérotation).
+- Client, date, produits et quantités ; un même produit saisi deux fois fait une seule ligne.
+- Chaque ligne garde le **coût unitaire** au dépôt : le coût moyen d'achat, celui de la valorisation de l'inventaire (FLOW-INVENTAIRE), inconnu sans achat.
+- Imprimé : le bon (produits, quantités, avis de propriété, signatures).
+
+**Relevé** (par client) : ce que le client détient, produit par produit.
+- Quantité consignée, **coûtant** (moyenne pondérée des dépôts), **valeur au coût**, date du dernier dépôt.
+- Total des unités et de la valeur.
+- Le solde est la somme des mouvements (dépôts, retours, consommations).
+
+**Reprendre** (colonne Retourné, puis « Enregistrer la reprise ») : le client rend de la marchandise.
+- Le **lieu de retour** est obligatoire (secteur, entrepôt ou magasin ; il n'est jamais prérempli).
+- La quantité est déduite du solde.
+
+**Facturer la consommation** (colonne Consommé, puis « Facturer la consommation ») : le client a utilisé la marchandise.
+- Facture brouillon, ou émise si demandé, **aux prix du client** (liste de prix, remise, règles), dans sa devise, texte « Marchandise en consignation consommée ».
+- Le solde baisse aussitôt.
+- Un produit sans prix est refusé.
+
+**Règles :**
+- On ne sort jamais plus que le solde : 422 « Quantité trop grande pour … : le client en détient … ». Le solde est revérifié sous verrou au moment d'écrire.
+- Un geste à la fois : l'écran refuse de facturer s'il reste des retours saisis, et inversement.
+- Changer de client efface les saisies.
+- Le stock compté de PI (les scans) n'est pas touché : la consignation est un registre à part.
+
+**Historique** (par client, sur une période, les 12 derniers mois par défaut) : dépôts (+), retours (−, avec le lieu) et consommations (−, avec la facture), du plus récent au plus ancien. Une période inversée est refusée.
+
+**Consignations chez les clients** (rapport) : tous les clients ou un seul, avec ou sans les produits à quantité nulle. Un bloc par client (classés par nom, produits par numéro) : quantités, coûtant, valeur, dernier dépôt, sous-total ; total général. En PDF (paysage) aussi.
+
+**Droits :** module **Consignations**, copié des factures à sa création.
+- Créer un bon de dépôt : créer.
+- Reprendre : modifier.
+- Facturer la consommation : **Facturer la consommation en consignation** (`consignations.facturer`), plus le droit de créer des factures (et de les émettre si on les émet).
+- Relevé, historique et rapport : lecture.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET / POST | `/consignations` | Bons de dépôt (liste ; nouveau : `client_id`, `date_depot`, `notes`, `lignes[]`) |
+| GET | `/consignations/{id}` (`/pdf`) | Bon de dépôt (imprimé) |
+| GET | `/consignations/releve?client_id=` | Soldes du client, valeur au coût |
+| POST | `/consignations/reprise` | Reprise (`client_id`, `lieu_retour`, `lignes[]`) |
+| POST | `/consignations/facturer` | Consommation facturée (`client_id`, `lignes[]`, `emettre`) |
+| GET | `/consignations/historique?client_id=&du=&au=` | Mouvements de la période |
+| GET | `/consignations/rapport` | Consignations chez les clients (`client_id`, `nuls`, `format=pdf`) |
+
+Code : services `App\Services\Consignations` et `ConsignationsPdf`, `ConsignationController`, vues `pdf/consignation-depot` et `pdf/consignations-rapport` ; web : page `ConsignationsPage` ; migration `2026_10_17_100051_creer_consignations` (tables `consignations`, `consignation_lignes`, `consignation_mouvements`).
 
 ---
 
