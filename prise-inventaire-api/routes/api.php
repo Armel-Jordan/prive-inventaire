@@ -107,6 +107,7 @@ use App\Http\Controllers\Comptabilite\RapportTaxesController;
 use App\Http\Controllers\Comptabilite\RecurrenceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
+use App\Http\Controllers\EtiquetteController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
 use App\Http\Controllers\Inventaire\ValorisationInventaireController;
 use App\Http\Controllers\InventaireTournantController;
@@ -247,6 +248,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::delete('/produits/{produit}/codes-barres/{id}', [ProduitCodeBarreController::class, 'destroy'])->whereNumber('produit')->whereNumber('id');
     Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
     Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
+    // Étiquettes des produits : formats (rouleau ou planche) et impression en PDF.
+    Route::get('/etiquettes/formats', [EtiquetteController::class, 'formats']);
+    Route::post('/etiquettes/formats', [EtiquetteController::class, 'store']);
+    Route::put('/etiquettes/formats/{id}', [EtiquetteController::class, 'update'])->whereNumber('id');
+    Route::delete('/etiquettes/formats/{id}', [EtiquetteController::class, 'destroy'])->whereNumber('id');
+    Route::post('/etiquettes/imprimer', [EtiquetteController::class, 'imprimer']);
 
     // Dashboard stats (legacy)
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);

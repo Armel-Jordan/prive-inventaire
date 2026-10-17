@@ -33,6 +33,7 @@ class Droits
      */
     private const MODULES = [
         'produits' => 'produits',
+        'etiquettes' => 'etiquettes',
         'secteurs' => 'secteurs',
         'scan' => 'inventaires',
         'prises-inventaire' => 'inventaires',
@@ -109,6 +110,8 @@ class Droits
         'caisses' => 'caisses',
         // Cartes cadeaux : soldes et mouvements.
         'cartes-cadeaux' => 'cartes_cadeaux',
+        // Étiquettes : les formats, pour qui peut imprimer.
+        'etiquettes' => 'etiquettes',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -254,6 +257,11 @@ class Droits
         // Codes-barres : ajouter et retirer modifient le produit.
         'POST api/produits/{produit}/codes-barres' => ['produits', 'modifier'],
         'DELETE api/produits/{produit}/codes-barres/{id}' => ['produits', 'modifier'],
+        // Étiquettes : imprimer n'écrit rien (droit de les voir) ; les formats se gèrent avec l'action nommée.
+        'POST api/etiquettes/imprimer' => ['etiquettes', 'voir'],
+        'POST api/etiquettes/formats' => ['etiquettes', 'formats'],
+        'PUT api/etiquettes/formats/{id}' => ['etiquettes', 'formats'],
+        'DELETE api/etiquettes/formats/{id}' => ['etiquettes', 'formats'],
         // Virements : générer un lot, le télécharger (coordonnées bancaires), le marquer refusé.
         'POST api/debourses/virements/lots' => ['debourses', 'virements'],
         'GET api/debourses/virements/lots/{id}/fichier' => ['debourses', 'virements'],

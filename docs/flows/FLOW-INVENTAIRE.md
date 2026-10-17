@@ -22,6 +22,7 @@
 13. [Prises d'inventaire](#13-prises-dinventaire-sessions-de-comptage)
 14. [Historique des scans](#14-historique-des-scans-statistiques-comparaison-tableau-de-bord)
 15. [Codes-barres des produits](#15-codes-barres-des-produits-inventaire--produits)
+16. [Étiquettes des produits](#16-étiquettes-des-produits-paramètres--étiquettes)
 
 ---
 
@@ -607,3 +608,57 @@ Code :
 - service `App\Services\CodesBarresProduits` (lecture, enregistrement), `ProduitCodeBarreController`, modèle `ProduitCodeBarre` ;
 - web : composant `produits/FenetreCodesBarres`, service `src/services/codesBarres.ts` ;
 - migration `2026_10_17_100071_creer_codes_barres_produits` (table `produit_codes_barres`, colonne `inventaire_scan.code_lu`).
+
+## 16. Étiquettes des produits (Paramètres → Étiquettes)
+
+Plan de parité fripv2, phase 2.1 (suite) : imprimer les étiquettes des produits en PDF.
+
+**Formats** (onglet Formats) :
+- **Rouleau** : une étiquette par page, à sa taille, pour une imprimante d'étiquettes (thermique ou autre) ;
+- **Planche** : une grille sur une page A4 ou Letter, avec ses marges et ses espaces ;
+  - la grille doit tenir dans la page (le message donne la largeur ou la hauteur atteinte) ;
+  - l'aperçu de la fenêtre montre où tombent les étiquettes.
+- **Contenu** : nom de l'entreprise, description, code-barres, chiffres sous le code-barres, numéro du produit, prix, prix taxes comprises, date d'impression ; taille du texte en points.
+- La disposition se calcule d'après la taille de l'étiquette et du texte. Un format trop petit pour son contenu est refusé : il faut au moins 5 mm pour le code-barres.
+- **Formats d'origine**, créés à la première visite (les trois de fripv2 en 38 × 22 mm, et une planche) :
+  - Complet (par défaut) : description, code-barres, chiffres, numéro, prix ;
+  - Sans prix ;
+  - Code-barres seul ;
+  - Planche A4 (3 × 7) : 21 étiquettes de 63,5 × 38,1 mm.
+- **Un format par défaut**, et toujours au moins un format actif. Un format désactivé ou retiré cède sa place par défaut au premier format actif.
+
+**Impression** (onglet Imprimer) :
+- **Produits** :
+  - un par un : recherche par numéro, description ou code-barres ;
+  - lecture d'une douchette suivie d'Entrée : le code lu est celui imprimé ;
+  - tout un secteur ;
+  - depuis la liste des produits : bouton **Étiquettes** d'un produit, ou **Étiquettes** des produits affichés (200 au plus) ;
+- **Pour chaque produit** : le code imprimé (le principal, un autre de ses codes, ou son numéro s'il n'en a pas) et le nombre d'exemplaires ; 2 000 étiquettes au plus par impression.
+- **Prix** : celui d'une liste de prix (prix saisi pour le produit, sinon prix de base ajusté), sinon le prix de base.
+  - Taxes comprises si le format le demande : avec le groupe de taxes choisi, sinon celui par défaut ; « TTC » suit le prix.
+  - Montant à la précision de la devise de l'entreprise (sans décimales en XAF).
+- **Planche entamée** : on clique la première étiquette libre. Le contour des étiquettes peut être tracé pour un essai sur papier ordinaire.
+- **Code-barres** : EAN-13, EAN-8, UPC-A (comme un EAN-13 qui commence par 0), sinon Code 128.
+  - Jeu C pour un nombre pair de chiffres, sinon jeu B.
+  - Dessin en SVG, sans bibliothèque ; un code accentué, qu'aucune symbologie n'écrit, est imprimé en texte.
+- **Textes ajustés** avec les métriques de la police du PDF :
+  - description répartie entre les mots, coupée avec « … » ;
+  - numéro arrêté avant le prix ; il ne répète pas les chiffres du code quand le code imprimé est le numéro ;
+  - prix rapetissé s'il est long.
+
+**Droits** : module **Étiquettes** (onglet Paramètres).
+- **Consulter** : voir les formats et imprimer (l'impression n'écrit rien).
+- **Gérer les formats** : créer, modifier, retirer.
+- Pour chaque groupe, la migration règle ces droits d'après ceux des produits : consulter comme on voit les produits, gérer les formats comme on les modifie.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/etiquettes/formats` | Formats (ceux d'origine à la première visite), contenus possibles, pages, maximum |
+| POST / PUT / DELETE | `/etiquettes/formats[/{id}]` | Créer, modifier, retirer un format (gérer les formats) |
+| POST | `/etiquettes/imprimer` | Le PDF : `format_id`, `lignes` (`produit_id`, `code_barre_id`, `copies`), `liste_prix_id`, `groupe_taxe_id`, `depart`, `langue`, `contours` |
+
+Code :
+- `App\Support\SvgCodeBarre` (EAN-13, EAN-8, UPC-A, Code 128) ;
+- service `App\Services\Etiquettes` (formats, disposition, textes, prix, PDF), `EtiquetteController`, modèle `EtiquetteFormat`, vue `pdf/etiquettes` ;
+- web : page `EtiquettesPage`, composants `etiquettes/OngletImpression`, `etiquettes/OngletFormats`, `etiquettes/FenetreFormatEtiquette`, service `src/services/etiquettes.ts` ;
+- migration `2026_10_17_100072_creer_formats_etiquettes` (table `etiquette_formats`, module de droits `etiquettes`).
