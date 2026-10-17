@@ -26,6 +26,8 @@ class Devis extends Model
         'commande_id',
         'devise',
         'taux_change',
+        // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
+        'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
     ];
 
     protected $casts = [

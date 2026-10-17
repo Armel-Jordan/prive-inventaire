@@ -52,7 +52,7 @@ class DocumentsVentePdf
             'Date du devis' => $this->date($devis->date_devis),
             'Valable jusqu\'au' => $this->date($devis->date_validite),
         ], [
-            'destinataire' => $this->client($devis->client),
+            'destinataire' => $this->client($devis->client, false, $devis),
             'lignes' => $devis->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire, 0, $l->montant_ligne))->all(),
             // Les devis sont établis hors taxes.
             'totaux' => [['Total HT', (float) $devis->montant_total, true]],
@@ -70,7 +70,7 @@ class DocumentsVentePdf
             'Date de commande' => $this->date($commande->date_commande),
             'Livraison souhaitée' => $this->date($commande->date_livraison_souhaitee),
         ], [
-            'destinataire' => $this->client($commande->client),
+            'destinataire' => $this->client($commande->client, false, $commande),
             'lignes' => $commande->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
             'totaux' => $this->totaux('commande_client', $commande, $commande->lignes),
             'notes' => $commande->notes,
@@ -86,7 +86,7 @@ class DocumentsVentePdf
             'Échéance' => $this->date($facture->date_echeance),
             'Conditions de paiement' => $facture->conditionPaiement?->libelle,
         ], [
-            'destinataire' => $this->client($facture->client),
+            'destinataire' => $this->client($facture->client, false, $facture),
             'lignes' => $facture->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
             'totaux' => $this->totaux('facture', $facture, $facture->lignes),
             'reglement' => array_values(array_filter([
@@ -108,7 +108,7 @@ class DocumentsVentePdf
             'Facture créditée' => $avoir->facture ? trim($avoir->facture->numero.' du '.$this->date($avoir->facture->date_facture)) : null,
             'Motif' => $avoir->motif,
         ], [
-            'destinataire' => $this->client($avoir->client),
+            'destinataire' => $this->client($avoir->client, false, $avoir->facture),
             'lignes' => $avoir->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
             'totaux' => $this->totaux('avoir', $avoir, $avoir->lignes),
             'reglement' => $avoir->statut === Avoir::BROUILLON ? [] : array_values(array_filter([
@@ -154,7 +154,7 @@ class DocumentsVentePdf
             'Mode de livraison' => self::MODES_LIVRAISON[$bon->mode_livraison] ?? $bon->mode_livraison,
             'Date de livraison' => $this->date($bon->date_livraison),
         ]), [
-            'destinataire' => $this->client($bon->facture?->client, true),
+            'destinataire' => $this->client($bon->facture?->client, true, $bon->facture),
             'colonnes' => 'livraison',
             'lignes' => $bon->lignes->map(fn ($l) => [
                 'reference' => $l->produit?->numero ?? '-',
@@ -195,10 +195,24 @@ class DocumentsVentePdf
         ];
     }
 
-    private function client(?Model $client, bool $livraison = false): array
+    /**
+     * Destinataire d'un document : la fiche du client, ou, pour le client de passage, les coordonnées notées sur le
+     * document (celles de sa facture pour une note de crédit ou un bon de livraison).
+     */
+    private function client(?Model $client, bool $livraison = false, ?Model $document = null): array
     {
         if (! $client) {
             return ['nom' => '-', 'lignes' => []];
+        }
+        if ($client->de_passage && filled($document?->getAttribute('passage_nom'))) {
+            return [
+                'nom' => $document->passage_nom,
+                'lignes' => array_values(array_filter([
+                    $document->passage_adresse,
+                    $document->passage_telephone ? 'Tél. : '.$document->passage_telephone : null,
+                    $document->passage_courriel,
+                ])),
+            ];
         }
 
         $adresse = $livraison && $client->adresse_livraison ? $client->adresse_livraison : $client->adresse_facturation;

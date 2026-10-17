@@ -9,6 +9,7 @@ use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
+use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\TaxesDocument;
@@ -72,6 +73,7 @@ class CommandeClientController extends Controller
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
             ...DevisesVente::regles(),
+            ...ClientsDePassage::regles(),
         ]);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise.
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
@@ -84,7 +86,7 @@ class CommandeClientController extends Controller
         $commande = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('commande', $tenantId);
 
-            $commande = ComClientEntete::create($devise + [
+            $commande = ComClientEntete::create($devise + app(ClientsDePassage::class)->coordonnees($validated, Client::find($validated['client_id'])) + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
@@ -140,9 +142,12 @@ class CommandeClientController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            ...ClientsDePassage::regles(),
         ]);
 
         DB::transaction(function () use ($commande, $validated) {
+            // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
+            $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id)));
             // Client et date se modifient aussi ; une note vidée est effacée (elle était conservée).
             $commande->update([
                 'client_id' => $validated['client_id'] ?? $commande->client_id,

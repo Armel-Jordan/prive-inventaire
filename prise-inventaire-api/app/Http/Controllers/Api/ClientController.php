@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +52,12 @@ class ClientController extends Controller
         $clients = Client::where('tenant_id', $tenantId)->where('actif', true)->orderBy('raison_sociale')->get();
 
         return response()->json($clients);
+    }
+
+    /** Fiche du client de passage de l'entreprise (ventes au comptoir), créée à sa première utilisation. */
+    public function dePassage(ClientsDePassage $passage): JsonResponse
+    {
+        return response()->json($passage->client());
     }
 
     public function show(int $id): JsonResponse

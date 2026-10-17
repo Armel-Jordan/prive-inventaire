@@ -21,6 +21,8 @@ import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise,
 import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
+import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
+import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
 
 export default function DevisPage() {
@@ -50,6 +52,9 @@ export default function DevisPage() {
     devise: '',
     taux: '1',
   });
+  // Coordonnées du client de passage, notées sur le devis.
+  const [passage, setPassage] = useState(PASSAGE_VIDE);
+  const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
   const [lignes, setLignes] = useState<{ id?: number; produit_id: number; quantite: number; prix_unitaire: number }[]>([]);
   // Frais additionnels et de livraison proposés pour le devis en cours de saisie.
   const frais = useFraisAutomatiques({
@@ -100,6 +105,8 @@ export default function DevisPage() {
         devise: formData.devise || deviseEntreprise,
         taux_change: formData.devise ? Number(formData.taux) : undefined,
         lignes: [...lignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire: f.prix_unitaire_ht }))],
+        // Retenues par l'API pour le client de passage seulement.
+        ...passage,
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -171,6 +178,7 @@ export default function DevisPage() {
       devise: devis.devise ?? '',
       taux: String(devis.taux_change ?? 1),
     });
+    setPassage(saisiePassage(devis));
     setLignes(devis.lignes.map(l => ({
       id: l.id,
       produit_id: l.produit_id,
@@ -204,7 +212,15 @@ export default function DevisPage() {
     setEditingId(null);
     frais.reinitialiser();
     setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
+    setPassage(PASSAGE_VIDE);
     setLignes([]);
+  };
+
+  // Client choisi : sa devise est proposée, avec son taux.
+  const choisirClient = (id: string, liste: Client[] = clients) => {
+    const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
+    if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
 
   const getStatutBadge = (statut: string) => {
@@ -281,7 +297,7 @@ export default function DevisPage() {
                     {devis.numero}
                     <BalisesFiche entite="devis" entiteId={devis.id} />
                   </td>
-                  <td className="px-4 py-3 text-sm">{devis.client?.raison_sociale}</td>
+                  <td className="px-4 py-3 text-sm">{nomClient(devis)}<PastilleClientDePassage client={devis.client} /></td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_devis)}</td>
                   <td className="px-4 py-3 text-sm">{fmtDate(devis.date_validite)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total, devis.devise)}</td>
@@ -347,15 +363,11 @@ export default function DevisPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Client *</label>
-                  <select required value={formData.client_id} onChange={(e) => {
-                      // Devise du client proposée, avec son taux.
-                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
-                      setFormData({ ...formData, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
-                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
-                    }} className="w-full px-3 py-2 border rounded-lg">
+                  <select required value={formData.client_id} onChange={(e) => choisirClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
                     <option value="">Sélectionner...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
                   </select>
+                  {!clientDePassage && <BoutonClientDePassage onChoisir={c => { setClients(cs => avecClient(cs, c)); choisirClient(String(c.id), [c]); }} />}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Date devis *</label>
@@ -371,6 +383,7 @@ export default function DevisPage() {
                   <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
               </div>
+              {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               {editingId ? (formData.devise && <p className="text-sm text-gray-500">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
                 <ChampDevise valeur={{ devise: formData.devise, taux: formData.taux }} onChange={v => setFormData(f => ({ ...f, devise: v.devise, taux: v.taux }))} />
               )}
@@ -421,7 +434,7 @@ export default function DevisPage() {
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-gray-500">Client:</span><p className="font-medium">{selectedDevis.client?.raison_sociale}</p></div>
+                <div><span className="text-gray-500">Client:</span><p className="font-medium">{nomClient(selectedDevis)}<PastilleClientDePassage client={selectedDevis.client} /></p><DetailClientDePassage document={selectedDevis} /></div>
                 <div><span className="text-gray-500">Statut:</span><p className="mt-1">{getStatutBadge(selectedDevis.statut)}</p></div>
                 <div><span className="text-gray-500">Date:</span><p>{fmtDate(selectedDevis.date_devis)}</p></div>
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>

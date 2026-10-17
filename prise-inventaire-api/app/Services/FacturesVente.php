@@ -33,8 +33,10 @@ class FacturesVente
         $condition = $this->conditions->pourFacture($donnees['condition_paiement_id'] ?? null, $client);
         // Devise de la facture : celle demandée, sinon celle du client ; prix saisis dans cette devise.
         $devise = $this->devises->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, $client);
+        // Coordonnées du client de passage (pour lui seulement).
+        $passage = app(ClientsDePassage::class)->coordonnees($donnees, $client);
 
-        return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise) {
+        return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise, $passage) {
             $numero = Configuration::consommerNumero('facture', $tenantId);
 
             $montantHt = 0;
@@ -60,7 +62,7 @@ class FacturesVente
                 return compact('ht', 'tvaM', 'ttc', 'tva', 'remise', 'detail', 'groupeId') + $l;
             }, $donnees['lignes']);
 
-            $facture = Facture::create($devise + [
+            $facture = Facture::create($devise + $passage + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $donnees['client_id'],

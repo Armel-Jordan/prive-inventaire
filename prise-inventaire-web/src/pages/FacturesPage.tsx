@@ -35,6 +35,8 @@ import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
+import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
+import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
 
 
@@ -83,6 +85,9 @@ export default function FacturesPage() {
   const [escompte, setEscompte] = useState<PropositionEscompte | null>(null);
   const [avecEscompte, setAvecEscompte] = useState(false);
   const [createLignes, setCreateLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
+  // Coordonnées du client de passage, notées sur la facture.
+  const [passage, setPassage] = useState(PASSAGE_VIDE);
+  const clientDePassage = clients.find(c => c.id === Number(createForm.client_id))?.de_passage;
   // Frais additionnels et de livraison proposés pour la facture en cours de saisie.
   const frais = useFraisAutomatiques({
     document: 'facture',
@@ -168,6 +173,13 @@ export default function FacturesPage() {
     }
   };
 
+  // Client choisi : sa devise est proposée, avec son taux.
+  const choisirClient = (id: string, liste: Client[] = clients) => {
+    const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setCreateForm(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
+    if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
+  };
+
   const handleCreateFacture = async (e: React.FormEvent) => {
     e.preventDefault();
     if (createLignes.length === 0) { alert('Ajoutez au moins une ligne'); return; }
@@ -182,10 +194,13 @@ export default function FacturesPage() {
         taux_change: createForm.devise ? Number(createForm.taux) : undefined,
         notes: createForm.notes || undefined,
         lignes: [...createLignes, ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire_ht: f.prix_unitaire_ht }))],
+        // Retenues par l'API pour le client de passage seulement.
+        ...passage,
       });
       frais.reinitialiser();
       setShowCreateModal(false);
       setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
+      setPassage(PASSAGE_VIDE);
       setCreateLignes([]);
       loadFactures();
     } catch (error) {
@@ -326,7 +341,7 @@ export default function FacturesPage() {
                     {facture.numero}
                     <BalisesFiche entite="facture" entiteId={facture.id} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{facture.client?.raison_sociale}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{nomClient(facture)}<PastilleClientDePassage client={facture.client} /></td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(facture.date_facture)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
                     {montant(facture.montant_ttc, facture.devise)}
@@ -438,7 +453,8 @@ export default function FacturesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-sm text-gray-500">Client:</span>
-                  <p className="font-medium dark:text-white">{selectedFacture.client?.raison_sociale}</p>
+                  <p className="font-medium dark:text-white">{nomClient(selectedFacture)}<PastilleClientDePassage client={selectedFacture.client} /></p>
+                  <DetailClientDePassage document={selectedFacture} />
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Statut:</span>
@@ -605,17 +621,13 @@ export default function FacturesPage() {
                   <select
                     required
                     value={createForm.client_id}
-                    onChange={(e) => {
-                      // Devise du client proposée, avec son taux.
-                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
-                      setCreateForm({ ...createForm, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
-                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
-                    }}
+                    onChange={(e) => choisirClient(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="">Sélectionner...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
                   </select>
+                  {!clientDePassage && <BoutonClientDePassage onChoisir={c => { setClients(cs => avecClient(cs, c)); choisirClient(String(c.id), [c]); }} />}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1 dark:text-gray-300">Date facture *</label>
@@ -649,6 +661,7 @@ export default function FacturesPage() {
                   <BoutonRemarquesRapides onInserer={texte => setCreateForm(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
               </div>
+              {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium dark:text-gray-300">Lignes</label>

@@ -36,7 +36,8 @@ import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise,
 import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
-
+import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
+import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 
 export default function CommandesClientPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
@@ -77,6 +78,9 @@ export default function CommandesClientPage() {
     devise: '',
     taux: '1',
   });
+  // Coordonnées du client de passage, notées sur la commande.
+  const [passage, setPassage] = useState(PASSAGE_VIDE);
+  const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
   const [lignes, setLignes] = useState<{ produit_id: number; quantite: number; prix_unitaire_ht: number }[]>([]);
   // Frais additionnels et de livraison proposés pour la commande en cours de saisie (ceux déjà sur un brouillon
   // modifié ne sont pas proposés de nouveau).
@@ -131,6 +135,8 @@ export default function CommandesClientPage() {
         quantite: l.quantite,
         prix_unitaire_ht: l.prix_unitaire_ht,
       })),
+      // Retenues par l'API pour le client de passage seulement.
+      ...passage,
     };
     try {
       if (editingId) {
@@ -159,6 +165,7 @@ export default function CommandesClientPage() {
       devise: cmd.devise ?? '',
       taux: String(cmd.taux_change ?? 1),
     });
+    setPassage(saisiePassage(cmd));
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -263,7 +270,15 @@ export default function CommandesClientPage() {
       devise: '',
       taux: '1',
     });
+    setPassage(PASSAGE_VIDE);
     setLignes([]);
+  };
+
+  // Client choisi : sa devise est proposée, avec son taux.
+  const choisirClient = (id: string, liste: Client[] = clients) => {
+    const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
+    if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
 
   const getStatutBadge = (statut: string) => {
@@ -347,7 +362,7 @@ export default function CommandesClientPage() {
                     {cmd.numero}
                     <BalisesFiche entite="commande_client" entiteId={cmd.id} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{cmd.client?.raison_sociale}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{nomClient(cmd)}<PastilleClientDePassage client={cmd.client} /></td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDateDocument(cmd.date_commande)}</td>
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
                     {montant(Number(cmd.montant_ttc ?? 0), cmd.devise)}
@@ -477,12 +492,7 @@ export default function CommandesClientPage() {
                   <select
                     required
                     value={formData.client_id}
-onChange={(e) => {
-                      // Devise du client proposée, avec son taux.
-                      const deviseClient = clients.find(c => c.id === Number(e.target.value))?.devise ?? '';
-                      setFormData({ ...formData, client_id: e.target.value, devise: deviseClient, taux: deviseClient ? '' : '1' });
-                      if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
-                    }}
+                    onChange={(e) => choisirClient(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
                     <option value="">Sélectionner...</option>
@@ -490,6 +500,7 @@ onChange={(e) => {
                       <option key={c.id} value={c.id}>{c.raison_sociale}</option>
                     ))}
                   </select>
+                  {!clientDePassage && <BoutonClientDePassage onChoisir={c => { setClients(cs => avecClient(cs, c)); choisirClient(String(c.id), [c]); }} />}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1 dark:text-gray-300">Date commande *</label>
@@ -523,6 +534,7 @@ onChange={(e) => {
                   />
                 </div>
               </div>
+              {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               {editingId ? (formData.devise && <p className="text-sm text-gray-500 dark:text-gray-400">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
                 <ChampDevise valeur={{ devise: formData.devise, taux: formData.taux }} onChange={v => setFormData(f => ({ ...f, devise: v.devise, taux: v.taux }))} />
               )}
@@ -621,7 +633,8 @@ onChange={(e) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-sm text-gray-500">Client:</span>
-                  <p className="font-medium dark:text-white">{selectedCommande.client?.raison_sociale}</p>
+                  <p className="font-medium dark:text-white">{nomClient(selectedCommande)}<PastilleClientDePassage client={selectedCommande.client} /></p>
+                  <DetailClientDePassage document={selectedCommande} />
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Statut:</span>
@@ -675,7 +688,7 @@ onChange={(e) => {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Refuser la commande</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Commande {selectedCommande.numero} - {selectedCommande.client?.raison_sociale}
+              Commande {selectedCommande.numero} - {nomClient(selectedCommande)}
             </p>
             <div>
               <label className="block text-sm font-medium mb-1 dark:text-gray-300">Motif du refus *</label>

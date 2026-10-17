@@ -9,6 +9,7 @@ use App\Models\ComClientLigne;
 use App\Models\Configuration;
 use App\Models\Devis;
 use App\Models\DevisLigne;
+use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\TaxesDocument;
 use App\Support\TauxTaxe;
@@ -41,6 +42,7 @@ class DevisController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('numero', 'like', "%{$search}%")
+                    ->orWhere('passage_nom', 'like', "%{$search}%")
                     ->orWhereHas('client', fn ($q2) => $q2->where('raison_sociale', 'like', "%{$search}%"));
             });
         }
@@ -62,6 +64,7 @@ class DevisController extends Controller
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             ...DevisesVente::regles(),
+            ...ClientsDePassage::regles(),
         ]);
         // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise.
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
@@ -74,7 +77,7 @@ class DevisController extends Controller
         $devis = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('devis', $tenantId);
 
-            $devis = Devis::create($devise + [
+            $devis = Devis::create($devise + app(ClientsDePassage::class)->coordonnees($validated, Client::find($validated['client_id'])) + [
                 'tenant_id' => $tenantId,
                 'numero' => $numero,
                 'client_id' => $validated['client_id'],
@@ -126,10 +129,11 @@ class DevisController extends Controller
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            ...ClientsDePassage::regles(),
         ]);
 
         DB::transaction(function () use ($validated, $devis) {
-            $devis->update([
+            $devis->update(app(ClientsDePassage::class)->pourModification($validated, $devis, Client::find($validated['client_id'])) + [
                 'client_id' => $validated['client_id'],
                 'date_devis' => $validated['date_devis'],
                 'date_validite' => $validated['date_validite'],
@@ -228,7 +232,7 @@ class DevisController extends Controller
             // Même séquence que la création normale de commande (cohérence + verrou).
             $numero = Configuration::consommerNumero('commande', $tenantId);
 
-            $commande = ComClientEntete::create([
+            $commande = ComClientEntete::create(app(ClientsDePassage::class)->copier($devis) + [
                 'numero' => $numero,
                 'client_id' => $devis->client_id,
                 // La commande reste dans la devise du devis, à son taux.

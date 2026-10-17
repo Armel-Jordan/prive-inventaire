@@ -12,6 +12,7 @@ import OngletSynthese from '@/components/fiche-client/OngletSynthese';
 import OngletHistorique from '@/components/fiche-client/OngletHistorique';
 import OngletRemarques from '@/components/fiche/OngletRemarques';
 import { formatMontant, useSymboleDevise } from '@/components/fiche/format';
+import { PastilleClientDePassage } from '@/components/ClientDePassage';
 
 type Onglet = 'synthese' | 'historique' | 'contacts' | 'adresses' | 'remarques';
 type Compteur = 'contacts_count' | 'adresses_count' | 'remarques_count';
@@ -91,6 +92,7 @@ export default function FicheClientPage() {
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <Building2 className="text-purple-600" /> {client.raison_sociale}
               </h1>
+              <PastilleClientDePassage client={client} />
               <button onClick={basculerFavori} aria-pressed={Boolean(client.favori)} aria-label={client.favori ? tf.unfavorite : tf.favorite} title={client.favori ? tf.unfavorite : tf.favorite}
                 className={client.favori ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400 dark:text-gray-600'}>
                 <Star size={20} fill={client.favori ? 'currentColor' : 'none'} />

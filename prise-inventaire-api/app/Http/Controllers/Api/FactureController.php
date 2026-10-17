@@ -13,6 +13,7 @@ use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
 use App\Services\Acomptes;
+use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
 use App\Services\FacturesVente;
@@ -103,6 +104,7 @@ class FactureController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            ...ClientsDePassage::regles(),
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
@@ -137,7 +139,7 @@ class FactureController extends Controller
         $facture = DB::transaction(function () use ($commande, $tenantId, $condition) {
             $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
 
-            $facture = Facture::create([
+            $facture = Facture::create(app(ClientsDePassage::class)->copier($commande) + [
                 'tenant_id' => $tenantId,
                 'numero' => $numeroFacture,
                 'commande_id' => $commande->id,

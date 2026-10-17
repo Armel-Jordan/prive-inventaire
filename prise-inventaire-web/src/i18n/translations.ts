@@ -969,7 +969,20 @@ export const translations = {
       deleted: 'Demande supprimée.',
       deposit: 'Acompte',
     },
-    // Notes de crédit (avoirs)
+    // Client de passage (ventes au comptoir)
+    walkIn: {
+      button: 'Client de passage',
+      buttonHelp: "Vente à un client sans fiche : choisit le client de passage de l'entreprise (créé à sa première utilisation) ; notez ses coordonnées sur le document.",
+      title: 'Coordonnées du client de passage',
+      help: 'Reprises sur le PDF, le courriel et les documents qui en découlent (commande, facture). Toutes facultatives.',
+      name: 'Nom',
+      phone: 'Téléphone',
+      email: 'Courriel',
+      address: 'Adresse',
+      badge: 'De passage',
+      badgeHelp: "Fiche du client de passage : les coordonnées de chaque vente sont notées sur ses documents.",
+      error: 'Client de passage indisponible.',
+    },
     availability: {
       nav: 'Disponibilités',
       title: 'Disponibilité des produits',
@@ -1304,6 +1317,7 @@ export const translations = {
       createdBy: 'saisi par {nom}',
       stockHelp: 'Chaque remise en stock est un arrivage dans son secteur (Relocalisation, Traçabilité), compté comme une entrée par la prise d\'inventaire suivante.',
     },
+    // Notes de crédit (avoirs)
     creditNotes: {
       nav: 'Notes de crédit',
       title: 'Notes de crédit',
@@ -3534,7 +3548,20 @@ export const translations = {
       deleted: 'Request deleted.',
       deposit: 'Deposit',
     },
-    // Credit notes
+    // Walk-in customer (counter sales)
+    walkIn: {
+      button: 'Walk-in customer',
+      buttonHelp: "Sale to a customer without a record: selects the company's walk-in customer (created on first use); record their details on the document.",
+      title: 'Walk-in customer details',
+      help: 'Shown on the PDF, the email and the documents that follow (order, invoice). All optional.',
+      name: 'Name',
+      phone: 'Phone',
+      email: 'Email',
+      address: 'Address',
+      badge: 'Walk-in',
+      badgeHelp: "Walk-in customer record: each sale's details are recorded on its documents.",
+      error: 'Walk-in customer unavailable.',
+    },
     availability: {
       nav: 'Availability',
       title: 'Product availability',
@@ -3869,6 +3896,7 @@ export const translations = {
       createdBy: 'entered by {nom}',
       stockHelp: 'Each restock is an arrival in its sector (Relocation, Traceability), counted as an entry by the next stocktake.',
     },
+    // Credit notes
     creditNotes: {
       nav: 'Credit notes',
       title: 'Credit notes',
