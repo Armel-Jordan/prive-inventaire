@@ -41,7 +41,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -88,6 +88,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/planification', label: t.nav.planning, icon: CalendarClock, module: 'planification' },
       { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck, module: 'approbations' },
       { path: '/rapports', label: t.nav.reports, icon: FileBarChart, module: 'rapports' },
+      { path: '/bibliotheque-rapports', label: t.reportsLibrary.nav, icon: LibraryBig, module: 'rapports' },
       { path: '/inventaire-tournant', label: 'Inv. Tournant', icon: RotateCcw, module: 'inventaire_tournant' },
     ],
   },

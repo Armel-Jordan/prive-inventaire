@@ -129,6 +129,7 @@ use App\Http\Controllers\ProduitLienController;
 use App\Http\Controllers\ProduitTenantController;
 use App\Http\Controllers\ProduitUniteController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RapportBibliothequeController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\RechercheController;
 use App\Http\Controllers\RoleController;
@@ -438,6 +439,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/activite-employe', [RapportController::class, 'activiteParEmploye']);
         Route::get('/evolution-annuelle', [RapportController::class, 'evolutionAnnuelle']);
         Route::get('/top-produits', [RapportController::class, 'topProduits']);
+        // Bibliothèque : catalogue des rapports (selon les droits du compte), un rapport à l'écran ou en fichier.
+        Route::get('/bibliotheque', [RapportBibliothequeController::class, 'catalogue']);
+        Route::get('/bibliotheque/{code}', [RapportBibliothequeController::class, 'executer'])->where('code', '[a-z0-9-]+');
     });
 
     // Balises de classement des fiches et documents.

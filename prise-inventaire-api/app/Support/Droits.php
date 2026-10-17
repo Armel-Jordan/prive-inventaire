@@ -312,6 +312,9 @@ class Droits
         'GET api/prises-inventaire/valorisation' => ['valorisation', 'voir'],
         // Stock par entrepôt (multi-entrepôts).
         'GET api/stock-entrepots' => ['inventaires', 'voir'],
+        // Bibliothèque des rapports : le droit de voir les rapports, puis celui du module de chaque rapport (contrôleur).
+        'GET api/rapports/bibliotheque' => ['rapports', 'voir'],
+        'GET api/rapports/bibliotheque/{code}' => ['rapports', 'voir'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

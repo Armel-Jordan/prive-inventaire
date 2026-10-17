@@ -28,6 +28,7 @@ import TachesPlanifieesPage from '@/pages/TachesPlanifieesPage';
 import ApprobationsPage from '@/pages/ApprobationsPage';
 import TracabilitePage from '@/pages/TracabilitePage';
 import RapportsPage from '@/pages/RapportsPage';
+import BibliothequeRapportsPage from '@/pages/BibliothequeRapportsPage';
 import InventaireTournantPage from '@/pages/InventaireTournantPage';
 import ProfilPage from '@/pages/ProfilPage';
 import RolesPage from '@/pages/RolesPage';
@@ -160,6 +161,7 @@ function AppRoutes() {
         <Route path="approbations" element={<ApprobationsPage />} />
         <Route path="tracabilite" element={<TracabilitePage />} />
         <Route path="rapports" element={<RapportsPage />} />
+        <Route path="bibliotheque-rapports" element={<BibliothequeRapportsPage />} />
         <Route path="inventaire-tournant" element={<InventaireTournantPage />} />
         <Route path="profil" element={<ProfilPage />} />
         <Route path="roles" element={<RolesPage />} />
