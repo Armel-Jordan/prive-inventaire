@@ -13,6 +13,7 @@ use App\Models\FactureEcheance;
 use App\Models\FactureLigne;
 use App\Models\FacturePaiement;
 use App\Services\Caisses;
+use App\Services\CartesCadeaux;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
@@ -32,6 +33,7 @@ class FactureController extends Controller
         private readonly ConditionsPaiement $conditions,
         private readonly FacturesVente $factures,
         private readonly Caisses $caisses,
+        private readonly CartesCadeaux $cartes,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -225,7 +227,9 @@ class FactureController extends Controller
         $validated = $request->validate([
             'montant' => 'required|numeric|min:0.01',
             'date_paiement' => 'required|date',
-            'mode_paiement' => 'required|in:especes,cheque,virement,carte,autre',
+            // « carte_cadeau » : payé avec une carte cadeau (enregistré en mode « autre », rattaché à la carte).
+            'mode_paiement' => 'required|in:especes,cheque,virement,carte,autre,carte_cadeau',
+            'carte_cadeau' => 'nullable|required_if:mode_paiement,carte_cadeau|string|max:30',
             'reference' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
             // Échéance de cette facture uniquement.
@@ -262,20 +266,28 @@ class FactureController extends Controller
                     }
                     $escompte = $propose['escompte'];
                 }
-                $sessionCaisse = $this->caisses->sessionPourEncaissement($validated['caisse_id'] ?? null);
+                // Une carte cadeau n'apporte pas d'argent : elle ne passe pas par la caisse.
+                $carte = $validated['mode_paiement'] === 'carte_cadeau'
+                    ? $this->cartes->pourPaiement($validated['carte_cadeau'], $facture->devise, (float) $validated['montant'], Carbon::parse($validated['date_paiement'])->toDateString())
+                    : null;
+                $sessionCaisse = $carte ? null : $this->caisses->sessionPourEncaissement($validated['caisse_id'] ?? null);
 
-                FacturePaiement::create([
+                $paiement = FacturePaiement::create([
                     'facture_id' => $facture->id,
                     'echeance_id' => $validated['echeance_id'] ?? null,
                     'date_paiement' => $validated['date_paiement'],
                     'montant' => $validated['montant'],
                     'escompte' => $escompte,
-                    'mode_paiement' => $validated['mode_paiement'],
-                    'reference' => $validated['reference'] ?? null,
+                    'mode_paiement' => $carte ? 'autre' : $validated['mode_paiement'],
+                    'reference' => $carte ? $carte->numero : ($validated['reference'] ?? null),
                     'notes' => $validated['notes'] ?? null,
                     'enregistre_par' => $request->user()?->id,
                     'caisse_session_id' => $sessionCaisse,
+                    'carte_cadeau_id' => $carte?->id,
                 ]);
+                if ($carte) {
+                    $this->cartes->utiliser($carte, $paiement, $request->user()?->id);
+                }
 
                 // Recalcul autoritatif : montant_paye, reste_a_payer, statut, encours client.
                 $facture->updateMontantPaye();

@@ -41,10 +41,14 @@ export interface ApercuVente {
   montant_ttc: number;
 }
 
+/** Mode d'un paiement au comptoir : ceux de la caisse, ou une carte cadeau (son numéro). */
+export type ModePaiementVente = ModeCaisse | 'carte_cadeau';
+
 export interface PaiementVente {
-  mode: ModeCaisse;
+  mode: ModePaiementVente;
   montant: number;
   reference?: string;
+  carte_cadeau?: string;
 }
 
 export interface VenteEnregistree {

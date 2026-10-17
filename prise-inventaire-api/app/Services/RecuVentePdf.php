@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdminUser;
 use App\Models\CaisseSession;
+use App\Models\CarteCadeauMouvement;
 use App\Models\Facture;
 use App\Support\EntreprisePdf;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,6 +34,7 @@ class RecuVentePdf
         // Hauteur du ticket selon son contenu (en points) : en-tête, deux lignes par produit, totaux, paiements.
         $monnaie = $paiements->contains(fn ($p) => $p->montant_recu !== null && (float) $p->montant_recu > (float) $p->montant);
         $hauteur = 200 + 28 * $facture->lignes->count() + 13 * count($totaux) + 13 * $paiements->count() + ($monnaie ? 26 : 0)
+            + 11 * $paiements->whereNotNull('carte_cadeau_id')->count()
             + ((float) $facture->reste_a_payer > 0.004 ? 15 : 0) + ($client ? 11 : 0) + ($session || $vendeur ? 11 : 0);
 
         return Pdf::loadView('pdf.recu-vente', [
@@ -43,6 +45,8 @@ class RecuVentePdf
             'caisse' => $session?->caisse,
             'vendeur' => $vendeur,
             'paiements' => $paiements,
+            // Solde restant sur chaque carte cadeau qui a payé, juste après son paiement.
+            'soldesCartes' => CarteCadeauMouvement::whereIn('facture_paiement_id', $paiements->pluck('id'))->where('type', 'utilisation')->pluck('solde_apres', 'facture_paiement_id'),
             'totaux' => $totaux,
             'modes' => Caisses::LIBELLES_MODES,
             'instant' => $facture->created_at?->copy()->setTimezone($fuseau),

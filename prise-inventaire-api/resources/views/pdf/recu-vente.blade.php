@@ -60,9 +60,12 @@
     <table>
         @foreach($paiements as $paiement)
             <tr>
-                <td>{{ $paiement->acompte_id ? 'Acompte' : ($modes[$paiement->mode_paiement] ?? $paiement->mode_paiement) }}{{ $paiement->reference && ! $paiement->acompte_id ? ' '.$paiement->reference : '' }}</td>
+                <td>{{ $paiement->acompte_id ? 'Acompte' : ($paiement->carte_cadeau_id ? 'Carte cadeau' : ($modes[$paiement->mode_paiement] ?? $paiement->mode_paiement)) }}{{ $paiement->reference && ! $paiement->acompte_id ? ' '.$paiement->reference : '' }}</td>
                 <td class="droite">{{ $montant($paiement->montant) }}</td>
             </tr>
+            @if($paiement->carte_cadeau_id && isset($soldesCartes[$paiement->id]))
+                <tr><td class="petit">Solde restant sur la carte</td><td class="droite petit">{{ $montant($soldesCartes[$paiement->id]) }}</td></tr>
+            @endif
             @if($paiement->montant_recu !== null && (float) $paiement->montant_recu > (float) $paiement->montant)
                 <tr><td class="petit">Argent remis</td><td class="droite petit">{{ $montant($paiement->montant_recu) }}</td></tr>
                 <tr><td>Monnaie rendue</td><td class="droite">{{ $montant((float) $paiement->montant_recu - (float) $paiement->montant) }}</td></tr>

@@ -1624,6 +1624,8 @@ export async function enregistrerPaiement(id: number, data: {
   escompte?: boolean;
   /** Caisse du poste : le paiement entre dans sa session ouverte. */
   caisse_id?: number;
+  /** Mode « carte_cadeau » : le numéro de la carte. */
+  carte_cadeau?: string;
 }): Promise<Facture> {
   return fetchApi(`/factures/${id}/paiement`, { method: 'POST', body: JSON.stringify(data) });
 }

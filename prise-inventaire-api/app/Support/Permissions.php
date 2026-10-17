@@ -173,6 +173,11 @@ class Permissions
                 'aide_fr' => "Enregistrer une vente au comptoir : la facture est créée, émise et encaissée d'un coup. Demande aussi les droits de créer, d'émettre et d'encaisser des factures.",
                 'aide_en' => 'Record a counter sale: the invoice is created, issued and paid at once. Also requires the rights to create, issue and take payment on invoices.'],
         ]],
+        'cartes_cadeaux' => ['onglet' => 'ventes', 'fr' => 'Cartes cadeaux', 'en' => 'Gift cards', 'crud' => ['voir', 'creer', 'modifier'], 'actions' => [
+            'rembourser' => ['base' => 'modifier', 'fr' => "Rembourser le solde d'une carte cadeau", 'en' => "Refund a gift card's balance",
+                'aide_fr' => "Rendre au client tout le solde d'une carte : la carte est annulée. Demande aussi le droit de modifier les cartes.",
+                'aide_en' => 'Give the whole balance of a card back to the customer: the card is cancelled. Also requires the right to change cards.'],
+        ]],
         'caisses' => ['onglet' => 'ventes', 'fr' => 'Gestion de caisse', 'en' => 'Cash management', 'crud' => ['voir'], 'actions' => [
             'gerer' => ['base' => 'modifier', 'fr' => 'Gérer les sessions de caisse', 'en' => 'Manage register sessions',
                 'aide_fr' => "Ouvrir une caisse avec son fond, enregistrer les entrées et sorties d'argent, fermer la caisse en comptant le tiroir.",

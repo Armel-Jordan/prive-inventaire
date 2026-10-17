@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, FileText, Minus, Plus, Printer, ScanLine, ShoppingBasket, Trash2, X } from 'lucide-react';
+import { CheckCircle2, FileText, Gift, Minus, Plus, Printer, ScanLine, ShoppingBasket, Trash2, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, useMontantDocument } from '@/lib/documents';
 import { getClientsActifs, ouvrirPdf, type Client } from '@/services/api';
-import { MODES_CAISSE, type ModeCaisse } from '@/services/caisses';
+import { MODES_CAISSE } from '@/services/caisses';
 import {
   calculerVente, chercherProduitsPdv, enregistrerVente, imprimerRecu,
-  type ApercuVente, type LigneVente, type ProduitPdv, type VenteEnregistree,
+  type ApercuVente, type LigneVente, type ModePaiementVente, type PaiementVente, type ProduitPdv, type VenteEnregistree,
 } from '@/services/pointDeVente';
+import { imprimerCertificat, type CarteCadeau } from '@/services/cartesCadeaux';
+import ChampCarteCadeau from '@/components/cartesCadeaux/ChampCarteCadeau';
+import VendreCarte from '@/components/cartesCadeaux/VendreCarte';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 
@@ -48,6 +51,9 @@ export default function PointDeVentePage() {
   const [erreur, setErreur] = useState('');
   const [encaisser, setEncaisser] = useState(false);
   const [vente, setVente] = useState<VenteEnregistree | null>(null);
+  // Carte cadeau vendue au comptoir.
+  const [venteCarte, setVenteCarte] = useState(false);
+  const [carteVendue, setCarteVendue] = useState<CarteCadeau | null>(null);
 
   useEffect(() => {
     let actif = true;
@@ -140,12 +146,24 @@ export default function PointDeVentePage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><ShoppingBasket className="text-emerald-600" /> {tp.title}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{tp.subtitle}</p>
         </div>
-        <div className="max-w-sm w-full sm:w-auto">
+        <div className="max-w-sm w-full sm:w-auto space-y-2">
           {encaissement.caisse
             ? <CaisseDuPoste caisse={encaissement.caisse} />
             : <p className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{tp.noRegister}</p>}
+          {peut('cartes_cadeaux', 'creer') && (
+            <button type="button" onClick={() => setVenteCarte(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700">
+              <Gift size={16} className="text-pink-600" /> {t.giftCards.sellAtCounter}
+            </button>
+          )}
         </div>
       </div>
+      {carteVendue && (
+        <p className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
+          {t.giftCards.sold.replace('{numero}', carteVendue.numero)}
+          <button type="button" onClick={() => { imprimerCertificat(carteVendue).catch(e => setErreur(messageErreur(e, tp.error))); }} className="underline">{t.giftCards.certificate}</button>
+          <button type="button" onClick={() => setCarteVendue(null)} className="ml-auto" aria-label={tp.close}><X size={14} /></button>
+        </p>
+      )}
       {erreur && <p role="alert" className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{erreur}</p>}
 
       <div className="grid gap-4 lg:grid-cols-3 items-start">
@@ -282,15 +300,18 @@ export default function PointDeVentePage() {
         />
       )}
       {vente && <VenteTerminee vente={vente} montant={montant} onNouvelle={() => { setVente(null); saisieRef.current?.focus(); }} />}
+      {venteCarte && <VendreCarte onClose={() => setVenteCarte(false)} onVendue={carte => { setVenteCarte(false); setCarteVendue(carte); }} />}
       {encaissement.dialogue}
     </div>
   );
 }
 
 interface LignePaiement {
-  mode: ModeCaisse;
+  mode: ModePaiementVente;
   montant: string;
   reference: string;
+  /** Numéro de la carte cadeau. */
+  carte: string;
 }
 
 /** Paiement de la vente : un ou plusieurs modes ; seules les espèces peuvent dépasser (monnaie rendue). */
@@ -299,13 +320,13 @@ function Encaissement({ apercu, dePassage, montant, onClose, onVendre }: {
   dePassage: boolean;
   montant: Montant;
   onClose: () => void;
-  onVendre: (paiements: { mode: ModeCaisse; montant: number; reference?: string }[]) => Promise<void>;
+  onVendre: (paiements: PaiementVente[]) => Promise<void>;
 }) {
   const { t } = useLanguage();
   const tp = t.pointOfSale;
   const total = arrondi(apercu.montant_ttc);
   const devise = apercu.devise;
-  const [lignes, setLignes] = useState<LignePaiement[]>([{ mode: 'especes', montant: String(total), reference: '' }]);
+  const [lignes, setLignes] = useState<LignePaiement[]>([{ mode: 'especes', montant: String(total), reference: '', carte: '' }]);
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
 
@@ -322,9 +343,11 @@ function Encaissement({ apercu, dePassage, montant, onClose, onVendre }: {
     : '';
 
   const modifier = (index: number, changement: Partial<LignePaiement>) => setLignes(ls => ls.map((l, i) => (i === index ? { ...l, ...changement } : l)));
-  const ajouterMode = () => setLignes(ls => [...ls, { mode: 'carte', montant: reste > 0 ? String(reste) : '', reference: '' }]);
+  const ajouterMode = () => setLignes(ls => [...ls, { mode: 'carte', montant: reste > 0 ? String(reste) : '', reference: '', carte: '' }]);
+  // Ce qui reste à payer sans compter une ligne (montant proposé pour une carte cadeau, au plus son solde).
+  const resteSans = (index: number) => Math.max(0, arrondi(total - lignes.reduce((s, l, i) => s + (i === index ? 0 : Number(l.montant) || 0), 0)));
 
-  async function vendre(paiements: { mode: ModeCaisse; montant: number; reference?: string }[]) {
+  async function vendre(paiements: PaiementVente[]) {
     setOccupe(true);
     setErreur('');
     try {
@@ -335,8 +358,11 @@ function Encaissement({ apercu, dePassage, montant, onClose, onVendre }: {
     }
   }
 
-  const paiements = lignes.filter(l => Number(l.montant) > 0)
-    .map(l => ({ mode: l.mode, montant: Number(l.montant), ...(l.reference.trim() ? { reference: l.reference.trim() } : {}) }));
+  const paiements: PaiementVente[] = lignes.filter(l => Number(l.montant) > 0).map(l => ({
+    mode: l.mode,
+    montant: Number(l.montant),
+    ...(l.mode === 'carte_cadeau' ? { carte_cadeau: l.carte.trim() } : l.reference.trim() ? { reference: l.reference.trim() } : {}),
+  }));
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -350,15 +376,20 @@ function Encaissement({ apercu, dePassage, montant, onClose, onVendre }: {
           {lignes.map((ligne, index) => (
             <div key={index} className="flex flex-wrap items-end gap-2">
               <label className={`${classeLibelle} w-36`}>{tp.mode}
-                <select value={ligne.mode} onChange={e => modifier(index, { mode: e.target.value as ModeCaisse })} className={classeChamp}>
+                <select value={ligne.mode} onChange={e => modifier(index, { mode: e.target.value as ModePaiementVente })} className={classeChamp}>
                   {MODES_CAISSE.map(m => <option key={m} value={m}>{t.cashRegisters.modes[m]}</option>)}
+                  <option value="carte_cadeau">{t.giftCards.giftCard}</option>
                 </select>
               </label>
               <label className={`${classeLibelle} w-32`}>{tp.amount}
                 <input type="number" min="0" step="0.01" value={ligne.montant} onChange={e => modifier(index, { montant: e.target.value })}
                   className={`${classeChamp} text-right`} autoFocus={index === 0} />
               </label>
-              {ligne.mode !== 'especes' && (
+              {ligne.mode === 'carte_cadeau' && (
+                <ChampCarteCadeau className="flex-1 min-w-[12rem]" numero={ligne.carte} onNumero={carte => modifier(index, { carte })}
+                  onVerifiee={carte => modifier(index, { montant: String(Math.min(Number(carte.solde), resteSans(index))) })} />
+              )}
+              {ligne.mode !== 'especes' && ligne.mode !== 'carte_cadeau' && (
                 <label className={`${classeLibelle} flex-1 min-w-[8rem]`}>{tp.reference}
                   <input value={ligne.reference} maxLength={100} onChange={e => modifier(index, { reference: e.target.value })} className={classeChamp} />
                 </label>

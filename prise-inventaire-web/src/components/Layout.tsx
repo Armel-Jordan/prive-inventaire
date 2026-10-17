@@ -40,7 +40,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Gift, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, Repeat, Scale, ScrollText, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -120,6 +120,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/demandes-acompte', label: t.depositRequests.nav, icon: FileClock, module: 'demandes_acompte' },
       { path: '/point-de-vente', label: t.pointOfSale.nav, icon: ShoppingBasket, module: 'point_de_vente' },
       { path: '/caisses', label: t.cashRegisters.nav, icon: Banknote, module: 'caisses' },
+      { path: '/cartes-cadeaux', label: t.giftCards.nav, icon: Gift, module: 'cartes_cadeaux' },
       { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'comptes_clients' },
       { path: '/relances', label: t.reminders.nav, icon: BellRing, module: 'relances' },
       { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
