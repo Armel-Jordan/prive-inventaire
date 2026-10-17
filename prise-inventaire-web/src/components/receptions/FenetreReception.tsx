@@ -7,6 +7,7 @@ import { messageErreur } from '@/lib/erreurs';
 import { getFournisseursActifs, getLignesEnAttente, type ComFourEntete, type ComFourLigne, type Fournisseur } from '@/services/api';
 import { enregistrerReception, type ResultatReception, type SaisieReception } from '@/services/receptions';
 import CoutsAnnexes from '@/components/receptions/CoutsAnnexes';
+import OptionsSecteurs from '@/components/OptionsSecteurs';
 import type { Secteur } from '@/types';
 
 /** Ligne de commande attendue, avec sa commande (numéro, devise). */
@@ -274,7 +275,8 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
                       <td className="px-2 py-2">
                         <select value={r.secteur_id ?? ''} aria-label={tr.sector} onChange={e => changer(r.cle, { secteur_id: e.target.value ? Number(e.target.value) : null })} className={classeChamp}>
                           <option value="">{tr.defaultSector}</option>
-                          {secteurs.map(s => <option key={s.id} value={s.id}>{s.code} - {s.nom}</option>)}
+                          {/* Multi-entrepôts : les secteurs de l'entrepôt où la commande est livrée d'abord. */}
+                          <OptionsSecteurs secteurs={secteurs} prefere={attendue.commande.entrepot_id ?? commande.entrepot_id} />
                         </select>
                       </td>
                       <td className="px-2 py-2">

@@ -43,11 +43,14 @@ class ScanTenantController extends Controller
             'jusqu_a' => 'nullable|date',
             'produit' => 'nullable|string|max:100',
             'per_page' => 'nullable|integer|min:1|max:500',
+            'entrepot_id' => 'nullable|integer',
         ]);
 
         return ScanTenant::query()->whereNull('deleted_at')
             ->when($request->filled('employe'), fn ($q) => $q->where('employe', $request->employe))
             ->when($request->filled('secteur'), fn ($q) => $q->whereIn('secteur', $this->appellationsSecteur((string) $request->secteur)))
+            // Multi-entrepôts : les scans des secteurs de l'entrepôt.
+            ->when($request->integer('entrepot_id'), fn ($q, $entrepot) => $q->whereIn('secteur', $this->appellationsEntrepot($entrepot)))
             ->when($request->filled('produit'), fn ($q) => $q->where('numero', 'like', '%'.addcslashes((string) $request->produit, '%_\\').'%'))
             ->when($request->filled('depuis'), fn ($q) => $q->where('date_saisie', '>=', Carbon::parse($request->depuis)->utc()))
             ->when($request->filled('jusqu_a'), fn ($q) => $q->where('date_saisie', '<', Carbon::parse($request->jusqu_a)->utc()));
@@ -59,6 +62,13 @@ class ScanTenantController extends Controller
         $fiche = Secteur::where('code', $secteur)->orWhere('nom', $secteur)->first();
 
         return $fiche ? array_values(array_unique([$fiche->code, $fiche->nom, $secteur])) : [$secteur];
+    }
+
+    /** Codes et noms des secteurs d'un entrepôt (même désactivés : leurs scans restent). */
+    private function appellationsEntrepot(int $entrepot): array
+    {
+        return Secteur::withTrashed()->where('entrepot_id', $entrepot)->get(['code', 'nom'])
+            ->flatMap(fn (Secteur $s) => [$s->code, $s->nom])->unique()->values()->all();
     }
 
     /** Secteur ramené à son code (un scan Android porte le nom), pour compter un secteur une seule fois. */

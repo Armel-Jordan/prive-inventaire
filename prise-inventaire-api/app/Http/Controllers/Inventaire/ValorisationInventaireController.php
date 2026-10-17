@@ -22,8 +22,10 @@ class ValorisationInventaireController extends Controller
         $filtres = $request->validate([
             'methode' => ['nullable', Rule::in(ValorisationInventaire::METHODES)],
             'secteur_id' => ['nullable', 'integer', TenantRule::exists('secteurs')],
+            // Multi-entrepôts : les secteurs d'un entrepôt.
+            'entrepot_id' => ['nullable', 'integer', TenantRule::exists('entrepots')],
         ]);
-        $resultat = $valorisation->calculer($filtres['methode'] ?? 'cout_moyen', $filtres['secteur_id'] ?? null);
+        $resultat = $valorisation->calculer($filtres['methode'] ?? 'cout_moyen', $filtres['secteur_id'] ?? null, $filtres['entrepot_id'] ?? null);
         if ($request->query('format') !== 'csv') {
             return response()->json($resultat);
         }

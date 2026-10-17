@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Search, X, Plus, Download, Calendar, Filter, CheckSquare, Square } from 'lucide-react';
 import { getHistoriqueScans, exporterScans, createScan, updateScan, deleteScan, getSecteurs, getEmployes, getProduits } from '@/services/api';
+import OptionsSecteurs from '@/components/OptionsSecteurs';
+import { useLanguage } from '@/i18n/useLanguage';
+import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { signaler } from '@/lib/erreurs';
@@ -27,6 +30,10 @@ export default function ScansPage() {
   const [editingScan, setEditingScan] = useState<InventaireScan | null>(null);
   const [editQuantite, setEditQuantite] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
+  // Multi-entrepôts : les scans des secteurs d'un entrepôt.
+  const [filterEntrepot, setFilterEntrepot] = useState('');
+  const [entrepots, setEntrepots] = useState<EntrepotChoix[]>([]);
+  const { t } = useLanguage();
   const [filterEmploye, setFilterEmploye] = useState('');
   const [filterProduit, setFilterProduit] = useState('');
   const [filterDateDebut, setFilterDateDebut] = useState('');
@@ -51,6 +58,7 @@ export default function ScansPage() {
   /** Filtres transmis à l'API (période en instants, dans le fuseau du navigateur). */
   const filtresApi = () => ({
     secteur: filterSecteur || undefined,
+    entrepot_id: filterEntrepot ? Number(filterEntrepot) : undefined,
     employe: filterEmploye || undefined,
     produit: produitRecherche || undefined,
     ...bornesPeriode(filterDateDebut, filterDateFin),
@@ -95,10 +103,11 @@ export default function ScansPage() {
   // Les filtres sont appliqués par l'API : la page affichée est déjà filtrée.
   const filteredScans = scans;
 
-  const hasActiveFilters = filterSecteur || filterEmploye || filterProduit || filterDateDebut || filterDateFin;
+  const hasActiveFilters = filterSecteur || filterEntrepot || filterEmploye || filterProduit || filterDateDebut || filterDateFin;
 
   function resetFilters() {
     setFilterSecteur('');
+    setFilterEntrepot('');
     setFilterEmploye('');
     setFilterProduit('');
     setFilterDateDebut('');
@@ -175,7 +184,11 @@ export default function ScansPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterSecteur, filterEmploye, produitRecherche, filterDateDebut, filterDateFin, page]);
+  }, [filterSecteur, filterEntrepot, filterEmploye, produitRecherche, filterDateDebut, filterDateFin, page]);
+
+  useEffect(() => {
+    chargerEntrepots().then(setEntrepots).catch(() => {});
+  }, []);
 
   async function handleUpdate() {
     if (!editingScan) return;
@@ -230,7 +243,7 @@ export default function ScansPage() {
             <span className="font-medium text-gray-700">Recherche avancée</span>
             {hasActiveFilters && (
               <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                {[filterSecteur, filterEmploye, filterProduit, filterDateDebut, filterDateFin].filter(Boolean).length} filtre(s)
+                {[filterSecteur, filterEntrepot, filterEmploye, filterProduit, filterDateDebut, filterDateFin].filter(Boolean).length} filtre(s)
               </span>
             )}
           </div>
@@ -243,7 +256,7 @@ export default function ScansPage() {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t ${entrepots.length > 0 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'}`}>
             {/* Recherche produit */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">Produit</label>
@@ -259,6 +272,22 @@ export default function ScansPage() {
               </div>
             </div>
 
+            {/* Entrepôt : la liste des secteurs se limite aux siens. */}
+            {entrepots.length > 0 && (
+              <div>
+                <label htmlFor="scans-entrepot" className="block text-xs text-gray-500 mb-1">{t.warehouses.warehouse}</label>
+                <select
+                  id="scans-entrepot"
+                  value={filterEntrepot}
+                  onChange={(e) => { setFilterEntrepot(e.target.value); setFilterSecteur(''); setPage(1); }}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">{t.warehouses.all}</option>
+                  {entrepots.map((e) => <option key={e.id} value={String(e.id)}>{libelleEntrepot(e)}</option>)}
+                </select>
+              </div>
+            )}
+
             {/* Secteur */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">Secteur</label>
@@ -268,9 +297,7 @@ export default function ScansPage() {
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Tous</option>
-                {secteurs.map((s) => (
-                  <option key={s.id} value={s.code}>{s.code} - {s.nom}</option>
-                ))}
+                <OptionsSecteurs secteurs={secteurs.filter((s) => !filterEntrepot || String(s.entrepot_id) === filterEntrepot)} valeur={(s) => s.code} />
               </select>
             </div>
 

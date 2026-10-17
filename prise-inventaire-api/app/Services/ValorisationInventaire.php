@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ComFourEntete;
 use App\Models\ProduitTenant;
+use App\Models\Secteur;
 use App\Models\TenantParametres;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -28,9 +29,12 @@ class ValorisationInventaire
 
     public function __construct(private PrisesInventaire $prises) {}
 
-    public function calculer(string $methode, ?int $secteurId = null): array
+    public function calculer(string $methode, ?int $secteurId = null, ?int $entrepotId = null): array
     {
-        $lignes = $this->prises->inventaireOfficiel($secteurId);
+        $lignes = $this->prises->inventaireOfficiel($secteurId, $entrepotId);
+        // Multi-entrepôts : l'entrepôt de chaque secteur, pour les totaux par entrepôt.
+        $entrepots = Secteur::withTrashed()->with('entrepot:id,code,nom')->whereIn('id', $lignes->pluck('secteur_id')->filter()->unique()->values())
+            ->get(['id', 'entrepot_id'])->keyBy('id');
         $produits = ProduitTenant::withTrashed()->whereIn('numero', $lignes->pluck('produit_numero')->unique()->values())
             ->get(['id', 'numero', 'description', 'categorie', 'prix_unitaire'])->keyBy('numero');
         $couts = $this->couts($methode, $produits);
@@ -59,7 +63,9 @@ class ValorisationInventaire
             $parProduit[$numero]['secteurs'][] = $ligne['secteur'];
 
             $cle = $ligne['secteur_id'] ?? $ligne['secteur'];
-            $parSecteur[$cle] ??= ['secteur_id' => $ligne['secteur_id'], 'secteur' => $ligne['secteur'], 'valeur' => 0.0, 'nb_produits' => 0, 'nb_sans_cout' => 0, 'prise' => $ligne['prise']];
+            $entrepot = $ligne['secteur_id'] ? $entrepots->get($ligne['secteur_id'])?->entrepot : null;
+            $parSecteur[$cle] ??= ['secteur_id' => $ligne['secteur_id'], 'secteur' => $ligne['secteur'], 'valeur' => 0.0, 'nb_produits' => 0, 'nb_sans_cout' => 0, 'prise' => $ligne['prise'],
+                'entrepot_id' => $entrepot?->id, 'entrepot' => $entrepot ? "{$entrepot->code} — {$entrepot->nom}" : null];
             $parSecteur[$cle]['valeur'] = round($parSecteur[$cle]['valeur'] + ($valeur ?? 0), 2);
             $parSecteur[$cle]['nb_produits']++;
             $parSecteur[$cle]['nb_sans_cout'] += $cout ? 0 : 1;
@@ -75,6 +81,11 @@ class ValorisationInventaire
             'nb_sans_cout' => $produitsValorises->whereNull('cout_unitaire')->count(),
             'produits' => $produitsValorises->all(),
             'secteurs' => collect($parSecteur)->sortBy('secteur')->values()->all(),
+            // Totaux par entrepôt (les secteurs sans entrepôt ensemble, entrepot_id vide).
+            'entrepots' => collect($parSecteur)->groupBy(fn (array $s) => (string) $s['entrepot_id'])
+                ->map(fn (Collection $s) => ['entrepot_id' => $s->first()['entrepot_id'], 'entrepot' => $s->first()['entrepot'],
+                    'valeur' => round($s->sum('valeur'), 2), 'nb_secteurs' => $s->count()])
+                ->sortBy(fn (array $e) => [$e['entrepot'] === null ? 1 : 0, $e['entrepot']])->values()->all(),
         ];
     }
 

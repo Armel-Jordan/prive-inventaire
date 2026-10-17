@@ -306,6 +306,8 @@ class Droits
         'PUT api/fournisseurs/{fournisseur}/comptes-bancaires/{id}' => ['fournisseurs', 'comptes_bancaires'],
         'DELETE api/fournisseurs/{fournisseur}/comptes-bancaires/{id}' => ['fournisseurs', 'comptes_bancaires'],
         'GET api/prises-inventaire/valorisation' => ['valorisation', 'voir'],
+        // Stock par entrepôt (multi-entrepôts).
+        'GET api/stock-entrepots' => ['inventaires', 'voir'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

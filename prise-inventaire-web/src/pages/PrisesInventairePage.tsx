@@ -11,6 +11,7 @@ import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { couleursStatutPrise, formatDateHeure, formatQuantite, versDateHeureLocale } from '@/components/prises-inventaire/format';
+import { libelleEntrepot } from '@/lib/entrepots';
 
 type Onglet = 'sessions' | 'officiel';
 
@@ -35,6 +36,12 @@ function NouvellePrise({ secteurs, onCreee, onAnnuler }: { secteurs: Secteur[]; 
     }
   }
 
+  // Multi-entrepôts : les entrepôts des secteurs, pour cocher d'un clic tous les secteurs de l'un d'eux.
+  const entrepots = [...new Map(secteurs.flatMap(s => (s.entrepot ? [[s.entrepot.id, s.entrepot] as const] : []))).values()]
+    .sort((a, b) => a.code.localeCompare(b.code));
+  const cocherEntrepot = (entrepotId: number) => setForm(f => ({
+    ...f, secteurIds: [...new Set([...f.secteurIds, ...secteurs.filter(s => s.entrepot_id === entrepotId).map(s => s.id as number)])],
+  }));
   const basculer = (secteurId: number) => setForm(f => ({
     ...f, secteurIds: f.secteurIds.includes(secteurId) ? f.secteurIds.filter(i => i !== secteurId) : [...f.secteurIds, secteurId],
   }));
@@ -59,12 +66,24 @@ function NouvellePrise({ secteurs, onCreee, onAnnuler }: { secteurs: Secteur[]; 
         <label className="flex items-center gap-2 text-sm mb-2 dark:text-gray-300">
           <input type="checkbox" checked={form.tous} onChange={e => setForm({ ...form, tous: e.target.checked })} /> {ts.allSectors}
         </label>
+        {!form.tous && entrepots.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-500 dark:text-gray-400">
+            {t.warehouses.tickSectors}
+            {entrepots.map(e => (
+              <button key={e.id} type="button" onClick={() => cocherEntrepot(e.id)}
+                className="px-2 py-0.5 rounded-full border border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-900/30">
+                {libelleEntrepot(e)}
+              </button>
+            ))}
+          </div>
+        )}
         {!form.tous && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
             {secteurs.map(s => (
               <label key={s.id} className="flex items-center gap-2 text-sm px-2 py-1 rounded border dark:border-gray-700 dark:text-gray-300">
                 <input type="checkbox" checked={form.secteurIds.includes(s.id as number)} onChange={() => basculer(s.id as number)} />
                 <span className="font-mono text-xs">{s.code}</span> {s.nom}
+                {s.entrepot && <span className="ml-auto text-[10px] text-gray-400">{s.entrepot.code}</span>}
               </label>
             ))}
           </div>

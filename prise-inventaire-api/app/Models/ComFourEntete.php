@@ -28,6 +28,8 @@ class ComFourEntete extends Model
         'taux_change',
         'notes',
         'created_by',
+        // Entrepôt où livrer (« Livrer à ») ; vide : l'adresse de l'entreprise.
+        'entrepot_id',
     ];
 
     protected $casts = [
@@ -56,6 +58,12 @@ class ComFourEntete extends Model
     public function lignes(): HasMany
     {
         return $this->hasMany(ComFourLigne::class, 'com_four_entete_id');
+    }
+
+    /** Entrepôt où livrer la commande (gardé s'il a été retiré du référentiel depuis). */
+    public function entrepot(): BelongsTo
+    {
+        return $this->belongsTo(Entrepot::class, 'entrepot_id')->withTrashed();
     }
 
     public function createdBy(): BelongsTo

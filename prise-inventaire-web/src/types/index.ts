@@ -78,6 +78,9 @@ export interface Secteur {
   /** false : secteur désactivé (masqué des listes de choix, réactivable). */
   actif?: boolean;
   description?: string;
+  /** Multi-entrepôts : l'entrepôt du secteur ; vide, le secteur ne dépend d'aucun entrepôt. */
+  entrepot_id?: number | null;
+  entrepot?: { id: number; code: string; nom: string } | null;
 }
 
 export interface InventaireScan {

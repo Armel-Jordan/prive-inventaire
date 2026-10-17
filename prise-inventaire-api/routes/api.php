@@ -109,6 +109,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\EtiquetteController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
+use App\Http\Controllers\Inventaire\StockEntrepotsController;
 use App\Http\Controllers\Inventaire\ValorisationInventaireController;
 use App\Http\Controllers\InventaireTournantController;
 use App\Http\Controllers\MouvementInventaireController;
@@ -481,6 +482,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/valider', [PriseInventaireController::class, 'valider'])->whereNumber('id');
         Route::post('/{id}/annuler', [PriseInventaireController::class, 'annuler'])->whereNumber('id');
     });
+
+    // Stock par entrepôt (multi-entrepôts) : droit « voir » des inventaires et scans.
+    Route::get('/stock-entrepots', StockEntrepotsController::class);
 
     // Utilisateurs admin CRUD (admin uniquement)
     Route::middleware('role:admin')->group(function () {

@@ -18,8 +18,10 @@ class SecteurController extends Controller
     public function index(Request $request): JsonResponse
     {
         $statut = $request->query('statut', 'actifs');
-        $secteurs = Secteur::query()
+        $secteurs = Secteur::query()->with('entrepot:id,code,nom')
             ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
+            // Multi-entrepôts : les secteurs d'un entrepôt.
+            ->when($request->integer('entrepot_id'), fn ($q, $entrepot) => $q->where('entrepot_id', $entrepot))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('code')
             ->get();
@@ -39,12 +41,20 @@ class SecteurController extends Controller
         };
     }
 
+    /** Entrepôt du référentiel ; celui du secteur reste accepté s'il a été retiré depuis (le secteur se réenregistre). */
+    private function regleEntrepot(?Secteur $secteur = null): array
+    {
+        return ['nullable', 'integer', TenantRule::exists('entrepots')->where(fn ($q) => $q->whereNull('deleted_at')
+            ->when($secteur?->entrepot_id, fn ($q, $actuel) => $q->orWhere('id', $actuel)))];
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
             'code' => ['nullable', 'string', 'max:10', $this->codeNonDesactive(), TenantRule::unique('secteurs', 'code')],
             'nom' => 'required|string|max:100',
             'description' => 'nullable|string',
+            'entrepot_id' => $this->regleEntrepot(),
         ]);
 
         // Générer le code automatiquement si non fourni
@@ -67,12 +77,13 @@ class SecteurController extends Controller
             'code' => strtoupper($code),
             'nom' => $request->nom,
             'description' => $request->description,
+            'entrepot_id' => $request->input('entrepot_id'),
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Secteur créé avec succès',
-            'secteur' => $secteur,
+            'secteur' => $secteur->load('entrepot:id,code,nom'),
         ], 201);
     }
 
@@ -94,6 +105,7 @@ class SecteurController extends Controller
             'nom' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
             'actif' => 'sometimes|boolean',
+            'entrepot_id' => $this->regleEntrepot($secteur),
         ]);
 
         if ($request->has('code')) {
@@ -108,13 +120,16 @@ class SecteurController extends Controller
         if ($request->has('actif')) {
             $secteur->actif = $request->actif;
         }
+        if ($request->has('entrepot_id')) {
+            $secteur->entrepot_id = $request->input('entrepot_id');
+        }
 
         $secteur->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Secteur modifié avec succès',
-            'secteur' => $secteur,
+            'secteur' => $secteur->load('entrepot:id,code,nom'),
         ]);
     }
 

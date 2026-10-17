@@ -11,6 +11,7 @@ import { ajouterRemarque } from '@/lib/utils';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
+import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 import {
   getCommandesFournisseur,
   getCommandeFournisseur,
@@ -68,6 +69,9 @@ export default function CommandesFournisseurPage() {
   const [formDateCommande, setFormDateCommande] = useState(aujourdhui());
   const [formDateLivraison, setFormDateLivraison] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  // Multi-entrepôts : l'entrepôt où livrer (proposé : celui par défaut).
+  const [formEntrepot, setFormEntrepot] = useState('');
+  const [entrepots, setEntrepots] = useState<EntrepotChoix[]>([]);
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
   const [formDevise, setFormDevise] = useState('EUR');
   const [formTauxChange, setFormTauxChange] = useState(1);
@@ -105,6 +109,7 @@ export default function CommandesFournisseurPage() {
     getProduits().then(p => setProduits(p || [])).catch(() => {});
     getConfiguration('commande_fournisseur').then(setConfigNumero).catch(() => {});
     getParametres().then(p => setDeviseLocale(p.devise_code || 'EUR')).catch(() => {});
+    chargerEntrepots().then(liste => setEntrepots(liste.filter(e => e.actif))).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -149,6 +154,7 @@ export default function CommandesFournisseurPage() {
     setFormDateCommande(aujourdhui());
     setFormDateLivraison('');
     setFormNotes('');
+    setFormEntrepot(String(entrepots.find(e => e.par_defaut)?.id ?? ''));
     setFormLignes([{ produit_id: 0, quantite_commandee: 1, prix_unitaire: 0 }]);
     setFormDevise(deviseLocale);
     setFormTauxChange(1);
@@ -223,6 +229,7 @@ export default function CommandesFournisseurPage() {
         notes: formNotes || undefined,
         devise: formDevise,
         taux_change: formTauxChange,
+        entrepot_id: formEntrepot ? Number(formEntrepot) : null,
         lignes: formLignes,
       });
       setShowModal(false);
@@ -518,6 +525,17 @@ export default function CommandesFournisseurPage() {
                 </div>
               </div>
 
+              {entrepots.length > 0 && (
+                <div>
+                  <label htmlFor="commande-entrepot" className="block text-sm font-medium text-gray-700 mb-1">{t.warehouses.deliverTo}</label>
+                  <select id="commande-entrepot" value={formEntrepot} onChange={(e) => setFormEntrepot(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{t.warehouses.companyAddress}</option>
+                    {entrepots.map(e => <option key={e.id} value={String(e.id)}>{libelleEntrepot(e)}</option>)}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">{t.warehouses.deliverToHelp}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
@@ -692,6 +710,9 @@ export default function CommandesFournisseurPage() {
                   <p className="font-medium">
                     {formatDateDocument(selectedCommande.date_livraison_prevue)}
                   </p>
+                  {selectedCommande.entrepot && (
+                    <p className="text-xs text-gray-500 mt-0.5">{t.warehouses.deliverTo} : {libelleEntrepot(selectedCommande.entrepot)}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Montant total</p>

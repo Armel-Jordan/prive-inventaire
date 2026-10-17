@@ -6,6 +6,7 @@ import { getValorisation, exporterValorisation, METHODES_VALORISATION, type Meth
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
+import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 import type { Secteur } from '@/types';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
@@ -18,31 +19,36 @@ export default function ValorisationInventairePage() {
 
   const [methode, setMethode] = useState<MethodeValorisation>('cout_moyen');
   const [secteurId, setSecteurId] = useState('');
+  // Multi-entrepôts : les secteurs d'un entrepôt.
+  const [entrepotId, setEntrepotId] = useState('');
+  const [entrepots, setEntrepots] = useState<EntrepotChoix[]>([]);
+  const tw = t.warehouses;
   const [recherche, setRecherche] = useState('');
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   // Résultat et critères qui l'ont produit : tant qu'ils diffèrent des critères affichés, le calcul est en cours.
   const [resultat, setResultat] = useState<{ cle: string; valorisation: Valorisation } | null>(null);
   const [refuse, setRefuse] = useState(false);
   const [erreur, setErreur] = useState('');
-  const cle = `${methode}|${secteurId}`;
+  const cle = `${methode}|${secteurId}|${entrepotId}`;
   const valorisation = resultat?.valorisation ?? null;
   const chargement = resultat?.cle !== cle;
 
   useEffect(() => {
     getSecteurs().then(setSecteurs).catch(() => {});
+    chargerEntrepots().then(setEntrepots).catch(() => {});
   }, []);
 
   useEffect(() => {
     let actif = true;
-    getValorisation(methode, secteurId ? Number(secteurId) : undefined)
-      .then(v => { if (actif) { setResultat({ cle: `${methode}|${secteurId}`, valorisation: v }); setErreur(''); } })
+    getValorisation(methode, secteurId ? Number(secteurId) : undefined, entrepotId ? Number(entrepotId) : undefined)
+      .then(v => { if (actif) { setResultat({ cle: `${methode}|${secteurId}|${entrepotId}`, valorisation: v }); setErreur(''); } })
       .catch(e => {
         if (!actif) return;
         if (e instanceof ApiError && e.status === 403) setRefuse(true);
         else setErreur(messageErreur(e, tv.error));
       });
     return () => { actif = false; };
-  }, [methode, secteurId, tv.error]);
+  }, [methode, secteurId, entrepotId, tv.error]);
 
   const nombre = (valeur: number, decimales = 2) => valeur.toLocaleString(locale, { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
   const argent = (valeur: number) => `${nombre(valeur)}${valorisation?.devise ? ` ${valorisation.devise}` : ''}`;
@@ -69,23 +75,32 @@ export default function ValorisationInventairePage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl">{tv.subtitle}</p>
         </div>
         {valorisation && valorisation.nb_produits > 0 && (
-          <button onClick={() => exporterValorisation(methode, secteurId ? Number(secteurId) : undefined).catch(e => setErreur(messageErreur(e, tv.error)))}
+          <button onClick={() => exporterValorisation(methode, secteurId ? Number(secteurId) : undefined, entrepotId ? Number(entrepotId) : undefined).catch(e => setErreur(messageErreur(e, tv.error)))}
             className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
             <Download size={16} /> {tv.export}
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2 max-w-6xl">
+      <div className={`grid grid-cols-1 gap-2 mb-2 max-w-6xl ${entrepots.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
         <label className="text-xs text-gray-500 dark:text-gray-400">{tv.method}
           <select value={methode} onChange={e => setMethode(e.target.value as MethodeValorisation)} className={classeChamp}>
             {METHODES_VALORISATION.map(m => <option key={m} value={m}>{tv.methods[m]}</option>)}
           </select>
         </label>
+        {entrepots.length > 0 && (
+          <label className="text-xs text-gray-500 dark:text-gray-400">{tw.warehouse}
+            {/* Un entrepôt : la liste des secteurs se limite aux siens. */}
+            <select value={entrepotId} onChange={e => { setEntrepotId(e.target.value); setSecteurId(''); }} className={classeChamp}>
+              <option value="">{tw.all}</option>
+              {entrepots.map(e => <option key={e.id} value={String(e.id)}>{libelleEntrepot(e)}</option>)}
+            </select>
+          </label>
+        )}
         <label className="text-xs text-gray-500 dark:text-gray-400">{tv.sector}
           <select value={secteurId} onChange={e => setSecteurId(e.target.value)} className={classeChamp}>
             <option value="">{tv.allSectors}</option>
-            {secteurs.map(s => <option key={s.id} value={s.id}>{s.code} — {s.nom}</option>)}
+            {secteurs.filter(s => !entrepotId || String(s.entrepot_id) === entrepotId).map(s => <option key={s.id} value={s.id}>{s.code} — {s.nom}</option>)}
           </select>
         </label>
         <label className="text-xs text-gray-500 dark:text-gray-400">{tv.search}
@@ -120,6 +135,33 @@ export default function ValorisationInventairePage() {
             </div>
           </div>
 
+          {(valorisation.entrepots ?? []).some(e => e.entrepot_id !== null) && (
+            <>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{tw.byWarehouse}</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto max-w-6xl mb-6">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-300">
+                      <th className="px-4 py-2 font-medium">{tw.warehouse}</th>
+                      <th className="px-4 py-2 font-medium text-right">{tv.value}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(valorisation.entrepots ?? []).map(e => (
+                      <tr key={e.entrepot_id ?? 'aucun'} className="border-t dark:border-gray-700">
+                        <td className="px-4 py-2 text-gray-900 dark:text-white">
+                          {e.entrepot ?? <span className="text-gray-500 dark:text-gray-400">{tw.none}</span>}
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{tw.sectors.replace('{n}', String(e.nb_secteurs))}</span>
+                        </td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap text-gray-900 dark:text-white">{argent(e.valeur)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{tv.bySector}</h2>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto max-w-6xl mb-6">
             <table className="w-full text-sm">
@@ -134,7 +176,10 @@ export default function ValorisationInventairePage() {
               <tbody>
                 {valorisation.secteurs.map(s => (
                   <tr key={s.secteur_id ?? s.secteur} className="border-t dark:border-gray-700">
-                    <td className="px-4 py-2 font-mono text-gray-900 dark:text-white">{s.secteur}</td>
+                    <td className="px-4 py-2 font-mono text-gray-900 dark:text-white">
+                      {s.secteur}
+                      {s.entrepot && <span className="block font-sans text-xs text-gray-500 dark:text-gray-400">{s.entrepot}</span>}
+                    </td>
                     <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.prise ? `${s.prise.numero}${s.prise.date ? ` · ${new Date(s.prise.date).toLocaleDateString(locale)}` : ''}` : '—'}</td>
                     <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{s.nb_produits}{s.nb_sans_cout > 0 && <span className="text-amber-700"> ({tv.withoutCostShort.replace('{n}', String(s.nb_sans_cout))})</span>}</td>
                     <td className="px-4 py-2 text-right whitespace-nowrap text-gray-900 dark:text-white">{argent(s.valeur)}</td>
