@@ -128,10 +128,10 @@ Route::post('/auth/reinitialiser-mot-de-passe', [MotDePasseController::class, 'r
 Route::post('/auth/login/deux-facteurs', [AuthController::class, 'connexionDeuxFacteurs'])->middleware('throttle:10,1,connexion-deux-facteurs');
 
 // ============================================
-// Routes Mobile (sans authentification JWT)
-// Ces routes sont utilisées par l'app Android
+// Routes Mobile : application Android (jeton Sanctum), mêmes droits que les adresses du back-office qu'elles
+// reprennent (scans : module Inventaires, relocalisation : module Relocalisation).
 // ============================================
-Route::prefix('mobile')->middleware(['auth:sanctum', 'tenant', 'tenant.context'])->group(function () {
+Route::prefix('mobile')->middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group(function () {
     // Employés (lecture seule)
     Route::get('/employes', [EmployeTenantController::class, 'index']);
 

@@ -297,6 +297,8 @@ Le contrôle est fait par le middleware `droits` (`App\Support\Droits`).
 
 **Actions nommées :** les routes d'action (émettre, payer, accepter, livrer, valider, clôturer…) exigent leur action nommée, plutôt que « modifier ».
 
+**Application mobile :** les adresses `api/mobile/…` suivent les mêmes droits que leur équivalent du back-office (`api/…`) : un scan demande « créer » dans Inventaires, une relocalisation « créer » dans Relocalisation.
+
 **Comptabilité :**
 
 | Opération | Permission exigée |
