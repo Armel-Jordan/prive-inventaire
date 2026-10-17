@@ -742,3 +742,42 @@ Code :
   `ProduitTraduction` ; `App\Services\Portail\CommandesPortail::catalogue`, `PortailCommandeController::image` ;
 - web : `produits/ChampsFicheProduit`, `lib/ficheProduit.ts` ; espace client : `CataloguePortail` ;
 - migration `2026_10_17_100076_fiche_produit_enrichie` (colonnes de `produits`, table `produit_traductions`).
+
+## 19. Multi-entrepôts (Paramètres → Secteurs, Inventaire → Stock par entrepôt)
+
+Plan de parité fripv2, phase 2.5 : les entrepôts du référentiel (Paramètres → Référentiels → Entrepôts) passent
+au-dessus des secteurs. Les secteurs actuels restent valides : un secteur sans entrepôt sert comme avant. Tant que
+l'entreprise n'a aucun entrepôt, les écrans restent tels quels.
+
+- **Secteurs** : chaque secteur peut se ranger dans un entrepôt (colonne, filtre, champ du formulaire ; colonne
+  `entrepot` de l'export et de l'import CSV, par code). Un entrepôt retiré du référentiel depuis reste sur les secteurs
+  qui le portaient, et ces secteurs se réenregistrent.
+- **Stock par entrepôt** : la somme des scans de chaque produit, répartie selon l'entrepôt de leur secteur. Le
+  secteur est reconnu par son code ou son nom : le web enregistre le code, Android le nom. Les scans d'un secteur sans
+  entrepôt, ou d'un secteur inconnu, sont « sans entrepôt ». Filtre par entrepôt, recherche, totaux, export CSV. Un
+  entrepôt désactivé ou retiré garde sa colonne tant qu'il a du stock.
+- **Historique des scans** : filtre par entrepôt ; la liste des secteurs se limite alors aux siens.
+- **Valorisation** : filtre par entrepôt, valeur de chaque entrepôt, entrepôt de chaque secteur.
+- **Prises d'inventaire** : un clic coche tous les secteurs d'un entrepôt.
+- **Commandes fournisseur** : « Livrer à » propose l'entrepôt par défaut du référentiel. Le bon de commande imprime son
+  nom et son adresse ; vide, l'adresse de l'entreprise. Une commande modifiée sans ce champ garde son entrepôt.
+- **Réceptions** : les secteurs de l'entrepôt où la commande est livrée sont proposés d'abord.
+
+**Droits** : le stock par entrepôt demande le droit de voir les inventaires et scans. Les secteurs suivent leurs
+propres droits, les entrepôts ceux des référentiels, et les commandes ceux des commandes fournisseur.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/stock-entrepots?recherche=&entrepot_id=&format=csv` | Stock par entrepôt (`entrepots`, `produits`, `totaux`) |
+| GET | `/secteurs?entrepot_id=` | Secteurs, avec leur `entrepot` ; ceux d'un entrepôt |
+| POST / PUT | `/secteurs[/{id}]` | `entrepot_id` |
+| GET | `/scan/historique?entrepot_id=` | Scans des secteurs d'un entrepôt (aussi `/scan/export`) |
+| GET | `/prises-inventaire/valorisation?entrepot_id=` | Valorisation des secteurs d'un entrepôt ; `entrepots` : la valeur de chacun |
+| POST / PUT | `/commandes-fournisseur[/{id}]` | `entrepot_id` (« Livrer à ») |
+
+Code :
+- service `App\Services\StocksEntrepots`, `Inventaire\StockEntrepotsController` ; `SecteurController`,
+  `ScanTenantController`, `ValorisationInventaire`, `PrisesInventaire::inventaireOfficiel`,
+  `CommandeFournisseurController`, vue `pdf.bon-commande` ;
+- web : `StockEntrepotsPage`, `services/stockEntrepots.ts`, `lib/entrepots.ts`, `OptionsSecteurs` ;
+- migration `2026_10_17_100077_entrepots_secteurs` (colonnes `entrepot_id` de `secteurs` et `com_four_entete`).

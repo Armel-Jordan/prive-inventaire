@@ -291,6 +291,15 @@
                         <div class="info-label">Conditions de paiement</div>
                         <div class="info-value">{{ $commande->fournisseur->conditions_paiement }}</div>
                     @endif
+
+                    {{-- Multi-entrepôts : l'entrepôt où livrer, avec son adresse. --}}
+                    @if($commande->entrepot)
+                        <div class="info-label">Livrer à</div>
+                        <div class="info-value" style="font-weight: bold;">{{ $commande->entrepot->nom }}</div>
+                        @foreach ($commande->entrepot->lignesAdresse() as $ligneAdresse)
+                            <div class="info-value">{{ $ligneAdresse }}</div>
+                        @endforeach
+                    @endif
                 </div>
             </div>
         </div>

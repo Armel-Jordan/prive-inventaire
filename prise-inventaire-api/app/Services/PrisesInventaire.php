@@ -163,9 +163,11 @@ final class PrisesInventaire
      *
      * @return Collection<int, array>
      */
-    public function inventaireOfficiel(?int $secteurId = null): Collection
+    public function inventaireOfficiel(?int $secteurId = null, ?int $entrepotId = null): Collection
     {
-        $secteurs = Secteur::query()->when($secteurId, fn ($q) => $q->whereKey($secteurId))->orderBy('code')->get();
+        // Un secteur, ou les secteurs d'un entrepôt (multi-entrepôts).
+        $secteurs = Secteur::query()->when($secteurId, fn ($q) => $q->whereKey($secteurId))
+            ->when($entrepotId, fn ($q) => $q->where('entrepot_id', $entrepotId))->orderBy('code')->get();
         [$references] = $this->references(null, $secteurs);
         $lignes = $this->lignesDeReference($references, null)->sortBy(['secteur', 'produit_numero'])->values();
         $descriptions = $this->descriptions($lignes->pluck('produit_numero'));

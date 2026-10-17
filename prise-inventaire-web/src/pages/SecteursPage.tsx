@@ -8,6 +8,8 @@ import { messageErreur } from '@/lib/erreurs';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useLanguage } from '@/i18n/useLanguage';
+import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -23,7 +25,12 @@ export default function SecteursPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSecteur, setEditingSecteur] = useState<Secteur | null>(null);
-  const [form, setForm] = useState({ code: '', nom: '', description: '' });
+  const [form, setForm] = useState({ code: '', nom: '', description: '', entrepot_id: '' });
+  // Multi-entrepôts : les entrepôts du référentiel, et le filtre de la liste (« aucun » : secteurs sans entrepôt).
+  const [entrepots, setEntrepots] = useState<EntrepotChoix[]>([]);
+  const [filterEntrepot, setFilterEntrepot] = useState('');
+  const { t } = useLanguage();
+  const tw = t.warehouses;
   const [importing, setImporting] = useState(false);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
@@ -49,6 +56,7 @@ export default function SecteursPage() {
 
   useEffect(() => {
     getConfiguration('secteur').then(setConfigNumero).catch(() => {});
+    chargerEntrepots().then(setEntrepots).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -98,24 +106,25 @@ export default function SecteursPage() {
 
   function openCreate() {
     setEditingSecteur(null);
-    setForm({ code: '', nom: '', description: '' });
+    setForm({ code: '', nom: '', description: '', entrepot_id: '' });
     setShowModal(true);
   }
 
   function openEdit(secteur: Secteur) {
     setEditingSecteur(secteur);
-    setForm({ code: secteur.code, nom: secteur.nom, description: secteur.description || '' });
+    setForm({ code: secteur.code, nom: secteur.nom, description: secteur.description || '', entrepot_id: secteur.entrepot_id ? String(secteur.entrepot_id) : '' });
     setShowModal(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      const donnees = { ...form, entrepot_id: form.entrepot_id ? Number(form.entrepot_id) : null };
       if (editingSecteur) {
-        await updateSecteur(editingSecteur.id!, form);
+        await updateSecteur(editingSecteur.id!, donnees);
         toast('Secteur modifié avec succès');
       } else {
-        await createSecteur(form);
+        await createSecteur(donnees);
         toast('Secteur créé avec succès');
       }
       setShowModal(false);
@@ -140,8 +149,8 @@ export default function SecteursPage() {
 
   function exportToCSV() {
     const csv = [
-      'code;nom;description',
-      ...secteurs.map(s => [s.code, s.nom, s.description || ''].join(';'))
+      'code;nom;description;entrepot',
+      ...secteurs.map(s => [s.code, s.nom, s.description || '', s.entrepot?.code ?? ''].join(';'))
     ].join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -170,7 +179,10 @@ export default function SecteursPage() {
         headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
         if (row.code && row.nom) {
           try {
-            await createSecteur({ code: row.code, nom: row.nom, description: row.description || '' });
+            // Colonne « entrepot » : le code d'un entrepôt du référentiel.
+            const entrepot = row.entrepot ? entrepots.find(e => e.code.toLowerCase() === row.entrepot.toLowerCase()) : undefined;
+            if (row.entrepot && !entrepot) throw new Error(`${tw.warehouse} « ${row.entrepot} » ?`);
+            await createSecteur({ code: row.code, nom: row.nom, description: row.description || '', entrepot_id: entrepot?.id ?? null });
             imported++;
           } catch (e) {
             errors++;
@@ -189,6 +201,11 @@ export default function SecteursPage() {
     }
   }
 
+  // Colonne et filtre des entrepôts dès que l'entreprise en a (sinon l'écran reste comme avant).
+  const avecEntrepots = entrepots.length > 0 || secteurs.some(s => s.entrepot);
+  const visibles = secteurs.filter(s => !filterEntrepot || (filterEntrepot === 'aucun' ? !s.entrepot_id : String(s.entrepot_id) === filterEntrepot));
+  const choixEntrepots = entrepots.filter(e => e.actif || String(e.id) === form.entrepot_id);
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -196,11 +213,19 @@ export default function SecteursPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Secteurs</h1>
           {!loading && (
             <p className="text-sm text-gray-500 mt-0.5">
-              {secteurs.length} secteur{secteurs.length !== 1 ? 's' : ''}
+              {visibles.length} secteur{visibles.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {avecEntrepots && (
+            <select value={filterEntrepot} onChange={e => setFilterEntrepot(e.target.value)} aria-label={tw.warehouse}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
+              <option value="">{tw.all}</option>
+              {entrepots.map(e => <option key={e.id} value={String(e.id)}>{libelleEntrepot(e)}{e.actif ? '' : ` (${tw.inactive})`}</option>)}
+              <option value="aucun">{tw.none}</option>
+            </select>
+          )}
           <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
             aria-label="Statut"
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
@@ -232,7 +257,7 @@ export default function SecteursPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-6 text-gray-500">Chargement...</div>
-        ) : secteurs.length === 0 ? (
+        ) : visibles.length === 0 ? (
           <div className="p-6 text-gray-500">Aucun secteur</div>
         ) : (
           <div className="overflow-x-auto">
@@ -241,12 +266,13 @@ export default function SecteursPage() {
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Code</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Nom</th>
+                  {avecEntrepots && <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">{tw.warehouse}</th>}
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Description</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-700">
-                {secteurs.map((secteur) => (
+                {visibles.map((secteur) => (
                   <tr key={secteur.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3">
                       <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-1 rounded text-sm font-medium">
@@ -259,6 +285,11 @@ export default function SecteursPage() {
                         <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
                       )}
                     </td>
+                    {avecEntrepots && (
+                      <td className="px-4 py-3 text-sm dark:text-gray-300">
+                        {secteur.entrepot ? libelleEntrepot(secteur.entrepot) : <span className="text-gray-400 text-xs">{tw.none}</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{secteur.description || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -342,6 +373,21 @@ export default function SecteursPage() {
                 <input type="text" value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })}
                   className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 dark:bg-gray-700 dark:text-white" required />
               </div>
+              {avecEntrepots && (
+                <div>
+                  <label htmlFor="secteur-entrepot" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tw.warehouse}</label>
+                  <select id="secteur-entrepot" value={form.entrepot_id} onChange={e => setForm({ ...form, entrepot_id: e.target.value })}
+                    className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 dark:bg-gray-700 dark:text-white">
+                    <option value="">{tw.noneOption}</option>
+                    {/* L'entrepôt du secteur reste proposé s'il a été désactivé ou retiré depuis. */}
+                    {form.entrepot_id && !choixEntrepots.some(e => String(e.id) === form.entrepot_id) && editingSecteur?.entrepot && (
+                      <option value={form.entrepot_id}>{libelleEntrepot(editingSecteur.entrepot)}</option>
+                    )}
+                    {choixEntrepots.map(e => <option key={e.id} value={String(e.id)}>{libelleEntrepot(e)}</option>)}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tw.sectorHelp}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
                 <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}

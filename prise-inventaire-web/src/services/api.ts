@@ -418,6 +418,8 @@ export interface PageHistorique<T> {
 export interface FiltresScans {
   employe?: string;
   secteur?: string;
+  /** Multi-entrepôts : les scans des secteurs de l'entrepôt. */
+  entrepot_id?: number;
   produit?: string;
   depuis?: string;
   jusqu_a?: string;
@@ -889,6 +891,9 @@ export interface ComFourEntete {
   devise?: string;
   taux_change?: number;
   notes?: string;
+  /** Multi-entrepôts : l'entrepôt où livrer (« Livrer à ») ; vide, l'adresse de l'entreprise. */
+  entrepot_id?: number | null;
+  entrepot?: { id: number; code: string; nom: string; adresse?: string | null; ville?: string | null } | null;
   created_by: number;
   lignes?: ComFourLigne[];
   created_at?: string;
@@ -920,6 +925,7 @@ export async function createCommandeFournisseur(data: {
   notes?: string;
   devise?: string;
   taux_change?: number;
+  entrepot_id?: number | null;
   lignes: { produit_id: number; quantite_commandee: number; prix_unitaire: number }[];
 }): Promise<ComFourEntete> {
   return fetchApi('/commandes-fournisseur', {

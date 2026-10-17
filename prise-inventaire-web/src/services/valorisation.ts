@@ -23,6 +23,17 @@ export interface SecteurValorise {
   nb_produits: number;
   nb_sans_cout: number;
   prise: { id: number; numero: string; date: string | null } | null;
+  /** Multi-entrepôts : l'entrepôt du secteur (« CODE — Nom »), vide sans entrepôt. */
+  entrepot_id?: number | null;
+  entrepot?: string | null;
+}
+
+/** Total d'un entrepôt (les secteurs sans entrepôt ensemble, entrepot_id vide). */
+export interface EntrepotValorise {
+  entrepot_id: number | null;
+  entrepot: string | null;
+  valeur: number;
+  nb_secteurs: number;
 }
 
 export interface Valorisation {
@@ -33,22 +44,24 @@ export interface Valorisation {
   nb_sans_cout: number;
   produits: ProduitValorise[];
   secteurs: SecteurValorise[];
+  entrepots?: EntrepotValorise[];
 }
 
-function requete(filtres: { methode: MethodeValorisation; secteur_id?: number; format?: string }): string {
+function requete(filtres: { methode: MethodeValorisation; secteur_id?: number; entrepot_id?: number; format?: string }): string {
   const parametres = new URLSearchParams({ methode: filtres.methode });
   if (filtres.secteur_id) parametres.set('secteur_id', String(filtres.secteur_id));
+  if (filtres.entrepot_id) parametres.set('entrepot_id', String(filtres.entrepot_id));
   if (filtres.format) parametres.set('format', filtres.format);
   return parametres.toString();
 }
 
-export async function getValorisation(methode: MethodeValorisation, secteurId?: number): Promise<Valorisation> {
-  return apiFetch(`/prises-inventaire/valorisation?${requete({ methode, secteur_id: secteurId })}`, { timeoutMs: 120000 });
+export async function getValorisation(methode: MethodeValorisation, secteurId?: number, entrepotId?: number): Promise<Valorisation> {
+  return apiFetch(`/prises-inventaire/valorisation?${requete({ methode, secteur_id: secteurId, entrepot_id: entrepotId })}`, { timeoutMs: 120000 });
 }
 
 /** Export CSV, téléchargé avec l'en-tête d'authentification. */
-export async function exporterValorisation(methode: MethodeValorisation, secteurId?: number): Promise<void> {
-  const fichier = await apiFetch<Blob>(`/prises-inventaire/valorisation?${requete({ methode, secteur_id: secteurId, format: 'csv' })}`, { responseType: 'blob', timeoutMs: 120000 });
+export async function exporterValorisation(methode: MethodeValorisation, secteurId?: number, entrepotId?: number): Promise<void> {
+  const fichier = await apiFetch<Blob>(`/prises-inventaire/valorisation?${requete({ methode, secteur_id: secteurId, entrepot_id: entrepotId, format: 'csv' })}`, { responseType: 'blob', timeoutMs: 120000 });
   const lien = document.createElement('a');
   lien.href = URL.createObjectURL(fichier);
   lien.download = `valorisation-inventaire-${methode}.csv`;
