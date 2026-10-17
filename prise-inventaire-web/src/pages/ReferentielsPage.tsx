@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Pencil, Trash2, History, X, Search,
   Ruler, ArrowLeftRight, FolderTree, Factory, Wallet, CalendarClock, Landmark, Coins,
-  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags,
+  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags, KeyRound,
 } from 'lucide-react';
 import {
   getReferentiel, createReferentiel, updateReferentiel, deleteReferentiel, getHistoriqueDevise,
@@ -165,6 +165,18 @@ const ONGLETS: Onglet[] = [
       { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'territoire_id', type: 'reference', reference: 'territoires', colonne: true },
       { cle: 'description', type: 'zone' },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
+  {
+    // Modèles de contrats de location : durée, rythme et jour des loyers, à l'avance ou après coup.
+    type: 'types_location', groupe: 'commercial', icone: KeyRound, champs: [
+      { cle: 'code', type: 'texte', requis: true, colonne: true, majuscules: true, longueurMax: 20 },
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'duree_mois', type: 'nombre', requis: true, colonne: true, min: 1, max: 120, defaut: 12 },
+      { cle: 'frequence', type: 'liste', requis: true, colonne: true, options: ['mensuelle', 'trimestrielle', 'semestrielle', 'annuelle'], defaut: 'mensuelle' },
+      { cle: 'jour_facturation', type: 'nombre', requis: true, colonne: true, min: 1, max: 28, defaut: 1 },
+      { cle: 'a_echoir', type: 'booleen', colonne: true, defaut: true },
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },

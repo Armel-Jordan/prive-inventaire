@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\CompteClientController;
 use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\ContratLocationController;
 use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
 use App\Http\Controllers\Api\CourrielParametresController;
@@ -664,6 +665,20 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}', [AbonnementClientController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [AbonnementClientController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/echeances/{echeanceId}/relier', [AbonnementClientController::class, 'relier'])->whereNumber(['id', 'echeanceId']);
+    });
+
+    // Contrats de location : produits loués, prix de contrat et loyers, retours, renouvellement.
+    Route::prefix('contrats-location')->middleware('module:ventes')->group(function () {
+        Route::get('/', [ContratLocationController::class, 'index']);
+        Route::post('/facturer-loyers', [ContratLocationController::class, 'facturerLoyers']);
+        Route::post('/', [ContratLocationController::class, 'store']);
+        Route::get('/{id}', [ContratLocationController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [ContratLocationController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [ContratLocationController::class, 'destroy'])->whereNumber('id');
+        Route::post('/{id}/facturer', [ContratLocationController::class, 'facturer'])->whereNumber('id');
+        Route::post('/{id}/renouveler', [ContratLocationController::class, 'renouveler'])->whereNumber('id');
+        Route::get('/{id}/pdf', [ContratLocationController::class, 'pdf'])->whereNumber('id');
+        Route::post('/{id}/lignes/{ligneId}/retour', [ContratLocationController::class, 'retour'])->whereNumber(['id', 'ligneId']);
     });
 
     // Retours clients : marchandise rapportée, remise en stock ou mise au rebut, puis note de crédit du retour.

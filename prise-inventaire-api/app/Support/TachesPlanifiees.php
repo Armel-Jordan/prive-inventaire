@@ -4,9 +4,11 @@ namespace App\Support;
 
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\FacturerAbonnements;
+use App\Taches\FacturerLocations;
 use App\Taches\NettoyerNotifications;
 use App\Taches\RelancerDevisSansReponse;
 use App\Taches\RelancerFacturesEnRetard;
+use App\Taches\RenouvelerContrats;
 use App\Taches\SignalerAlertesStock;
 use App\Taches\SignalerCommandesFournisseurEnRetard;
 use App\Taches\SignalerControlesTechniques;
@@ -32,6 +34,8 @@ final class TachesPlanifiees
         'relances_paiement' => [RelancerFacturesEnRetard::class, 'quotidienne', '08:00'],
         'relances_devis' => [RelancerDevisSansReponse::class, 'quotidienne', '08:30'],
         'facturation_abonnements' => [FacturerAbonnements::class, 'quotidienne', '06:00'],
+        'facturation_locations' => [FacturerLocations::class, 'quotidienne', '06:10'],
+        'renouvellement_contrats' => [RenouvelerContrats::class, 'quotidienne', '05:50'],
         'commandes_fournisseur_en_retard' => [SignalerCommandesFournisseurEnRetard::class, 'quotidienne', '07:00'],
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
@@ -49,6 +53,8 @@ final class TachesPlanifiees
         'relances_devis' => ['jours' => 7],
         // Factures d'abonnement créées émises plutôt qu'en brouillon.
         'facturation_abonnements' => ['emettre' => false],
+        // Factures de loyer créées émises plutôt qu'en brouillon.
+        'facturation_locations' => ['emettre' => false],
         'commandes_fournisseur_en_retard' => ['jours' => 0],
         'livraisons_en_retard' => ['jours' => 3],
         'controles_techniques' => ['jours' => 30],
@@ -60,6 +66,8 @@ final class TachesPlanifiees
         'relances_paiement' => 'ventes',
         'relances_devis' => 'ventes',
         'facturation_abonnements' => 'ventes',
+        'facturation_locations' => 'ventes',
+        'renouvellement_contrats' => 'ventes',
         'commandes_fournisseur_en_retard' => 'achats',
         'livraisons_en_retard' => 'ventes',
         'controles_techniques' => 'ventes',

@@ -2011,6 +2011,7 @@ export type TypeReferentiel =
   | 'entrepots'
   | 'territoires'
   | 'itineraires'
+  | 'types_location'
   | 'representants'
   | 'transporteurs'
   | 'raisons'

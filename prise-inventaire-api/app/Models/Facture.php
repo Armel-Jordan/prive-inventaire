@@ -20,6 +20,8 @@ class Facture extends Model
         'montant_paye', 'montant_credite', 'montant_escompte', 'reste_a_payer', 'notes', 'devise', 'taux_change',
         // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
+        // Contrat de location facturé (prix de contrat ou loyer).
+        'contrat_location_id',
     ];
 
     protected $casts = [
