@@ -2,9 +2,10 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link } from 'react-router-dom';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags, Boxes } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags, Boxes, Link2 } from 'lucide-react';
 import FenetreCodesBarres from '@/components/produits/FenetreCodesBarres';
 import FenetreUnitesProduit from '@/components/produits/FenetreUnitesProduit';
+import FenetreLiensProduit from '@/components/produits/FenetreLiensProduit';
 import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration, getReferentiel } from '@/services/api';
@@ -85,6 +86,7 @@ export default function ProduitsPage() {
   const [aSuggerer, setASuggerer] = useState<Produit | null>(null);
   const [codesDe, setCodesDe] = useState<Produit | null>(null);
   const [unitesDe, setUnitesDe] = useState<Produit | null>(null);
+  const [liensDe, setLiensDe] = useState<Produit | null>(null);
   const [unites, setUnites] = useState<UniteChoix[]>([]);
 
   async function loadData() {
@@ -362,6 +364,9 @@ export default function ProduitsPage() {
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
                     <td className="px-4 py-3 text-sm dark:text-gray-200">
                       {produit.description}
+                      {(produit.composants?.length ?? 0) > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{t.productLinks.kit}</span>
+                      )}
                       {estDangereux(produit) && (
                         <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" title={th.dangerous}>
                           {[produit.numero_onu, produit.classe_danger && `${th.classShort} ${produit.classe_danger}`].filter(Boolean).join(' · ')}
@@ -407,6 +412,10 @@ export default function ProduitsPage() {
                       <button onClick={() => setUnitesDe(produit)} className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2"
                         title={t.productUnits.button} aria-label={`${t.productUnits.button} — ${produit.numero}`}>
                         <Boxes size={16} />
+                      </button>
+                      <button onClick={() => setLiensDe(produit)} className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2"
+                        title={t.productLinks.button} aria-label={`${t.productLinks.button} — ${produit.numero}`}>
+                        <Link2 size={16} />
                       </button>
                       {produit.actif !== false && peut('etiquettes', 'voir') && (
                         <Link to={`/etiquettes?produits=${produit.id}`} className="inline-block p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2 align-middle"
@@ -586,6 +595,10 @@ export default function ProduitsPage() {
       {codesDe && (
         <FenetreCodesBarres produit={{ id: codesDe.id!, numero: codesDe.numero, description: codesDe.description }} modifiable={canEdit('produits')}
           onClose={() => setCodesDe(null)} onModifie={loadData} />
+      )}
+      {liensDe && (
+        <FenetreLiensProduit produit={{ id: liensDe.id!, numero: liensDe.numero, description: liensDe.description }} produits={produits}
+          modifiable={canEdit('produits')} onClose={() => setLiensDe(null)} onModifie={loadData} />
       )}
       {unitesDe && (
         <FenetreUnitesProduit produit={{ id: unitesDe.id!, numero: unitesDe.numero, description: unitesDe.description, prix_unitaire: unitesDe.prix_unitaire }}

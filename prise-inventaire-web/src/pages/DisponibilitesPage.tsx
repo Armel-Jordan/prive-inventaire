@@ -80,7 +80,19 @@ export default function DisponibilitesPage() {
               <tr key={d.produit_id} className={d.manque > 0 ? 'bg-red-50/60 dark:bg-red-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}>
                 <td className="px-3 py-2 text-gray-900 dark:text-white">
                   {d.description}
+                  {d.ensemble && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
+                      title={td.kitHelp.replace('{composants}', (d.composants ?? []).map(c => `${Number(c.quantite)} × ${c.numero}`).join(', '))}>{td.kit}</span>
+                  )}
                   <span className="block text-xs font-mono text-gray-500">{d.numero}{d.mesure ? ` · ${d.mesure}` : ''}</span>
+                  {d.ensemble && (d.composants ?? []).length > 0 && (
+                    <span className="block text-xs text-gray-500">{(d.composants ?? []).map(c => `${Number(c.quantite)} × ${c.numero} (${nombre(c.disponible)})`).join(' · ')}</span>
+                  )}
+                  {d.manque > 0 && (d.equivalents ?? []).length > 0 && (
+                    <span className="block text-xs text-emerald-700 dark:text-emerald-400">
+                      {td.equivalents.replace('{liste}', (d.equivalents ?? []).map(e => `${e.numero} (${nombre(e.disponible)})${e.remarque ? ` — ${e.remarque}` : ''}`).join(', '))}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{nombre(d.stock)}</td>
                 <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{nombre(d.reserve)}</td>

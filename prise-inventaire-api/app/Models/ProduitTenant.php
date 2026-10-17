@@ -83,6 +83,18 @@ class ProduitTenant extends Model
         return $this->hasMany(ProduitCodeBarre::class, 'produit_id')->orderByDesc('principal')->orderBy('id');
     }
 
+    /** Produits ajoutés d'office sur ses lignes de vente (annexes), avec leur quantité pour une unité. */
+    public function annexes(): HasMany
+    {
+        return $this->hasMany(ProduitLien::class, 'produit_id')->where('type', ProduitLien::ANNEXE)->orderBy('id');
+    }
+
+    /** Composants de l'ensemble (kit), avec leur quantité pour un ensemble ; vide : un produit simple. */
+    public function composants(): HasMany
+    {
+        return $this->hasMany(ProduitLien::class, 'produit_id')->where('type', ProduitLien::COMPOSANT)->orderBy('id');
+    }
+
     /** Unités de vente du produit (en plus de son unité de stock), celle par défaut d'abord, puis par facteur. */
     public function unites(): HasMany
     {

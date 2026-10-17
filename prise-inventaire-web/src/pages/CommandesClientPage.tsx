@@ -39,7 +39,7 @@ import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
 import OriginePrix from '@/components/OriginePrix';
 import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
-import { prixUnite, uniteParDefaut } from '@/lib/unitesVente';
+import { annexesALaVente, prixUnite, uniteParDefaut } from '@/lib/unitesVente';
 import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
@@ -255,16 +255,26 @@ export default function CommandesClientPage() {
   };
 
   const updateLigne = (index: number, field: 'produit_id' | 'quantite' | 'prix_unitaire_ht', value: number) => {
-    setLignes(ls => ls.map((ligne, i) => {
-      if (i !== index) return ligne;
-      if (field === 'prix_unitaire_ht') return saisirPrix(ligne, 'prix_unitaire_ht', value);
-      if (field === 'quantite') return { ...ligne, quantite: value };
-      // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une commande en devise étrangère),
-      // remplacé ensuite par celui du client ; dans l'unité de vente proposée d'office pour ce produit.
+    setLignes(ls => {
+      const maj = ls.map((ligne, i) => {
+        if (i !== index) return ligne;
+        if (field === 'prix_unitaire_ht') return saisirPrix(ligne, 'prix_unitaire_ht', value);
+        if (field === 'quantite') return { ...ligne, quantite: value };
+        // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une commande en devise étrangère),
+        // remplacé ensuite par celui du client ; dans l'unité de vente proposée d'office pour ce produit.
+        const produit = produits.find(p => p.id === value);
+        const unite = uniteParDefaut(produit);
+        return { ...choisirProduit(ligne, value, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), formData.devise, Number(formData.taux))), unite };
+      });
+      if (field !== 'produit_id') return maj;
+      // Annexes du produit choisi (la pile fournie avec l'appareil), ajoutées d'office après sa ligne.
       const produit = produits.find(p => p.id === value);
-      const unite = uniteParDefaut(produit);
-      return { ...choisirProduit(ligne, value, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), formData.devise, Number(formData.taux))), unite };
-    }));
+      const annexes = annexesALaVente(produit, ls[index]?.quantite ?? 1, uniteParDefaut(produit), produits).map(a => ({
+        produit_id: Number(a.produit.id), quantite: a.quantite, unite: null,
+        prix_unitaire_ht: dansLaDevise(prixUnite(a.produit, null), formData.devise, Number(formData.taux)), auto: true,
+      }));
+      return [...maj.slice(0, index + 1), ...annexes, ...maj.slice(index + 1)];
+    });
   };
 
   // Unité de la ligne : le prix de cette unité est proposé, sauf prix saisi.

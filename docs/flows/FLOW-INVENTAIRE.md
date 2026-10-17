@@ -23,6 +23,7 @@
 14. [Historique des scans](#14-historique-des-scans-statistiques-comparaison-tableau-de-bord)
 15. [Codes-barres des produits](#15-codes-barres-des-produits-inventaire--produits)
 16. [Étiquettes des produits](#16-étiquettes-des-produits-paramètres--étiquettes)
+17. [Ensembles, annexes et équivalents](#17-ensembles-annexes-et-équivalents-paramètres--produits--liens)
 
 ---
 
@@ -662,3 +663,47 @@ Code :
 - service `App\Services\Etiquettes` (formats, disposition, textes, prix, PDF), `EtiquetteController`, modèle `EtiquetteFormat`, vue `pdf/etiquettes` ;
 - web : page `EtiquettesPage`, composants `etiquettes/OngletImpression`, `etiquettes/OngletFormats`, `etiquettes/FenetreFormatEtiquette`, service `src/services/etiquettes.ts` ;
 - migration `2026_10_17_100072_creer_formats_etiquettes` (table `etiquette_formats`, module de droits `etiquettes`).
+
+## 17. Ensembles, annexes et équivalents (Paramètres → Produits → Liens)
+
+Plan de parité fripv2, phase 2.3 : des produits liés entre eux (bouton **Ensemble, annexes, équivalents** sur chaque
+ligne de la liste des produits).
+
+**Ensemble (kit)** : un produit composé d'autres produits, chacun en une quantité.
+- Il se vend en un article et consomme ses composants. Il porte le badge **Ensemble** dans la liste.
+- Un ensemble peut en contenir un autre (le coffret contient le pack), sans boucle : un produit ne peut pas contenir
+  un ensemble qui le contient déjà.
+- **Disponibilités** :
+  - une commande acceptée d'ensembles réserve ses composants (ensembles imbriqués dépliés) ;
+  - le stock et le disponible d'un ensemble sont le nombre d'ensembles que permettent ses composants ;
+  - un manque de composants se voit sur l'ensemble (manques à l'acceptation, reliquats) et sur les composants, que
+    les suggestions d'achat proposent alors de commander.
+
+**Annexes** : des produits ajoutés d'office sur les lignes de vente du produit (la pile fournie avec l'appareil).
+- La quantité est donnée par unité vendue, en unités de stock, arrondie à l'unité supérieure.
+- Les lignes sont ajoutées sous la ligne du produit, au moment où on le choisit sur un devis, une commande ou une
+  facture. On peut les modifier ou les retirer.
+
+**Équivalents** : des substituts possibles, dans les deux sens, avec une remarque (« même format, autre marque »).
+- Ajouter ou retirer un équivalent le fait des deux côtés.
+- Quand un produit manque, les disponibilités donnent ses équivalents et leur disponible.
+
+**Refusés** : le produit lui-même, un doublon, un produit désactivé.
+
+**Droits** : ceux des produits. Consulter les liens demande le droit de voir les produits ; les ajouter, les changer
+ou les retirer, celui de les modifier.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/produits/{id}/liens` | Composants, annexes, équivalents, et les ensembles qui contiennent le produit |
+| POST | `/produits/{id}/liens` | Lier (`type` composant, annexe ou equivalent ; `lie_id` ; `quantite` ; `remarque`) |
+| PUT / DELETE | `/produits/{id}/liens/{lien}` | Quantité ou remarque ; retrait |
+
+La liste des produits (`GET /produits`) donne leurs `annexes` et leurs `composants`. Les disponibilités
+(`GET /disponibilites`) donnent `ensemble` et `composants` pour un ensemble, et `equivalents` pour un produit en manque.
+
+Code :
+- service `App\Services\LiensProduits` (liens, compositions dépliées, ensembles contenant un produit) ;
+- `ProduitLienController`, modèle `ProduitLien` ; `App\Services\DisponibiliteProduits` (ensembles, équivalents) ;
+- web : `produits/FenetreLiensProduit`, `services/liensProduits.ts`, `annexesALaVente` (`lib/unitesVente.ts`) ;
+- migration `2026_10_17_100075_creer_liens_produits` (table `produit_liens`).

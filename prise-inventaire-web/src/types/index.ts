@@ -39,6 +39,10 @@ export interface Produit {
   codes_barres?: { id: number; code: string; type: string; quantite: string; principal: boolean }[];
   /** Unités de vente du produit en plus de son unité de stock (`mesure`), celle par défaut d'abord. */
   unites?: UniteVenteProduit[];
+  /** Produits ajoutés d'office sur ses lignes de vente, avec leur quantité par unité vendue. */
+  annexes?: { id: number; produit_id: number; lie_id: number; quantite: number }[];
+  /** Composants : le produit est un ensemble (kit). */
+  composants?: { id: number; produit_id: number; lie_id: number; quantite: number }[];
 }
 
 /** Unité de vente d'un produit : unités de stock dans une unité (facteur), prix propre éventuel, unité par défaut. */

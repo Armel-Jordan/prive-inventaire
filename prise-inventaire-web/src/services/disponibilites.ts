@@ -16,6 +16,11 @@ export interface Disponibilite {
   en_commande: number;
   reliquats: number;
   manque: number;
+  /** Ensemble (kit) : stock et disponible en ensembles, d'après ses composants. */
+  ensemble?: boolean;
+  composants?: { produit_id: number; numero: string | null; quantite: number; disponible: number }[];
+  /** Produit en manque : ses équivalents et leur disponible. */
+  equivalents?: { produit_id: number; numero: string; description: string; disponible: number; remarque: string | null }[];
 }
 
 /** Manque signalé à l'acceptation d'une commande. */
