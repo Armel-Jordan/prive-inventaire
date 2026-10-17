@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Les prix d'achat sont ramenés à l'unité de stock (un carton de 12 coûte 12 unités) et à la devise de
  * l'entreprise (taux de change figé sur la commande). Le prix d'une ligne de commande est le coût réel saisi à ses
- * réceptions quand il y en a un (phase 3.3), sinon le prix commandé. Rien n'est enregistré : c'est un état.
+ * réceptions quand il y en a un (phase 3.3), sinon le prix commandé ; les coûts annexes répartis sur ses réceptions
+ * (transport, douane…) s'y ajoutent par unité de stock. Rien n'est enregistré : c'est un état.
  */
 class ValorisationInventaire
 {
@@ -96,19 +97,26 @@ class ValorisationInventaire
         $coutsRecus = DB::table('reception_arrivages_ligne')->where('annulee', false)->whereNotNull('cout_unitaire')
             ->groupBy('com_four_ligne_id')
             ->selectRaw('com_four_ligne_id, SUM(quantite_recue) AS qte_cout, SUM(quantite_recue * cout_unitaire) AS valeur_cout');
+        // Coûts annexes répartis (par unité de stock, devise de l'entreprise), par ligne de commande.
+        $fraisRecus = DB::table('reception_arrivages_ligne')->where('annulee', false)->whereNotNull('frais_unitaire')
+            ->groupBy('com_four_ligne_id')
+            ->selectRaw('com_four_ligne_id, SUM(quantite_recue * frais_unitaire) AS frais_total');
         $achats = ComFourEntete::query()
             ->join('com_four_ligne as l', 'l.com_four_entete_id', '=', 'com_four_entete.id')
             ->leftJoinSub($coutsRecus, 'rc', 'rc.com_four_ligne_id', '=', 'l.id')
+            ->leftJoinSub($fraisRecus, 'rf', 'rf.com_four_ligne_id', '=', 'l.id')
             ->whereIn('l.produit_id', $numeros->keys())
             ->whereNotIn('com_four_entete.statut', [ComFourEntete::STATUT_BROUILLON, ComFourEntete::STATUT_ANNULEE])
             ->orderBy('com_four_entete.date_commande')->orderBy('com_four_entete.id')
             ->get(['l.produit_id', 'l.quantite_commandee', 'l.quantite_recue', 'l.qte_par_unite_achat', 'l.prix_unitaire',
-                'com_four_entete.taux_change', 'com_four_entete.numero', 'com_four_entete.date_commande', 'rc.qte_cout', 'rc.valeur_cout'])
+                'com_four_entete.taux_change', 'com_four_entete.numero', 'com_four_entete.date_commande', 'rc.qte_cout', 'rc.valeur_cout', 'rf.frais_total'])
             ->groupBy('produit_id');
 
         $couts = [];
         foreach ($achats as $produitId => $lignes) {
-            $unitaire = fn ($l) => $this->prixLigne($l) * ((float) $l->taux_change ?: 1.0) / max(1, (int) $l->qte_par_unite_achat);
+            // Coûts annexes : moyenne par unité de stock reçue de la ligne (les réceptions sans coûts annexes comptent 0).
+            $unitaire = fn ($l) => $this->prixLigne($l) * ((float) $l->taux_change ?: 1.0) / max(1, (int) $l->qte_par_unite_achat)
+                + ((int) $l->quantite_recue > 0 ? (float) $l->frais_total / (int) $l->quantite_recue : 0.0);
             if ($methode === 'dernier_achat') {
                 $derniere = $lignes->last();
                 $couts[$numeros[$produitId]] = [

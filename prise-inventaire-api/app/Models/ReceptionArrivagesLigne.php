@@ -19,6 +19,7 @@ class ReceptionArrivagesLigne extends Model
         'date_reception',
         'quantite_recue',
         'cout_unitaire',
+        'frais_unitaire',
         'secteur_id',
         'lot_numero',
         'date_peremption',
@@ -32,6 +33,7 @@ class ReceptionArrivagesLigne extends Model
         'date_peremption' => 'date',
         'quantite_recue' => 'integer',
         'cout_unitaire' => 'decimal:4',
+        'frais_unitaire' => 'decimal:4',
         'annulee' => 'boolean',
     ];
 

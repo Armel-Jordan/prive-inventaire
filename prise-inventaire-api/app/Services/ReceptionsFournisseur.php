@@ -11,6 +11,8 @@ use App\Models\Fournisseur;
 use App\Models\HistoriquePrixAchat;
 use App\Models\Reception;
 use App\Models\ReceptionArrivagesLigne;
+use App\Models\ReceptionFrais;
+use App\Models\TenantParametres;
 use DomainException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +30,10 @@ use Illuminate\Validation\ValidationException;
  *    le reste abandonné reste visible (« quantite_abandonnee ») ; ses reliquats clients deviennent facturables ;
  *  - un coût différent du prix commandé est inscrit à l'historique des prix d'achat et au catalogue du fournisseur ;
  *  - une réception se corrige (date, références, coûts : jamais les quantités) ou s'annule : ses quantités sont alors
- *    retirées des commandes et des reliquats clients, et elle ne compte plus nulle part.
+ *    retirées des commandes et des reliquats clients, et elle ne compte plus nulle part ;
+ *  - ses coûts annexes (transport, douane, assurance…) se répartissent sur ses lignes au prorata de la valeur, de la
+ *    quantité, du poids ou du volume : « frais_unitaire », par unité de stock dans la devise de l'entreprise, s'ajoute
+ *    au coût de revient que retient la valorisation de l'inventaire.
  *
  * Les réceptions enregistrées avant cette version n'ont pas de document et comptent comme avant.
  */
@@ -53,6 +58,9 @@ class ReceptionsFournisseur
         $clotures = array_values(array_unique(array_map('intval', $donnees['clotures'] ?? [])));
         if ($saisies === [] && $clotures === []) {
             throw ValidationException::withMessages(['receptions' => 'Saisissez au moins une quantité reçue, ou clôturez une ligne.']);
+        }
+        if ($saisies === [] && ($donnees['frais'] ?? []) !== []) {
+            throw ValidationException::withMessages(['frais' => 'Les coûts annexes accompagnent une réception : saisissez au moins une quantité reçue.']);
         }
 
         return DB::transaction(function () use ($donnees, $saisies, $clotures, $tenantId, $auteur) {
@@ -114,6 +122,7 @@ class ReceptionsFournisseur
                     ]);
                 }
                 $this->retenirCouts($reception, $creees, $lignes, $commandes, $fournisseur, $auteur);
+                $this->remplacerFrais($reception, $donnees['frais'] ?? []);
             }
 
             $cloturees = $this->cloturer($clotures);
@@ -131,11 +140,12 @@ class ReceptionsFournisseur
     }
 
     /**
-     * Corrige une réception enregistrée : date, bon de livraison, connaissement, note et coût de ses lignes. Les
-     * quantités ne se corrigent pas (elles ont été reportées sur les commandes) : on annule et on refait la réception.
+     * Corrige une réception enregistrée : date, bon de livraison, connaissement, note, coût de ses lignes et coûts
+     * annexes (la liste remplace la précédente). Les quantités ne se corrigent pas (elles ont été reportées sur les
+     * commandes) : on annule et on refait la réception.
      *
      * @param  array{date_reception?: string, bon_livraison?: ?string, connaissement?: ?string, notes?: ?string,
-     *     lignes?: list<array{id: int, cout_unitaire?: float|string|null}>}  $donnees
+     *     lignes?: list<array{id: int, cout_unitaire?: float|string|null}>, frais?: list<array<string, mixed>>}  $donnees
      */
     public function modifier(Reception $reception, array $donnees): Reception
     {
@@ -154,6 +164,13 @@ class ReceptionsFournisseur
                 if (array_key_exists('cout_unitaire', $saisie)) {
                     $ligne->update(['cout_unitaire' => $this->cout($saisie['cout_unitaire'])]);
                 }
+            }
+            if (array_key_exists('frais', $donnees)) {
+                $reception->frais()->delete();
+                $this->remplacerFrais($reception, $donnees['frais'] ?? []);
+            } else {
+                // Une répartition à la valeur suit les coûts corrigés.
+                $this->repartirFrais($reception);
             }
 
             return $reception->fresh($this->relations());
@@ -205,11 +222,89 @@ class ReceptionsFournisseur
     {
         return [
             'fournisseur:id,code,raison_sociale,adresse,ville,telephone,email,devise',
-            'auteur:id,nom', 'auteurAnnulation:id,nom',
+            'auteur:id,nom', 'auteurAnnulation:id,nom', 'frais.fournisseur:id,code,raison_sociale',
             'lignes.ligneCommande.commande:id,numero,devise,taux_change,date_commande,statut',
             'lignes.ligneCommande.produit' => fn ($q) => $q->withTrashed(),
             'lignes.secteur' => fn ($q) => $q->withTrashed(),
         ];
+    }
+
+    /**
+     * Enregistre les coûts annexes d'une réception puis les répartit. Un coût dans une autre devise que celle de
+     * l'entreprise demande son taux de change.
+     *
+     * @param  list<array<string, mixed>>  $frais
+     */
+    private function remplacerFrais(Reception $reception, array $frais): void
+    {
+        $reference = strtoupper(trim((string) TenantParametres::query()->value('devise_code')));
+        foreach (array_values($frais) as $index => $saisie) {
+            $devise = strtoupper(trim((string) ($saisie['devise'] ?? '')));
+            $etrangere = $devise !== '' && $devise !== $reference;
+            $taux = (float) ($saisie['taux_change'] ?? 0);
+            if ($etrangere && $taux <= 0) {
+                throw ValidationException::withMessages(["frais.{$index}.taux_change" => "Indiquez le taux de change {$devise} → {$reference}."]);
+            }
+            ReceptionFrais::create([
+                'tenant_id' => $reception->tenant_id,
+                'reception_id' => $reception->id,
+                'type' => $saisie['type'],
+                'libelle' => $saisie['libelle'] ?? null,
+                'fournisseur_id' => $saisie['fournisseur_id'] ?? null,
+                'reference' => $saisie['reference'] ?? null,
+                'montant' => round((float) $saisie['montant'], 2),
+                'devise' => $etrangere ? $devise : null,
+                'taux_change' => $etrangere ? $taux : 1,
+                'repartition' => $saisie['repartition'] ?? 'valeur',
+            ]);
+        }
+        $this->repartirFrais($reception);
+    }
+
+    /**
+     * Répartit les coûts annexes sur les lignes de la réception, au prorata de la base choisie pour chacun : valeur
+     * reçue (devise de l'entreprise), quantité, poids ou volume (unités de stock × poids ou volume de la fiche produit).
+     * Chaque ligne retient ses coûts par unité de stock (« frais_unitaire »).
+     */
+    public function repartirFrais(Reception $reception): void
+    {
+        $lignes = $reception->lignes()->where('annulee', false)
+            ->with(['ligneCommande.commande', 'ligneCommande.produit' => fn ($q) => $q->withTrashed()])->get();
+        $frais = $reception->frais()->get();
+        $alloue = array_fill_keys($lignes->pluck('id')->all(), 0.0);
+        foreach ($frais as $index => $cout) {
+            $bases = $lignes->mapWithKeys(fn (ReceptionArrivagesLigne $l) => [$l->id => $this->base($l, $cout->repartition)]);
+            $total = $bases->sum();
+            if ($total <= 0) {
+                $mesures = ['poids' => 'de poids', 'volume' => 'de volume', 'valeur' => 'de valeur', 'quantite' => 'de quantité'];
+                throw ValidationException::withMessages([
+                    "frais.{$index}.repartition" => "Impossible de répartir ce coût : aucune ligne de la réception n'a ".($mesures[$cout->repartition] ?? 'de base')
+                        .($cout->repartition === 'poids' || $cout->repartition === 'volume' ? ' sur sa fiche produit' : '').'. Choisissez une autre répartition.',
+                ]);
+            }
+            foreach ($bases as $id => $base) {
+                $alloue[$id] += $cout->montantReference() * $base / $total;
+            }
+        }
+        foreach ($lignes as $ligne) {
+            $unites = $ligne->quantite_recue * max(1, (int) $ligne->ligneCommande?->qte_par_unite_achat);
+            $ligne->update(['frais_unitaire' => $frais->isEmpty() || $unites <= 0 ? null : round($alloue[$ligne->id] / $unites, 4)]);
+        }
+    }
+
+    /** Base de répartition d'une ligne : valeur (devise de l'entreprise), unités de stock, poids ou volume. */
+    private function base(ReceptionArrivagesLigne $ligne, string $repartition): float
+    {
+        $commande = $ligne->ligneCommande;
+        $unites = $ligne->quantite_recue * max(1, (int) $commande?->qte_par_unite_achat);
+
+        return match ($repartition) {
+            'quantite' => (float) $unites,
+            'poids' => $unites * (float) ($commande?->produit?->poids_kg ?? 0),
+            'volume' => $unites * (float) ($commande?->produit?->volume_m3 ?? 0),
+            default => $ligne->quantite_recue * (float) ($ligne->cout_unitaire ?? $commande?->prix_unitaire ?? 0)
+                * ((float) $commande?->commande?->taux_change ?: 1.0),
+        };
     }
 
     /** Une ligne de commande reçoit au plus son reste (toutes saisies confondues), sauf sur-réception acceptée. */
