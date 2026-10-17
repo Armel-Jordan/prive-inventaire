@@ -43,6 +43,20 @@ export interface Produit {
   annexes?: { id: number; produit_id: number; lie_id: number; quantite: number }[];
   /** Composants : le produit est un ensemble (kit). */
   composants?: { id: number; produit_id: number; lie_id: number; quantite: number }[];
+  /** Fiche détaillée : fabricant (référentiel) et référence chez lui, description longue, image principale (une image jointe). */
+  fabricant_id?: number | null;
+  fabricant?: { id: number; nom: string } | null;
+  reference_fabricant?: string | null;
+  description_longue?: string | null;
+  image_id?: number | null;
+  /** Descriptions dans d'autres langues (l'espace client montre celle du visiteur). */
+  traductions?: TraductionProduit[];
+}
+
+export interface TraductionProduit {
+  langue: string;
+  description: string | null;
+  description_longue: string | null;
 }
 
 /** Unité de vente d'un produit : unités de stock dans une unité (facteur), prix propre éventuel, unité par défaut. */

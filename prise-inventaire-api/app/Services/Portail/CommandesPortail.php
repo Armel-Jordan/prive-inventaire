@@ -37,19 +37,28 @@ class CommandesPortail
             ->when($categories, fn (Builder $q) => $q->whereIn('categorie', $categories));
     }
 
-    /** Une page du catalogue, au prix du client (quantité 1). */
-    public function catalogue(Client $client, ?string $recherche, ?string $categorie, int $page): array
+    /**
+     * Une page du catalogue, au prix du client (quantité 1), dans la langue du visiteur (descriptions traduites de la
+     * fiche produit, sinon celles de la fiche), avec la description longue, le fabricant et l'image s'il y en a une.
+     */
+    public function catalogue(Client $client, ?string $recherche, ?string $categorie, int $page, ?string $langue = null): array
     {
         $produits = $this->produitsProposes()
             ->when($categorie, fn (Builder $q) => $q->where('categorie', $categorie))
-            ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $r) => $r->where('description', 'like', "%{$recherche}%")->orWhere('numero', 'like', "%{$recherche}%")))
+            ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $r) => $r->where('description', 'like', "%{$recherche}%")->orWhere('numero', 'like', "%{$recherche}%")
+                ->orWhereHas('traductions', fn (Builder $t) => $t->where('description', 'like', "%{$recherche}%"))))
+            ->with(['traductions', 'fabricant:id,nom'])
             ->orderBy('description')->orderBy('numero')
-            ->paginate(24, ['id', 'numero', 'description', 'mesure', 'categorie'], 'page', $page);
+            ->paginate(24, ['id', 'numero', 'description', 'mesure', 'categorie', 'description_longue', 'fabricant_id', 'reference_fabricant', 'image_id'], 'page', $page);
         $prix = collect($this->calcul->calculer($client, $produits->getCollection()->map(fn (ProduitTenant $p) => ['produit_id' => $p->id, 'quantite' => 1])->all(), now()))
             ->keyBy('produit_id');
 
         return [
-            'data' => $produits->getCollection()->map(fn (ProduitTenant $p) => $p->only(['id', 'numero', 'description', 'mesure', 'categorie']) + [
+            'data' => $produits->getCollection()->map(fn (ProduitTenant $p) => $p->only(['id', 'numero', 'mesure', 'categorie', 'reference_fabricant']) + [
+                'description' => $p->descriptionEn($langue),
+                'description_longue' => $p->descriptionEn($langue, 'description_longue'),
+                'fabricant' => $p->fabricant?->nom,
+                'image' => $p->image_id !== null,
                 'prix' => $prix[$p->id]['prix'] ?? null,
                 'prix_liste' => $prix[$p->id]['prix_liste'] ?? null,
             ])->values(),

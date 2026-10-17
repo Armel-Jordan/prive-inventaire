@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Configuration;
+use App\Models\PieceJointe;
 use App\Models\ProduitTenant;
+use App\Models\ProduitTraduction;
 use App\Services\CodesBarresProduits;
 use App\Support\TenantRule;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProduitTenantController extends Controller
 {
@@ -23,7 +26,7 @@ class ProduitTenantController extends Controller
         // Unités de vente : les lignes des documents proposent l'unité et son prix.
         // Annexes : les lignes des documents les ajoutent d'office ; composants : le produit est un ensemble.
         $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal', 'unites.unite:id,code,libelle,decimales',
-            'annexes:id,produit_id,lie_id,quantite', 'composants:id,produit_id,lie_id,quantite'])
+            'annexes:id,produit_id,lie_id,quantite', 'composants:id,produit_id,lie_id,quantite', 'fabricant:id,nom', 'traductions'])
             ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')
@@ -45,6 +48,58 @@ class ProduitTenantController extends Controller
                 $echec("Le numéro « {$valeur} » appartient au produit désactivé « {$desactive->description} » : réactivez-le (filtre « Désactivés » de la liste des produits).");
             }
         };
+    }
+
+    /**
+     * Fiche enrichie (phase 2.4) : fabricant (référentiel) et référence chez lui, description longue, image principale
+     * (une image jointe à la fiche), descriptions traduites.
+     */
+    private function reglesFiche(?ProduitTenant $produit = null): array
+    {
+        return [
+            // Un fabricant du référentiel ; celui de la fiche reste accepté s'il a été supprimé depuis (la fiche se réenregistre).
+            'fabricant_id' => ['nullable', 'integer', TenantRule::exists('fabricants')->where(fn ($q) => $q->whereNull('deleted_at')
+                ->when($produit?->fabricant_id, fn ($q, $actuel) => $q->orWhere('id', $actuel)))],
+            'reference_fabricant' => ['nullable', 'string', 'max:60'],
+            'description_longue' => ['nullable', 'string', 'max:10000'],
+            'image_id' => ['nullable', 'integer'],
+            'traductions' => ['sometimes', 'array', 'max:5'],
+            'traductions.*.langue' => ['required', Rule::in(ProduitTraduction::LANGUES), 'distinct'],
+            'traductions.*.description' => ['nullable', 'string', 'max:255'],
+            'traductions.*.description_longue' => ['nullable', 'string', 'max:10000'],
+        ];
+    }
+
+    /** Valeurs de la fiche enrichie transmises ; l'image principale doit être une image jointe à ce produit. */
+    private function fiche(Request $request, ?ProduitTenant $produit): array
+    {
+        $valeurs = $request->only(['fabricant_id', 'reference_fabricant', 'description_longue']);
+        if ($request->has('image_id')) {
+            $image = $request->input('image_id');
+            if ($image !== null) {
+                $jointe = $produit && PieceJointe::query()->whereKey($image)->where('entite', 'produit')->where('entite_id', $produit->id)
+                    ->whereIn('type_mime', ProduitTenant::TYPES_IMAGE)->exists();
+                if (! $jointe) {
+                    throw ValidationException::withMessages(['image_id' => 'Choisissez une image jointe à cette fiche produit.']);
+                }
+            }
+            $valeurs['image_id'] = $image;
+        }
+
+        return $valeurs;
+    }
+
+    /** Descriptions traduites : une par langue ; sans texte, la traduction est retirée. */
+    private function enregistrerTraductions(ProduitTenant $produit, Request $request): void
+    {
+        foreach ($request->input('traductions', []) as $traduction) {
+            $texte = ['description' => trim((string) ($traduction['description'] ?? '')) ?: null, 'description_longue' => trim((string) ($traduction['description_longue'] ?? '')) ?: null];
+            if ($texte['description'] === null && $texte['description_longue'] === null) {
+                ProduitTraduction::query()->where('produit_id', $produit->id)->where('langue', $traduction['langue'])->delete();
+            } else {
+                ProduitTraduction::query()->updateOrCreate(['produit_id' => $produit->id, 'langue' => $traduction['langue']], $texte);
+            }
+        }
     }
 
     /** Champs de transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids et volume unitaires. */
@@ -87,7 +142,12 @@ class ProduitTenantController extends Controller
             'categorie' => 'nullable|string|max:100',
             'prix_unitaire' => 'nullable|numeric|min:0',
             ...$this->reglesTransport(),
+            ...$this->reglesFiche(),
         ]);
+        if ($request->filled('image_id')) {
+            // Une image se joint à la fiche une fois le produit créé.
+            throw ValidationException::withMessages(['image_id' => 'Choisissez une image jointe à cette fiche produit.']);
+        }
 
         // Générer le numéro automatiquement si non fourni
         $numero = $request->numero;
@@ -115,9 +175,10 @@ class ProduitTenantController extends Controller
             'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
             'prix_unitaire' => $request->prix_unitaire,
-        ] + $this->transport($request));
+        ] + $this->transport($request) + $this->fiche($request, null));
+        $this->enregistrerTraductions($produit, $request);
 
-        $produit->load('secteur');
+        $produit->load(['secteur', 'fabricant:id,nom', 'traductions']);
 
         return response()->json([
             'success' => true,
@@ -128,7 +189,7 @@ class ProduitTenantController extends Controller
 
     public function show($id): JsonResponse
     {
-        $produit = ProduitTenant::with('secteur')->findOrFail($id);
+        $produit = ProduitTenant::with(['secteur', 'fabricant:id,nom', 'traductions'])->findOrFail($id);
 
         return response()->json($produit);
     }
@@ -149,13 +210,17 @@ class ProduitTenantController extends Controller
             'prix_unitaire' => 'nullable|numeric|min:0',
             'actif' => 'sometimes|boolean',
             ...$this->reglesTransport(),
+            ...$this->reglesFiche($produit),
         ]);
 
         $produit->fill(array_merge(
             $request->only(['numero', 'description', 'mesure', 'unite_achat', 'qte_par_unite_achat', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']),
             $this->transport($request),
+            $this->fiche($request, $produit),
         ));
         $produit->save();
+        $this->enregistrerTraductions($produit, $request);
+        $produit->load(['fabricant:id,nom', 'traductions']);
 
         return response()->json([
             'success' => true,

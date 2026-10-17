@@ -707,3 +707,38 @@ Code :
 - `ProduitLienController`, modèle `ProduitLien` ; `App\Services\DisponibiliteProduits` (ensembles, équivalents) ;
 - web : `produits/FenetreLiensProduit`, `services/liensProduits.ts`, `annexesALaVente` (`lib/unitesVente.ts`) ;
 - migration `2026_10_17_100075_creer_liens_produits` (table `produit_liens`).
+
+## 18. Fiche produit détaillée (Inventaire → Produits)
+
+Plan de parité fripv2, phase 2.4 : la fiche d'un produit gagne une section **Fiche détaillée** dans son formulaire.
+
+- **Fabricant** : choisi dans le référentiel des fabricants (Paramètres → Référentiels). Un fabricant retiré du
+  référentiel depuis reste sur les fiches qui le portaient, et ces fiches se réenregistrent. La liste des produits
+  montre le fabricant et sa référence sous la description, et se filtre par fabricant.
+- **Référence fabricant** : le code du produit chez son fabricant. La recherche de la liste et la recherche globale
+  la trouvent.
+- **Description longue** : spécifications, composition, mode d'emploi.
+- **Traductions** : une description et une description longue par langue (anglais, français). Une traduction vidée
+  est retirée.
+- **Image principale** : une image jointe à la fiche (JPEG, PNG, WebP ou GIF ; jamais un SVG, qui peut porter du
+  script). On la choisit parmi les images jointes, ou on en ajoute une depuis le formulaire : elle est jointe aussitôt.
+  À la création, l'image se choisit une fois le produit créé. Supprimer la pièce jointe retire l'image de la fiche.
+
+**Espace client** : le catalogue montre la description dans la langue du visiteur (sa traduction, sinon celle de la
+fiche), avec la description longue (« Détails »), le fabricant et sa référence, et l'image. La recherche du catalogue
+trouve aussi les descriptions traduites. L'image se lit avec la session du portail, et seulement pour un produit
+proposé au client.
+
+**Droits** : ceux des produits (modifier la fiche) ; les images sont des pièces jointes de la fiche.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| POST / PUT | `/produits[/{id}]` | `fabricant_id`, `reference_fabricant`, `description_longue`, `image_id` (modification seulement), `traductions[]` (`langue`, `description`, `description_longue`) |
+| GET | `/espace-client/catalogue?langue=en` | Catalogue dans la langue du visiteur : `description_longue`, `fabricant`, `reference_fabricant`, `image` (vrai ou faux) |
+| GET | `/espace-client/produits/{id}/image` | Image principale d'un produit proposé au client |
+
+Code :
+- `ProduitTenantController` (règles et contrôle de l'image), modèles `ProduitTenant` (`descriptionEn`) et
+  `ProduitTraduction` ; `App\Services\Portail\CommandesPortail::catalogue`, `PortailCommandeController::image` ;
+- web : `produits/ChampsFicheProduit`, `lib/ficheProduit.ts` ; espace client : `CataloguePortail` ;
+- migration `2026_10_17_100076_fiche_produit_enrichie` (colonnes de `produits`, table `produit_traductions`).

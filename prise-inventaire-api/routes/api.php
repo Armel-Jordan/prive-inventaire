@@ -1193,6 +1193,7 @@ Route::prefix('espace-client')->middleware(AuthentifierPortail::class)->group(fu
     Route::put('/moi', [PortailAuthController::class, 'modifierProfil']);
     Route::put('/moi/mot-de-passe', [PortailAuthController::class, 'changerMotDePasse']);
     Route::get('/catalogue', [PortailCommandeController::class, 'catalogue']);
+    Route::get('/produits/{id}/image', [PortailCommandeController::class, 'image'])->whereNumber('id');
     Route::post('/prix', [PortailCommandeController::class, 'prix']);
     Route::get('/commandes', [PortailCommandeController::class, 'index']);
     Route::post('/commandes', [PortailCommandeController::class, 'store'])->middleware('throttle:20,1,portail-commandes');

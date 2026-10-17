@@ -6,6 +6,8 @@ import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, Sh
 import FenetreCodesBarres from '@/components/produits/FenetreCodesBarres';
 import FenetreUnitesProduit from '@/components/produits/FenetreUnitesProduit';
 import FenetreLiensProduit from '@/components/produits/FenetreLiensProduit';
+import ChampsFicheProduit, { type ValeursFiche } from '@/components/produits/ChampsFicheProduit';
+import { LANGUES_TRADUCTION } from '@/lib/ficheProduit';
 import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
 import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration, getReferentiel } from '@/services/api';
@@ -28,7 +30,8 @@ const UNITES_ORIGINE: UniteChoix[] = [
   { code: 'M', libelle: 'Mètre' }, { code: 'M2', libelle: 'Mètre carré' }, { code: 'M3', libelle: 'Mètre cube' },
 ];
 
-interface ProduitForm {
+/** Le formulaire porte aussi la fiche détaillée (fabricant, description longue, traductions, image). */
+interface ProduitForm extends ValeursFiche {
   numero: string;
   description: string;
   mesure: string;
@@ -47,6 +50,7 @@ interface ProduitForm {
 const emptyForm: ProduitForm = {
   numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '',
   numero_onu: '', classe_danger: '', groupe_emballage: '', poids_kg: '', volume_m3: '',
+  fabricant_id: '', reference_fabricant: '', description_longue: '', traductions: {}, image_id: null,
 };
 
 /** Matière dangereuse : numéro ONU ou classe renseignés (et pas seulement des zéros), comme côté API. */
@@ -70,6 +74,7 @@ export default function ProduitsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
+  const [filterFabricant, setFilterFabricant] = useState('');
   // Produits désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
   const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [showModal, setShowModal] = useState(false);
@@ -126,15 +131,20 @@ export default function ProduitsPage() {
 
   // Unique types for filter
   const types = [...new Set(produits.map(p => p.type).filter(Boolean))].sort();
+  // Fabricants des produits listés, pour le filtre.
+  const fabricants = [...new Map(produits.flatMap(p => (p.fabricant ? [[p.fabricant.id, p.fabricant.nom] as const] : []))).entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]));
 
   const filtered = produits.filter(p => {
     const q = search.toLowerCase();
-    // Le numéro, la description ou l'un des codes-barres.
+    // Le numéro, la description, la référence fabricant ou l'un des codes-barres.
     const matchSearch = p.numero.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
+      || (p.reference_fabricant ?? '').toLowerCase().includes(q)
       || (p.codes_barres ?? []).some(c => c.code.toLowerCase().includes(q));
     const matchType = !filterType || p.type === filterType;
     const matchSecteur = !filterSecteur || String(p.secteur_id) === filterSecteur;
-    return matchSearch && matchType && matchSecteur;
+    const matchFabricant = !filterFabricant || String(p.fabricant_id) === filterFabricant;
+    return matchSearch && matchType && matchSecteur && matchFabricant;
   });
 
   function openCreate() {
@@ -157,6 +167,11 @@ export default function ProduitsPage() {
       groupe_emballage: produit.groupe_emballage ?? '',
       poids_kg: produit.poids_kg != null ? String(Number(produit.poids_kg)) : '',
       volume_m3: produit.volume_m3 != null ? String(Number(produit.volume_m3)) : '',
+      fabricant_id: produit.fabricant_id ? String(produit.fabricant_id) : '',
+      reference_fabricant: produit.reference_fabricant ?? '',
+      description_longue: produit.description_longue ?? '',
+      traductions: Object.fromEntries((produit.traductions ?? []).map(tr => [tr.langue, { description: tr.description ?? '', description_longue: tr.description_longue ?? '' }])),
+      image_id: produit.image_id ?? null,
     });
     setEditingId(produit.id!);
     setShowModal(true);
@@ -175,6 +190,16 @@ export default function ProduitsPage() {
         groupe_emballage: form.groupe_emballage || null,
         poids_kg: form.poids_kg === '' ? null : Number(form.poids_kg),
         volume_m3: form.volume_m3 === '' ? null : Number(form.volume_m3),
+        fabricant_id: form.fabricant_id ? Number(form.fabricant_id) : null,
+        reference_fabricant: form.reference_fabricant.trim() || null,
+        description_longue: form.description_longue.trim() || null,
+        // Toutes les langues : une traduction vidée est retirée par l'API.
+        traductions: LANGUES_TRADUCTION.map(langue => ({
+          langue,
+          description: form.traductions[langue]?.description.trim() || null,
+          description_longue: form.traductions[langue]?.description_longue.trim() || null,
+        })),
+        image_id: form.image_id,
       };
       if (editingId) {
         await updateProduit(editingId, payload);
@@ -256,7 +281,7 @@ export default function ProduitsPage() {
     }
   }
 
-  const hasFilters = filterType || filterSecteur;
+  const hasFilters = filterType || filterSecteur || filterFabricant;
 
   return (
     <div>
@@ -322,6 +347,16 @@ export default function ProduitsPage() {
               {secteurs.map(s => <option key={s.id} value={String(s.id)}>{s.code} — {s.nom}</option>)}
             </select>
           </div>
+          {fabricants.length > 0 && (
+            <div className="relative">
+              <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <select value={filterFabricant} onChange={e => setFilterFabricant(e.target.value)} aria-label={t.productRecord.manufacturer}
+                className="pl-8 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none">
+                <option value="">{t.productRecord.allManufacturers}</option>
+                {fabricants.map(([id, nom]) => <option key={id} value={String(id)}>{nom}</option>)}
+              </select>
+            </div>
+          )}
           <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as 'actifs' | 'inactifs' | 'tous')}
             aria-label="Statut"
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
@@ -330,7 +365,7 @@ export default function ProduitsPage() {
             <option value="tous">Tous</option>
           </select>
           {hasFilters && (
-            <button onClick={() => { setFilterType(''); setFilterSecteur(''); }}
+            <button onClick={() => { setFilterType(''); setFilterSecteur(''); setFilterFabricant(''); }}
               className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
               <X size={14} /> Réinitialiser
             </button>
@@ -376,6 +411,11 @@ export default function ProduitsPage() {
                         <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Désactivé</span>
                       )}
                       <BalisesFiche entite="produit" entiteId={produit.id!} />
+                      {(produit.fabricant || produit.reference_fabricant) && (
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5" title={t.productRecord.manufacturer}>
+                          {[produit.fabricant?.nom, produit.reference_fabricant].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {produit.secteur
@@ -452,12 +492,13 @@ export default function ProduitsPage() {
       {/* Modal créer/modifier */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="produit-titre"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold dark:text-white">{editingId ? 'Modifier le produit' : 'Nouveau produit'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><X size={20} /></button>
+              <h2 id="produit-titre" className="text-lg font-semibold dark:text-white">{editingId ? 'Modifier le produit' : 'Nouveau produit'}</h2>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label="Fermer"><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Numéro {!editingId && configNumero?.auto_increment ? '(auto-généré)' : '*'}
@@ -508,6 +549,8 @@ export default function ProduitsPage() {
                   </datalist>
                 </div>
               </div>
+              <ChampsFicheProduit key={editingId ?? 'nouveau'} valeurs={form} onChange={modification => setForm(actuel => ({ ...actuel, ...modification }))}
+                produitId={editingId} fabricantActuel={produits.find(p => p.id === editingId)?.fabricant ?? null} />
               <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conditionnement fournisseur</p>
                 <div className="grid grid-cols-2 gap-3">
