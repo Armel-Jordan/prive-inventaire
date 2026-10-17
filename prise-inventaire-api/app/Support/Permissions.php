@@ -165,6 +165,9 @@ class Permissions
             'piloter' => ['base' => 'modifier', 'fr' => 'Piloter une tournée', 'en' => 'Run a delivery run',
                 'aide_fr' => "Ajouter des bons, fixer l'ordre de passage, démarrer et terminer une tournée.",
                 'aide_en' => 'Add notes, set the stop order, start and finish a run.'],
+            'charger' => ['base' => 'modifier', 'fr' => 'Charger un camion', 'en' => 'Load a truck',
+                'aide_fr' => 'Cocher les colis et la marchandise hors colis chargés dans le camion, scanner les étiquettes des colis.',
+                'aide_en' => 'Tick the parcels and loose goods loaded on the truck, scan parcel labels.'],
         ]],
         'zones_preparation' => ['onglet' => 'ventes', 'fr' => 'Zones de préparation', 'en' => 'Picking areas'],
 

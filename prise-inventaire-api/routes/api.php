@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\BonCommandePdfController;
 use App\Http\Controllers\Api\BonLivraisonController;
 use App\Http\Controllers\Api\CamionController;
 use App\Http\Controllers\Api\ChampPersonnaliseController;
+use App\Http\Controllers\Api\ChargementTourneeController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ClientFicheAdresseController;
 use App\Http\Controllers\Api\ClientFicheCategorieController;
@@ -752,6 +753,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/ordonner', [TourneeController::class, 'ordonner']);
         Route::post('/{id}/ajouter-route', [TourneeController::class, 'ajouterRoute']);
         Route::get('/{id}/feuille-de-route', [TourneeController::class, 'feuilleDeRoute']);
+        // Chargement du camion : état, colis et vrac cochés, étiquette scannée, fiche de chargement.
+        Route::get('/{id}/chargement', [ChargementTourneeController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/chargement/pdf', [ChargementTourneeController::class, 'pdf'])->whereNumber('id');
+        Route::post('/{id}/chargement/scan', [ChargementTourneeController::class, 'scanner'])->whereNumber('id');
+        Route::post('/{id}/chargement/colis/{colisId}', [ChargementTourneeController::class, 'colis'])->whereNumber(['id', 'colisId']);
+        Route::post('/{id}/chargement/vrac/{bonId}', [ChargementTourneeController::class, 'vrac'])->whereNumber(['id', 'bonId']);
     });
 
     // Zones de Préparation

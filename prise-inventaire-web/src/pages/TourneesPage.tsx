@@ -1,7 +1,9 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle, AlertTriangle, ArrowUp, ArrowDown, ListOrdered, Route, FileText } from 'lucide-react';
+import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle, AlertTriangle, ArrowUp, ArrowDown, ListOrdered, Route, FileText, ClipboardCheck } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
+import ChargementTournee from '@/components/livraison/ChargementTournee';
+import { chargementIncomplet, getChargement } from '@/services/chargement';
 import {
   getTournees,
   getTournee,
@@ -37,6 +39,9 @@ export default function TourneesPage() {
   const { t } = useLanguage();
   const th = t.hazmat;
   const ts = t.sequences;
+  const tl = t.truckLoading;
+  // Tournée dont on coche le chargement du camion.
+  const [tourneeChargement, setTourneeChargement] = useState<number | null>(null);
   // Routes de livraison (référentiel des itinéraires), proposées à la création d'une tournée.
   const [itineraires, setItineraires] = useState<FicheReferentiel[]>([]);
   const kg = (valeur: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(valeur);
@@ -211,6 +216,9 @@ export default function TourneesPage() {
   };
 
   const handleDemarrer = async (id: number) => {
+    // Le départ ne dépend pas du chargement : on prévient seulement s'il n'est pas fini.
+    const resume = await getChargement(id).then(etat => etat.resume, () => null);
+    if (chargementIncomplet(resume) && !confirm(tl.startWarning.replace('{n}', String(resume.reste)))) return;
     try {
       await demarrerTournee(id);
       loadTournees();
@@ -345,6 +353,16 @@ export default function TourneesPage() {
                           >
                             <PackagePlus size={18} />
                           </button>
+                          {peut('tournees', 'charger') && (tournee.tournee_bons?.length ?? 0) > 0 && (
+                            <button
+                              onClick={() => setTourneeChargement(tournee.id)}
+                              className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                              title={tl.button}
+                              aria-label={`${tl.button} — ${tournee.numero}`}
+                            >
+                              <ClipboardCheck size={18} />
+                            </button>
+                          )}
                           {peut('tournees', 'piloter') && (
                             <button
                               onClick={() => handleDemarrer(tournee.id)}
@@ -598,6 +616,16 @@ export default function TourneesPage() {
                   </button>
                 )}
                 {(selectedTournee.tournee_bons?.length ?? 0) > 0 && (
+                  <button type="button" onClick={() => setTourneeChargement(selectedTournee.id)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded border border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300">
+                    <ClipboardCheck size={14} /> {tl.button}
+                    {selectedTournee.chargement && selectedTournee.chargement.colis + selectedTournee.chargement.vrac > 0 && (
+                      <span className="text-xs">({tl.progress.replace('{n}', String(selectedTournee.chargement.colis_charges + selectedTournee.chargement.vrac_charges))
+                        .replace('{total}', String(selectedTournee.chargement.colis + selectedTournee.chargement.vrac))})</span>
+                    )}
+                  </button>
+                )}
+                {(selectedTournee.tournee_bons?.length ?? 0) > 0 && (
                   <button type="button" title={ts.sheetHelp}
                     onClick={() => { ouvrirPdf(`/tournees/${selectedTournee.id}/feuille-de-route`, `feuille-de-route-${selectedTournee.numero}.pdf`).catch(e => signaler(e, ts.sheet)); }}
                     className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
@@ -665,6 +693,14 @@ export default function TourneesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {tourneeChargement !== null && (
+        <ChargementTournee tourneeId={tourneeChargement} peutCharger={peut('tournees', 'charger')} onClose={() => {
+          setTourneeChargement(null);
+          // Le détail ouvert reprend l'avancement du chargement.
+          if (selectedTournee) getTournee(selectedTournee.id).then(setSelectedTournee).catch(() => {});
+        }} />
       )}
     </div>
   );

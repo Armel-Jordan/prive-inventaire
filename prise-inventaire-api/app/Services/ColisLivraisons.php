@@ -73,6 +73,7 @@ class ColisLivraisons
     {
         $bon = $colis->bonLivraison;
         $this->verifierStatut($bon);
+        $this->verifierPasCharge($colis);
 
         return DB::transaction(function () use ($colis, $bon, $donnees) {
             BonLivraison::whereKey($bon->id)->lockForUpdate()->first();
@@ -95,6 +96,7 @@ class ColisLivraisons
     public function supprimer(ColisLivraison $colis): void
     {
         $this->verifierStatut($colis->bonLivraison);
+        $this->verifierPasCharge($colis);
         $colis->delete();
     }
 
@@ -153,6 +155,14 @@ class ColisLivraisons
     {
         if (! in_array($bon->statut, self::STATUTS, true)) {
             throw ValidationException::withMessages(['bon' => 'Les colis ne se modifient plus une fois le bon parti en livraison.']);
+        }
+    }
+
+    /** Un colis coché comme chargé dans le camion ne change plus : on le décoche d'abord (chargement de la tournée). */
+    private function verifierPasCharge(ColisLivraison $colis): void
+    {
+        if ($colis->charge_le) {
+            throw ValidationException::withMessages(['colis' => "Le colis {$colis->numero} est chargé dans le camion : décochez-le avant de le modifier."]);
         }
     }
 }
