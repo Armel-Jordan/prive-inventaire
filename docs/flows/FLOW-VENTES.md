@@ -1394,6 +1394,43 @@ Plan de parité fripv2, phase 1.10a (« Caisses », « Gestion de caisse », « 
 
 Code : services `App\Services\Caisses` et `SommaireCaissePdf`, `CaisseController`, vue `pdf/sommaire-caisse` ; web : page `CaissesPage`, `hooks/useCaissePoste` (caisse du poste), `hooks/useEncaissementCaisse` (encaisser, ouvrir la caisse fermée) et `components/caisse/*` ; migration `2026_10_17_100052_creer_caisses` (référentiel `caisses`, tables `caisse_sessions`, `caisse_mouvements`, colonne `caisse_session_id` sur `facture_paiements`, `acomptes` et `acompte_remboursements`).
 
+### 5.20 Point de vente (Ventes → Point de vente)
+
+Plan de parité fripv2, phase 1.10b (facturation sur un poste de caisse et fenêtre « Payer facture ») : une vente au comptoir se fait en un geste.
+
+**Panier :**
+- **Ajouter des produits** : on scanne un code ou on tape un numéro, puis Entrée (le produit au numéro exact, ou le seul trouvé) ; on peut aussi chercher par la désignation et choisir dans la liste. Un produit déjà au panier gagne une unité.
+- **Quantités et prix** : quantités modifiables. Les prix sont **ceux du client** (liste de prix, remise, règles), convertis dans sa devise ; un prix saisi les remplace. Les totaux HT, taxes et TTC se recalculent à chaque changement, avec les mêmes règles de taxes que les factures.
+- **Client** : le client de passage par défaut, dont le nom peut être noté sur la facture, ou un client de la liste.
+- Un produit sans prix doit être chiffré avant d'encaisser.
+
+**Encaisser :** un ou plusieurs modes de paiement. L'écran montre en direct le total, le reçu, le reste et la **monnaie à rendre**.
+- Seules les **espèces** peuvent dépasser ce qui reste dû. L'excédent est la monnaie rendue : seul le dû est encaissé, et l'argent remis est noté pour le reçu (`facture_paiements.montant_recu`).
+- Le **client de passage** paie toute la vente, et un paiement en espèces règle toute la vente.
+- Un client en compte peut payer une partie, par chèque, carte ou virement, ou rien (« Porter au compte ») : le reste demeure à recevoir.
+- La vente crée la **facture**, l'**émet** et enregistre les **paiements**, d'un seul tenant. Sur un poste de caisse, les paiements entrent dans la session ouverte de sa caisse (§5.19). Caisse fermée, rien n'est créé, pas même un numéro de facture, et l'ouverture est proposée comme pour tout encaissement.
+- Le stock compté (les scans) n'est pas touché, comme pour toute facture.
+
+**Reçu** : ticket de 80 mm (« Imprimer le reçu ») de toute facture émise, qui se réimprime à l'identique.
+- En-tête : entreprise, numéro de facture, date et heure dans le fuseau de l'utilisateur, caisse et vendeur, client.
+- Contenu : produits, totaux avec le détail des taxes, paiements (référence de la carte, argent remis, monnaie rendue), reste dû.
+
+La facture PDF reste disponible.
+
+**Droits :** module **Point de vente** (`point_de_vente`), copié des factures à sa création.
+- **Vendre au comptoir** (`point_de_vente.vendre`) : suit le droit de créer une facture.
+- Il faut aussi les droits de créer et d'émettre des factures, et d'encaisser si la vente est payée ; le contrôleur les vérifie.
+- L'aperçu (calcul) est ouvert : rien n'est écrit.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/point-de-vente/produits?recherche=` | Produits actifs : numéro exact d'abord, puis numéro ou désignation (20 au plus) |
+| POST | `/point-de-vente/calculer` | Aperçu : prix du client (ou saisi) et totaux avec les taxes (`client_id`, `lignes[]`, `date`) |
+| POST | `/point-de-vente/ventes` | Vente : facture créée, émise et encaissée. Champs : `client_id` ou client de passage (`passage_nom`…), `date`, `lignes[]`, `paiements[]` (`mode`, `montant`, `reference`), `caisse_id`. Réponse : la facture et `monnaie` |
+| GET | `/point-de-vente/recus/{factureId}?fuseau=` | Reçu (ticket de 80 mm) d'une facture émise |
+
+Code : services `App\Services\VentesComptoir` et `RecuVentePdf` (le calcul des lignes est partagé avec la saisie des factures : `FacturesVente::calculerLignes`), `PointDeVenteController`, vue `pdf/recu-vente` ; web : page `PointDeVentePage`, service `pointDeVente.ts` ; migration `2026_10_17_100053_creer_point_de_vente` (`facture_paiements.montant_recu`, droits du module).
+
 ---
 
 ## 6. Bons de Livraison

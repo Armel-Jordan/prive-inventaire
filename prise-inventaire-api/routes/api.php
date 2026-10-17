@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\FraisController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
+use App\Http\Controllers\Api\PointDeVenteController;
 use App\Http\Controllers\Api\PortailClientController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
@@ -733,6 +734,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [DemandeAcompteController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/envoyer', [DemandeAcompteController::class, 'envoyer'])->whereNumber('id');
         Route::post('/{id}/encaisser', [DemandeAcompteController::class, 'encaisser'])->whereNumber('id');
+    });
+
+    // Point de vente : recherche des produits, aperçu (prix du client, taxes), vente au comptoir encaissée, reçu.
+    Route::prefix('point-de-vente')->middleware('module:ventes')->group(function () {
+        Route::get('/produits', [PointDeVenteController::class, 'produits']);
+        Route::post('/calculer', [PointDeVenteController::class, 'calculer']);
+        Route::post('/ventes', [PointDeVenteController::class, 'vendre']);
+        Route::get('/recus/{factureId}', [PointDeVenteController::class, 'recu'])->whereNumber('factureId');
     });
 
     // Gestion de caisse : ouverture avec le fond, entrées et sorties d'argent, fermeture (tiroir compté), sommaire.
