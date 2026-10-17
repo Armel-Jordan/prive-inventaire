@@ -11,6 +11,7 @@ use App\Models\FactureFournisseur;
 use App\Models\FactureFournisseurPaiement;
 use App\Models\Fournisseur;
 use App\Models\TenantParametres;
+use App\Models\VirementLot;
 use App\Services\Banque\Rapprochements;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -256,6 +257,10 @@ class Debourses
             $debourse = Debourse::query()->whereKey($debourse->id)->lockForUpdate()->firstOrFail();
             if ($debourse->statut === Debourse::ANNULE) {
                 throw new DomainException("Le déboursé {$debourse->numero} est déjà annulé.");
+            }
+            // Un virement transmis à la banque peut encore être exécuté : le lot doit d'abord être marqué refusé.
+            if ($debourse->virement_statut === VirementLot::EMIS) {
+                throw new DomainException("Le déboursé {$debourse->numero} est dans le lot de virements n° {$debourse->virementLot?->numero} transmis à la banque : marquez le lot refusé avant de l'annuler.");
             }
             app(Rapprochements::class)->verifierDocument('debourse', $debourse->id, "Le déboursé {$debourse->numero}");
             $paiements = FactureFournisseurPaiement::query()->where('debourse_id', $debourse->id)->get();

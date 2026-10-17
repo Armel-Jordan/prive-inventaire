@@ -87,6 +87,7 @@ use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
 use App\Http\Controllers\Api\TenantTaxeController;
 use App\Http\Controllers\Api\TourneeController;
+use App\Http\Controllers\Api\VirementController;
 use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\AuditLogController;
@@ -565,6 +566,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Chèques : numérotés sur le chéquier du compte bancaire, puis imprimés (un par page).
         Route::post('/cheques/numeroter', [ChequeController::class, 'numeroter']);
         Route::get('/cheques/pdf', [ChequeController::class, 'pdf']);
+        // Virements : déboursés à transmettre, lots (fichier SEPA ou CSV), refus de la banque.
+        Route::get('/virements', [VirementController::class, 'index']);
+        Route::get('/virements/lots', [VirementController::class, 'lots']);
+        Route::post('/virements/lots', [VirementController::class, 'store']);
+        Route::get('/virements/lots/{id}/fichier', [VirementController::class, 'fichier'])->whereNumber('id');
+        Route::post('/virements/lots/{id}/refuser', [VirementController::class, 'refuser'])->whereNumber('id');
         Route::post('/', [DebourseController::class, 'store']);
         Route::get('/{id}', [DebourseController::class, 'show'])->whereNumber('id');
         Route::put('/{id}', [DebourseController::class, 'update'])->whereNumber('id');

@@ -23,6 +23,8 @@ class CompteBancaire extends Model
         'iban', 'bic', 'devise_code', 'par_defaut', 'actif', 'notes', 'compte_comptable_id', 'journal_id',
         // Prochain numéro du chéquier : les chèques des déboursés le prennent à leur première impression.
         'prochain_cheque',
+        // Virements aux fournisseurs : dernier format de fichier, identifiant d'émetteur, prochain numéro de lot.
+        'virement_format', 'virement_emetteur', 'prochain_lot',
         // Colonnes du CSV de la banque, mémorisées au dernier import de relevé.
         'import_reglages',
     ];

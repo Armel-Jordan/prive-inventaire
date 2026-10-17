@@ -251,6 +251,10 @@ class Droits
         'POST api/banque/comptes/{id}/releves' => ['banque', 'rapprocher'],
         'DELETE api/banque/releves/{releve}' => ['banque', 'rapprocher'],
         'POST api/debourses/cheques/numeroter' => ['debourses', 'cheques'],
+        // Virements : générer un lot, le télécharger (coordonnées bancaires), le marquer refusé.
+        'POST api/debourses/virements/lots' => ['debourses', 'virements'],
+        'GET api/debourses/virements/lots/{id}/fichier' => ['debourses', 'virements'],
+        'POST api/debourses/virements/lots/{id}/refuser' => ['debourses', 'virements'],
         'POST api/banque/comptes/{id}/releve/relier-suggestions' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/relier' => ['banque', 'rapprocher'],
         'POST api/banque/releve-lignes/{ligne}/delier' => ['banque', 'rapprocher'],
