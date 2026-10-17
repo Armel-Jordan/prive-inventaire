@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ReliquatsClients;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -57,6 +58,9 @@ class ReceptionArrivagesLigne extends Model
             // jour de « quantite_stock » qui figurait ici faisait échouer toute réception (colonne inexistante).
 
             $ligneCommande->commande->updateStatut();
+
+            // Reliquats clients en attente de cette ligne : la réception se répartit sur eux.
+            app(ReliquatsClients::class)->recevoir($ligneCommande, (int) $reception->quantite_recue);
         });
     }
 }

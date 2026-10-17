@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\PortailClientController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RelanceController;
+use App\Http\Controllers\Api\ReliquatClientController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\RetourClientController;
 use App\Http\Controllers\Api\RetourFournisseurController;
@@ -623,6 +624,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/imputer', [AvoirController::class, 'imputer'])->whereNumber('id');
         Route::post('/{id}/rembourser', [AvoirController::class, 'rembourser'])->whereNumber('id');
         Route::delete('/{id}', [AvoirController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Reliquats clients (back orders) : produits attendus faute de stock, commandés au fournisseur, facturés à réception.
+    Route::prefix('reliquats-clients')->middleware('module:ventes')->group(function () {
+        Route::get('/', [ReliquatClientController::class, 'index']);
+        Route::get('/depuis-commande/{id}', [ReliquatClientController::class, 'lignesCommande'])->whereNumber('id');
+        Route::post('/depuis-commande/{id}', [ReliquatClientController::class, 'depuisCommande'])->whereNumber('id');
+        Route::post('/commander', [ReliquatClientController::class, 'commander']);
+        Route::post('/facturer', [ReliquatClientController::class, 'facturer']);
+        Route::post('/', [ReliquatClientController::class, 'store']);
+        Route::put('/{id}', [ReliquatClientController::class, 'update'])->whereNumber('id');
+        Route::post('/{id}/annuler', [ReliquatClientController::class, 'annuler'])->whereNumber('id');
+        Route::delete('/{id}', [ReliquatClientController::class, 'destroy'])->whereNumber('id');
     });
 
     // Retours clients : marchandise rapportée, remise en stock ou mise au rebut, puis note de crédit du retour.

@@ -9,6 +9,7 @@ use App\Models\Configuration;
 use App\Models\Fournisseur;
 use App\Models\HistoriquePrixAchat;
 use App\Models\ProduitTenant;
+use App\Services\ReliquatsClients;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -148,6 +149,10 @@ class CommandeFournisseurController extends Controller
             ]);
 
             $existingIds = collect($validated['lignes'])->pluck('id')->filter()->toArray();
+            // Reliquats clients des lignes retirées ou changées de produit : ils redeviennent inscrits.
+            $changees = collect($validated['lignes'])->filter(fn ($l) => isset($l['id']))
+                ->filter(fn ($l) => (int) $commande->lignes()->whereKey($l['id'])->value('produit_id') !== (int) $l['produit_id'])->pluck('id');
+            app(ReliquatsClients::class)->liberer($commande->lignes()->whereNotIn('id', $existingIds)->pluck('id')->merge($changees));
             $commande->lignes()->whereNotIn('id', $existingIds)->delete();
 
             foreach ($validated['lignes'] as $ligne) {
@@ -226,6 +231,8 @@ class CommandeFournisseurController extends Controller
 
         $commande->statut = ComFourEntete::STATUT_ANNULEE;
         $commande->save();
+        // Ses reliquats clients redeviennent inscrits : la demande du client n'est pas annulée avec la commande.
+        app(ReliquatsClients::class)->liberer($commande->lignes()->pluck('id'));
 
         return response()->json([
             'message' => 'Commande annulée.',
@@ -252,6 +259,8 @@ class CommandeFournisseurController extends Controller
         $commande->recalculerMontantTotal();
         $commande->statut = ComFourEntete::STATUT_COMPLETE;
         $commande->save();
+        // Reliquats clients : reçus en partie, ils se facturent à la quantité reçue ; sans rien reçu, ils redeviennent inscrits.
+        app(ReliquatsClients::class)->commandeCloturee($commande);
 
         return response()->json([
             'message' => 'Commande clôturée. Le reste non reçu a été annulé.',
@@ -267,6 +276,7 @@ class CommandeFournisseurController extends Controller
             ], 422);
         }
 
+        app(ReliquatsClients::class)->liberer($commande->lignes()->pluck('id'));
         $commande->delete();
 
         return response()->json(['message' => 'Commande supprimée.']);
