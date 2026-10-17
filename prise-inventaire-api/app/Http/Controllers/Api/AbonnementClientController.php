@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AbonnementClient;
 use App\Models\AbonnementEcheance;
+use App\Models\AbonnementReleve;
 use App\Models\Client;
 use App\Models\Facture;
 use App\Services\AbonnementsClients;
@@ -31,8 +32,8 @@ class AbonnementClientController extends Controller
         // Client complet : son tarif (liste de prix, remise) donne le prix du jour.
         $requete = AbonnementClient::query()
             ->with(['client', 'produit:id,numero,description'])
-            ->withCount(['echeances', 'echeances as echeances_en_retard' => fn ($q) => $q->whereNull('facture_id')->whereDate('date_prevue', '<', today()->toDateString())])
-            ->withMin(['echeances as prochaine_echeance' => fn ($q) => $q->whereNull('facture_id')], 'date_prevue')
+            ->withCount(['echeances', 'releves', 'echeances as echeances_en_retard' => fn ($q) => $q->aFacturer()->whereDate('date_prevue', '<', today()->toDateString())])
+            ->withMin(['echeances as prochaine_echeance' => fn ($q) => $q->aFacturer()], 'date_prevue')
             ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->integer('client_id')))
             ->when($request->filled('produit_id'), fn ($q) => $q->where('produit_id', $request->integer('produit_id')))
             ->when($statut === 'actif', fn ($q) => $q->whereDate('date_fin', '>=', today()->toDateString()))
@@ -78,8 +79,8 @@ class AbonnementClientController extends Controller
     {
         $abonnement = AbonnementClient::findOrFail($id);
         $donnees = $this->valider($request);
-        // Une fois une échéance facturée, le début et le client ne changent plus (le reste du calendrier, si).
-        if ($abonnement->echeances()->whereNotNull('facture_id')->exists()) {
+        // Une fois une échéance facturée (ou close), le début et le client ne changent plus (le reste du calendrier, si).
+        if ($abonnement->echeances()->traitee()->exists()) {
             if (! Carbon::parse($donnees['date_debut'])->isSameDay($abonnement->date_debut)) {
                 throw ValidationException::withMessages(['date_debut' => 'La date de début ne peut pas être modifiée : des factures existent déjà pour cet abonnement.']);
             }
@@ -100,7 +101,7 @@ class AbonnementClientController extends Controller
     {
         $abonnement = AbonnementClient::findOrFail($id);
         DB::transaction(function () use ($abonnement) {
-            $abonnement->echeances()->whereNull('facture_id')->delete();
+            $abonnement->echeances()->aFacturer()->delete();
             $abonnement->delete();
         });
 
@@ -149,12 +150,14 @@ class AbonnementClientController extends Controller
         $resultat = $this->abonnements->facturer(Carbon::parse($donnees['jusquau']), $donnees['client_id'] ?? null, $emettre, $request->user()?->id, $request->user()->tenant_id);
 
         return response()->json([
-            'message' => $resultat['factures'] === [] && $resultat['erreurs'] === []
+            'message' => $resultat['factures'] === [] && $resultat['erreurs'] === [] && $resultat['sans_facture'] === 0
                 ? 'Aucune échéance à facturer pour cette date.'
                 : count($resultat['factures']).' facture(s) créée(s) pour '.$resultat['echeances'].' échéance(s)'
+                    .($resultat['sans_facture'] ? ', '.$resultat['sans_facture'].' sans rien à facturer' : '')
                     .($resultat['erreurs'] ? ', '.count($resultat['erreurs']).' erreur(s)' : '').'.',
             'factures' => array_map(fn (Facture $f) => $f->fresh()->only(['id', 'numero', 'client_id', 'date_facture', 'statut', 'montant_ttc', 'devise']), $resultat['factures']),
             'echeances' => $resultat['echeances'],
+            'sans_facture' => $resultat['sans_facture'],
             'erreurs' => $resultat['erreurs'],
         ]);
     }
@@ -169,6 +172,55 @@ class AbonnementClientController extends Controller
         return $this->show($id);
     }
 
+    /** Relevés de consommation d'un abonnement à l'usage, les plus récents d'abord, avec leur état (facturé ou non). */
+    public function releves(int $id): JsonResponse
+    {
+        $abonnement = AbonnementClient::findOrFail($id);
+
+        return response()->json($abonnement->releves()->orderByDesc('date_releve')->orderByDesc('id')->get()
+            ->map(fn (AbonnementReleve $r) => $r->toArray() + ['facture' => $this->abonnements->releveFacture($r)]));
+    }
+
+    public function ajouterReleve(Request $request, int $id): JsonResponse
+    {
+        $abonnement = AbonnementClient::findOrFail($id);
+        if (! $abonnement->aLUsage()) {
+            throw ValidationException::withMessages(['abonnement' => "Cet abonnement n'est pas facturé à l'usage."]);
+        }
+        $donnees = $request->validate([
+            'date_releve' => ['required', 'date', 'before_or_equal:tomorrow'],
+            'quantite' => ['required', 'integer', 'min:0', 'max:999999999'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+        $releve = new AbonnementReleve($donnees + ['abonnement_id' => $abonnement->id, 'cree_par' => $request->user()?->id]);
+        if ($this->abonnements->releveFacture($releve)) {
+            throw ValidationException::withMessages(['date_releve' => 'Cette période est déjà facturée : le relevé ne peut plus y entrer.']);
+        }
+        $releve->save();
+
+        return $this->releves($id)->setStatusCode(201);
+    }
+
+    public function supprimerReleve(int $id, int $releveId): JsonResponse
+    {
+        $releve = AbonnementReleve::where('abonnement_id', $id)->findOrFail($releveId);
+        if ($this->abonnements->releveFacture($releve)) {
+            throw ValidationException::withMessages(['releve' => 'Ce relevé est déjà facturé.']);
+        }
+        $releve->delete();
+
+        return $this->releves($id);
+    }
+
+    /** Import d'un fichier CSV de relevés (client, produit, date, quantité, note) : tout ou rien. */
+    public function importerReleves(Request $request): JsonResponse
+    {
+        $request->validate(['fichier' => ['required', 'file', 'max:5120', 'mimes:csv,txt']], ['fichier.mimes' => 'Le fichier doit être un CSV.']);
+        $resultat = $this->abonnements->importerReleves((string) file_get_contents($request->file('fichier')->getRealPath()), $request->user()?->id);
+
+        return response()->json($resultat + ['message' => $resultat['erreurs'] ? 'Aucun relevé importé.' : "{$resultat['importes']} relevé(s) importé(s)."], $resultat['erreurs'] ? 422 : 200);
+    }
+
     /** Une ligne de la liste : l'abonnement, son statut, son prix du jour et ses totaux ramenés au mois et à l'année. */
     private function ligne(AbonnementClient $abonnement): array
     {
@@ -178,7 +230,8 @@ class AbonnementClientController extends Controller
         } catch (ValidationException) {
             $prix = null;
         }
-        $montant = $prix !== null ? $prix * $abonnement->quantite : null;
+        // À l'usage, le montant dépend de la consommation : pas de total d'avance.
+        $montant = $prix !== null && ! $abonnement->aLUsage() ? $prix * $abonnement->quantite : null;
         $ligne = $abonnement->toArray();
         $ligne['client'] = $abonnement->client?->only(['id', 'raison_sociale', 'devise']);
 
@@ -191,15 +244,15 @@ class AbonnementClientController extends Controller
     }
 
     /**
-     * Échéances : en retard d'abord (à facturer), puis à venir (la prochaine en tête), puis les facturées, de la plus
-     * récente à la plus ancienne.
+     * Échéances : en retard d'abord (à facturer), puis à venir (la prochaine en tête), puis les traitées (facturées ou
+     * sans rien à facturer), de la plus récente à la plus ancienne.
      */
     private function echeances(AbonnementClient $abonnement): array
     {
         $echeances = $abonnement->echeances()->with('facture:id,numero,statut,montant_ttc,devise,date_facture')->get();
-        $aFacturer = $echeances->whereNull('facture_id')->sortBy('date_prevue');
+        $aFacturer = $echeances->filter(fn (AbonnementEcheance $e) => ! $e->facture_id && ! $e->rien_a_facturer)->sortBy('date_prevue');
         $enRetard = $aFacturer->filter(fn ($e) => $e->date_prevue->lt(today()));
-        $facturees = $echeances->whereNotNull('facture_id')->sortByDesc('date_prevue');
+        $facturees = $echeances->diff($aFacturer)->sortByDesc('date_prevue');
 
         return $enRetard->concat($aFacturer->diff($enRetard))->concat($facturees)->map(fn (AbonnementEcheance $e) => [
             'id' => $e->id,
@@ -217,7 +270,10 @@ class AbonnementClientController extends Controller
             'client_id' => ['required', 'integer', TenantRule::exists('clients')->whereNull('deleted_at')],
             'produit_id' => ['required', 'integer', TenantRule::exists('produits')->whereNull('deleted_at')],
             'description' => ['nullable', 'string', 'max:500'],
-            'quantite' => ['required', 'integer', 'min:1', 'max:999999'],
+            // fixe : la quantité de l'abonnement ; releve : la consommation relevée sur la période (au-delà de l'incluse).
+            'mode_quantite' => ['nullable', Rule::in(['fixe', 'releve'])],
+            'quantite' => ['required_unless:mode_quantite,releve', 'nullable', 'integer', 'min:1', 'max:999999'],
+            'quantite_incluse' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'prix_fixe' => ['boolean'],
             'prix_unitaire' => ['nullable', 'required_if:prix_fixe,true', 'numeric', 'min:0', 'max:99999999'],
             'frequence' => ['required', Rule::in(array_keys(AbonnementsClients::FREQUENCES))],
@@ -243,11 +299,15 @@ class AbonnementClientController extends Controller
         // Au-delà du mois : mois de facturation (par défaut celui du début) et mois de début de période.
         $moisFacturation = $mensuel ? null : ($donnees['mois_facturation'] ?? Carbon::parse($donnees['date_debut'])->month);
 
+        $usage = ($donnees['mode_quantite'] ?? 'fixe') === 'releve';
+
         return [
             'client_id' => $donnees['client_id'],
             'produit_id' => $donnees['produit_id'],
             'description' => $donnees['description'] ?? null,
-            'quantite' => $donnees['quantite'],
+            'mode_quantite' => $usage ? 'releve' : 'fixe',
+            'quantite' => $usage ? 1 : $donnees['quantite'],
+            'quantite_incluse' => $usage ? ($donnees['quantite_incluse'] ?? 0) : 0,
             'prix_fixe' => (bool) ($donnees['prix_fixe'] ?? false),
             'prix_unitaire' => ($donnees['prix_fixe'] ?? false) ? $donnees['prix_unitaire'] : null,
             'frequence' => $donnees['frequence'],

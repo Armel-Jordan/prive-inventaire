@@ -665,6 +665,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}', [AbonnementClientController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [AbonnementClientController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/echeances/{echeanceId}/relier', [AbonnementClientController::class, 'relier'])->whereNumber(['id', 'echeanceId']);
+        // Facturation à l'usage : relevés de consommation (saisis ou importés).
+        Route::post('/releves/import', [AbonnementClientController::class, 'importerReleves']);
+        Route::get('/{id}/releves', [AbonnementClientController::class, 'releves'])->whereNumber('id');
+        Route::post('/{id}/releves', [AbonnementClientController::class, 'ajouterReleve'])->whereNumber('id');
+        Route::delete('/{id}/releves/{releveId}', [AbonnementClientController::class, 'supprimerReleve'])->whereNumber(['id', 'releveId']);
     });
 
     // Contrats de location : produits loués, prix de contrat et loyers, retours, renouvellement.

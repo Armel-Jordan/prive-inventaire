@@ -142,6 +142,10 @@ class Droits
         // Facturer les abonnements (créer les factures, aussi contrôlé par le contrôleur) ; relier une échéance.
         'POST api/abonnements-clients/facturer' => ['abonnements_clients', 'facturer'],
         'POST api/abonnements-clients/{id}/echeances/{echeanceId}/relier' => ['abonnements_clients', 'facturer'],
+        // Relevés de consommation : modifier l'abonnement.
+        'POST api/abonnements-clients/releves/import' => ['abonnements_clients', 'modifier'],
+        'POST api/abonnements-clients/{id}/releves' => ['abonnements_clients', 'modifier'],
+        'DELETE api/abonnements-clients/{id}/releves/{releveId}' => ['abonnements_clients', 'modifier'],
         // Contrats de location : facturer (prix de contrat, loyers ; droits des factures contrôlés aussi), renouveler.
         'POST api/contrats-location/{id}/facturer' => ['contrats_location', 'facturer'],
         'POST api/contrats-location/facturer-loyers' => ['contrats_location', 'facturer'],

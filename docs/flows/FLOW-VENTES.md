@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
+> Dernière mise à jour : 2026-10-17 — facturation à l'usage (§5.16) ; contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
 
 ---
 
@@ -1215,6 +1215,16 @@ La liste donne, pour chaque abonnement :
 - la numérotation automatique des factures doit être active.
 
 **Relier une échéance** à une facture faite à la main pour elle (une facture du même client) : elle n'est plus facturée. Une échéance déjà reliée ne se relie pas une seconde fois.
+
+**Facturation à l'usage** (« Quantité facturée : à l'usage ») : au lieu d'une quantité fixe, chaque échéance facture la consommation relevée sur sa période, au-delà de la **quantité incluse**. La période écoulée est alors proposée : facturer le 5 la consommation du mois précédent.
+- **Relevés :** une quantité consommée à une date, saisie dans la ligne dépliée de l'abonnement, ou importée d'un fichier CSV (« Importer des relevés »). Le fichier a pour colonnes client (code), produit (numéro), date (AAAA-MM-JJ ou JJ/MM/AAAA), quantité et note facultative ; le séparateur est ; , ou la tabulation. Chaque relevé va à l'abonnement à l'usage du client pour ce produit, en cours à cette date. L'import est tout ou rien : à la moindre erreur, rien n'est importé, et les erreurs sont listées avec leur numéro de ligne.
+- **Facturation :** quantité = somme des relevés datés dans la période, moins la quantité incluse.
+  - Consommation couverte par l'incluse : l'échéance se clôt **sans facture** (statut « Rien à facturer », compté « sans rien à facturer » dans le bilan).
+  - Aucun relevé sur la période : l'échéance attend, l'erreur « Relevé manquant pour … : période du … au … » est rapportée.
+- **Relevés figés :** un relevé dont la période est facturée (ou close) ne se retire plus. Une période facturée ne reçoit plus de relevé.
+- Facturée après coup, un abonnement n'a pas d'échéance pour une période finie avant son début (cela vaut aussi pour la quantité fixe).
+
+Routes : `GET`/`POST /abonnements-clients/{id}/releves`, `DELETE /abonnements-clients/{id}/releves/{releveId}`, `POST /abonnements-clients/releves/import` (`fichier`). Il faut le droit de modifier les abonnements ; la consultation est libre. Migration `2026_10_17_100050_facturation_a_l_usage` : `abonnements_clients.mode_quantite`, `quantite_incluse` ; table `abonnement_releves` ; `abonnement_echeances.rien_a_facturer`.
 
 **Tâche planifiée** `facturation_abonnements` (inactive par défaut) : chaque jour, elle facture les échéances dues à ce jour, en brouillon ou émises selon son paramètre (FLOW-TACHES-PLANIFIEES).
 
