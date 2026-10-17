@@ -130,3 +130,100 @@ export function modifierDebourse(id: number, donnees: { reference?: string | nul
 export function annulerDebourse(id: number, motif?: string | null): Promise<Debourse> {
   return apiFetch(`/debourses/${id}/annuler`, { method: 'POST', body: JSON.stringify({ motif: motif || null }), retries: 0 });
 }
+
+// === Paiements dus (plan de décaissement) ===
+
+/** Facture encore due : solde à la date du rapport, escompte encore offert à la date « payer le », net à payer. */
+export interface LignePaiementDu {
+  id: number;
+  numero: string;
+  numero_fournisseur: string | null;
+  fournisseur_id: number;
+  fournisseur: string;
+  devise: string | null;
+  taux_change: number;
+  date_facture: string;
+  date_echeance: string;
+  /** Retard à la date du rapport ; négatif : l'échéance est encore à venir. */
+  jours: number;
+  montant: number;
+  regle: number;
+  solde: number;
+  limite_escompte: string | null;
+  escompte: number;
+  net: number;
+}
+
+export interface TotauxPaiementsDus {
+  nombre: number;
+  montant: number;
+  regle: number;
+  solde: number;
+  escompte: number;
+  net: number;
+}
+
+export interface GroupePaiementsDus {
+  fournisseur_id: number;
+  fournisseur: string;
+  code_fournisseur: string;
+  devise: string | null;
+  factures: LignePaiementDu[];
+  totaux: TotauxPaiementsDus;
+}
+
+export interface RapportPaiementsDus {
+  date: string;
+  payer_le: string;
+  echeance_au: string;
+  groupes: GroupePaiementsDus[];
+  totaux_par_devise: (TotauxPaiementsDus & { devise: string | null })[];
+  total_entreprise: { solde: number; escompte: number; net: number };
+}
+
+export interface FiltresPaiementsDus {
+  date?: string;
+  payer_le?: string;
+  echeance_au?: string;
+  fournisseur_id?: number;
+  echus?: boolean;
+  escompte_seulement?: boolean;
+  inclure_soldees?: boolean;
+}
+
+function parametresPaiementsDus(filtres: FiltresPaiementsDus): URLSearchParams {
+  const parametres = new URLSearchParams();
+  Object.entries(filtres).forEach(([cle, valeur]) => {
+    if (valeur === undefined || valeur === null || valeur === '' || valeur === false) return;
+    parametres.set(cle, valeur === true ? '1' : String(valeur));
+  });
+  return parametres;
+}
+
+export function getPaiementsDus(filtres: FiltresPaiementsDus): Promise<RapportPaiementsDus> {
+  return apiFetch(`/debourses/paiements-dus?${parametresPaiementsDus(filtres)}`);
+}
+
+export async function exporterPaiementsDus(filtres: FiltresPaiementsDus): Promise<void> {
+  const parametres = parametresPaiementsDus(filtres);
+  parametres.set('format', 'csv');
+  const fichier = await apiFetch<Blob>(`/debourses/paiements-dus?${parametres}`, { responseType: 'blob', timeoutMs: 120000 });
+  const lien = document.createElement('a');
+  lien.href = URL.createObjectURL(fichier);
+  lien.download = `paiements-dus-${filtres.date ?? ''}.csv`;
+  lien.click();
+  setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+}
+
+/** Paie une sélection de factures en un geste : un déboursé par fournisseur et par devise. */
+export function payerSelection(donnees: {
+  factures: number[];
+  date_debourse: string;
+  mode: ModeDebourse;
+  reference?: string | null;
+  notes?: string | null;
+  /** Appliquer l'escompte encore offert à la date du paiement. */
+  escompte?: boolean;
+}): Promise<{ message: string; debourses: Debourse[] }> {
+  return apiFetch('/debourses/lot', { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
+}

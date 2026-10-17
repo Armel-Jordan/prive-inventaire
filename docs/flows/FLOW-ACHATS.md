@@ -804,7 +804,54 @@ Plan de parité fripv2, phase 4.5 (« Déboursé à un fournisseur ») : l'argen
 
 Code : services `App\Services\Debourses` et `AvisPaiementPdf`, `DebourseController`, vue `pdf/avis-paiement` ; web : page `DeboursesPage`, composants `debourses/FenetreDebourse` et `debourses/DetailDebourse`, service `src/services/debourses.ts` ; migration `2026_10_17_100064_creer_debourses` (tables `debourses`, `debourse_lignes`, colonnes `facture_fournisseur_paiements.escompte` et `.debourse_id`, `parametres_comptables.compte_escomptes_obtenus_id`, droits du module).
 
-À venir : le rapport des paiements dus et le paiement d'une sélection de factures en un geste, l'impression des chèques et les fichiers de paiement bancaires (phase 4.5).
+### Paiements dus (Achats → Paiements dus)
+
+Le plan de décaissement de fripv2 (« Paiements dus — comptes à payer ») : savoir quoi payer, quand, et combien on économise en payant tôt.
+
+**Deux dates, deux rôles** :
+- la **date du rapport** arrête les soldes : les factures et les paiements datés après elle sont ignorés ;
+- la date **Payer le** (ou **Dans N jours**) décide seulement quels escomptes sont encore accordés. Elle ne change aucun solde.
+
+**Filtres** :
+- **Échéance au** (aujourd'hui par défaut : le rapport s'ouvre sur ce qui est déjà dû) ; il n'y a volontairement pas de borne basse, pour garder les retards en vue ;
+- fournisseur ;
+- seulement ce qui est échu ;
+- seulement les factures dont l'escompte court encore ;
+- inclure les factures soldées.
+
+**Colonnes**, par facture :
+- **document** (notre numéro et celui du fournisseur), **date**, **échéance** (sans échéance : la date de la facture) ;
+- **jours** de retard à la date du rapport (négatif : l'échéance est à venir) ;
+- **montant** TTC ;
+- **réglé** : l'argent versé et les escomptes pris jusqu'à la date du rapport ;
+- **solde dû** ;
+- **limite d'escompte** ;
+- **escompte** accordé si l'on paie le jour choisi : le même calcul que pour un déboursé, jamais plus que le solde ;
+- **net à payer** : solde moins escompte, jamais sous zéro.
+
+**Regroupement** :
+- les factures sont groupées par fournisseur et par devise, avec un sous-total ;
+- un total par devise : les devises ne se mélangent jamais ;
+- quand il y a plusieurs devises, un total de contrôle dans la devise de l'entreprise ;
+- export CSV.
+
+**Payer la sélection** : les factures cochées se paient en un geste.
+- Date, mode, référence, et le choix d'appliquer les escomptes encore offerts.
+- **Un déboursé par fournisseur** (et par devise) règle le reste de chacune de ses factures choisies, moins son escompte.
+- **Tout ou rien** : une facture qui ne reste pas à payer refuse toute la sélection.
+
+**Droits** :
+- consulter le rapport demande de voir les déboursés ;
+- payer la sélection, de les saisir.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/debourses/paiements-dus` | Rapport (`date`, `payer_le`, `echeance_au`, `fournisseur_id`, `devise`, `echus`, `escompte_seulement`, `inclure_soldees` ; `format=csv`) |
+| POST | `/debourses/lot` | Payer une sélection (`factures[]`, `date_debourse`, `mode`, `reference`, `notes`, `escompte`) : un déboursé par fournisseur |
+
+Code : service `App\Services\PaiementsDus`, `Debourses::payerLot`, page `PaiementsDusPage`.
+
+À venir : l'impression des chèques et les fichiers de paiement bancaires viendront avec les comptes bancaires (phase 4.6).
 
 ---
 

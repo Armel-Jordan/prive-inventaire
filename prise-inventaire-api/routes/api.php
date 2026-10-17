@@ -553,6 +553,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('debourses')->middleware('module:achats')->group(function () {
         Route::get('/', [DebourseController::class, 'index']);
         Route::get('/a-payer', [DebourseController::class, 'aPayer']);
+        Route::get('/paiements-dus', [DebourseController::class, 'paiementsDus']);
+        Route::post('/lot', [DebourseController::class, 'payerLot']);
         Route::post('/', [DebourseController::class, 'store']);
         Route::get('/{id}', [DebourseController::class, 'show'])->whereNumber('id');
         Route::put('/{id}', [DebourseController::class, 'update'])->whereNumber('id');
