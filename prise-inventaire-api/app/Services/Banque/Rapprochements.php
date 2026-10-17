@@ -162,6 +162,23 @@ class Rapprochements
         return $this->detail($rapprochement->fresh());
     }
 
+    /**
+     * Pointe d'un geste les mouvements reliés aux opérations des relevés importés datées au plus tard du relevé (et
+     * pointables ici : datés au plus tard du relevé, pas pointés ailleurs). Renvoie le détail et le nombre pointé.
+     */
+    public function pointerReleve(RapprochementBancaire $rapprochement): array
+    {
+        $this->exigerEnCours($rapprochement);
+        $date = $rapprochement->date_releve->toDateString();
+        $relies = app(RelevesBancaires::class)->mouvementsRelies($rapprochement->compte_bancaire_id, $date);
+        $ids = EcritureComptableLigne::query()->whereIn('id', $relies)->whereNull('rapprochement_id')
+            ->where('compte_id', $rapprochement->compteBancaire->compte_comptable_id)
+            ->whereHas('ecriture', fn ($q) => $q->whereDate('date', '<=', $date))->pluck('id')->all();
+        $detail = $ids === [] ? $this->detail($rapprochement) : $this->pointer($rapprochement, $ids, true);
+
+        return $detail + ['pointes' => count($ids)];
+    }
+
     /** Termine un rapprochement en cours : l'écart avec le relevé doit être nul. */
     public function terminer(RapprochementBancaire $rapprochement, ?int $auteur): RapprochementBancaire
     {

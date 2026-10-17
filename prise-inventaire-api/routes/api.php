@@ -92,6 +92,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Banque\CompteBancaireController;
 use App\Http\Controllers\Banque\RapprochementBancaireController;
+use App\Http\Controllers\Banque\ReleveBancaireController;
 use App\Http\Controllers\Banque\TransactionBancaireController;
 use App\Http\Controllers\Comptabilite\ComptabilisationController;
 use App\Http\Controllers\Comptabilite\CompteComptableController;
@@ -1017,6 +1018,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/rapprochements/{id}/rouvrir', [RapprochementBancaireController::class, 'rouvrir'])->whereNumber('id');
         Route::delete('/rapprochements/{id}', [RapprochementBancaireController::class, 'destroy'])->whereNumber('id');
         Route::get('/rapprochements/{id}/pdf', [RapprochementBancaireController::class, 'pdf'])->whereNumber('id');
+        Route::post('/rapprochements/{id}/pointer-releve', [ReleveBancaireController::class, 'pointerRapprochement'])->whereNumber('id');
+        // Relevés importés (CSV, OFX, CAMT) : fichiers, opérations, liens aux mouvements, classement.
+        Route::get('/comptes/{id}/releve', [ReleveBancaireController::class, 'index'])->whereNumber('id');
+        Route::get('/comptes/{id}/releves', [ReleveBancaireController::class, 'imports'])->whereNumber('id');
+        Route::post('/comptes/{id}/releves', [ReleveBancaireController::class, 'store'])->whereNumber('id');
+        Route::delete('/releves/{releve}', [ReleveBancaireController::class, 'destroy'])->whereNumber('releve');
+        Route::post('/comptes/{id}/releve/relier-suggestions', [ReleveBancaireController::class, 'relierSuggestions'])->whereNumber('id');
+        Route::get('/releve-lignes/{ligne}/candidats', [ReleveBancaireController::class, 'candidats'])->whereNumber('ligne');
+        Route::post('/releve-lignes/{ligne}/relier', [ReleveBancaireController::class, 'relier'])->whereNumber('ligne');
+        Route::post('/releve-lignes/{ligne}/delier', [ReleveBancaireController::class, 'delier'])->whereNumber('ligne');
+        Route::post('/releve-lignes/{ligne}/exclure', [ReleveBancaireController::class, 'exclure'])->whereNumber('ligne');
+        Route::post('/releve-lignes/{ligne}/retablir', [ReleveBancaireController::class, 'retablir'])->whereNumber('ligne');
+        Route::post('/releve-lignes/{ligne}/classer', [ReleveBancaireController::class, 'classer'])->whereNumber('ligne');
     });
 
     // Mouvements d'inventaire et Localisations

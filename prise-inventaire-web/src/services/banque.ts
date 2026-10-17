@@ -217,3 +217,151 @@ export function rouvrirRapprochement(id: number): Promise<RapprochementBancaire>
 export function supprimerRapprochement(id: number): Promise<{ message: string }> {
   return apiFetch(`/banque/rapprochements/${id}`, { method: 'DELETE', retries: 0 });
 }
+
+export function pointerReleveRapprochement(id: number): Promise<DetailRapprochement & { pointes: number }> {
+  return apiFetch(`/banque/rapprochements/${id}/pointer-releve`, { method: 'POST', retries: 0 });
+}
+
+// === Relevés bancaires importés ===
+
+export type StatutOperationReleve = 'non_reliee' | 'partielle' | 'reliee' | 'exclue';
+export const STATUTS_OPERATION_RELEVE: StatutOperationReleve[] = ['non_reliee', 'partielle', 'reliee', 'exclue'];
+
+/** Mouvement du compte comptable relié à une opération du relevé. */
+export interface MouvementRelie {
+  id: number;
+  date: string;
+  numero: string;
+  journal: string;
+  libelle: string;
+  reference: string | null;
+  source: SourceEcriture;
+  /** Signé : positif quand l'argent entre. */
+  montant: number;
+}
+
+/** Mouvement libre qui peut correspondre à une opération. */
+export interface CandidatReleve extends Omit<MouvementRelie, 'montant'> {
+  /** Montant sans signe ; `signe` : positif quand l'argent entre. */
+  montant: number;
+  signe: number;
+}
+
+export interface OperationReleve {
+  id: number;
+  date_operation: string;
+  libelle: string;
+  reference: string | null;
+  /** Signé : positif quand l'argent entre sur le compte. */
+  montant: number;
+  statut: StatutOperationReleve;
+  motif_exclusion: string | null;
+  montant_relie: number;
+  mouvements: MouvementRelie[];
+  /** Meilleure correspondance proposée, jamais appliquée seule. */
+  suggestion?: CandidatReleve | null;
+}
+
+/** Colonnes du CSV de la banque, numérotées à partir de 1 ; mémorisées sur le compte au dernier import. */
+export interface ReglagesImportReleve {
+  colonne_date?: number;
+  colonne_libelle?: number;
+  colonne_montant?: number;
+  colonne_debit?: number;
+  colonne_credit?: number;
+  colonne_reference?: number;
+  ligne_debut?: number;
+  format_date?: 'jma' | 'amj' | 'mja';
+}
+
+export interface ReleveCompte {
+  import_reglages: ReglagesImportReleve | null;
+  du: string;
+  au: string;
+  lignes: OperationReleve[];
+  resume: Record<StatutOperationReleve, number> & { suggestions: number };
+}
+
+export type FormatReleve = 'csv' | 'ofx' | 'camt';
+
+export interface RapportImportReleve {
+  format: FormatReleve;
+  lues: number;
+  nouvelles: number;
+  doublons: number;
+  ignorees: { ligne: number; raison: string }[];
+  /** Somme signée des opérations nouvelles. */
+  total: number;
+  apercu: { date: string; libelle: string; reference: string | null; montant: number }[];
+  /** Null : aperçu seul, ou rien de nouveau. */
+  releve_id: number | null;
+}
+
+/** Fichier importé : un import sans opération reliée se supprime (colonnes mal réglées, mauvais compte). */
+export interface ImportReleve {
+  id: number;
+  fichier: string;
+  format: FormatReleve;
+  importe_le: string | null;
+  auteur: string | null;
+  /** Période couverte par ses opérations. */
+  du: string | null;
+  au: string | null;
+  nombre_lignes: number;
+  doublons: number;
+  reliees: number;
+}
+
+export function getImportsReleve(compteId: number): Promise<ImportReleve[]> {
+  return apiFetch(`/banque/comptes/${compteId}/releves`);
+}
+
+export function supprimerImportReleve(id: number): Promise<{ message: string }> {
+  return apiFetch(`/banque/releves/${id}`, { method: 'DELETE', retries: 0 });
+}
+
+export function getReleve(compteId: number, filtres: { du?: string; au?: string; statut?: StatutOperationReleve | '' } = {}): Promise<ReleveCompte> {
+  return apiFetch(`/banque/comptes/${compteId}/releve?${parametres(filtres)}`);
+}
+
+/** Importe un fichier CSV, OFX ou CAMT ; `simulation` : l'aperçu seul. */
+export function importerReleve(compteId: number, fichier: File, reglages: ReglagesImportReleve, simulation: boolean): Promise<RapportImportReleve> {
+  const formulaire = new FormData();
+  formulaire.append('fichier', fichier);
+  formulaire.append('simulation', simulation ? '1' : '0');
+  Object.entries(reglages).forEach(([cle, valeur]) => {
+    if (valeur !== undefined && valeur !== null && valeur !== '') formulaire.append(cle, String(valeur));
+  });
+  return apiFetch(`/banque/comptes/${compteId}/releves`, { method: 'POST', body: formulaire, retries: 0, timeoutMs: 120000 });
+}
+
+export function getCandidatsReleve(operationId: number, recherche?: string): Promise<CandidatReleve[]> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/candidats?${parametres({ recherche })}`);
+}
+
+export function relierOperation(operationId: number, lignes: number[]): Promise<OperationReleve> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/relier`, { method: 'POST', body: JSON.stringify({ lignes }), retries: 0 });
+}
+
+/** Retire un mouvement de l'opération, ou tous sans `ligne`. */
+export function delierOperation(operationId: number, ligne?: number): Promise<OperationReleve> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/delier`, { method: 'POST', body: JSON.stringify({ ligne: ligne ?? null }), retries: 0 });
+}
+
+export function exclureOperation(operationId: number, motif?: string | null): Promise<OperationReleve> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/exclure`, { method: 'POST', body: JSON.stringify({ motif: motif || null }), retries: 0 });
+}
+
+export function retablirOperation(operationId: number): Promise<OperationReleve> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/retablir`, { method: 'POST', retries: 0 });
+}
+
+/** Crée la transaction bancaire d'une opération sans mouvement, la passe au journal et la relie. */
+export function classerOperation(operationId: number, donnees: { compte_comptable_id: number; libelle?: string | null }): Promise<{ ligne: OperationReleve; transaction: TransactionBancaire; message: string }> {
+  return apiFetch(`/banque/releve-lignes/${operationId}/classer`, { method: 'POST', body: JSON.stringify(donnees), retries: 0 });
+}
+
+/** Applique toutes les meilleures correspondances proposées sur la période. */
+export function relierSuggestionsReleve(compteId: number, du?: string, au?: string): Promise<{ message: string; reliees: number }> {
+  return apiFetch(`/banque/comptes/${compteId}/releve/relier-suggestions?${parametres({ du, au })}`, { method: 'POST', retries: 0 });
+}

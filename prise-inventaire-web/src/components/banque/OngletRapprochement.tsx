@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCheck, RotateCcw, Trash2 } from 'lucide-react';
+import { CheckCheck, FileCheck2, RotateCcw, Trash2 } from 'lucide-react';
 import BoutonPdf from '@/components/BoutonPdf';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, formatDateDocument, formatDateHeure, useMontantDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
 import {
-  commencerRapprochement, getRapprochement, getRapprochements, modifierRapprochement, pointerMouvements, rouvrirRapprochement,
+  commencerRapprochement, getRapprochement, getRapprochements, modifierRapprochement, pointerMouvements, pointerReleveRapprochement, rouvrirRapprochement,
   supprimerRapprochement, terminerRapprochement, type CompteBanque, type DetailRapprochement, type RapprochementBancaire,
 } from '@/services/banque';
 
@@ -15,7 +15,8 @@ const classeChamp = 'px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:b
 /**
  * Rapprochement bancaire d'un compte relié : l'historique de ses relevés, un nouveau relevé (date, solde de fin), le
  * pointage des mouvements de son compte comptable jusqu'à la date du relevé, l'écart, la fin (écart nul), la
- * réouverture du dernier, la suppression d'un rapprochement en cours et le rapport PDF.
+ * réouverture du dernier, la suppression d'un rapprochement en cours et le rapport PDF. Les mouvements reliés au
+ * relevé importé (onglet Relevés) se pointent d'un geste.
  */
 export default function OngletRapprochement({ comptes }: { comptes: CompteBanque[] }) {
   const { t, language } = useLanguage();
@@ -32,6 +33,7 @@ export default function OngletRapprochement({ comptes }: { comptes: CompteBanque
   const [releve, setReleve] = useState({ date: aujourdhui(), solde: '' });
   const [nonPointes, setNonPointes] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [info, setInfo] = useState('');
   const [enCours, setEnCours] = useState(false);
 
   const chargerHistorique = useCallback(async (choisir = false) => {
@@ -61,6 +63,7 @@ export default function OngletRapprochement({ comptes }: { comptes: CompteBanque
   async function agir<T>(action: () => Promise<T>, apres?: (resultat: T) => void) {
     setEnCours(true);
     setErreur('');
+    setInfo('');
     try {
       const resultat = await action();
       apres?.(resultat);
@@ -106,6 +109,7 @@ export default function OngletRapprochement({ comptes }: { comptes: CompteBanque
         )}
       </div>
       <p className="text-xs text-gray-500">{tr.help}</p>
+      {info && <div role="status" className="px-3 py-2 rounded-lg text-sm bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-200">{info}</div>}
       {erreur && <div role="alert" className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200">{erreur}</div>}
 
       {detail && r && (
@@ -169,7 +173,10 @@ export default function OngletRapprochement({ comptes }: { comptes: CompteBanque
               <input type="checkbox" checked={nonPointes} onChange={e => setNonPointes(e.target.checked)} /> {tr.untickedOnly}
             </label>
             {modifiable && lignes.length > 0 && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={enCours} title={tr.tickLinkedHelp}
+                  onClick={() => agir(() => pointerReleveRapprochement(detail.rapprochement.id), d => { setDetail(d); setInfo(tr.tickedLinked.replace('{n}', String(d.pointes))); })}
+                  className="flex items-center gap-1 px-3 py-1 text-xs border border-blue-600 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40"><FileCheck2 size={12} /> {tr.tickLinked}</button>
                 <button type="button" disabled={enCours} onClick={() => agir(() => pointerMouvements(detail.rapprochement.id, lignes.filter(l => !l.pointee).map(l => l.id), true), setDetail)}
                   className="px-3 py-1 text-xs border rounded-lg dark:border-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40">{tr.tickAll}</button>
                 <button type="button" disabled={enCours} onClick={() => agir(() => pointerMouvements(detail.rapprochement.id, lignes.filter(l => l.pointee).map(l => l.id), false), setDetail)}

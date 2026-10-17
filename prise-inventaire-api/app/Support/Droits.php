@@ -241,6 +241,17 @@ class Droits
         'POST api/banque/rapprochements/{id}/terminer' => ['banque', 'rapprocher'],
         'POST api/banque/rapprochements/{id}/rouvrir' => ['banque', 'rapprocher'],
         'DELETE api/banque/rapprochements/{id}' => ['banque', 'rapprocher'],
+        'POST api/banque/rapprochements/{id}/pointer-releve' => ['banque', 'rapprocher'],
+        // Relevés importés : importer, relier, délier, exclure, rétablir (comme le rapprochement) ; classer crée une
+        // transaction bancaire.
+        'POST api/banque/comptes/{id}/releves' => ['banque', 'rapprocher'],
+        'DELETE api/banque/releves/{releve}' => ['banque', 'rapprocher'],
+        'POST api/banque/comptes/{id}/releve/relier-suggestions' => ['banque', 'rapprocher'],
+        'POST api/banque/releve-lignes/{ligne}/relier' => ['banque', 'rapprocher'],
+        'POST api/banque/releve-lignes/{ligne}/delier' => ['banque', 'rapprocher'],
+        'POST api/banque/releve-lignes/{ligne}/exclure' => ['banque', 'rapprocher'],
+        'POST api/banque/releve-lignes/{ligne}/retablir' => ['banque', 'rapprocher'],
+        'POST api/banque/releve-lignes/{ligne}/classer' => ['banque', 'saisir'],
         'POST api/retours-fournisseurs/{id}/cloturer' => ['retours_fournisseurs', 'cloturer'],
         'POST api/approbations/{id}/approve' => ['approbations', 'decider'],
         'POST api/approbations/{id}/reject' => ['approbations', 'decider'],
