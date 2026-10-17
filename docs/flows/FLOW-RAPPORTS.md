@@ -48,6 +48,8 @@ La période va par défaut du premier jour du mois à aujourd'hui ; une période
   l'utilisateur. Le PDF est en paysage au-delà de six colonnes.
 - **Langue** : les titres, paramètres, colonnes et libellés (statuts, modes de paiement) suivent la langue de l'écran,
   français ou anglais ; une semaine s'écrit `2026-S42` en français et `2026-W42` en anglais.
+- **Mes filtres** : les paramètres d'un rapport s'enregistrent sous un nom. Celui marqué par défaut s'applique à
+  l'ouverture du rapport (voir [FLOW-FILTRES-MEMORISES.md](./FLOW-FILTRES-MEMORISES.md)).
 
 ## Envoi par courriel
 

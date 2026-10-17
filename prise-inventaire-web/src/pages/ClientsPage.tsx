@@ -14,6 +14,8 @@ import type { Client, FicheReferentiel } from '../services/api';
 import { getReferentiel } from '../services/api';
 import { CelluleCodeClient, FiltresClients, type FiltresListeClients } from '@/components/fiche-client/ListeClientsFiche';
 import Pagination from '@/components/Pagination';
+import FiltresMemorises from '@/components/FiltresMemorises';
+import { texteFiltre } from '@/services/filtresMemorises';
 import { PastilleClientDePassage } from '@/components/ClientDePassage';
 import { signaler } from '@/lib/erreurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
@@ -216,7 +218,18 @@ export default function ClientsPage() {
             className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         </div>
-        <FiltresClients valeur={filtres} onChange={f => { setFiltres(f); setPage(1); }} />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <FiltresClients valeur={filtres} onChange={f => { setFiltres(f); setPage(1); }} />
+          {/* Filtres mémorisés : recherche, catégorie, favoris. */}
+          <div className="mt-3">
+            <FiltresMemorises ecran="clients" valeurs={{ recherche: search, categorie_id: filtres.categorie_id ?? null, favoris: filtres.favoris ?? null }}
+              onAppliquer={v => {
+                setSearch(texteFiltre(v.recherche));
+                setFiltres({ categorie_id: typeof v.categorie_id === 'number' ? v.categorie_id : undefined, favoris: v.favoris === true ? true : undefined });
+                setPage(1);
+              }} />
+          </div>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
