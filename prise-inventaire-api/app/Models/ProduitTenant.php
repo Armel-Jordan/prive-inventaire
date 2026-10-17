@@ -83,6 +83,12 @@ class ProduitTenant extends Model
         return $this->hasMany(ProduitCodeBarre::class, 'produit_id')->orderByDesc('principal')->orderBy('id');
     }
 
+    /** Unités de vente du produit (en plus de son unité de stock), celle par défaut d'abord, puis par facteur. */
+    public function unites(): HasMany
+    {
+        return $this->hasMany(ProduitUnite::class, 'produit_id')->orderByDesc('par_defaut')->orderBy('facteur')->orderBy('id');
+    }
+
     public function fournisseurPrincipal(): BelongsTo
     {
         return $this->belongsTo(Fournisseur::class, 'fournisseur_principal_id');

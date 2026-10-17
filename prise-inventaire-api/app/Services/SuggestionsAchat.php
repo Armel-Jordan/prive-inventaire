@@ -82,7 +82,8 @@ class SuggestionsAchat
                     }
                     SuggestionAchat::create([
                         'produit_id' => $reliquat->produit_id, 'fournisseur_id' => $fournisseur, 'source' => 'reliquat',
-                        'reliquat_id' => $reliquat->id, 'quantite_suggeree' => $reliquat->quantite, 'statut' => SuggestionAchat::EN_ATTENTE,
+                        // En unités de stock : un reliquat de 2 caisses de 12 en suggère 24.
+                        'reliquat_id' => $reliquat->id, 'quantite_suggeree' => ReliquatsClients::enStock([$reliquat]), 'statut' => SuggestionAchat::EN_ATTENTE,
                     ]);
                     $nombre++;
                 }

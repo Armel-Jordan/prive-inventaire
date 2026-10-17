@@ -328,6 +328,12 @@ class RetoursFournisseurs
                 if (! $ligne) {
                     throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => "Cette ligne n'appartient pas au retour client {$retourClient->numero}."]);
                 }
+                // Un retour fournisseur se compte en unités de stock : une ligne rapportée dans une autre unité (la
+                // caisse de 12) ne s'y relie pas.
+                if ($ligne->facteur !== null) {
+                    $produit = $ligne->produit;
+                    throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => "{$produit?->numero} a été rapporté en {$ligne->unite} : faites ce retour au fournisseur sans le relier au retour client, en {$produit?->mesure}."]);
+                }
                 $produitId = $ligne->produit_id;
                 $origine['retour_client_ligne_id'] = $ligne->id;
             } else {

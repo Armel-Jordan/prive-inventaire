@@ -15,6 +15,7 @@ use App\Services\FacturesVente;
 use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
 use App\Services\TaxesDocument;
+use App\Services\UnitesProduits;
 use App\Support\Droits;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -67,9 +68,12 @@ class DevisController extends Controller
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
+            'lignes.*.unite' => 'nullable|string|max:20',
             ...DevisesVente::regles(),
             ...ClientsDePassage::regles(),
         ]);
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise.
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
 
@@ -99,6 +103,8 @@ class DevisController extends Controller
                     'quantite' => $ligne['quantite'],
                     'prix_unitaire' => $ligne['prix_unitaire'],
                     'montant_ligne' => $ligne['quantite'] * $ligne['prix_unitaire'],
+                    'unite' => $ligne['unite'],
+                    'facteur' => $ligne['facteur'],
                 ]);
             }
 
@@ -133,8 +139,10 @@ class DevisController extends Controller
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
         ]);
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
 
         DB::transaction(function () use ($validated, $devis) {
             $devis->update(app(ClientsDePassage::class)->pourModification($validated, $devis, Client::find($validated['client_id'])) + [
@@ -153,6 +161,8 @@ class DevisController extends Controller
                     'quantite' => $ligne['quantite'],
                     'prix_unitaire' => $ligne['prix_unitaire'],
                     'montant_ligne' => $ligne['quantite'] * $ligne['prix_unitaire'],
+                    'unite' => $ligne['unite'],
+                    'facteur' => $ligne['facteur'],
                 ];
                 if (isset($ligne['id'])) {
                     // Scoper au devis courant (tenant-scopé) : empêche de modifier la ligne d'un autre tenant par id.
@@ -284,6 +294,9 @@ class DevisController extends Controller
                     'prix_unitaire_ht' => $ligne->prix_unitaire,
                     'taux_tva' => TauxTaxe::parDefaut(),
                     'remise_ligne' => 0,
+                    // Même unité de vente, au facteur du devis.
+                    'unite' => $ligne->unite,
+                    'facteur' => $ligne->facteur,
                 ]);
                 $ligneCommande->calculerMontants();
                 $detail = $this->taxes->appliquer($ligneCommande, $this->taxes->groupePour(['produit_id' => $ligne->produit_id]));
@@ -362,6 +375,8 @@ class DevisController extends Controller
                     'produit_id' => $ligne->produit_id,
                     'quantite' => $ligne->quantite,
                     'prix_unitaire_ht' => $ligne->prix_unitaire,
+                    'unite' => $ligne->unite,
+                    'facteur' => $ligne->facteur,
                 ])->all(),
             ], $devis->tenant_id);
             $verrouille->update(['facture_id' => $facture->id]);
@@ -408,6 +423,8 @@ class DevisController extends Controller
                     'quantite' => $ligne->quantite,
                     'prix_unitaire' => $ligne->prix_unitaire,
                     'montant_ligne' => $ligne->quantite * $ligne->prix_unitaire,
+                    'unite' => $ligne->unite,
+                    'facteur' => $ligne->facteur,
                 ]);
             }
             $copie->recalculerTotal();

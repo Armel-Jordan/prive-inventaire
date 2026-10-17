@@ -77,7 +77,7 @@ class ReliquatClientController extends Controller
     /** Lignes d'une commande client, avec ce qui en est déjà en reliquat. */
     public function lignesCommande(int $commandeId): JsonResponse
     {
-        $commande = ComClientEntete::with(['client:id,code,raison_sociale', 'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description')])->findOrFail($commandeId);
+        $commande = ComClientEntete::with(['client:id,code,raison_sociale', 'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure')])->findOrFail($commandeId);
         $deja = ReliquatClient::where('commande_client_id', $commande->id)->where('statut', '!=', ReliquatClient::ANNULE)
             ->selectRaw('commande_client_ligne_id, SUM(quantite) AS quantite')->groupBy('commande_client_ligne_id')->pluck('quantite', 'commande_client_ligne_id');
 
@@ -86,8 +86,11 @@ class ReliquatClientController extends Controller
             'possible' => in_array($commande->statut, ReliquatsClients::COMMANDES_SOURCES, true),
             'lignes' => $commande->lignes->map(fn ($l) => [
                 'ligne_id' => $l->id,
-                'produit' => $l->produit?->only(['id', 'numero', 'description']),
+                'produit' => $l->produit?->only(['id', 'numero', 'description', 'mesure']),
+                // Quantités dans l'unité de la ligne (vide : l'unité de stock) ; facteur : unités de stock dans une unité.
                 'quantite' => (int) $l->quantite,
+                'unite' => $l->unite,
+                'facteur' => $l->facteur,
                 'deja_en_reliquat' => (int) ($deja[$l->id] ?? 0),
                 'prix_unitaire_ht' => (float) $l->prix_unitaire_ht,
             ])->values(),

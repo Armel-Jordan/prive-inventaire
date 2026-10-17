@@ -38,7 +38,9 @@ import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
 import OriginePrix from '@/components/OriginePrix';
-import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { prixUnite, uniteParDefaut } from '@/lib/unitesVente';
+import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 
@@ -142,11 +144,10 @@ export default function CommandesClientPage() {
       // À la création : toujours envoyée (la devise de l'entreprise l'emporte alors sur celle du client).
       devise: formData.devise || deviseEntreprise,
       taux_change: formData.devise ? Number(formData.taux) : undefined,
-      lignes: [...lignes, ...frais.lignes].map(l => ({
-        produit_id: l.produit_id,
-        quantite: l.quantite,
-        prix_unitaire_ht: l.prix_unitaire_ht,
-      })),
+      lignes: [
+        ...lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, unite: l.unite ?? null })),
+        ...frais.lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })),
+      ],
       // Retenues par l'API pour le client de passage seulement.
       ...passage,
     };
@@ -184,6 +185,7 @@ export default function CommandesClientPage() {
         produit_id: l.produit_id,
         quantite: l.quantite,
         prix_unitaire_ht: parseFloat(l.prix_unitaire_ht),
+        unite: l.unite ?? null,
       }))
     );
     setShowModal(true);
@@ -258,11 +260,16 @@ export default function CommandesClientPage() {
       if (field === 'prix_unitaire_ht') return saisirPrix(ligne, 'prix_unitaire_ht', value);
       if (field === 'quantite') return { ...ligne, quantite: value };
       // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour une commande en devise étrangère),
-      // remplacé ensuite par celui du client.
+      // remplacé ensuite par celui du client ; dans l'unité de vente proposée d'office pour ce produit.
       const produit = produits.find(p => p.id === value);
-      return choisirProduit(ligne, value, 'prix_unitaire_ht', dansLaDevise(Number(produit?.prix_unitaire) || 0, formData.devise, Number(formData.taux)));
+      const unite = uniteParDefaut(produit);
+      return { ...choisirProduit(ligne, value, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), formData.devise, Number(formData.taux))), unite };
     }));
   };
+
+  // Unité de la ligne : le prix de cette unité est proposé, sauf prix saisi.
+  const changerUniteLigne = (index: number, unite: string | null) => setLignes(ls => ls.map((ligne, i) => (i !== index ? ligne
+    : changerUnite(ligne, unite, 'prix_unitaire_ht', dansLaDevise(prixUnite(produits.find(p => p.id === ligne.produit_id), unite), formData.devise, Number(formData.taux))))));
 
   const removeLigne = (index: number) => {
     setLignes(lignes.filter((_, i) => i !== index));
@@ -591,6 +598,8 @@ export default function CommandesClientPage() {
                           className="w-20 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           placeholder="Qté"
                         />
+                        <ChoixUnite produit={produits.find(p => p.id === ligne.produit_id)} valeur={ligne.unite} onChange={u => changerUniteLigne(idx, u)}
+                          libelle={t.productUnits.lineUnit.replace('{n}', String(idx + 1))} />
                         <input
                           type="number"
                           step="0.01"

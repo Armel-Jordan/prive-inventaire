@@ -37,6 +37,20 @@ export interface Produit {
   volume_m3?: number | string | null;
   /** Codes-barres du produit (le principal d'abord). */
   codes_barres?: { id: number; code: string; type: string; quantite: string; principal: boolean }[];
+  /** Unités de vente du produit en plus de son unité de stock (`mesure`), celle par défaut d'abord. */
+  unites?: UniteVenteProduit[];
+}
+
+/** Unité de vente d'un produit : unités de stock dans une unité (facteur), prix propre éventuel, unité par défaut. */
+export interface UniteVenteProduit {
+  id: number;
+  unite_id: number;
+  code: string;
+  libelle: string | null;
+  facteur: number;
+  /** Vide : le prix du produit multiplié par le facteur. */
+  prix: number | null;
+  par_defaut: boolean;
 }
 
 export interface Secteur {

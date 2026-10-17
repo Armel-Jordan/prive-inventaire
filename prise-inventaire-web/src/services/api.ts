@@ -1189,6 +1189,9 @@ export interface ComClientLigne {
   com_entete_id: number;
   produit_id: number;
   quantite: number;
+  /** Unité de vente de la ligne (la caisse de 12) et son facteur ; vides : l'unité de stock. */
+  unite?: string | null;
+  facteur?: number | null;
   prix_unitaire_ht: number;
   taux_tva: number;
   remise_ligne: number;
@@ -1244,6 +1247,9 @@ export interface FactureLigne {
   produit_id: number;
   produit?: ProduitLigne;
   quantite: number;
+  /** Unité de vente de la ligne (la caisse de 12) et son facteur ; vides : l'unité de stock. */
+  unite?: string | null;
+  facteur?: number | null;
   prix_unitaire_ht: number;
   taux_tva: number;
   montant_ht: number;
@@ -1292,6 +1298,8 @@ export interface BonLivraisonLigne {
   quantite_a_livrer: number;
   quantite_preparee: number;
   quantite_livree: number;
+  /** Unité de la ligne (celle facturée : la caisse de 12) ; vide : l'unité de stock. */
+  unite?: string | null;
   statut_ligne: 'a_preparer' | 'en_cours' | 'prepare' | 'charge' | 'livre';
 }
 
@@ -1879,6 +1887,9 @@ export interface PrixCalcule {
   origine: 'base' | 'liste' | 'remise_client' | 'regle';
   regle: { id: number; libelle: string } | null;
   candidats: { origine: PrixCalcule['origine']; libelle: string | null; prix: number | null; regle_id?: number }[];
+  /** Unité de vente de la ligne (la caisse de 12) et son facteur ; absents : l'unité de stock du produit. */
+  unite?: string | null;
+  facteur?: number | null;
 }
 
 export async function getListesPrix(): Promise<ListePrix[]> {
@@ -1925,7 +1936,7 @@ export async function supprimerReglePrix(id: number): Promise<void> {
   await fetchApi(`/regles-prix/${id}`, { method: 'DELETE' });
 }
 
-export async function calculerPrix(donnees: { client_id?: number; date?: string; lignes: { produit_id: number; quantite?: number }[] }): Promise<PrixCalcule[]> {
+export async function calculerPrix(donnees: { client_id?: number; date?: string; lignes: { produit_id: number; quantite?: number; unite?: string | null }[] }): Promise<PrixCalcule[]> {
   return fetchApi('/prix/calculer', { method: 'POST', body: JSON.stringify(donnees) });
 }
 
@@ -2328,6 +2339,9 @@ export interface DevisLigne {
   produit_id: number;
   produit?: { id: number; numero: string; description: string };
   quantite: number;
+  /** Unité de vente de la ligne (la caisse de 12) et son facteur ; vides : l'unité de stock. */
+  unite?: string | null;
+  facteur?: number | null;
   prix_unitaire: number;
   montant_ligne: number;
 }

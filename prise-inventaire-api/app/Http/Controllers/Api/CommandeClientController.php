@@ -13,6 +13,7 @@ use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\TaxesDocument;
+use App\Services\UnitesProduits;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -72,9 +73,12 @@ class CommandeClientController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
+            'lignes.*.unite' => 'nullable|string|max:20',
             ...DevisesVente::regles(),
             ...ClientsDePassage::regles(),
         ]);
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise.
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
 
@@ -105,6 +109,8 @@ class CommandeClientController extends Controller
                     'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
                     'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                     'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
+                    'unite' => $ligneData['unite'],
+                    'facteur' => $ligneData['facteur'],
                 ]);
                 $ligne->calculerMontants();
                 $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
@@ -142,8 +148,12 @@ class CommandeClientController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
         ]);
+        if (isset($validated['lignes'])) {
+            $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
+        }
 
         DB::transaction(function () use ($commande, $validated) {
             // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
@@ -167,6 +177,8 @@ class CommandeClientController extends Controller
                         'prix_unitaire_ht' => $ligneData['prix_unitaire_ht'],
                         'taux_tva' => $ligneData['taux_tva'] ?? TauxTaxe::parDefaut(),
                         'remise_ligne' => $ligneData['remise_ligne'] ?? 0,
+                        'unite' => $ligneData['unite'],
+                        'facteur' => $ligneData['facteur'],
                     ]);
                     $ligne->calculerMontants();
                     $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
@@ -221,17 +233,19 @@ class CommandeClientController extends Controller
             $commande->save();
 
             foreach ($commande->lignes as $ligne) {
+                // En unités de stock (une caisse de 12 réserve 12 unités).
+                $quantite = (int) round($ligne->quantite * $ligne->facteurStock());
                 MouvementVente::creerMouvement(
                     $ligne->produit_id,
                     'reservation',
-                    $ligne->quantite,
+                    $quantite,
                     null, null, null, null,
                     'commande', $commande->id,
                     "Réservation pour commande {$commande->numero}",
                     $request->user()?->id
                 );
 
-                ProduitLocalisation::reserver($ligne->produit_id, $ligne->quantite, $commande->id);
+                ProduitLocalisation::reserver($ligne->produit_id, $quantite, $commande->id);
             }
         });
         // Produits dont le stock ne couvre pas les commandes acceptées (celle-ci comprise) : l'écran propose de noter

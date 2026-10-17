@@ -99,6 +99,9 @@ class ReliquatsClients
             'date_requise' => $commande->date_livraison_souhaitee,
             'statut' => ReliquatClient::CREE,
             'cree_par' => $auteur,
+            // Dans l'unité de la ligne commandée (2 caisses restent 2 caisses, à leur prix).
+            'unite' => $s[0]->unite,
+            'facteur' => $s[0]->facteur,
         ])));
     }
 
@@ -171,7 +174,8 @@ class ReliquatsClients
                 ]);
                 foreach ($groupe->groupBy('produit_id') as $produitId => $duProduit) {
                     $produit = ProduitTenant::withTrashed()->find($produitId);
-                    $quantite = (int) $duProduit->sum('quantite');
+                    // En unités de stock : un reliquat de 2 caisses de 12 commande 24 unités.
+                    $quantite = self::enStock($duProduit);
                     $prix = $this->dernierPrix((int) $produitId, $fiche->id);
                     $ligne = ComFourLigne::create([
                         'com_four_entete_id' => $commande->id,
@@ -193,24 +197,46 @@ class ReliquatsClients
         });
     }
 
-    /** Réception d'une ligne fournisseur : répartie sur ses reliquats, du plus ancien au plus récent. */
+    /**
+     * Réception d'une ligne fournisseur : répartie sur ses reliquats, du plus ancien au plus récent. Un reliquat dans
+     * une autre unité (la caisse de 12) ne reçoit que des unités entières : 18 unités reçues en donnent 1 caisse, les 6
+     * autres attendent la réception suivante. La ligne a déjà compté la réception ($quantite) dans ce qu'elle a reçu.
+     */
     public function recevoir(ComFourLigne $ligne, int $quantite): void
     {
-        $reste = $quantite;
-        $reliquats = ReliquatClient::withoutGlobalScopes()->where('com_four_ligne_id', $ligne->id)
-            ->whereIn('statut', [ReliquatClient::COMMANDE, ReliquatClient::RECU_PARTIEL])->orderBy('id')->get();
+        $lies = ReliquatClient::withoutGlobalScopes()->where('com_four_ligne_id', $ligne->id)->where('statut', '!=', ReliquatClient::ANNULE)
+            ->orderBy('id')->get();
+        // Reçu par la ligne et pas encore attribué à ses reliquats, en unités de stock.
+        $reste = (float) $ligne->quantite_recue - $lies->sum(fn (ReliquatClient $r) => (float) $r->quantite_recue * $r->facteurStock());
+        $reliquats = $lies->whereIn('statut', [ReliquatClient::COMMANDE, ReliquatClient::RECU_PARTIEL]);
         foreach ($reliquats as $reliquat) {
             if ($reste <= 0) {
                 break;
             }
-            $part = min($reste, $reliquat->quantite - $reliquat->quantite_recue);
+            $facteur = $reliquat->facteurStock();
+            $part = min((int) floor($reste / $facteur + 1e-9), $reliquat->quantite - $reliquat->quantite_recue);
             if ($part <= 0) {
                 continue;
             }
-            $reste -= $part;
+            $reste -= $part * $facteur;
             $recue = $reliquat->quantite_recue + $part;
             $reliquat->update(['quantite_recue' => $recue, 'statut' => $recue >= $reliquat->quantite ? ReliquatClient::RECU : ReliquatClient::RECU_PARTIEL]);
         }
+    }
+
+    /**
+     * Quantité de reliquats en unités de stock (chacun multiplié par son facteur), arrondie à l'unité supérieure.
+     *
+     * @param  iterable<ReliquatClient>  $reliquats
+     */
+    public static function enStock(iterable $reliquats, string $champ = 'quantite'): int
+    {
+        $total = 0.0;
+        foreach ($reliquats as $reliquat) {
+            $total += (float) $reliquat->{$champ} * $reliquat->facteurStock();
+        }
+
+        return (int) ceil(round($total, 6));
     }
 
     /**
@@ -266,13 +292,15 @@ class ReliquatsClients
         $reliquats = ReliquatClient::withoutGlobalScopes()->where('com_four_ligne_id', $ligne->id)
             ->whereIn('statut', [ReliquatClient::RECU_PARTIEL, ReliquatClient::RECU, ReliquatClient::FACTURE])
             ->orderByDesc('id')->get();
-        $exces = (int) $reliquats->sum('quantite_recue') - max(0, (int) $ligne->quantite_recue);
+        // En unités de stock : les reliquats dans une autre unité comptent leur facteur.
+        $exces = self::enStock($reliquats, 'quantite_recue') - max(0, (int) $ligne->quantite_recue);
         foreach ($reliquats->where('statut', '!=', ReliquatClient::FACTURE) as $reliquat) {
             if ($exces <= 0) {
                 return;
             }
-            $part = min($exces, (int) $reliquat->quantite_recue);
-            $exces -= $part;
+            $facteur = $reliquat->facteurStock();
+            $part = min((int) ceil($exces / $facteur - 1e-9), (int) $reliquat->quantite_recue);
+            $exces -= $part * $facteur;
             $recue = $reliquat->quantite_recue - $part;
             $reliquat->update(['quantite_recue' => $recue, 'statut' => $recue > 0 ? ReliquatClient::RECU_PARTIEL : ReliquatClient::COMMANDE]);
         }
@@ -319,6 +347,9 @@ class ReliquatsClients
                         'quantite' => $r->quantite_recue,
                         'prix_unitaire_ht' => (float) $r->prix_unitaire_ht,
                         'remise_ligne' => (float) $r->remise_ligne,
+                        // Facturé dans l'unité du reliquat.
+                        'unite' => $r->unite,
+                        'facteur' => $r->facteur,
                     ])->values()->all(),
                 ], $tenantId);
                 ReliquatClient::whereIn('id', $groupe->pluck('id'))->update(['statut' => ReliquatClient::FACTURE, 'facture_id' => $facture->id]);

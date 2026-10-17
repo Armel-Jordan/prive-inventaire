@@ -2,19 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AUneUnite;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ComClientLigne extends Model
 {
-    use HasFactory;
+    use AUneUnite, HasFactory;
 
     protected $table = 'com_client_ligne';
 
     protected $fillable = [
         'com_entete_id', 'produit_id', 'quantite', 'prix_unitaire_ht',
         'taux_tva', 'groupe_taxe_id', 'remise_ligne', 'montant_ht', 'montant_ttc',
+        // Unité de la ligne et son facteur (unités de stock dans une unité) ; vides : l'unité de stock.
+        'unite', 'facteur',
     ];
 
     protected $casts = [
@@ -24,6 +27,7 @@ class ComClientLigne extends Model
         'remise_ligne' => 'decimal:2',
         'montant_ht' => 'decimal:2',
         'montant_ttc' => 'decimal:2',
+        'facteur' => 'float',
     ];
 
     // Taux appliqué quand la ligne n'en précise pas (saisie directe ou conversion d'un devis).

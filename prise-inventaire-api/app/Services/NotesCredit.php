@@ -73,6 +73,8 @@ class NotesCredit
                     'produit_id' => $ligne->produit_id,
                     'produit' => $ligne->produit?->only(['id', 'numero', 'description', 'mesure']),
                     'quantite_facturee' => (int) $ligne->quantite,
+                    // Unité facturée (la caisse de 12) ; vide : l'unité de stock.
+                    'unite' => $ligne->unite,
                     'prix_unitaire_ht' => (float) $ligne->prix_unitaire_ht,
                     'remise_ligne' => (float) $ligne->remise_ligne,
                     'taux_tva' => (float) $ligne->taux_tva,
@@ -295,6 +297,9 @@ class NotesCredit
                 'facture_ligne_id' => $ligne->id,
                 'produit_id' => $ligne->produit_id,
                 'quantite' => $quantite,
+                // Créditée dans l'unité facturée.
+                'unite' => $ligne->unite,
+                'facteur' => $ligne->facteur,
                 'prix_unitaire_ht' => $prix,
                 'taux_tva' => (float) $ligne->taux_tva,
                 'groupe_taxe_id' => $ligne->groupe_taxe_id,

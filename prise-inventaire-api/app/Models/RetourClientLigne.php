@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AUneUnite;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** Produit retourné : quantité, raison, et ce qu'on en fait (remise en stock dans un secteur, ou rebut). */
 class RetourClientLigne extends Model
 {
+    use AUneUnite;
+
     public const REMISE_EN_STOCK = 'remise_en_stock';
 
     public const REBUT = 'rebut';
@@ -19,10 +22,13 @@ class RetourClientLigne extends Model
     protected $fillable = [
         'retour_client_id', 'facture_ligne_id', 'produit_id', 'quantite', 'raison_id', 'traitement', 'secteur_id',
         'mouvement_id', 'notes',
+        // Unité de la ligne et son facteur (unités de stock dans une unité) ; vides : l'unité de stock.
+        'unite', 'facteur',
     ];
 
     protected $casts = [
         'quantite' => 'integer',
+        'facteur' => 'float',
     ];
 
     public function retour(): BelongsTo

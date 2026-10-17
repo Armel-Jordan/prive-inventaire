@@ -56,8 +56,9 @@ class MatieresDangereusesPdf
                     'bon' => $bon->numero,
                     'client' => $bon->facture?->client?->raison_sociale,
                     'quantite' => $quantite,
-                    'unite' => $produit->mesure,
-                    'masse_kg' => $produit->poids_kg !== null ? round($quantite * (float) $produit->poids_kg, 2) : null,
+                    // Unité de la ligne (la caisse de 12) ; la masse compte les unités de stock qu'elle contient.
+                    'unite' => $ligne->unite ?? $produit->mesure,
+                    'masse_kg' => $produit->poids_kg !== null ? round($quantite * $ligne->facteurStock() * (float) $produit->poids_kg, 2) : null,
                 ];
             })->filter();
         })->values();
