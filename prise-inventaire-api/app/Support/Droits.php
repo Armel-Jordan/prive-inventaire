@@ -149,6 +149,9 @@ class Droits
         'POST api/devis/{devis}/refuser' => ['devis', 'decider'],
         'POST api/devis/{devis}/convertir' => ['devis', 'convertir'],
         'POST api/devis/{devis}/lien-reponse' => ['devis', 'envoyer'],
+        // Facturer un devis demande aussi le droit de créer une facture (vérifié par le contrôleur).
+        'POST api/devis/{devis}/facturer' => ['devis', 'convertir'],
+        'POST api/devis/{devis}/copier' => ['devis', 'creer'],
         'POST api/bons-livraison/{id}/preparer' => ['bons_livraison', 'preparer'],
         'POST api/bons-livraison/{id}/pret' => ['bons_livraison', 'preparer'],
         'POST api/bons-livraison/{id}/livrer' => ['bons_livraison', 'livrer'],

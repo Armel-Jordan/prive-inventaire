@@ -24,6 +24,8 @@ class Devis extends Model
         'notes',
         'created_by',
         'commande_id',
+        // Facture issue du devis, converti directement (sans commande).
+        'facture_id',
         'devise',
         'taux_change',
         // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
@@ -78,6 +80,12 @@ class Devis extends Model
     public function commande(): BelongsTo
     {
         return $this->belongsTo(ComClientEntete::class, 'commande_id');
+    }
+
+    /** Facture issue du devis converti directement, sans commande. */
+    public function facture(): BelongsTo
+    {
+        return $this->belongsTo(Facture::class, 'facture_id');
     }
 
     /** Devis envoyé dont la date de validité est passée. */

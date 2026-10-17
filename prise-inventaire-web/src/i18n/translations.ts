@@ -969,6 +969,15 @@ export const translations = {
       deleted: 'Demande supprimée.',
       deposit: 'Acompte',
     },
+    // Devis : facturer directement, copier
+    quoteActions: {
+      invoice: 'Facturer',
+      invoiceHelp: 'Facturer le devis accepté directement, sans commande',
+      confirmInvoice: 'Facturer le devis {numero} ? Une facture brouillon est créée avec ses lignes, ses prix et sa devise.',
+      invoicedAs: 'Facture issue de ce devis',
+      copy: 'Copier',
+      copyHelp: 'Copier en nouveau devis brouillon, daté du jour',
+    },
     // Réponse en ligne aux devis (lien vers le site de l'espace client)
     quoteAnswer: {
       shareLink: 'Lien de réponse',
@@ -3573,6 +3582,15 @@ export const translations = {
       confirmDelete: 'Delete this request?',
       deleted: 'Request deleted.',
       deposit: 'Deposit',
+    },
+    // Quotes: invoice directly, copy
+    quoteActions: {
+      invoice: 'Invoice',
+      invoiceHelp: 'Invoice the accepted quote directly, without an order',
+      confirmInvoice: 'Invoice quote {numero}? A draft invoice is created with its lines, prices and currency.',
+      invoicedAs: 'Invoice created from this quote',
+      copy: 'Copy',
+      copyHelp: 'Copy into a new draft quote, dated today',
     },
     // Online answers to quotes (link to the client site)
     quoteAnswer: {
