@@ -88,6 +88,7 @@ use App\Http\Controllers\Api\ZonePreparationController;
 use App\Http\Controllers\ApprobationController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Comptabilite\ComptabilisationController;
 use App\Http\Controllers\Comptabilite\CompteComptableController;
 use App\Http\Controllers\Comptabilite\EcritureComptableController;
 use App\Http\Controllers\Comptabilite\EtatComptableController;
@@ -933,6 +934,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/etats/resultat', [EtatComptableController::class, 'compteResultat']);
         Route::get('/soldes-ouverture', [EtatComptableController::class, 'soldesOuverture']);
         Route::get('/recurrences', [RecurrenceComptableController::class, 'index']);
+        Route::get('/comptabilisation/parametres', [ComptabilisationController::class, 'parametres']);
+        Route::get('/comptabilisation/apercu', [ComptabilisationController::class, 'apercu']);
 
         // Écritures : permissions de la comptabilité (saisir des écritures, plan et exercices, clôturer), voir
         // App\Support\Droits. Lectures : droit de consulter la comptabilité, et de voir les états.
@@ -946,6 +949,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Écritures récurrentes : planifier la répétition d'une écriture manuelle, convertir les dates échues.
         Route::post('/ecritures/{id}/recurrence', [RecurrenceComptableController::class, 'store'])->whereNumber('id');
         Route::post('/recurrences/convertir', [RecurrenceComptableController::class, 'convertir']);
+        // Comptabilisation automatique des ventes, des achats et des paiements : réglages et lancement.
+        Route::put('/comptabilisation/parametres', [ComptabilisationController::class, 'enregistrerParametres']);
+        Route::post('/comptabilisation', [ComptabilisationController::class, 'comptabiliser']);
         Route::put('/recurrences/{id}', [RecurrenceComptableController::class, 'update'])->whereNumber('id');
         Route::delete('/recurrences/{id}', [RecurrenceComptableController::class, 'destroy'])->whereNumber('id');
         Route::put('/soldes-ouverture', [EtatComptableController::class, 'enregistrerSoldesOuverture']);

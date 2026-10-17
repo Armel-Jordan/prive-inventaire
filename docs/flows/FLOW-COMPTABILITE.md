@@ -17,7 +17,8 @@ Une comptabilité en partie double, dans le module **Finance** :
 - **Plan comptable** (**Finance → Plan comptable**) : les comptes de l'entreprise et leur hiérarchie.
 - **Exercices comptables** (**Finance → Exercices comptables**) : les années financières et leurs périodes ; de là, les **soldes d'ouverture**.
 - **Journal comptable** (**Finance → Journal comptable**) : les écritures, classées par journal.
-- **Écritures récurrentes** (**Finance → Écritures récurrentes**) : les écritures manuelles répétées à intervalle régulier (§4 bis).
+- **Écritures récurrentes** (**Finance → Écritures récurrentes**) : les écritures manuelles répétées à intervalle régulier.
+- **Comptabilisation automatique** (**Finance → Comptabilisation automatique**) : les ventes, les achats et les paiements passent au journal (§4 ter).
 - **Grand livre**, **Balance** et **États financiers** (bilan, compte de résultat) (**Finance**) : les états tirés des écritures.
 
 Ce socle est générique. Une entreprise part d'un plan type (OHADA, France, Canada), d'un fichier, ou de rien, puis adapte son plan librement. Rien ne change pour les entreprises qui n'ont pas le module Finance.
@@ -26,7 +27,6 @@ Prochaines étapes du plan de parité :
 
 | Phase | Contenu |
 |---|---|
-| 4.3 | Écritures générées automatiquement à partir des ventes, des achats et des paiements |
 | 4.8b | États aux formats réglementaires (SYSCOHADA, liasse française), en PDF |
 
 ---
@@ -191,6 +191,47 @@ Plan de parité fripv2, phase 4.2 (« Récurrence » et « Transactions récurre
 - **Suspendre** et **reprendre** une récurrence. **Supprimer les dates restantes** retire les dates non converties. Une récurrence qui a déjà créé des écritures reste, arrêtée, pour que son numéro les désigne toujours ; sinon elle disparaît.
 - **Droits** : consulter avec le droit de voir la comptabilité ; planifier, convertir, suspendre et supprimer avec celui de saisir des écritures.
 
+### Comptabilisation automatique (Finance → Comptabilisation automatique)
+
+Plan de parité fripv2, phase 4.3 : les ventes, les achats et les paiements passent au journal, une écriture par document, selon des réglages propres à l'entreprise. Rien n'est écrit pendant les ventes ou les achats : une période fermée ou un compte manquant ne bloque jamais une facture ou un paiement. La comptabilisation se lance depuis l'écran, ou chaque jour par la tâche planifiée **Comptabilisation automatique** (inactive par défaut, 23 h 30).
+
+**Réglages** :
+- **date de début** : seuls les documents datés à partir de ce jour se comptabilisent (les plus anciens ont pu être saisis à la main) ;
+- **journaux** des ventes, des achats, de banque, de caisse et des opérations diverses ;
+- **comptes** :
+  - clients, fournisseurs, ventes, achats ;
+  - taxes collectées, taxes déductibles ;
+  - caisse, banque ;
+  - acomptes clients, escomptes accordés, cartes cadeaux ;
+- **« Proposer d'après le plan comptable »** remplit les réglages vides : journaux par défaut, comptes trouvés par leur type (clients, fournisseurs), puis par les numéros usuels des plans OHADA (411, 401, 701, 601, 443, 445, 571, 521, 419), français et canadien ;
+- **correspondances** :
+  - mode de paiement → caisse ou banque (espèces : caisse ; les autres : banque, par défaut) ;
+  - taxe → comptes collectée et déductible (taxes des groupes de taxes) ;
+  - catégorie de produit → comptes de vente et d'achat. Vide : les comptes par défaut.
+- Un compte d'en-tête ne se règle pas, car il ne reçoit pas d'écriture.
+
+**Écritures** (montants dans la devise de l'entreprise, au taux du document ; le compte du tiers prend la somme des contreparties arrondies, sans écart d'arrondi) :
+
+| Document | Journal | Débit | Crédit |
+|---|---|---|---|
+| Facture de vente émise | Ventes | Clients (TTC) | Ventes par catégorie (HT), taxes collectées par taxe |
+| Note de crédit émise | Ventes | Ventes (HT), taxes collectées | Clients (TTC) |
+| Paiement d'un client | Caisse ou banque selon le mode | Caisse ou banque ; acompte appliqué : acomptes clients ; carte cadeau : cartes cadeaux (journal des opérations diverses) ; escompte accordé | Clients (paiement et escompte) |
+| Acompte reçu | Caisse ou banque | Caisse ou banque | Acomptes clients |
+| Remboursement d'acompte | Caisse ou banque | Acomptes clients | Caisse ou banque |
+| Remboursement de note de crédit | Caisse ou banque | Clients | Caisse ou banque |
+| Facture fournisseur | Achats | Achats par catégorie (HT), taxes déductibles par taxe | Fournisseurs (TTC) |
+| Paiement d'un fournisseur | Caisse ou banque | Fournisseurs | Caisse ou banque |
+
+**Règles :**
+- Une écriture générée porte le type de son document en source (filtre « Origine » du journal) et le numéro du document en référence.
+- Elle ne se modifie pas depuis le journal : le document se corrige, ou l'écriture se contre-passe.
+- **Un document se comptabilise une fois.** Une facture fournisseur annulée, un paiement fournisseur annulé ou un acompte supprimé après coup font **contre-passer** leur écriture, à la date de l'annulation (aujourd'hui pour une suppression).
+- **Refus** : un document dans une période fermée, ou qui demande un compte non réglé, reste à comptabiliser, et son motif est rapporté (« Compte « Taxes collectées » non réglé »). Les autres passent.
+- **Aperçu** : nombre et montant des documents à comptabiliser par type sur la période, écritures à contre-passer, réglages manquants.
+- Une seule comptabilisation à la fois par entreprise.
+- **Droits** : consulter avec le droit de voir la comptabilité ; régler et lancer avec celui de saisir des écritures.
+
 ### Protections du plan et des exercices
 
 - Un compte qui a des écritures ne se supprime pas (il se désactive) et ne devient pas un en-tête.
@@ -279,6 +320,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/recurrences` | Récurrences et leurs dates, nombre de dates échues |
 | `POST /comptabilite/recurrences/convertir` | Convertir les dates échues (ou `{echeances: [ids]}`, `{jusqu_au}`) ; `converties`, `erreurs` |
 | `PUT /comptabilite/recurrences/{id}`, `DELETE` | Suspendre ou reprendre (`{active}`) ; supprimer les dates restantes |
+| `GET` et `PUT /comptabilite/comptabilisation/parametres` | Réglages de la comptabilisation automatique (avec les propositions, les journaux, comptes, taxes et catégories) |
+| `GET /comptabilite/comptabilisation/apercu?du=&au=` | Documents à comptabiliser par type, contre-passations, réglages manquants |
+| `POST /comptabilite/comptabilisation` | `{du, au}` : comptabiliser ; `creees`, `par_type`, `contre_passations`, `erreurs` |
 | `GET /comptabilite/ecritures/export?du=&au=` | Lignes en CSV |
 | `GET /comptabilite/balance?du=&au=[&format=csv]` | Balance |
 | `GET /comptabilite/grand-livre?compte_id=&du=&au=&recherche=[&format=csv]` | Grand livre |
@@ -287,9 +331,9 @@ Les données sont cloisonnées par entreprise, comme le reste de l'application.
 | `GET /comptabilite/etats/resultat?du=&au=[&format=csv]` | Compte de résultat |
 
 Code :
-- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`.
-- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences}` ; tâche `App\Taches\ConvertirEcrituresRecurrentes`.
+- **Modèles** : `CompteComptable`, `ExerciceComptable`, `PeriodeComptable`, `JournalComptable`, `EcritureComptable`, `EcritureComptableLigne`, `RecurrenceComptable`, `RecurrenceEcheance`, `ParametreComptable`.
+- **Services** : `App\Services\Comptabilite\{PlanComptable, Exercices, Ecritures, Soldes, Clotures, EtatsFinanciers, Recurrences, Comptabilisation}` ; tâches `App\Taches\ConvertirEcrituresRecurrentes`, `App\Taches\ComptabiliserDocuments`.
 - **Plans types** : `App\Support\PlansComptables` ; export CSV : `App\Support\FichierCsv`.
 - **Contrôleurs** : `App\Http\Controllers\Comptabilite\*`.
-- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
-- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`.
+- **Écrans** : `PlanComptablePage`, `ExercicesComptablesPage`, `JournalComptablePage`, `EcrituresRecurrentesPage`, `ComptabilisationPage`, `GrandLivrePage`, `BalanceComptablePage`, `SoldesOuverturePage`, `EtatsFinanciersPage` ; service `src/services/comptabilite.ts`.
+- **Migrations** : `2026_10_16_100025_creer_plan_comptable_et_exercices`, `2026_10_16_100026_creer_journal_comptable`, `2026_10_17_100061_creer_recurrences_comptables`, `2026_10_17_100062_creer_parametres_comptables`.

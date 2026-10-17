@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookText, ChevronDown, ChevronRight, Download, Pencil, Plus, Repeat, Settings2, Trash2, Undo2, X } from 'lucide-react';
 import {
   getComptes, getExercices, getJournaux, getEcritures, enregistrerEcriture, supprimerEcriture, contrePasserEcriture, exporterEcritures,
-  enregistrerJournal, supprimerJournal, montant, planifierRecurrence, TYPES_JOURNAL, FREQUENCES_RECURRENCE,
+  enregistrerJournal, supprimerJournal, montant, planifierRecurrence, TYPES_JOURNAL, FREQUENCES_RECURRENCE, SOURCES_ECRITURE,
   type CompteComptable, type EcritureComptable, type FrequenceRecurrence, type JournalComptable, type PageEcritures, type SourceEcriture, type TypeJournal,
 } from '@/services/comptabilite';
 import { ApiError } from '@/services/http';
@@ -256,7 +256,7 @@ export default function JournalComptablePage() {
         <label className="text-xs text-gray-500 dark:text-gray-400">{tj.source}
           <select value={filtres.source} onChange={e => filtrer({ source: e.target.value })} className={classeChamp}>
             <option value="">{tj.allSources}</option>
-            {(['manuelle', 'ouverture', 'cloture', 'recurrente'] as const).map(s => <option key={s} value={s}>{tj.sources[s]}</option>)}
+            {SOURCES_ECRITURE.map(s => <option key={s} value={s}>{tj.sources[s]}</option>)}
           </select>
         </label>
         <label className="text-xs text-gray-500 dark:text-gray-400">{tj.search}

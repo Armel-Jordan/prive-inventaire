@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Taches\ComptabiliserDocuments;
 use App\Taches\ConvertirEcrituresRecurrentes;
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\FacturerAbonnements;
@@ -41,6 +42,7 @@ final class TachesPlanifiees
         'livraisons_en_retard' => [SignalerLivraisonsEnRetard::class, 'quotidienne', '07:00'],
         'controles_techniques' => [SignalerControlesTechniques::class, 'quotidienne', '07:00'],
         'ecritures_recurrentes' => [ConvertirEcrituresRecurrentes::class, 'quotidienne', '05:30'],
+        'comptabilisation' => [ComptabiliserDocuments::class, 'quotidienne', '23:30'],
     ];
 
     /**
@@ -74,6 +76,7 @@ final class TachesPlanifiees
         'livraisons_en_retard' => 'ventes',
         'controles_techniques' => 'ventes',
         'ecritures_recurrentes' => 'finance',
+        'comptabilisation' => 'finance',
     ];
 
     public static function codes(): array
