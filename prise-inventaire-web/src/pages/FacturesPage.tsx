@@ -37,7 +37,9 @@ import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
 import OriginePrix from '@/components/OriginePrix';
-import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
+import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -214,7 +216,10 @@ export default function FacturesPage() {
         devise: createForm.devise || deviseEntreprise,
         taux_change: createForm.devise ? Number(createForm.taux) : undefined,
         notes: createForm.notes || undefined,
-        lignes: [...createLignes, ...frais.lignes].map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })),
+        lignes: [
+          ...createLignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, unite: l.unite ?? null })),
+          ...frais.lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })),
+        ],
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
       });
@@ -520,7 +525,7 @@ export default function FacturesPage() {
                             {ligne.produit?.description ?? `Produit #${ligne.produit_id}`}
                             {ligne.description && <span className="block text-xs text-gray-500">{ligne.description}</span>}
                           </td>
-                          <td className="py-1 text-right">{ligne.quantite}</td>
+                          <td className="py-1 text-right">{quantiteAvecUnite(ligne.quantite, ligne.unite)}</td>
                           <td className="py-1 text-right">{montant(Number(ligne.prix_unitaire_ht ?? 0), selectedFacture?.devise)}</td>
                           <td className="py-1 text-right">{montant(Number(ligne.montant_ht ?? 0), selectedFacture?.devise)}</td>
                         </tr>
@@ -709,7 +714,9 @@ export default function FacturesPage() {
                             // étrangère), remplacé ensuite par celui du client.
                             const produitId = parseInt(e.target.value);
                             const produit = produits.find(p => p.id === produitId);
-                            modifierLigne(idx, ligne => choisirProduit(ligne, produitId, 'prix_unitaire_ht', dansLaDevise(Number(produit?.prix_unitaire) || 0, createForm.devise, Number(createForm.taux))));
+                            // Dans l'unité de vente proposée d'office pour ce produit.
+                            const unite = uniteParDefaut(produit);
+                            modifierLigne(idx, ligne => ({ ...choisirProduit(ligne, produitId, 'prix_unitaire_ht', dansLaDevise(prixUnite(produit, unite), createForm.devise, Number(createForm.taux))), unite }));
                           }}
                           aria-label="Produit"
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
@@ -719,6 +726,9 @@ export default function FacturesPage() {
                         <input type="number" min="1" value={l.quantite}
                           onChange={(e) => modifierLigne(idx, ligne => ({ ...ligne, quantite: parseInt(e.target.value) || 1 }))}
                           className="w-20 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Qté" />
+                        <ChoixUnite produit={produits.find(p => p.id === l.produit_id)} valeur={l.unite} libelle={t.productUnits.lineUnit.replace('{n}', String(idx + 1))}
+                          onChange={u => modifierLigne(idx, ligne => changerUnite(ligne, u, 'prix_unitaire_ht',
+                            dansLaDevise(prixUnite(produits.find(p => p.id === ligne.produit_id), u), createForm.devise, Number(createForm.taux))))} />
                         <input type="number" step="0.01" value={l.prix_unitaire_ht}
                           onChange={(e) => modifierLigne(idx, ligne => saisirPrix(ligne, 'prix_unitaire_ht', parseFloat(e.target.value) || 0))}
                           className="w-24 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Prix HT" />

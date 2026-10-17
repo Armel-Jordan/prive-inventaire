@@ -257,6 +257,9 @@ class Droits
         // Codes-barres : ajouter et retirer modifient le produit.
         'POST api/produits/{produit}/codes-barres' => ['produits', 'modifier'],
         'DELETE api/produits/{produit}/codes-barres/{id}' => ['produits', 'modifier'],
+        // Unités de vente : les ajouter, les changer ou les retirer modifie le produit.
+        'POST api/produits/{produit}/unites' => ['produits', 'modifier'],
+        'DELETE api/produits/{produit}/unites/{id}' => ['produits', 'modifier'],
         // Étiquettes : imprimer n'écrit rien (droit de les voir) ; les formats se gèrent avec l'action nommée.
         'POST api/etiquettes/imprimer' => ['etiquettes', 'voir'],
         'POST api/etiquettes/formats' => ['etiquettes', 'formats'],

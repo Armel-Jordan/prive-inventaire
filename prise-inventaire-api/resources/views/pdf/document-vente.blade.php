@@ -1,6 +1,9 @@
 @php
     $montant = fn ($valeur) => number_format((float) $valeur, 2, ',', ' ').' '.$devise;
     $quantite = fn ($valeur) => number_format((float) $valeur, 0, ',', ' ');
+    // Une ligne dans une unité de vente (la caisse de 12) : chaque quantité dit son unité (sinon rien ne change).
+    $avecUnites = collect($lignes)->contains(fn ($l) => ! empty($l['unite']));
+    $unite = fn (array $l) => $avecUnites ? ' '.($l['unite'] ?? $l['mesure'] ?? '') : '';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -95,7 +98,7 @@
                         <th class="right" style="width: 12%;">Préparé</th>
                         <th class="right" style="width: 12%;">Livré</th>
                     @else
-                        <th class="right" style="width: 9%;">Qté</th>
+                        <th class="right" style="width: {{ $avecUnites ? '15%' : '9%' }};">Qté</th>
                         <th class="right" style="width: 15%;">Prix unitaire HT</th>
                         <th class="right" style="width: 9%;">Remise</th>
                         <th class="right" style="width: 16%;">Total HT</th>
@@ -108,11 +111,11 @@
                         <td>{{ $ligne['reference'] }}</td>
                         <td>{!! nl2br(e($ligne['designation'])) !!}</td>
                         @if($colonnes === 'livraison')
-                            <td class="right">{{ $quantite($ligne['a_livrer']) }}</td>
-                            <td class="right">{{ $quantite($ligne['preparee']) }}</td>
-                            <td class="right">{{ $quantite($ligne['livree']) }}</td>
+                            <td class="right">{{ $quantite($ligne['a_livrer']) }}{{ $unite($ligne) }}</td>
+                            <td class="right">{{ $quantite($ligne['preparee']) }}{{ $unite($ligne) }}</td>
+                            <td class="right">{{ $quantite($ligne['livree']) }}{{ $unite($ligne) }}</td>
                         @else
-                            <td class="right">{{ $quantite($ligne['quantite']) }}</td>
+                            <td class="right" @if($avecUnites) style="white-space: nowrap;" @endif>{{ $quantite($ligne['quantite']) }}{{ $unite($ligne) }}</td>
                             <td class="right">{{ $montant($ligne['prix_unitaire']) }}</td>
                             <td class="right">{{ $ligne['remise'] > 0 ? rtrim(rtrim(number_format($ligne['remise'], 2, ',', ' '), '0'), ',').' %' : '' }}</td>
                             <td class="right">{{ $montant($ligne['total']) }}</td>

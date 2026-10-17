@@ -24,6 +24,7 @@ import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
 import { formatDateHeure } from '@/lib/documents';
+import { quantiteAvecUnite } from '@/lib/unitesVente';
 
 /** Statuts où les colis se préparent : avant le départ en livraison. */
 const STATUTS_COLIS = ['cree', 'en_preparation', 'pret'];
@@ -421,9 +422,9 @@ export default function BonsLivraisonPage() {
                       {selectedBon.lignes.map((ligne, idx) => (
                         <tr key={idx} className="dark:text-gray-300">
                           <td className="py-1">{nomProduit(ligne)}</td>
-                          <td className="py-1 text-right">{ligne.quantite_a_livrer}</td>
-                          <td className="py-1 text-right">{ligne.quantite_preparee}</td>
-                          <td className="py-1 text-right">{ligne.quantite_livree}</td>
+                          <td className="py-1 text-right">{quantiteAvecUnite(ligne.quantite_a_livrer, ligne.unite)}</td>
+                          <td className="py-1 text-right">{quantiteAvecUnite(ligne.quantite_preparee, ligne.unite)}</td>
+                          <td className="py-1 text-right">{quantiteAvecUnite(ligne.quantite_livree, ligne.unite)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -455,7 +456,7 @@ export default function BonsLivraisonPage() {
                   <div key={ligne.id} className="flex items-center justify-between gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="flex-1">
                       <p className="font-medium dark:text-white">{nomProduit(ligne)}</p>
-                      <p className="text-sm text-gray-500">À préparer: {ligne.quantite_a_livrer}</p>
+                      <p className="text-sm text-gray-500">À préparer: {quantiteAvecUnite(ligne.quantite_a_livrer, ligne.unite)}</p>
                     </div>
                     <input
                       type="number"
@@ -506,7 +507,7 @@ export default function BonsLivraisonPage() {
                   <div key={ligne.id} className="flex items-center justify-between gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="flex-1">
                       <p className="font-medium dark:text-white">{nomProduit(ligne)}</p>
-                      <p className="text-sm text-gray-500">Préparé: {ligne.quantite_preparee}</p>
+                      <p className="text-sm text-gray-500">Préparé: {quantiteAvecUnite(ligne.quantite_preparee, ligne.unite)}</p>
                     </div>
                     <input
                       type="number"

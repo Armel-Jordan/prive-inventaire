@@ -19,6 +19,7 @@ use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
 use App\Services\FacturesVente;
 use App\Services\TaxesDocument;
+use App\Services\UnitesProduits;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -107,8 +108,11 @@ class FactureController extends Controller
             'lignes.*.taux_tva' => 'nullable|numeric|min:0|max:100',
             'lignes.*.groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->whereNull('deleted_at')],
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
+            // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
+            'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
         ]);
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('facture', $tenantId);
@@ -171,6 +175,8 @@ class FactureController extends Controller
                     'montant_ht' => $ligne->montant_ht,
                     'montant_tva' => $ligne->montant_ttc - $ligne->montant_ht,
                     'montant_ttc' => $ligne->montant_ttc,
+                    'unite' => $ligne->unite,
+                    'facteur' => $ligne->facteur,
                 ]);
                 // La facture reprend le détail des taxes calculé sur la commande.
                 $this->taxes->copier('commande_client', $ligne->id, 'facture', $ligneFacture->id);
@@ -343,6 +349,9 @@ class FactureController extends Controller
                     'bon_id' => $bon->id,
                     'produit_id' => $ligne->produit_id,
                     'quantite_a_livrer' => $ligne->quantite,
+                    // Livré dans l'unité facturée.
+                    'unite' => $ligne->unite,
+                    'facteur' => $ligne->facteur,
                 ]);
             }
 

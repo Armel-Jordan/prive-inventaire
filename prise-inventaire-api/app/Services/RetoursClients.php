@@ -59,6 +59,8 @@ class RetoursClients
                 'produit' => $ligne->produit?->only(['id', 'numero', 'description', 'mesure']),
                 'secteur_id' => $ligne->produit?->secteur_id,
                 'quantite_facturee' => (int) $ligne->quantite,
+                // Unité facturée (la caisse de 12) ; vide : l'unité de stock.
+                'unite' => $ligne->unite,
                 'quantite_retournee' => $retournes[$ligne->id] ?? 0,
                 'reste' => max(0, (int) $ligne->quantite - ($retournes[$ligne->id] ?? 0)),
             ])->values()->all(),
@@ -151,7 +153,8 @@ class RetoursClients
                     'produit_numero' => $ligne->produit->numero,
                     'produit_nom' => $ligne->produit->description,
                     'secteur_destination' => $ligne->secteur->code ?: $ligne->secteur->nom,
-                    'quantite' => $ligne->quantite,
+                    // En unités de stock : une caisse de 12 retournée remet 12 unités en stock.
+                    'quantite' => $ligne->facteur === null ? $ligne->quantite : round($ligne->quantite * $ligne->facteurStock(), 4),
                     'unite_mesure' => $ligne->produit->mesure ?: 'unité',
                     'motif' => Str::limit("Retour client {$retour->numero}".($ligne->raison ? " : {$ligne->raison->libelle}" : ''), 255, ''),
                     'employe' => Str::limit($auteur?->nom ?: 'Retour client', 100, ''),
@@ -251,6 +254,9 @@ class RetoursClients
                 'facture_ligne_id' => $facture ? $ligne->id : null,
                 'produit_id' => $produitId,
                 'quantite' => (int) $saisie['quantite'],
+                // Retourné dans l'unité facturée ; sans facture, dans l'unité de stock.
+                'unite' => $facture ? $ligne->unite : null,
+                'facteur' => $facture ? $ligne->facteur : null,
                 'raison_id' => $saisie['raison_id'] ?? null,
                 'traitement' => $traitement,
                 'secteur_id' => $traitement === RetourClientLigne::REMISE_EN_STOCK ? (int) $saisie['secteur_id'] : null,

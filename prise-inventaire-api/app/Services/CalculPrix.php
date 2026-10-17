@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ListePrix;
 use App\Models\ListePrixProduit;
 use App\Models\ProduitTenant;
+use App\Models\ProduitUnite;
 use App\Models\ReglePrix;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -17,11 +18,15 @@ use Illuminate\Support\Collection;
  * 2. Candidats : ce prix, la remise globale de la fiche client, et chaque règle en vigueur qui vise le
  *    client (ou sa liste), le produit (ou sa catégorie) et dont la quantité minimale est atteinte.
  * 3. Le prix retenu est le plus bas des candidats positifs, comme dans fripv2 (à égalité, le premier).
+ *
+ * Dans une unité de vente (la caisse de 12, phase 2.2) : les prix sont ceux de l'unité de stock multipliés par le
+ * facteur, sauf le prix propre de l'unité qui remplace le prix de base ; la quantité minimale d'une règle se compte en
+ * unités de stock. Sans unité, rien ne change.
  */
 final class CalculPrix
 {
     /**
-     * @param  array<int, array{produit_id: int, quantite: int}>  $lignes
+     * @param  array<int, array{produit_id: int, quantite: int, unite?: ?string}>  $lignes
      * @return array<int, array<string, mixed>>
      */
     public function calculer(?Client $client, array $lignes, CarbonInterface $date): array
@@ -32,14 +37,24 @@ final class CalculPrix
             ? ListePrixProduit::where('liste_prix_id', $liste->id)->whereIn('produit_id', $produits->keys())->pluck('prix', 'produit_id')
             : collect();
         $regles = $this->reglesPour($client, $date);
+        // Unité de chaque ligne (vide : l'unité de stock) et son prix propre.
+        $unites = app(UnitesProduits::class)->pourLignes($lignes);
+        $prixUnites = ProduitUnite::query()->whereIn('produit_id', $produits->keys())->with('unite')->get()
+            ->mapWithKeys(fn (ProduitUnite $u) => [$u->produit_id.'|'.$u->code => $u->prix]);
 
-        return array_map(function (array $ligne) use ($client, $produits, $liste, $prixSaisis, $regles) {
+        return array_map(function (array $ligne, array $unite) use ($client, $produits, $liste, $prixSaisis, $regles, $prixUnites) {
             $produit = $produits->get($ligne['produit_id']);
+            if (! $produit) {
+                return ['produit_id' => (int) $ligne['produit_id'], 'quantite' => (int) $ligne['quantite'], 'introuvable' => true];
+            }
+            $resultat = $this->calculerLigne(
+                $client, $produit, max(1, (int) $ligne['quantite']), $liste, $prixSaisis->get($produit->id), $regles,
+                $unite['facteur'] ?? 1.0, $unite['unite'] ? $prixUnites->get($produit->id.'|'.$unite['unite']) : null,
+            );
 
-            return $produit
-                ? $this->calculerLigne($client, $produit, max(1, (int) $ligne['quantite']), $liste, $prixSaisis->get($produit->id), $regles)
-                : ['produit_id' => (int) $ligne['produit_id'], 'quantite' => (int) $ligne['quantite'], 'introuvable' => true];
-        }, $lignes);
+            // L'unité n'apparaît que si la ligne en a une : sans elle, la réponse reste celle d'avant.
+            return $unite['unite'] ? $resultat + ['unite' => $unite['unite'], 'facteur' => $unite['facteur']] : $resultat;
+        }, array_values($lignes), $unites);
     }
 
     /** Règles en vigueur qui peuvent concerner ce client (sans client : seulement les règles pour tous). */
@@ -52,11 +67,19 @@ final class CalculPrix
             ->get();
     }
 
-    private function calculerLigne(?Client $client, ProduitTenant $produit, int $quantite, ?ListePrix $liste, ?float $prixSaisi, Collection $regles): array
+    /**
+     * @param  float  $facteur  unités de stock dans une unité de la ligne (1 : l'unité de stock)
+     * @param  ?float  $prixUnite  prix propre de l'unité de la ligne, à la place du prix de base multiplié par le facteur
+     */
+    private function calculerLigne(?Client $client, ProduitTenant $produit, int $quantite, ?ListePrix $liste, ?float $prixSaisi, Collection $regles,
+        float $facteur = 1.0, ?float $prixUnite = null): array
     {
-        $prixBase = $produit->prix_unitaire !== null ? (float) $produit->prix_unitaire : null;
+        $prixBase = $prixUnite ?? ($produit->prix_unitaire !== null ? (float) $produit->prix_unitaire * $facteur : null);
         $precision = $liste?->precision ?? 2;
-        $prixListe = $liste ? $liste->prixPour($prixBase, $prixSaisi) : ($prixBase !== null ? round($prixBase, $precision) : null);
+        // Un prix saisi dans la liste vaut pour l'unité de stock : multiplié par le facteur.
+        $prixListe = $liste
+            ? $liste->prixPour($prixBase, $prixSaisi !== null ? $prixSaisi * $facteur : null)
+            : ($prixBase !== null ? round($prixBase, $precision) : null);
 
         $candidats = [[
             'origine' => $liste ? 'liste' : 'base',
@@ -72,16 +95,19 @@ final class CalculPrix
         }
 
         foreach ($regles as $regle) {
+            // Quantité minimale en unités de stock : 2 caisses de 12 atteignent un seuil de 20.
             $vise = (! $regle->produit_id || (int) $regle->produit_id === (int) $produit->id)
                 && (! $regle->categorie_produit || mb_strtolower((string) $produit->categorie) === mb_strtolower($regle->categorie_produit))
-                && $quantite >= $regle->quantite_min;
+                && $quantite * $facteur >= $regle->quantite_min - 1e-9;
             // Une remise suppose un prix de liste ; un prix fixe s'applique même sans prix de base.
             if ($vise && ($prixListe !== null || $regle->type === 'prix_fixe')) {
                 $candidats[] = [
                     'origine' => 'regle',
                     'libelle' => $regle->libelle,
                     'regle_id' => $regle->id,
-                    'prix' => round($regle->appliquer((float) $prixListe), $precision),
+                    // Prix fixe et remise en montant valent pour l'unité de stock : la règle s'applique au prix d'une
+                    // unité de stock, et le résultat est multiplié par le facteur (un pourcentage n'en dépend pas).
+                    'prix' => round($regle->appliquer((float) $prixListe / $facteur) * $facteur, $precision),
                 ];
             }
         }

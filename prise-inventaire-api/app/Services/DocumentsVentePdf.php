@@ -163,6 +163,8 @@ class DocumentsVentePdf
                 'a_livrer' => $l->quantite_a_livrer,
                 'preparee' => $l->quantite_preparee,
                 'livree' => $l->quantite_livree,
+                'unite' => $l->unite,
+                'mesure' => $l->produit?->mesure,
             ])->all(),
             'notes' => $bon->notes_livraison,
             // Signature électronique du client, si elle a été recueillie à la livraison.
@@ -241,6 +243,9 @@ class DocumentsVentePdf
             // Désignation du produit, et le texte propre à la ligne s'il y en a un (période d'un abonnement…).
             'designation' => implode("\n", array_filter([$ligne->produit?->description ?? 'Produit #'.$ligne->produit_id, $ligne->description ?? null])),
             'quantite' => $ligne->quantite,
+            // Unité de vente de la ligne (la caisse de 12) ; sinon l'unité de stock du produit.
+            'unite' => $ligne->unite ?? null,
+            'mesure' => $ligne->produit?->mesure,
             'prix_unitaire' => (float) $prixUnitaire,
             'remise' => (float) $remise,
             'total' => (float) $total,

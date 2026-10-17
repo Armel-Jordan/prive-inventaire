@@ -20,6 +20,8 @@
 11. [Tous les statuts et transitions](#11-tous-les-statuts-et-transitions)
 12. [Livraison partielle — cas particulier](#12-livraison-partielle--cas-particulier)
 13. [Documents PDF](#13-documents-pdf)
+14. [Écrans de vente](#14-écrans-de-vente--règles-daffichage-communes)
+15. [Unités de vente](#15-unités-de-vente-paramètres--produits--unités)
 
 ---
 
@@ -2202,3 +2204,62 @@ Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dan
 - **Tournées** : la liste « Ajouter un bon » ne propose que les bons prêts et pas encore placés
   (`GET /bons-livraison?statut=pret&sans_tournee=1`). Ajouter, retirer, démarrer ou terminer renvoie la tournée
   complète (camion, bons, factures, clients).
+
+---
+
+## 15. Unités de vente (Paramètres → Produits → Unités)
+
+Plan de parité fripv2, phase 2.2 : un produit se compte dans son **unité de stock** (sa mesure, par exemple UN), et se
+vend aussi dans d'autres unités : la caisse de 12, le carton, la palette.
+
+**Les unités d'un produit** (bouton **Unités** sur chaque ligne de la liste des produits) :
+- une unité vient du référentiel des unités (Paramètres → Référentiels) ; l'unité de stock vaut toujours 1 ;
+- **facteur** : le nombre d'unités de stock dans une unité (12 pour la caisse de 12). Il est proposé d'après les
+  conversions du référentiel, dans les deux sens et enchaînées (palette → caisse → unité). Sans conversion, on le saisit ;
+- **prix propre**, au besoin : sinon, le prix d'une unité est celui du produit multiplié par le facteur ;
+- **une unité proposée** d'office sur les lignes de vente (sinon l'unité de stock).
+
+**Sur les documents** (devis, commandes, factures) :
+- le choix de l'unité n'apparaît que pour un produit qui a des unités de vente : les autres lignes ne changent pas ;
+- la ligne garde le **code de son unité et son facteur**, figés à la saisie : changer ensuite les unités du produit ne
+  change aucun document ;
+- **prix proposé** : celui de l'unité, puis le calcul du client (liste de prix, remise, règles). Les prix de l'unité
+  de stock sont multipliés par le facteur ; la quantité minimale d'une règle se compte en unités de stock (2 caisses
+  de 12 atteignent un seuil de 20) ; le prix propre de l'unité remplace le prix de base ;
+- l'unité suit le document : devis → commande → facture → bon de livraison, note de crédit, retour client, reliquat.
+
+**En unités de stock** (une caisse de 12 compte pour 12) :
+- le **réservé** et les **reliquats** des disponibilités ;
+- les **manques** signalés à l'acceptation d'une commande (proposés ensuite dans l'unité de la ligne) ;
+- la **remise en stock** d'un retour client (le mouvement d'arrivée) ;
+- la **masse** des matières dangereuses, et le journal des réservations, préparations, chargements et livraisons ;
+- un **reliquat** reste dans l'unité de la ligne commandée, à son prix :
+  - il est commandé au fournisseur en unités de stock ;
+  - il ne reçoit que des unités entières : 18 unités reçues font 1 caisse, et les 6 autres attendent la réception suivante ;
+  - il se facture dans son unité.
+
+**Limite** : un retour client dans une autre unité ne se relie pas à un retour fournisseur. Ce dernier se compte en
+unités de stock et se saisit sans lien, en attendant les unités d'achat (phase 2.2, suite).
+
+**PDF** : dès qu'une ligne du document est dans une unité de vente, chaque quantité dit son unité (« 2 CS », « 5 UN ») ;
+sinon le document ne change pas.
+
+**Droits** : ceux des produits. Consulter les unités demande le droit de voir les produits, les ajouter, les changer ou
+les retirer le droit de les modifier.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/produits/{id}/unites` | Unité de stock, unités de vente, unités du référentiel qu'il peut prendre (facteur proposé) |
+| POST / PUT / DELETE | `/produits/{id}/unites[/{unite}]` | Ajouter (`unite_id`, `facteur` facultatif, `prix`, `par_defaut`), modifier, retirer |
+| POST | `/prix/calculer` | Accepte `lignes.*.unite` : prix de l'unité, avec `unite` et `facteur` dans la réponse |
+
+Les lignes des devis, commandes et factures acceptent `lignes.*.unite` : vide ou égale à la mesure du produit, c'est
+l'unité de stock ; sinon une unité de vente du produit, refusée si ce n'en est pas une.
+
+Code :
+- `App\Support\ConversionsUnites` (facteur entre deux unités) ;
+- service `App\Services\UnitesProduits`, `ProduitUniteController`, modèle `ProduitUnite`, trait
+  `App\Models\Concerns\AUneUnite` des lignes ;
+- web : `produits/FenetreUnitesProduit`, `ChoixUnite`, `lib/unitesVente.ts`, `services/unitesProduits.ts` ;
+- migration `2026_10_17_100073_creer_unites_produits` : table `produit_unites`, colonnes `unite` et `facteur` des lignes
+  de vente et des reliquats.

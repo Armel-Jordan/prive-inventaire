@@ -4,6 +4,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, dateSaisie, formatDateDocument } from '@/lib/documents';
+import { quantiteAvecUnite } from '@/lib/unitesVente';
 import { getClientsActifs, getProduits, getReferentiel, getSecteurs, type Client } from '@/services/api';
 import {
   creerRetourClient, getPropositionRetour, modifierRetourClient, traiterRetourClient,
@@ -279,7 +280,7 @@ export default function EditeurRetour({ factureId, brouillon, onClose, onEnregis
                         </td>
                         {factureId && (
                           <td className="py-2 pr-3 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">
-                            {facturee?.reste ?? 0}
+                            {quantiteAvecUnite(facturee?.reste ?? 0, facturee?.unite)}
                             <span className="block text-xs text-gray-500">{tr.invoicedReturned.replace('{facturee}', String(facturee?.quantite_facturee ?? 0)).replace('{retournee}', String(facturee?.quantite_retournee ?? 0))}</span>
                           </td>
                         )}

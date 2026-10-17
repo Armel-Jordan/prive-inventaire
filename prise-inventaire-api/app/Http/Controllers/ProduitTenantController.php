@@ -20,7 +20,8 @@ class ProduitTenantController extends Controller
     public function index(Request $request): JsonResponse
     {
         $statut = $request->query('statut', 'actifs');
-        $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal'])
+        // Unités de vente : les lignes des documents proposent l'unité et son prix.
+        $produits = ProduitTenant::with(['secteur', 'codesBarres:id,produit_id,code,type,quantite,principal', 'unites.unite:id,code,libelle,decimales'])
             ->when($statut !== 'tous', fn ($q) => $q->where('actif', $statut !== 'inactifs'))
             ->where('tenant_id', auth()->user()->tenant_id)
             ->orderBy('numero')

@@ -255,7 +255,8 @@ class TourneeController extends Controller
                     MouvementVente::creerMouvement(
                         $ligne->produit_id,
                         'chargement_camion',
-                        $ligne->quantite_preparee,
+                        // En unités de stock (une caisse de 12 charge 12 unités).
+                        (int) round($ligne->quantite_preparee * $ligne->facteurStock()),
                         'zone_preparation', null,
                         'camion', $tournee->camion_id,
                         'tournee', $tournee->id,

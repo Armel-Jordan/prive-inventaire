@@ -5,6 +5,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, useMontantDocument } from '@/lib/documents';
+import { quantiteAvecUnite } from '@/lib/unitesVente';
 import { getClientsActifs, getFournisseursActifs, getProduits, type Client, type Fournisseur, type PageResultats } from '@/services/api';
 import {
   annulerReliquat, commanderReliquats, creerReliquat, facturerReliquats, getReliquats, supprimerReliquat,
@@ -157,7 +158,7 @@ export default function ReliquatsClientsPage() {
                     {r.notes && <span className="block text-xs text-gray-500">{r.notes}</span>}
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap text-gray-900 dark:text-white">
-                    {r.quantite}
+                    {quantiteAvecUnite(r.quantite, r.unite)}
                     <span className="block text-xs text-gray-500">{tb.orderedReceived.replace('{commandee}', String(r.quantite_commandee)).replace('{recue}', String(r.quantite_recue))}</span>
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">{montantDoc(r.prix_unitaire_ht, r.devise)}</td>

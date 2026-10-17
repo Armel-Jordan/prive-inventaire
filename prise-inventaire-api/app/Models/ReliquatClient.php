@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AUneUnite;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ReliquatClient extends Model
 {
-    use BelongsToTenant;
+    use AUneUnite, BelongsToTenant;
 
     /** Inscrit, pas encore commandé au fournisseur. Seul état modifiable, annulable ou supprimable. */
     public const CREE = 'cree';
@@ -36,6 +37,8 @@ class ReliquatClient extends Model
         'tenant_id', 'client_id', 'produit_id', 'quantite', 'quantite_commandee', 'quantite_recue', 'prix_unitaire_ht',
         'remise_ligne', 'devise', 'taux_change', 'commande_client_id', 'commande_client_ligne_id', 'com_four_ligne_id',
         'facture_id', 'date_requise', 'statut', 'notes', 'cree_par',
+        // Unité de la ligne et son facteur (unités de stock dans une unité) ; vides : l'unité de stock.
+        'unite', 'facteur',
     ];
 
     protected $casts = [
@@ -45,6 +48,7 @@ class ReliquatClient extends Model
         'prix_unitaire_ht' => 'decimal:2',
         'remise_ligne' => 'decimal:2',
         'date_requise' => 'date',
+        'facteur' => 'float',
     ];
 
     public function client(): BelongsTo

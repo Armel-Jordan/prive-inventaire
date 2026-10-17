@@ -4,6 +4,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { aujourdhui, dateSaisie, formatDateDocument, useMontantDocument } from '@/lib/documents';
+import { quantiteAvecUnite } from '@/lib/unitesVente';
 import { creerAvoir, emettreAvoir, getPropositionAvoir, modifierAvoir, type Avoir, type LigneProposee, type PropositionAvoir } from '@/services/avoirs';
 
 interface Saisie { quantite: string; prix: string }
@@ -175,7 +176,7 @@ export default function EditeurNoteCredit({ factureId, brouillon, onClose, onEnr
                               {ligne.produit?.numero && <span className="block text-xs font-mono text-gray-500">{ligne.produit.numero}</span>}
                             </td>
                             <td className="py-2 pr-3 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">
-                              {ligne.quantite_facturee} × {montant(ligne.prix_unitaire_ht)}
+                              {quantiteAvecUnite(ligne.quantite_facturee, ligne.unite)} × {montant(ligne.prix_unitaire_ht)}
                               {ligne.remise_ligne > 0 && <span className="block text-xs text-gray-500">{tc.discount} {ligne.remise_ligne} %</span>}
                             </td>
                             <td className="py-2 pr-3 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">

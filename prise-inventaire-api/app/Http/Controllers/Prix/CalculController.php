@@ -21,10 +21,12 @@ class CalculController extends Controller
             'lignes' => ['required', 'array', 'min:1', 'max:200'],
             'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
             'lignes.*.quantite' => ['nullable', 'integer', 'min:1'],
+            // Unité de vente du produit (la caisse de 12) ; vide : son unité de stock.
+            'lignes.*.unite' => ['nullable', 'string', 'max:20'],
         ]);
 
         $client = isset($donnees['client_id']) ? Client::findOrFail($donnees['client_id']) : null;
-        $lignes = array_map(fn ($l) => ['produit_id' => (int) $l['produit_id'], 'quantite' => (int) ($l['quantite'] ?? 1)], $donnees['lignes']);
+        $lignes = array_map(fn ($l) => ['produit_id' => (int) $l['produit_id'], 'quantite' => (int) ($l['quantite'] ?? 1), 'unite' => $l['unite'] ?? null], $donnees['lignes']);
 
         return response()->json($calcul->calculer($client, $lignes, isset($donnees['date']) ? Carbon::parse($donnees['date']) : now()));
     }

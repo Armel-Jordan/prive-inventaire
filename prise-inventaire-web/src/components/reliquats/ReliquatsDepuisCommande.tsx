@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
+import { quantiteAvecUnite } from '@/lib/unitesVente';
 import { getLignesCommandeReliquat, reliquatsDepuisCommande, type LignesCommandeReliquat } from '@/services/reliquatsClients';
 
 const classeChamp = 'px-2 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
@@ -29,14 +30,16 @@ export default function ReliquatsDepuisCommande({ commandeId, proposees, onClose
     getLignesCommandeReliquat(commandeId).then(d => {
       if (!actif) return;
       setDonnees(d);
-      // Manques proposés : sur la première ligne de chaque produit, au plus ce qui peut encore être noté.
+      // Manques proposés (en unités de stock) : sur la première ligne de chaque produit, dans l'unité de la ligne
+      // (une caisse de 12 couvre 12 unités), au plus ce qui peut encore être noté.
       if (proposees) {
         const vus = new Set<number>();
         setQuantites(Object.fromEntries(d.lignes.flatMap(l => {
           const produit = l.produit?.id;
           if (!produit || vus.has(produit) || !proposees[produit]) return [];
           vus.add(produit);
-          return [[l.ligne_id, String(Math.min(proposees[produit], l.quantite - l.deja_en_reliquat))]];
+          const dansLUnite = Math.ceil(proposees[produit] / (Number(l.facteur) || 1) - 1e-9);
+          return [[l.ligne_id, String(Math.min(dansLUnite, l.quantite - l.deja_en_reliquat))]];
         })));
       }
     }, e => { if (actif) setErreur(messageErreur(e, tb.error)); });
@@ -91,7 +94,7 @@ export default function ReliquatsDepuisCommande({ commandeId, proposees, onClose
                   return (
                     <tr key={ligne.ligne_id} className="border-b dark:border-gray-700">
                       <td className="py-2 pr-3 text-gray-900 dark:text-white">{nom}</td>
-                      <td className="py-2 pr-3 text-right text-gray-700 dark:text-gray-300">{ligne.quantite}</td>
+                      <td className="py-2 pr-3 text-right text-gray-700 dark:text-gray-300">{quantiteAvecUnite(ligne.quantite, ligne.unite)}</td>
                       <td className="py-2 pr-3 text-right text-gray-700 dark:text-gray-300">{ligne.deja_en_reliquat}</td>
                       <td className="py-2 text-right">
                         <input type="number" min={0} max={reste} step={1} value={quantites[ligne.ligne_id] ?? '0'} disabled={reste <= 0}

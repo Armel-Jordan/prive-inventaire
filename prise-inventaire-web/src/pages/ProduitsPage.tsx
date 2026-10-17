@@ -2,11 +2,12 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link } from 'react-router-dom';
-import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags } from 'lucide-react';
+import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags, Boxes } from 'lucide-react';
 import FenetreCodesBarres from '@/components/produits/FenetreCodesBarres';
+import FenetreUnitesProduit from '@/components/produits/FenetreUnitesProduit';
 import SuggererAchat from '@/components/achats/SuggererAchat';
 import BalisesFiche from '@/components/BalisesFiche';
-import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration } from '@/services/api';
+import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, getConfiguration, getReferentiel } from '@/services/api';
 import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import { messageErreur } from '@/lib/erreurs';
@@ -14,6 +15,17 @@ import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
+
+interface UniteChoix {
+  code: string;
+  libelle: string;
+}
+
+/** Unités proposées tant que l'entreprise n'a pas rempli son référentiel des unités. */
+const UNITES_ORIGINE: UniteChoix[] = [
+  { code: 'UN', libelle: 'Unité' }, { code: 'KG', libelle: 'Kilogramme' }, { code: 'L', libelle: 'Litre' },
+  { code: 'M', libelle: 'Mètre' }, { code: 'M2', libelle: 'Mètre carré' }, { code: 'M3', libelle: 'Mètre cube' },
+];
 
 interface ProduitForm {
   numero: string;
@@ -72,6 +84,8 @@ export default function ProduitsPage() {
   // Produit pour lequel on signale un besoin d'achat (suggestion d'achat).
   const [aSuggerer, setASuggerer] = useState<Produit | null>(null);
   const [codesDe, setCodesDe] = useState<Produit | null>(null);
+  const [unitesDe, setUnitesDe] = useState<Produit | null>(null);
+  const [unites, setUnites] = useState<UniteChoix[]>([]);
 
   async function loadData() {
     try {
@@ -87,6 +101,10 @@ export default function ProduitsPage() {
 
   useEffect(() => {
     getConfiguration('produit').then(setConfigNumero).catch(() => {});
+    // Unités du référentiel de l'entreprise (Paramètres → Référentiels) ; sans référentiel, la liste d'origine.
+    getReferentiel('unites', true)
+      .then(liste => setUnites(liste.map(u => ({ code: String(u.code), libelle: String(u.libelle ?? u.code) }))))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -386,6 +404,10 @@ export default function ProduitsPage() {
                         title={t.barcodes.button} aria-label={`${t.barcodes.button} — ${produit.numero}`}>
                         <Barcode size={16} />
                       </button>
+                      <button onClick={() => setUnitesDe(produit)} className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2"
+                        title={t.productUnits.button} aria-label={`${t.productUnits.button} — ${produit.numero}`}>
+                        <Boxes size={16} />
+                      </button>
                       {produit.actif !== false && peut('etiquettes', 'voir') && (
                         <Link to={`/etiquettes?produits=${produit.id}`} className="inline-block p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded mr-2 align-middle"
                           title={t.labels.buttonHelp.replace('{numero}', produit.numero)} aria-label={`${t.labels.button} — ${produit.numero}`}>
@@ -457,12 +479,13 @@ export default function ProduitsPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unité de mesure</label>
                   <select value={form.mesure} onChange={e => setForm({ ...form, mesure: e.target.value })}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                    <option value="UN">UN (Unité)</option>
-                    <option value="KG">KG (Kilogramme)</option>
-                    <option value="L">L (Litre)</option>
-                    <option value="M">M (Mètre)</option>
-                    <option value="M2">M² (Mètre carré)</option>
-                    <option value="M3">M³ (Mètre cube)</option>
+                    {/* L'unité du produit reste proposée même si elle n'est pas (ou plus) au référentiel. */}
+                    {form.mesure && !(unites.length > 0 ? unites : UNITES_ORIGINE).some(u => u.code === form.mesure) && (
+                      <option value={form.mesure}>{form.mesure}</option>
+                    )}
+                    {(unites.length > 0 ? unites : UNITES_ORIGINE).map(u => (
+                      <option key={u.code} value={u.code}>{u.code} ({u.libelle})</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -483,7 +506,10 @@ export default function ProduitsPage() {
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Unité d'achat</label>
                     <input type="text" value={form.unite_achat} onChange={e => setForm({ ...form, unite_achat: e.target.value.toUpperCase() })}
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
-                      placeholder="ex: PACK, CARTON" />
+                      placeholder="ex: PACK, CARTON" list="unites-achat" />
+                    <datalist id="unites-achat">
+                      {unites.map(u => <option key={u.code} value={u.code}>{u.libelle}</option>)}
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Unités par paquet</label>
@@ -560,6 +586,10 @@ export default function ProduitsPage() {
       {codesDe && (
         <FenetreCodesBarres produit={{ id: codesDe.id!, numero: codesDe.numero, description: codesDe.description }} modifiable={canEdit('produits')}
           onClose={() => setCodesDe(null)} onModifie={loadData} />
+      )}
+      {unitesDe && (
+        <FenetreUnitesProduit produit={{ id: unitesDe.id!, numero: unitesDe.numero, description: unitesDe.description, prix_unitaire: unitesDe.prix_unitaire }}
+          modifiable={canEdit('produits')} onClose={() => setUnitesDe(null)} onModifie={loadData} />
       )}
       {aSuggerer && (
         <SuggererAchat produit={{ id: aSuggerer.id!, numero: aSuggerer.numero, description: aSuggerer.description }}

@@ -25,7 +25,7 @@ class FacturesVente
      * Facture brouillon numérotée. La numérotation automatique des factures doit être active (contrôlée par
      * l'appelant).
      *
-     * @param  array{client_id: int, date_facture: string, date_echeance?: ?string, condition_paiement_id?: ?int, devise?: ?string, taux_change?: mixed, notes?: ?string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht: float|string, taux_tva?: mixed, groupe_taxe_id?: ?int, remise_ligne?: mixed, description?: ?string}>}  $donnees
+     * @param  array{client_id: int, date_facture: string, date_echeance?: ?string, condition_paiement_id?: ?int, devise?: ?string, taux_change?: mixed, notes?: ?string, lignes: list<array{produit_id: int, quantite: int, prix_unitaire_ht: float|string, taux_tva?: mixed, groupe_taxe_id?: ?int, remise_ligne?: mixed, description?: ?string, unite?: ?string, facteur?: ?float}>}  $donnees
      */
     public function creer(array $donnees, int $tenantId): Facture
     {
@@ -72,6 +72,9 @@ class FacturesVente
                     'montant_ttc' => $l['ttc'],
                     // Texte sous la désignation du produit (la période d'un abonnement, par exemple).
                     'description' => $l['description'] ?? null,
+                    // Unité de vente de la ligne et son facteur (vides : l'unité de stock du produit).
+                    'unite' => $l['unite'] ?? null,
+                    'facteur' => $l['facteur'] ?? null,
                 ]);
                 $this->taxes->enregistrer('facture', $ligne->id, $l['detail']);
             }

@@ -123,6 +123,7 @@ use App\Http\Controllers\Prix\ListeController as PrixListeController;
 use App\Http\Controllers\Prix\RegleController as PrixRegleController;
 use App\Http\Controllers\ProduitCodeBarreController;
 use App\Http\Controllers\ProduitTenantController;
+use App\Http\Controllers\ProduitUniteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportController;
 use App\Http\Controllers\RechercheController;
@@ -246,6 +247,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::post('/produits/{produit}/codes-barres', [ProduitCodeBarreController::class, 'store'])->whereNumber('produit');
     Route::put('/produits/{produit}/codes-barres/{id}', [ProduitCodeBarreController::class, 'update'])->whereNumber('produit')->whereNumber('id');
     Route::delete('/produits/{produit}/codes-barres/{id}', [ProduitCodeBarreController::class, 'destroy'])->whereNumber('produit')->whereNumber('id');
+    // Unités de vente d'un produit (la caisse de 12…), avec leur facteur et leur prix.
+    Route::get('/produits/{produit}/unites', [ProduitUniteController::class, 'index'])->whereNumber('produit');
+    Route::post('/produits/{produit}/unites', [ProduitUniteController::class, 'store'])->whereNumber('produit');
+    Route::put('/produits/{produit}/unites/{id}', [ProduitUniteController::class, 'update'])->whereNumber('produit')->whereNumber('id');
+    Route::delete('/produits/{produit}/unites/{id}', [ProduitUniteController::class, 'destroy'])->whereNumber('produit')->whereNumber('id');
     Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
     Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
     // Étiquettes des produits : formats (rouleau ou planche) et impression en PDF.

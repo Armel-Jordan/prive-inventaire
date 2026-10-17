@@ -16,6 +16,9 @@ export interface ReliquatClient {
   quantite: number;
   quantite_commandee: number;
   quantite_recue: number;
+  /** Unité du reliquat (celle de la ligne commandée) et son facteur ; vides : l'unité de stock. */
+  unite?: string | null;
+  facteur?: number | null;
   prix_unitaire_ht: string;
   remise_ligne: string;
   devise: string | null;
@@ -37,7 +40,11 @@ export type ResumeReliquats = Record<StatutReliquat, number>;
 export interface LignesCommandeReliquat {
   commande: { id: number; numero: string; statut: string; client_id: number; devise: string | null; client: { id: number; code: string; raison_sociale: string } | null };
   possible: boolean;
-  lignes: { ligne_id: number; produit: { id: number; numero: string; description: string } | null; quantite: number; deja_en_reliquat: number; prix_unitaire_ht: number }[];
+  /** Quantités dans l'unité de la ligne (vide : l'unité de stock) ; facteur : unités de stock dans une unité. */
+  lignes: {
+    ligne_id: number; produit: { id: number; numero: string; description: string; mesure?: string | null } | null; quantite: number;
+    unite?: string | null; facteur?: number | null; deja_en_reliquat: number; prix_unitaire_ht: number;
+  }[];
 }
 
 export async function getReliquats(params: { statut?: string; client_id?: number; recherche?: string; page?: number } = {}): Promise<PageResultats<ReliquatClient> & { resume: ResumeReliquats }> {

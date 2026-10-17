@@ -61,6 +61,8 @@ export interface LigneRetournable {
   /** Secteur du produit, proposé pour la remise en stock. */
   secteur_id: number | null;
   quantite_facturee: number;
+  /** Unité facturée (la caisse de 12) ; vide : l'unité de stock. */
+  unite?: string | null;
   quantite_retournee: number;
   reste: number;
 }

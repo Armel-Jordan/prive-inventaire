@@ -15,7 +15,7 @@ export function usePrixAutomatiques({ clientId, date, taux = 1, lignes, actif = 
   taux?: number;
   lignes: LignePrix[];
   actif?: boolean;
-  /** Reçoit les prix calculés, par clé « produit:quantité » (voir `clePrix`). */
+  /** Reçoit les prix calculés, par clé « produit:quantité:unité » (voir `clePrix`). */
   appliquer: (prix: Map<string, PrixCalcule>) => void;
 }): void {
   const rappel = useRef(appliquer);
@@ -35,8 +35,8 @@ export function usePrixAutomatiques({ clientId, date, taux = 1, lignes, actif = 
         client_id: client ?? undefined,
         date: jour || undefined,
         lignes: demandes.map(paire => {
-          const [produit_id, quantite] = paire.split(':').map(Number);
-          return { produit_id, quantite };
+          const [produit, quantite, unite] = paire.split(':');
+          return { produit_id: Number(produit), quantite: Number(quantite), unite: unite || null };
         }),
       }).then(resultats => {
         if (vivant) rappel.current(new Map(resultats.map(r => [clePrix(r), r])));

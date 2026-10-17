@@ -95,7 +95,8 @@ class BonLivraisonController extends Controller
                 $ligne->save();
 
                 if ($nouvelleQte > $ancienneQte) {
-                    $diff = $nouvelleQte - $ancienneQte;
+                    // En unités de stock (une caisse de 12 sort 12 unités).
+                    $diff = (int) round(($nouvelleQte - $ancienneQte) * $ligne->facteurStock());
                     MouvementVente::creerMouvement(
                         $ligne->produit_id,
                         'sortie_preparation',
@@ -169,7 +170,7 @@ class BonLivraisonController extends Controller
                 MouvementVente::creerMouvement(
                     $ligne->produit_id,
                     'livraison_client',
-                    $ligne->quantite_livree,
+                    (int) round($ligne->quantite_livree * $ligne->facteurStock()),
                     'camion', null,
                     'client', $bon->facture->client_id,
                     'bon_livraison', $bon->id,
@@ -248,7 +249,8 @@ class BonLivraisonController extends Controller
                 continue;
             }
 
-            $ligneFactureOrigine = $factureOrigine->lignes->where('produit_id', $ligne->produit_id)->first();
+            // La ligne facturée du même produit, dans la même unité (une caisse ne se confond pas avec l'unité).
+            $ligneFactureOrigine = $factureOrigine->lignes->first(fn ($l) => (int) $l->produit_id === (int) $ligne->produit_id && $l->unite === $ligne->unite);
             if (! $ligneFactureOrigine) {
                 continue;
             }
@@ -268,6 +270,8 @@ class BonLivraisonController extends Controller
                 'montant_ht' => $montantLigneHt,
                 'montant_tva' => $montantLigneTva,
                 'montant_ttc' => $montantLigneTtc,
+                'unite' => $ligneFactureOrigine->unite,
+                'facteur' => $ligneFactureOrigine->facteur,
             ]);
 
             $montantHt += $montantLigneHt;

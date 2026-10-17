@@ -23,7 +23,9 @@ import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
 import OriginePrix from '@/components/OriginePrix';
-import { appliquerPrix, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
+import { prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
+import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -121,7 +123,7 @@ export default function DevisPage() {
         devise: formData.devise || deviseEntreprise,
         taux_change: formData.devise ? Number(formData.taux) : undefined,
         lignes: [
-          ...lignes.map(({ id, produit_id, quantite, prix_unitaire }) => ({ id, produit_id, quantite, prix_unitaire })),
+          ...lignes.map(({ id, produit_id, quantite, prix_unitaire, unite }) => ({ id, produit_id, quantite, prix_unitaire, unite: unite ?? null })),
           ...frais.lignes.map(f => ({ produit_id: f.produit_id, quantite: f.quantite, prix_unitaire: f.prix_unitaire_ht })),
         ],
         // Retenues par l'API pour le client de passage seulement.
@@ -241,6 +243,7 @@ export default function DevisPage() {
       produit_id: l.produit_id,
       quantite: l.quantite,
       prix_unitaire: Number(l.prix_unitaire),
+      unite: l.unite ?? null,
     })));
     setShowModal(true);
   };
@@ -253,11 +256,16 @@ export default function DevisPage() {
       if (field === 'prix_unitaire') return saisirPrix(ligne, 'prix_unitaire', value);
       if (field === 'quantite') return { ...ligne, quantite: value };
       // Prix du produit proposé tant qu'aucun prix n'a été saisi (converti pour un devis en devise étrangère),
-      // remplacé ensuite par celui du client.
+      // remplacé ensuite par celui du client ; dans l'unité de vente proposée d'office pour ce produit.
       const produit = produits.find(p => p.id === value);
-      return choisirProduit(ligne, value, 'prix_unitaire', dansLaDevise(Number(produit?.prix_unitaire) || 0, formData.devise, Number(formData.taux)));
+      const unite = uniteParDefaut(produit);
+      return { ...choisirProduit(ligne, value, 'prix_unitaire', dansLaDevise(prixUnite(produit, unite), formData.devise, Number(formData.taux))), unite };
     }));
   };
+
+  // Unité de la ligne : le prix de cette unité est proposé, sauf prix saisi.
+  const changerUniteLigne = (index: number, unite: string | null) => setLignes(ls => ls.map((ligne, i) => (i !== index ? ligne
+    : changerUnite(ligne, unite, 'prix_unitaire', dansLaDevise(prixUnite(produits.find(p => p.id === ligne.produit_id), unite), formData.devise, Number(formData.taux))))));
 
   const removeLigne = (index: number) => setLignes(lignes.filter((_, i) => i !== index));
 
@@ -471,6 +479,8 @@ export default function DevisPage() {
                           {produits.map(p => <option key={p.id} value={p.id}>{p.description}</option>)}
                         </select>
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
+                        <ChoixUnite produit={produits.find(p => p.id === ligne.produit_id)} valeur={ligne.unite} onChange={u => changerUniteLigne(idx, u)}
+                          libelle={t.productUnits.lineUnit.replace('{n}', String(idx + 1))} />
                         <input type="number" step="0.01" value={ligne.prix_unitaire} onChange={(e) => updateLigne(idx, 'prix_unitaire', parseFloat(e.target.value) || 0)} className="w-24 px-2 py-1 border rounded text-sm" placeholder="Prix" />
                         <span className="text-sm text-gray-600 w-28 text-right whitespace-nowrap">{montant(ligne.quantite * ligne.prix_unitaire, formData.devise || null)}</span>
                         <OriginePrix info={ligne.info_prix} />
@@ -537,7 +547,7 @@ export default function DevisPage() {
                   <div className="space-y-1">
                     {selectedDevis.lignes.map((l, i) => (
                       <div key={i} className="flex justify-between text-sm">
-                        <span>{l.produit?.description || `Produit #${l.produit_id}`} × {l.quantite}</span>
+                        <span>{l.produit?.description || `Produit #${l.produit_id}`} × {quantiteAvecUnite(l.quantite, l.unite)}</span>
                         <span className="whitespace-nowrap">{montant(l.montant_ligne, selectedDevis?.devise)}</span>
                       </div>
                     ))}

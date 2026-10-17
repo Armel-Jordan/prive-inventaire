@@ -63,6 +63,8 @@ export interface LigneProposee {
   produit_id: number | null;
   produit: ProduitDocument | null;
   quantite_facturee: number;
+  /** Unité facturée (la caisse de 12) ; vide : l'unité de stock. */
+  unite?: string | null;
   prix_unitaire_ht: number;
   remise_ligne: number;
   taux_tva: number;
