@@ -969,6 +969,15 @@ export const translations = {
       deleted: 'Demande supprimée.',
       deposit: 'Acompte',
     },
+    // Signature électronique à la livraison
+    deliverySignature: {
+      title: 'Signature du client',
+      name: 'Nom du signataire',
+      signHere: 'Signez ici',
+      clear: 'Effacer',
+      pad: 'Bloc de signature',
+      signed: 'Signé par le client',
+    },
     // Devis : facturer directement, copier
     quoteActions: {
       invoice: 'Facturer',
@@ -3582,6 +3591,15 @@ export const translations = {
       confirmDelete: 'Delete this request?',
       deleted: 'Request deleted.',
       deposit: 'Deposit',
+    },
+    // Electronic signature on delivery
+    deliverySignature: {
+      title: 'Customer signature',
+      name: 'Name of the signer',
+      signHere: 'Sign here',
+      clear: 'Clear',
+      pad: 'Signature pad',
+      signed: 'Signed by the customer',
     },
     // Quotes: invoice directly, copy
     quoteActions: {

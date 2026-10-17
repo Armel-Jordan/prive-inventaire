@@ -19,13 +19,26 @@ class BonLivraison extends Model
         'tenant_id', 'numero', 'facture_id', 'mode_livraison', 'statut',
         'date_preparation', 'date_pret', 'date_livraison',
         'preparateur_id', 'signature_client', 'notes_livraison',
+        // Signataire et moment de la signature électronique.
+        'signataire_nom', 'signe_le',
     ];
 
     protected $casts = [
         'date_preparation' => 'datetime',
         'date_pret' => 'datetime',
         'date_livraison' => 'datetime',
+        'signe_le' => 'datetime',
     ];
+
+    /** L'image de la signature (lourde) ne sort qu'avec le détail du bon ; les listes disent seulement s'il est signé. */
+    protected $hidden = ['signature_client'];
+
+    protected $appends = ['a_signature'];
+
+    public function getASignatureAttribute(): bool
+    {
+        return filled($this->attributes['signature_client'] ?? null);
+    }
 
     public static function generateNumero(): string
     {

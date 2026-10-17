@@ -150,7 +150,16 @@
         @if(count($signatures))
             <div class="signatures">
                 @foreach($signatures as $signature)
-                    <div class="signature"><div class="signature-line">{{ $signature }}</div></div>
+                    @if(is_array($signature) && ! empty($signature['image']))
+                        {{-- Signature électronique recueillie (bon de livraison) : l'image au-dessus de la ligne. --}}
+                        <div class="signature">
+                            <img src="{{ $signature['image'] }}" alt="" style="max-height: 50px; max-width: 180px; margin-top: 4px;">
+                            @if(! empty($signature['detail']))<div style="font-size: 8px; color: #555;">{{ $signature['detail'] }}</div>@endif
+                            <div class="signature-line" style="margin-top: 2px;">{{ $signature['libelle'] }}</div>
+                        </div>
+                    @else
+                        <div class="signature"><div class="signature-line">{{ is_array($signature) ? $signature['libelle'] : $signature }}</div></div>
+                    @endif
                 @endforeach
             </div>
         @endif

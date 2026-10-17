@@ -44,7 +44,8 @@ class BonLivraisonController extends Controller
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
         ])->findOrFail($id);
 
-        return response()->json($bon);
+        // Le détail donne l'image de la signature (les listes l'omettent).
+        return response()->json($bon->makeVisible('signature_client'));
     }
 
     public function demarrerPreparation(Request $request, int $id): JsonResponse
@@ -146,9 +147,11 @@ class BonLivraisonController extends Controller
             'lignes' => 'required|array',
             'lignes.*.id' => 'required|exists:bon_livraison_lignes,id',
             'lignes.*.quantite_livree' => 'required|integer|min:0',
-            'signature_client' => 'nullable|string',
+            // Signature électronique : image PNG ou JPEG encodée (data URL), nom du signataire.
+            'signature_client' => ['nullable', 'string', 'max:500000', 'regex:#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#'],
+            'signataire_nom' => ['nullable', 'string', 'max:150'],
             'notes_livraison' => 'nullable|string',
-        ]);
+        ], ['signature_client.regex' => 'La signature doit être une image (PNG ou JPEG).']);
 
         $tenantId = auth()->user()->tenant_id ?? $request->attributes->get('tenant')->id;
 
@@ -175,7 +178,10 @@ class BonLivraisonController extends Controller
                 );
             }
 
-            $bon->signature_client = $validated['signature_client'] ?? null;
+            $signature = $validated['signature_client'] ?? null;
+            $bon->signature_client = $signature;
+            $bon->signataire_nom = $signature && filled($validated['signataire_nom'] ?? null) ? trim($validated['signataire_nom']) : null;
+            $bon->signe_le = $signature ? now() : null;
             $bon->notes_livraison = $validated['notes_livraison'] ?? null;
             $bon->date_livraison = now();
 

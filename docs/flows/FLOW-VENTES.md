@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — devis facturé directement et copie de devis (§3.5, §3.9)
+> Dernière mise à jour : 2026-10-17 — signature électronique à la livraison (§6.3c)
 
 ---
 
@@ -1194,7 +1194,7 @@ Il y a deux étapes clés :
 | `date_pret` | Quand la préparation est terminée |
 | `date_livraison` | Quand la livraison a eu lieu |
 | `preparateur_id` | Qui a préparé |
-| `signature_client` | Signature numérique du client (à la livraison) |
+| `signature_client`, `signataire_nom`, `signe_le` | Signature électronique du client à la livraison : image, nom du signataire, moment (§6.3c) |
 | `notes_livraison` | Notes laissées à la livraison |
 
 **Lignes (BonLivraisonLigne)**
@@ -1213,7 +1213,7 @@ Il y a deux étapes clés :
 |--------|---------------|---------------------|
 | `cree` | BL créé, préparation pas encore commencée | Démarrer préparation ▶️, Annuler 🚫 |
 | `en_preparation` | Préparation en cours | Modifier quantités préparées, Marquer prêt ✅, Annuler 🚫 |
-| `pret` | Prêt à charger | Ajouter à une tournée 📦 |
+| `pret` | Prêt à charger | Ajouter à une tournée 📦, Enregistrer livraison 🚚 (retrait par le client, par exemple) |
 | `en_livraison` | Chargé dans un camion, en route | Enregistrer livraison 🚚 |
 | `livre_complet` | Tout livré | Terminé |
 | `livre_partiel` | Livraison partielle | Facture de reliquat créée auto |
@@ -1231,6 +1231,26 @@ Le bouton 🚫 (annuler) est disponible pour les statuts `cree` et `en_preparati
 - Doublon
 
 Un BL annulé ne peut plus être modifié. Les mouvements de stock déjà créés pendant la préparation ne sont pas automatiquement annulés — prévoir un mouvement correctif si nécessaire.
+
+### 6.3c Signature électronique à la livraison
+
+Plan de parité fripv2, phase 1.6 : comme sur les tablettes de livraison de fripv2, le client signe à la réception.
+
+**Recueillir la signature :** la fenêtre **Enregistrer livraison** propose un bloc de signature. Le client signe au doigt, au stylet ou à la souris ; le livreur note son nom. Les deux sont facultatifs, et **Effacer** recommence.
+
+**Ce qui est enregistré :**
+- l'image de la signature (PNG encodé, `signature_client`) ;
+- le nom du signataire (`signataire_nom`) ;
+- le moment de la signature (`signe_le`).
+
+Seule une image PNG ou JPEG est acceptée (422 sinon).
+
+**Où on la retrouve :**
+- **Liste :** une plume verte à côté du statut d'un bon signé. L'image, lourde, ne sort pas dans les listes (`a_signature` seulement).
+- **Détail :** l'image, le signataire et le moment.
+- **PDF du bon :** l'image, le nom et la date, au-dessus de la ligne « Reçu par le client ». Sans signature, la case reste à remplir à la main.
+
+Code : `BonLivraisonController::enregistrerLivraison` (validation), `DocumentsVentePdf::bonLivraison` (impression), composant `PadSignature` ; migration `2026_10_16_100043_signature_livraison`.
 
 ### 6.4 Statuts des lignes
 
@@ -1286,7 +1306,7 @@ Un BL annulé ne peut plus être modifié. Les mouvements de stock déjà créé
 ÉTAPE 7 : ENREGISTRER LA LIVRAISON
   → Endpoint: POST /bons-livraison/{id}/livrer
   → Pour chaque ligne, saisir la quantite_livree
-  → Signature du client (optionnel)
+  → Signature du client tracée à l'écran et nom du signataire (optionnels, §6.3c)
   → Notes de livraison (optionnel)
   → Un mouvement "livraison_client" est créé
 
