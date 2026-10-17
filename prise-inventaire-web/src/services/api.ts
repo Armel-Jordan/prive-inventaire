@@ -2175,7 +2175,7 @@ export async function calculerGroupeTaxe(id: number, montantHt: number): Promise
 }
 
 // === COURRIELS (paramètres d'envoi et modèles) ===
-export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'relance_devis' | 'bon_livraison' | 'commande_fournisseur' | 'retour_fournisseur' | 'general';
+export type TypeCourriel = 'devis' | 'commande_client' | 'facture' | 'avoir' | 'demande_acompte' | 'relance' | 'relance_devis' | 'bon_livraison' | 'commande_fournisseur' | 'retour_fournisseur' | 'rapport' | 'general';
 export type LangueCourriel = 'fr' | 'en';
 
 export interface ContenuModeleCourriel {
@@ -2263,12 +2263,16 @@ export async function testerParametresCourriel(destinataire: string, langue: Lan
 }
 
 // === COURRIELS (envoi des documents, file d'envoi et historique) ===
-export type TypeDocumentCourriel = Exclude<TypeCourriel, 'general'>;
+/** Types d'envoi d'un document (ni le courriel général, ni un rapport de la bibliothèque). */
+export type TypeDocumentCourriel = Exclude<TypeCourriel, 'general' | 'rapport'>;
+/** Ce qu'un envoi de l'historique joint : un document, ou un rapport de la bibliothèque. */
+export type TypeEnvoiCourriel = TypeDocumentCourriel | 'rapport';
 export type StatutCourriel = 'en_attente' | 'en_cours' | 'envoye' | 'echec';
 
 export interface PreparationCourriel {
-  type: TypeDocumentCourriel;
-  document_id: number;
+  type: TypeEnvoiCourriel;
+  /** Absent pour un rapport (son titre est dans document_numero). */
+  document_id: number | null;
   document_numero: string;
   langue: LangueCourriel;
   modele_personnalise: boolean;
@@ -2282,7 +2286,7 @@ export interface PreparationCourriel {
 
 export interface EnvoiCourriel {
   id: number;
-  type: TypeDocumentCourriel;
+  type: TypeEnvoiCourriel;
   document_id: number | null;
   document_numero: string | null;
   destinataires: string[];
@@ -2334,7 +2338,7 @@ export async function envoyerCourriel(courriel: NouveauCourriel): Promise<EnvoiC
   return fetchApi('/courriels/envois', { method: 'POST', body: JSON.stringify(courriel) });
 }
 
-export async function getEnvoisCourriel(filtres: { type?: TypeDocumentCourriel; document_id?: number; statut?: StatutCourriel; page?: number } = {}): Promise<PageEnvoisCourriel> {
+export async function getEnvoisCourriel(filtres: { type?: TypeEnvoiCourriel; document_id?: number; rapport?: string; statut?: StatutCourriel; page?: number } = {}): Promise<PageEnvoisCourriel> {
   const parametres = new URLSearchParams();
   Object.entries(filtres).forEach(([cle, valeur]) => { if (valeur !== undefined) parametres.set(cle, String(valeur)); });
   return fetchApi(`/courriels/envois?${parametres}`);

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Taches\ComptabiliserDocuments;
 use App\Taches\ConvertirEcrituresRecurrentes;
+use App\Taches\EnvoyerRapportsProgrammes;
 use App\Taches\ExecuterTransfertsPlanifies;
 use App\Taches\FacturerAbonnements;
 use App\Taches\FacturerLocations;
@@ -45,6 +46,8 @@ final class TachesPlanifiees
         'peremptions' => [SignalerPeremptions::class, 'quotidienne', '07:00'],
         'ecritures_recurrentes' => [ConvertirEcrituresRecurrentes::class, 'quotidienne', '05:30'],
         'comptabilisation' => [ComptabiliserDocuments::class, 'quotidienne', '23:30'],
+        // Envois programmés des rapports de la bibliothèque.
+        'rapports_programmes' => [EnvoyerRapportsProgrammes::class, 'quotidienne', '06:30'],
     ];
 
     /**

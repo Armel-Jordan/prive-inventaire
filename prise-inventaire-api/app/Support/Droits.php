@@ -315,6 +315,14 @@ class Droits
         // Bibliothèque des rapports : le droit de voir les rapports, puis celui du module de chaque rapport (contrôleur).
         'GET api/rapports/bibliotheque' => ['rapports', 'voir'],
         'GET api/rapports/bibliotheque/{code}' => ['rapports', 'voir'],
+        // Envoi d'un rapport par courriel, et envois programmés (consulter avec le droit de voir les rapports).
+        'GET api/rapports/bibliotheque/{code}/courriel' => ['rapports', 'envoyer'],
+        'POST api/rapports/bibliotheque/{code}/courriel' => ['rapports', 'envoyer'],
+        'GET api/rapports/programmes' => ['rapports', 'voir'],
+        'POST api/rapports/programmes' => ['rapports', 'programmer'],
+        'PUT api/rapports/programmes/{id}' => ['rapports', 'programmer'],
+        'DELETE api/rapports/programmes/{id}' => ['rapports', 'programmer'],
+        'POST api/rapports/programmes/{id}/envoyer' => ['rapports', 'programmer'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

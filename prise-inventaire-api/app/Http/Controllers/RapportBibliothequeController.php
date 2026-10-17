@@ -2,28 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
-use App\Models\Fournisseur;
+use App\Jobs\EnvoyerCourriel;
 use App\Models\ProduitTenant;
 use App\Rapports\Catalogue;
+use App\Rapports\Production;
 use App\Rapports\Rapport;
-use App\Support\ClasseurXlsx;
-use App\Support\EntreprisePdf;
-use App\Support\FichierCsv;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\Courriels\EnvoiCourriel;
+use App\Support\Courriels;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 /**
  * Bibliothèque des rapports (plan de parité fripv2, phases 5.1 et 5.2) : le catalogue des rapports que le compte peut
- * ouvrir, et chaque rapport à l'écran (lignes et totaux) ou en fichier (CSV, Excel, PDF), dans la langue demandée.
+ * ouvrir, chaque rapport à l'écran (lignes et totaux) ou en fichier (CSV, Excel, PDF), dans la langue demandée, et
+ * son envoi par courriel.
  */
 class RapportBibliothequeController extends Controller
 {
     public const FORMATS = ['json', 'csv', 'xlsx', 'pdf'];
+
+    /** Messages des adresses de courriel refusées (destinataires, copies). */
+    public const MESSAGES_ADRESSES = [
+        'destinataires.required' => 'Indiquez au moins un destinataire.',
+        'destinataires.max' => 'Vingt destinataires au plus.',
+        'destinataires.*.email' => 'Adresse de courriel invalide : « :input ».',
+        'copies.*.email' => 'Adresse de courriel invalide : « :input ».',
+        'copies_cachees.*.email' => 'Adresse de courriel invalide : « :input ».',
+    ];
+
+    public function __construct(private readonly Production $production) {}
 
     public function catalogue(Request $request): JsonResponse
     {
@@ -45,63 +54,88 @@ class RapportBibliothequeController extends Controller
 
     public function executer(Request $request, string $code): JsonResponse|Response
     {
-        $rapport = Catalogue::pour($request->user(), $request->attributes->get('tenant'))->get($code);
-        abort_unless($rapport, 404, 'Rapport introuvable, ou réservé à un autre droit.');
-        $rapport->langue = $this->langue($request);
+        $rapport = $this->rapport($request, $code);
         $saisies = $request->validate($rapport->regles() + ['format' => ['nullable', Rule::in(self::FORMATS)], 'langue' => ['nullable', Rule::in(['fr', 'en'])]]);
         $valeurs = $rapport->valeurs($saisies);
-        $colonnes = $rapport->colonnes($valeurs);
-        $lignes = $rapport->lignes($valeurs);
-        $totaux = $this->totaux($colonnes, $lignes);
         $format = $saisies['format'] ?? 'json';
-        $libelles = array_map(fn (array $c) => $c['libelle'][$rapport->langue] ?? $c['libelle']['fr'], $colonnes);
-        $nom = $code.'-'.today()->toDateString();
 
         if ($format === 'json') {
+            ['colonnes' => $colonnes, 'lignes' => $lignes, 'totaux' => $totaux] = $this->production->donnees($rapport, $valeurs);
+
             return response()->json([
                 'rapport' => $this->definition($rapport, $rapport->langue),
                 'valeurs' => $valeurs,
-                'colonnes' => collect($colonnes)->map(fn (array $c, string $cle) => ['cle' => $cle, 'libelle' => $libelles[$cle], 'type' => $c['type'], 'total' => $c['total'] ?? false])->values()->all(),
+                'colonnes' => collect($colonnes)->map(fn (array $c, string $cle) => ['cle' => $cle] + $c)->values()->all(),
                 'lignes' => $lignes,
                 'totaux' => $totaux,
                 'genere_le' => now()->toIso8601String(),
             ]);
         }
 
-        $cles = array_keys($colonnes);
-        $valeursLignes = array_map(fn (array $l) => array_map(fn (string $cle) => $l[$cle] ?? null, $cles), $lignes);
-        if ($totaux) {
-            $valeursLignes[] = array_map(fn (string $cle, int $index) => $totaux[$cle] ?? ($index === 0 ? 'Total' : null), $cles, array_keys($cles));
-        }
-        if ($format === 'csv') {
-            return FichierCsv::reponse("{$nom}.csv", array_values($libelles), array_map(fn (array $l) => array_map(fn ($v) => is_int($v) ? (string) $v : $v, $l), $valeursLignes));
-        }
-        if ($format === 'xlsx') {
-            $montants = array_map(fn (string $cle) => $colonnes[$cle]['type'] === 'montant', $cles);
+        $fichier = $this->production->fichier($rapport, $valeurs, $format, $this->fuseau($request));
 
-            return response(ClasseurXlsx::contenu($rapport->texte($rapport->titre()), array_values($libelles), $valeursLignes, $montants), 200, [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="'.$nom.'.xlsx"',
-            ]);
-        }
+        return response($fichier['contenu'], 200, [
+            'Content-Type' => $fichier['mime'].($format === 'csv' ? '; charset=UTF-8' : ''),
+            'Content-Disposition' => 'attachment; filename="'.$fichier['nom'].'"',
+        ]);
+    }
 
-        return Pdf::loadView('pdf.rapport', [
-            'langue' => $rapport->langue,
-            'titre' => $rapport->texte($rapport->titre()),
-            'description' => $rapport->texte($rapport->description()),
-            'parametres' => $this->parametresLisibles($rapport, $valeurs),
-            'colonnes' => collect($colonnes)->map(fn (array $c, string $cle) => ['libelle' => $libelles[$cle], 'type' => $c['type']])->all(),
-            'lignes' => $lignes,
-            'totaux' => $totaux,
-            'genere' => now()->setTimezone($this->fuseau($request))->format($rapport->langue === 'en' ? 'Y-m-d H:i' : 'd/m/Y H:i'),
-        ] + EntreprisePdf::entete())
-            ->setPaper('A4', count($colonnes) > 6 ? 'landscape' : 'portrait')->setOption('isFontSubsettingEnabled', true)
-            ->download("{$nom}.pdf");
+    /** Pré-remplissage de la fenêtre d'envoi d'un rapport par courriel (modèle « rapport » de l'entreprise). */
+    public function preparerCourriel(Request $request, EnvoiCourriel $envois, string $code): JsonResponse
+    {
+        $rapport = $this->rapport($request, $code);
+        $saisies = $request->validate($this->reglesParametres($rapport) + ['langue' => ['nullable', Rule::in(Courriels::LANGUES)]]);
+
+        return response()->json($envois->preparerRapport($rapport, $rapport->valeurs($saisies['parametres'] ?? []), $rapport->langue, $request->user()?->email));
+    }
+
+    /** Envoie le rapport par courriel (mis en file, puis envoyé tout de suite avec la file « sync »). */
+    public function envoyerCourriel(Request $request, EnvoiCourriel $envois, string $code): JsonResponse
+    {
+        $rapport = $this->rapport($request, $code);
+        $donnees = $request->validate($this->reglesParametres($rapport) + [
+            'format' => ['required', Rule::in(Production::FORMATS)],
+            'langue' => ['required', Rule::in(Courriels::LANGUES)],
+            'destinataires' => ['required', 'array', 'min:1', 'max:20'],
+            'destinataires.*' => ['required', 'email', 'max:255'],
+            'copies' => ['nullable', 'array', 'max:20'],
+            'copies.*' => ['required', 'email', 'max:255'],
+            'copies_cachees' => ['nullable', 'array', 'max:20'],
+            'copies_cachees.*' => ['required', 'email', 'max:255'],
+            'objet' => ['required', 'string', 'max:255'],
+            'contenu' => ['required', 'string', 'max:20000'],
+        ], self::MESSAGES_ADRESSES);
+
+        $envoi = $envois->creerRapport($rapport, [
+            'valeurs' => $rapport->valeurs($donnees['parametres'] ?? []),
+            'format' => $donnees['format'],
+            'fuseau' => $this->fuseau($request),
+        ], $donnees, $request->user()?->id);
+        EnvoyerCourriel::dispatch($envoi->id);
+
+        return response()->json($envoi->refresh()->load('auteur:id,nom')->resume(), 201);
+    }
+
+    /** Un rapport que le compte peut ouvrir, dans la langue demandée ; sinon « introuvable ». */
+    private function rapport(Request $request, string $code): Rapport
+    {
+        $rapport = Catalogue::pour($request->user(), $request->attributes->get('tenant'))->get($code);
+        abort_unless($rapport, 404, 'Rapport introuvable, ou réservé à un autre droit.');
+        $rapport->langue = $this->langue($request);
+
+        return $rapport;
+    }
+
+    /** Règles des paramètres d'un rapport donnés sous « parametres » (envoi par courriel). */
+    private function reglesParametres(Rapport $rapport): array
+    {
+        return ['parametres' => ['nullable', 'array']]
+            + collect($rapport->regles())->mapWithKeys(fn (array $regles, string $cle) => ["parametres.{$cle}" => $regles])->all();
     }
 
     private function langue(Request $request): string
     {
-        $langue = (string) $request->query('langue', 'fr');
+        $langue = (string) $request->input('langue', 'fr');
 
         return in_array($langue, ['fr', 'en'], true) ? $langue : 'fr';
     }
@@ -109,7 +143,7 @@ class RapportBibliothequeController extends Controller
     /** Fuseau de l'utilisateur transmis par l'écran (« Europe/Paris »), sinon celui de l'application. */
     private function fuseau(Request $request): string
     {
-        $fuseau = (string) $request->query('fuseau', '');
+        $fuseau = (string) $request->input('fuseau', '');
 
         return in_array($fuseau, timezone_identifiers_list(), true) ? $fuseau : config('app.timezone');
     }
@@ -132,45 +166,5 @@ class RapportBibliothequeController extends Controller
                 'options' => isset($p['options']) ? collect($p['options'])->map(fn (array $l, string $valeur) => ['valeur' => $valeur, 'libelle' => $l[$langue] ?? $l['fr']])->values()->all() : null,
             ], fn ($v) => $v !== null))->values()->all(),
         ];
-    }
-
-    /** Totaux des colonnes qui en ont (montants arrondis au centime). */
-    private function totaux(array $colonnes, array $lignes): array
-    {
-        $totaux = [];
-        foreach ($colonnes as $cle => $colonne) {
-            if ($colonne['total'] ?? false) {
-                $somme = array_sum(array_map(fn (array $l) => (float) ($l[$cle] ?? 0), $lignes));
-                $totaux[$cle] = match ($colonne['type']) {
-                    'entier' => (int) round($somme),
-                    'pourcentage' => round($somme, 1),
-                    'quantite' => round($somme, 4),
-                    default => round($somme, 2),
-                };
-            }
-        }
-
-        return $totaux;
-    }
-
-    /** Paramètres renseignés, lisibles, pour l'en-tête du PDF : libellé => valeur (date, option, client, fournisseur). */
-    private function parametresLisibles(Rapport $rapport, array $valeurs): array
-    {
-        $lisibles = [];
-        foreach ($rapport->parametres() as $cle => $parametre) {
-            $valeur = $valeurs[$cle] ?? null;
-            if ($valeur === null || $valeur === '') {
-                continue;
-            }
-            $lisibles[$rapport->texte($parametre['libelle'])] = match ($parametre['type']) {
-                'date' => Carbon::parse($valeur)->format($rapport->langue === 'en' ? 'Y-m-d' : 'd/m/Y'),
-                'choix' => $rapport->texte($parametre['options'][$valeur] ?? ['fr' => (string) $valeur]),
-                'client' => Client::withTrashed()->find($valeur)?->raison_sociale ?? (string) $valeur,
-                'fournisseur' => Fournisseur::withTrashed()->find($valeur)?->raison_sociale ?? (string) $valeur,
-                default => (string) $valeur,
-            };
-        }
-
-        return $lisibles;
     }
 }

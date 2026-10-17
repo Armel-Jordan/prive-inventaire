@@ -56,7 +56,14 @@ class Permissions
                 'aide_fr' => 'Approuver ou rejeter un mouvement en attente au-delà des seuils.',
                 'aide_en' => 'Approve or reject a pending movement above the thresholds.'],
         ]],
-        'rapports' => ['onglet' => 'inventaire', 'fr' => 'Rapports', 'en' => 'Reports', 'crud' => ['voir']],
+        'rapports' => ['onglet' => 'inventaire', 'fr' => 'Rapports', 'en' => 'Reports', 'crud' => ['voir'], 'actions' => [
+            'envoyer' => ['base' => 'voir', 'fr' => 'Envoyer un rapport par courriel', 'en' => 'Email a report',
+                'aide_fr' => 'Envoyer un rapport de la bibliothèque par courriel, en PDF, Excel ou CSV. Seuls les rapports que le compte peut ouvrir partent.',
+                'aide_en' => 'Email a report from the library as PDF, Excel or CSV. Only the reports the account can open can be sent.'],
+            'programmer' => ['base' => 'modifier', 'fr' => "Programmer l'envoi des rapports", 'en' => 'Schedule reports',
+                'aide_fr' => "Créer, modifier et supprimer les envois programmés (chaque jour, semaine ou mois). Chaque envoi suit les droits du dernier compte à l'avoir réglé.",
+                'aide_en' => 'Create, change and delete scheduled sends (daily, weekly or monthly). Each send follows the rights of the last account that set it up.'],
+        ]],
         'inventaire_tournant' => ['onglet' => 'inventaire', 'fr' => 'Inventaire tournant', 'en' => 'Cycle counting'],
 
         'fournisseurs' => ['onglet' => 'achats', 'fr' => 'Fournisseurs', 'en' => 'Suppliers', 'actions' => [

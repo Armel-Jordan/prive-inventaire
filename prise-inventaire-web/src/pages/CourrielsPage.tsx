@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Mail, Eye, RotateCw, X } from 'lucide-react';
 import {
   getEnvoisCourriel, getEnvoiCourriel, reessayerEnvoiCourriel,
-  type EnvoiCourriel, type PageEnvoisCourriel, type StatutCourriel, type TypeDocumentCourriel,
+  type EnvoiCourriel, type PageEnvoisCourriel, type StatutCourriel, type TypeEnvoiCourriel,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import BadgeStatutCourriel from '@/components/BadgeStatutCourriel';
 
 const STATUTS: StatutCourriel[] = ['en_attente', 'en_cours', 'envoye', 'echec'];
-const TYPES: TypeDocumentCourriel[] = ['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'relance_devis', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur'];
+const TYPES: TypeEnvoiCourriel[] = ['devis', 'commande_client', 'facture', 'avoir', 'demande_acompte', 'relance', 'relance_devis', 'bon_livraison', 'commande_fournisseur', 'retour_fournisseur', 'rapport'];
 
 /** Historique et file d'envoi des courriels de l'entreprise, avec relance des échecs. */
 export default function CourrielsPage() {
@@ -20,7 +20,7 @@ export default function CourrielsPage() {
 
   const [page, setPage] = useState(1);
   const [statut, setStatut] = useState<StatutCourriel | ''>('');
-  const [type, setType] = useState<TypeDocumentCourriel | ''>('');
+  const [type, setType] = useState<TypeEnvoiCourriel | ''>('');
   const [resultat, setResultat] = useState<PageEnvoisCourriel | null>(null);
   const [erreur, setErreur] = useState('');
   const [detail, setDetail] = useState<EnvoiCourriel | null>(null);
@@ -74,7 +74,7 @@ export default function CourrielsPage() {
           <option value="">{tc.allStatuses}</option>
           {STATUTS.map(s => <option key={s} value={s}>{tc.statuses[s]}</option>)}
         </select>
-        <select value={type} onChange={e => { setType(e.target.value as TypeDocumentCourriel | ''); setPage(1); }} className={classeFiltre} aria-label={tc.type}>
+        <select value={type} onChange={e => { setType(e.target.value as TypeEnvoiCourriel | ''); setPage(1); }} className={classeFiltre} aria-label={tc.type}>
           <option value="">{tc.allTypes}</option>
           {TYPES.map(ty => <option key={ty} value={ty}>{tc.types[ty]}</option>)}
         </select>

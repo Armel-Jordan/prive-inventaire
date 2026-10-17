@@ -131,6 +131,7 @@ use App\Http\Controllers\ProduitUniteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportBibliothequeController;
 use App\Http\Controllers\RapportController;
+use App\Http\Controllers\RapportProgrammeController;
 use App\Http\Controllers\RechercheController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RolePermissionController;
@@ -442,6 +443,16 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Bibliothèque : catalogue des rapports (selon les droits du compte), un rapport à l'écran ou en fichier.
         Route::get('/bibliotheque', [RapportBibliothequeController::class, 'catalogue']);
         Route::get('/bibliotheque/{code}', [RapportBibliothequeController::class, 'executer'])->where('code', '[a-z0-9-]+');
+        // Envoi d'un rapport par courriel (pré-remplissage, envoi) et envois programmés.
+        Route::get('/bibliotheque/{code}/courriel', [RapportBibliothequeController::class, 'preparerCourriel'])->where('code', '[a-z0-9-]+');
+        Route::post('/bibliotheque/{code}/courriel', [RapportBibliothequeController::class, 'envoyerCourriel'])->where('code', '[a-z0-9-]+')
+            ->middleware('throttle:30,1,courriel-envoi');
+        Route::get('/programmes', [RapportProgrammeController::class, 'index']);
+        Route::post('/programmes', [RapportProgrammeController::class, 'store']);
+        Route::put('/programmes/{id}', [RapportProgrammeController::class, 'update'])->whereNumber('id');
+        Route::delete('/programmes/{id}', [RapportProgrammeController::class, 'destroy'])->whereNumber('id');
+        Route::post('/programmes/{id}/envoyer', [RapportProgrammeController::class, 'envoyer'])->whereNumber('id')
+            ->middleware('throttle:30,1,courriel-envoi');
     });
 
     // Balises de classement des fiches et documents.
