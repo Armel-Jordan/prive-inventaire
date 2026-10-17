@@ -122,7 +122,7 @@ export default function RechercheGlobale() {
   const indexDe = new Map(resultats.map((r, i) => [`${r.type}-${r.id}`, i]));
 
   return (
-    <div ref={conteneur} className="relative mr-auto w-full max-w-md">
+    <div ref={conteneur} className="relative mr-auto w-full min-w-0 max-w-md">
       <label htmlFor={`${id}-champ`} className="sr-only">{tr.label}</label>
       <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
       <input
@@ -139,13 +139,13 @@ export default function RechercheGlobale() {
         onFocus={ouvrir}
         onKeyDown={clavier}
         placeholder={tr.placeholder}
-        className="w-full pl-9 pr-14 py-2 text-sm border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:bg-white dark:focus:bg-gray-700"
+        className="w-full pl-9 pr-3 sm:pr-14 py-2 text-sm border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:bg-white dark:focus:bg-gray-700"
       />
       {!texte && <kbd className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 rounded border text-[10px] text-gray-400 dark:border-gray-600">{tr.shortcut}</kbd>}
 
       {ouvert && (
         <div id={`${id}-liste`} role="listbox" aria-label={tr.label}
-          className="absolute z-40 mt-2 w-[min(32rem,90vw)] max-h-[70vh] overflow-y-auto rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl">
+          className="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:w-[min(32rem,90vw)] z-40 max-h-[70vh] overflow-y-auto rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl">
           {q.length < 2 ? (
             <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{tr.hint}</p>
           ) : groupes && groupes.length === 0 ? (
