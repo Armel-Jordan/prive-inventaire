@@ -7,6 +7,7 @@ use App\Models\PieceJointe;
 use App\Models\ProduitTenant;
 use App\Models\ProduitTraduction;
 use App\Services\CodesBarresProduits;
+use App\Services\LotsSeries;
 use App\Support\TenantRule;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -67,6 +68,8 @@ class ProduitTenantController extends Controller
             'traductions.*.langue' => ['required', Rule::in(ProduitTraduction::LANGUES), 'distinct'],
             'traductions.*.description' => ['nullable', 'string', 'max:255'],
             'traductions.*.description_longue' => ['nullable', 'string', 'max:10000'],
+            'suivi' => ['nullable', Rule::in(ProduitTenant::SUIVIS)],
+            'peremption' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -100,6 +103,27 @@ class ProduitTenantController extends Controller
                 ProduitTraduction::query()->updateOrCreate(['produit_id' => $produit->id, 'langue' => $traduction['langue']], $texte);
             }
         }
+    }
+
+    /**
+     * Suivi des exemplaires (phase 2.8) : par lot ou par numéro de série, et date de péremption exigée pour un lot. Le
+     * suivi ne change plus dès que des lots ou des numéros de série sont enregistrés pour le produit.
+     */
+    private function suivi(Request $request, ?ProduitTenant $produit): array
+    {
+        $valeurs = [];
+        if ($request->has('suivi')) {
+            $suivi = $request->input('suivi') ?: null;
+            if ($produit && $suivi !== $produit->suivi && ! app(LotsSeries::class)->suiviModifiable($produit)) {
+                throw ValidationException::withMessages(['suivi' => 'Des lots ou des numéros de série sont déjà enregistrés pour ce produit : son suivi ne peut plus changer.']);
+            }
+            $valeurs['suivi'] = $suivi;
+        }
+        if ($request->has('peremption')) {
+            $valeurs['peremption'] = $request->boolean('peremption');
+        }
+
+        return $valeurs;
     }
 
     /** Champs de transport : matière dangereuse (numéro ONU, classe, groupe d'emballage), poids et volume unitaires. */
@@ -175,7 +199,7 @@ class ProduitTenantController extends Controller
             'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
             'prix_unitaire' => $request->prix_unitaire,
-        ] + $this->transport($request) + $this->fiche($request, null));
+        ] + $this->transport($request) + $this->fiche($request, null) + $this->suivi($request, null));
         $this->enregistrerTraductions($produit, $request);
 
         $produit->load(['secteur', 'fabricant:id,nom', 'traductions']);
@@ -217,6 +241,7 @@ class ProduitTenantController extends Controller
             $request->only(['numero', 'description', 'mesure', 'unite_achat', 'qte_par_unite_achat', 'type', 'secteur_id', 'categorie', 'prix_unitaire', 'actif']),
             $this->transport($request),
             $this->fiche($request, $produit),
+            $this->suivi($request, $produit),
         ));
         $produit->save();
         $this->enregistrerTraductions($produit, $request);

@@ -108,6 +108,8 @@ use App\Http\Controllers\Comptabilite\RecurrenceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\EtiquetteController;
+use App\Http\Controllers\Inventaire\LotController;
+use App\Http\Controllers\Inventaire\NumeroSerieController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
 use App\Http\Controllers\Inventaire\StockEntrepotsController;
 use App\Http\Controllers\Inventaire\ValorisationInventaireController;
@@ -485,6 +487,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
 
     // Stock par entrepôt (multi-entrepôts) : droit « voir » des inventaires et scans.
     Route::get('/stock-entrepots', StockEntrepotsController::class);
+
+    // Lots et numéros de série (registre, péremptions) : module « Lots et numéros de série ».
+    Route::prefix('lots')->group(function () {
+        Route::get('/', [LotController::class, 'index']);
+        Route::get('/{id}', [LotController::class, 'show'])->whereNumber('id');
+        Route::put('/{id}', [LotController::class, 'update'])->whereNumber('id');
+    });
+    Route::get('/numeros-serie', [NumeroSerieController::class, 'index']);
 
     // Utilisateurs admin CRUD (admin uniquement)
     Route::middleware('role:admin')->group(function () {

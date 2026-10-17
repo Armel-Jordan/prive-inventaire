@@ -781,3 +781,55 @@ Code :
   `CommandeFournisseurController`, vue `pdf.bon-commande` ;
 - web : `StockEntrepotsPage`, `services/stockEntrepots.ts`, `lib/entrepots.ts`, `OptionsSecteurs` ;
 - migration `2026_10_17_100077_entrepots_secteurs` (colonnes `entrepot_id` de `secteurs` et `com_four_entete`).
+
+## 20. Lots, numéros de série et péremptions (Inventaire → Lots et numéros de série)
+
+Plan de parité fripv2, phase 2.8a : les exemplaires d'un produit peuvent être suivis par lot ou par numéro de série.
+Le suivi se règle sur la fiche du produit, section « Suivi des exemplaires ». Un produit sans suivi se reçoit comme
+avant : le lot saisi à la réception y reste une simple mention.
+
+- **Par lot** : chaque réception exige le numéro de lot. Si la fiche l'exige, la date de péremption est demandée
+  aussi.
+  - Le lot est créé à sa première réception, avec le fournisseur.
+  - Il tient un journal de quantités en unités de stock : une caisse de 6 compte pour 6. Le solde est ce qu'il en
+    reste.
+  - Un lot déjà connu se reçoit avec la même péremption ; une autre date est refusée.
+- **Par numéro de série** : chaque unité de stock reçue a son numéro, unique pour le produit. Avec un lecteur, on
+  saisit un numéro par ligne ; les espaces, virgules et points-virgules séparent aussi.
+- **Suivi verrouillé** : le suivi d'un produit ne change plus dès que des lots ou des numéros lui sont enregistrés.
+- **Annulation d'une réception** : ses lots sont contre-passés et ses numéros de série retirés. C'est refusé si un
+  exemplaire est déjà sorti.
+- **Registre des lots** :
+  - la péremption la plus proche d'abord ;
+  - un lot est « à surveiller » dans le préavis de la tâche « Péremption des lots » (30 jours par défaut), et
+    « périmé » ensuite ;
+  - filtres par état, « avec du stock », recherche ; export CSV ;
+  - le détail d'un lot montre ses réceptions ; avec le droit de modifier, on corrige sa péremption et ses notes.
+- **Registre des numéros de série** : produit, statut (en stock pour l'instant ; livré, retourné et rebut viendront
+  avec les livraisons), fournisseur, réception d'origine.
+- **Alerte** : la tâche planifiée « Péremption des lots » prévient une fois par lot et par date des lots qui ont
+  encore du stock et qui périment dans le préavis, ou sont périmés. Elle se règle dans Paramètres → Alertes.
+
+**Droits** : le module « Lots et numéros de série » (voir ; modifier pour corriger un lot) suit au départ les droits
+des produits. Le suivi d'un produit se règle avec les droits des produits, et les lots se saisissent avec ceux des
+réceptions.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| POST / PUT | `/produits[/{id}]` | `suivi` (vide, `lot` ou `serie`), `peremption` |
+| POST | `/receptions/multiple` | Par ligne : `lot_numero`, `date_peremption`, `numeros_serie[]` |
+| GET | `/lots?recherche=&etat=perimes\|a_surveiller\|sans_date&avec_stock=1&format=csv` | Registre des lots |
+| GET / PUT | `/lots/{id}` | Détail (mouvements) ; péremption et notes |
+| GET | `/numeros-serie?recherche=&statut=` | Registre des numéros de série |
+
+Code :
+- service `App\Services\LotsSeries` (contrôles et enregistrement à la réception, annulation), branché dans
+  `ReceptionsFournisseur` ;
+- `Inventaire\LotController`, `Inventaire\NumeroSerieController` ; modèles `Lot`, `LotMouvement`, `NumeroSerie` ;
+- tâche `App\Taches\SignalerPeremptions` (`peremptions`, préavis « jours ») ;
+- web : `LotsPage`, `services/lots.ts`, `FenetreReception` (lot exigé, numéros de série), fiche produit ;
+- migration `2026_10_17_100078_suivi_lots_series` (colonnes `suivi` et `peremption` de `produits`, tables `lots`,
+  `lot_mouvements`, `numeros_serie`, colonne `lot_id` des lignes de réception).
+
+Suite prévue (2.8b) : les livraisons consomment les lots (premier périmé, premier sorti) et les numéros de série,
+avec les retours et le rapport de rappel d'un lot (qui l'a reçu).

@@ -38,6 +38,8 @@ class Permissions
                 'aide_en' => 'Create a stocktake, enter corrections, validate it (it becomes the official inventory) or cancel it.'],
         ]],
         'valorisation' => ['onglet' => 'inventaire', 'fr' => "Valorisation de l'inventaire", 'en' => 'Inventory valuation', 'crud' => ['voir']],
+        // Registre des lots et des numéros de série, péremptions ; modifier : corriger la péremption ou les notes d'un lot.
+        'lots' => ['onglet' => 'inventaire', 'fr' => 'Lots et numéros de série', 'en' => 'Lots and serial numbers', 'crud' => ['voir', 'modifier']],
         'statistiques' => ['onglet' => 'inventaire', 'fr' => 'Statistiques', 'en' => 'Statistics', 'crud' => ['voir']],
         'comparaison' => ['onglet' => 'inventaire', 'fr' => 'Comparaison', 'en' => 'Comparison', 'crud' => ['voir']],
         'alertes' => ['onglet' => 'inventaire', 'fr' => 'Alertes de stock', 'en' => 'Stock alerts'],

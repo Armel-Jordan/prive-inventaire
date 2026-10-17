@@ -51,6 +51,10 @@ export interface Produit {
   image_id?: number | null;
   /** Descriptions dans d'autres langues (l'espace client montre celle du visiteur). */
   traductions?: TraductionProduit[];
+  /** Suivi des exemplaires : par lot ou par numéro de série ; vide, aucun suivi. */
+  suivi?: 'lot' | 'serie' | null;
+  /** Lot : la date de péremption est exigée à la réception. */
+  peremption?: boolean;
 }
 
 export interface TraductionProduit {

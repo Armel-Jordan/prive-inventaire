@@ -45,12 +45,16 @@ interface ProduitForm extends ValeursFiche {
   groupe_emballage: string;
   poids_kg: string;
   volume_m3: string;
+  // Suivi des exemplaires : par lot ou par numéro de série ; péremption exigée pour un lot.
+  suivi: '' | 'lot' | 'serie';
+  peremption: boolean;
 }
 
 const emptyForm: ProduitForm = {
   numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '',
   numero_onu: '', classe_danger: '', groupe_emballage: '', poids_kg: '', volume_m3: '',
   fabricant_id: '', reference_fabricant: '', description_longue: '', traductions: {}, image_id: null,
+  suivi: '', peremption: false,
 };
 
 /** Matière dangereuse : numéro ONU ou classe renseignés (et pas seulement des zéros), comme côté API. */
@@ -68,6 +72,7 @@ interface ConfigNumero {
 export default function ProduitsPage() {
   const { t } = useLanguage();
   const th = t.hazmat;
+  const tl = t.lots;
   const [produits, setProduits] = useState<Produit[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,6 +177,8 @@ export default function ProduitsPage() {
       description_longue: produit.description_longue ?? '',
       traductions: Object.fromEntries((produit.traductions ?? []).map(tr => [tr.langue, { description: tr.description ?? '', description_longue: tr.description_longue ?? '' }])),
       image_id: produit.image_id ?? null,
+      suivi: produit.suivi ?? '',
+      peremption: !!produit.peremption,
     });
     setEditingId(produit.id!);
     setShowModal(true);
@@ -200,6 +207,8 @@ export default function ProduitsPage() {
           description_longue: form.traductions[langue]?.description_longue.trim() || null,
         })),
         image_id: form.image_id,
+        suivi: form.suivi || null,
+        peremption: form.suivi === 'lot' && form.peremption,
       };
       if (editingId) {
         await updateProduit(editingId, payload);
@@ -399,6 +408,11 @@ export default function ProduitsPage() {
                     <td className="px-4 py-3 text-sm font-mono font-medium dark:text-gray-200">{produit.numero}</td>
                     <td className="px-4 py-3 text-sm dark:text-gray-200">
                       {produit.description}
+                      {produit.suivi && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+                          {produit.suivi === 'lot' ? tl.badgeLot : tl.badgeSerial}
+                        </span>
+                      )}
                       {(produit.composants?.length ?? 0) > 0 && (
                         <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{t.productLinks.kit}</span>
                       )}
@@ -551,6 +565,23 @@ export default function ProduitsPage() {
               </div>
               <ChampsFicheProduit key={editingId ?? 'nouveau'} valeurs={form} onChange={modification => setForm(actuel => ({ ...actuel, ...modification }))}
                 produitId={editingId} fabricantActuel={produits.find(p => p.id === editingId)?.fabricant ?? null} />
+              <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{tl.tracking}</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <select aria-label={tl.tracking} value={form.suivi} onChange={e => setForm({ ...form, suivi: e.target.value as ProduitForm['suivi'] })}
+                    className="px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm">
+                    <option value="">{tl.trackingNone}</option>
+                    <option value="lot">{tl.trackingLot}</option>
+                    <option value="serie">{tl.trackingSerial}</option>
+                  </select>
+                  {form.suivi === 'lot' && (
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input type="checkbox" checked={form.peremption} onChange={e => setForm({ ...form, peremption: e.target.checked })} /> {tl.expiryRequired}
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{tl.trackingHelp}</p>
+              </div>
               <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conditionnement fournisseur</p>
                 <div className="grid grid-cols-2 gap-3">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Plus, SplitSquareHorizontal, X } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { aujourdhui, useCodeDevise, useMontantDocument } from '@/lib/documents';
@@ -25,6 +25,8 @@ interface Rangee {
   secteur_id: number | null;
   lot: string;
   peremption: string;
+  /** Numéros de série saisis (produit suivi par numéro de série), un par ligne. */
+  series: string;
   note: string;
 }
 
@@ -33,6 +35,9 @@ const classeEntete = 'px-2 py-2 text-left text-xs font-medium text-gray-600 dark
 
 let compteur = 0;
 const nouvelleCle = () => `r${++compteur}`;
+
+/** Numéros de série saisis : séparés par des retours à la ligne, des espaces, des virgules ou des points-virgules. */
+const numerosSaisis = (texte: string) => texte.split(/[\s,;]+/).filter(Boolean);
 
 function attendues(commande: ComFourEntete, lignes: ComFourLigne[]): LigneAttendue[] {
   return lignes.filter((l): l is ComFourLigne & { id: number } => l.id !== undefined)
@@ -61,7 +66,7 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
   const codeEntreprise = useCodeDevise();
   const [lignes, setLignes] = useState<LigneAttendue[]>(() => attendues(commande, lignesInitiales));
   const [rangees, setRangees] = useState<Rangee[]>(() => attendues(commande, lignesInitiales).map(a => ({
-    cle: nouvelleCle(), ligneId: a.ligne.id, quantite: a.restant, secteur_id: null, lot: '', peremption: '', note: '',
+    cle: nouvelleCle(), ligneId: a.ligne.id, quantite: a.restant, secteur_id: null, lot: '', peremption: '', series: '', note: '',
   })));
   const [couts, setCouts] = useState<Record<number, string>>(() => Object.fromEntries(lignesInitiales.map(l => [l.id, String(Number(l.prix_unitaire))])));
   const [clotures, setClotures] = useState<number[]>([]);
@@ -104,7 +109,7 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
     setRangees(rs => {
       const derniere = rs.map(r => r.ligneId).lastIndexOf(ligneId);
       const copie = [...rs];
-      copie.splice(derniere + 1, 0, { cle: nouvelleCle(), ligneId, quantite: 0, secteur_id: null, lot: '', peremption: '', note: '' });
+      copie.splice(derniere + 1, 0, { cle: nouvelleCle(), ligneId, quantite: 0, secteur_id: null, lot: '', peremption: '', series: '', note: '' });
       return copie;
     });
   }
@@ -116,7 +121,7 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
       const nouvelles = attendues(ajoutee, await getLignesEnAttente(id) ?? []);
       setLignes(ls => [...ls, ...nouvelles]);
       setRangees(rs => [...rs, ...nouvelles.map(a => ({
-        cle: nouvelleCle(), ligneId: a.ligne.id, quantite: a.restant, secteur_id: null, lot: '', peremption: '', note: '',
+        cle: nouvelleCle(), ligneId: a.ligne.id, quantite: a.restant, secteur_id: null, lot: '', peremption: '', series: '', note: '',
       }))]);
       setCouts(cs => ({ ...cs, ...Object.fromEntries(nouvelles.map(a => [a.ligne.id, String(Number(a.ligne.prix_unitaire))])) }));
     } catch (e) {
@@ -134,10 +139,29 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
       secteur_id: r.secteur_id ?? undefined,
       lot_numero: r.lot || undefined,
       date_peremption: r.peremption || undefined,
+      numeros_serie: parLigne.get(r.ligneId)?.ligne.produit?.suivi === 'serie' ? numerosSaisis(r.series) : undefined,
       notes: r.note || undefined,
     }));
     if (receptions.length === 0 && clotures.length === 0) {
       setErreur(tr.nothingToSave);
+      return;
+    }
+    // Produits suivis (lot, péremption, un numéro de série par unité) : vérifiés avant l'envoi.
+    const manques = rangees.filter(r => r.quantite > 0).flatMap(r => {
+      const attendue = parLigne.get(r.ligneId);
+      const produit = attendue?.ligne.produit;
+      const nom = produit?.numero ?? produit?.description ?? '';
+      if (!attendue || !produit?.suivi) return [];
+      if (produit.suivi === 'lot') {
+        if (!r.lot.trim()) return [tr.lotRequired.replace('{produit}', nom)];
+        return produit.peremption && !r.peremption ? [tr.expiryRequired.replace('{produit}', nom)] : [];
+      }
+      const attendus = r.quantite * (attendue.ligne.qte_par_unite_achat ?? 1);
+      const saisis = numerosSaisis(r.series).length;
+      return saisis === attendus ? [] : [tr.serialsMismatch.replace('{produit}', nom).replace('{n}', String(saisis)).replace('{attendus}', String(attendus))];
+    });
+    if (manques.length > 0) {
+      setErreur(manques.join('\n'));
       return;
     }
     // Sur-réception : plus que le reste commandé sur une ligne, à confirmer.
@@ -240,8 +264,11 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
                   const premiere = rangees.findIndex(x => x.ligneId === r.ligneId) === index;
                   const total = recuPar(r.ligneId);
                   const devise = attendue.commande.devise;
+                  const suivi = attendue.ligne.produit?.suivi;
+                  const attendus = r.quantite * (attendue.ligne.qte_par_unite_achat ?? 1);
                   return (
-                    <tr key={r.cle} className={premiere ? '' : 'bg-gray-50/60 dark:bg-gray-900/20'}>
+                    <Fragment key={r.cle}>
+                    <tr className={premiere ? '' : 'bg-gray-50/60 dark:bg-gray-900/20'}>
                       <td className="px-2 py-2 text-sm dark:text-gray-200">
                         {premiere ? (
                           <>
@@ -280,10 +307,12 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
                         </select>
                       </td>
                       <td className="px-2 py-2">
-                        <input value={r.lot} aria-label={tr.lot} maxLength={50} onChange={e => changer(r.cle, { lot: e.target.value })} className={classeChamp} />
+                        <input value={r.lot} aria-label={tr.lot} maxLength={50} onChange={e => changer(r.cle, { lot: e.target.value })}
+                          required={suivi === 'lot' && r.quantite > 0} className={`${classeChamp} ${suivi === 'lot' && !r.lot.trim() && r.quantite > 0 ? 'border-amber-400' : ''}`} />
                       </td>
                       <td className="px-2 py-2">
-                        <input type="date" value={r.peremption} aria-label={tr.expiry} onChange={e => changer(r.cle, { peremption: e.target.value })} className={classeChamp} />
+                        <input type="date" value={r.peremption} aria-label={tr.expiry} onChange={e => changer(r.cle, { peremption: e.target.value })}
+                          required={suivi === 'lot' && !!attendue.ligne.produit?.peremption && r.quantite > 0} className={classeChamp} />
                       </td>
                       <td className="px-2 py-2">
                         <input value={r.note} aria-label={tr.lineNote} onChange={e => changer(r.cle, { note: e.target.value })} className={classeChamp} />
@@ -305,6 +334,20 @@ export default function FenetreReception({ commande, lignes: lignesInitiales, se
                         )}
                       </td>
                     </tr>
+                    {/* Produit suivi par numéro de série : un numéro par unité de stock reçue. */}
+                    {suivi === 'serie' && r.quantite > 0 && (
+                      <tr className={premiere ? '' : 'bg-gray-50/60 dark:bg-gray-900/20'}>
+                        <td colSpan={9} className="px-2 pb-2">
+                          <label className="block text-xs text-gray-600 dark:text-gray-300">
+                            {tr.serials} — {attendue.ligne.produit?.description ?? ''}
+                            <span className={`ml-2 font-medium ${numerosSaisis(r.series).length === attendus ? 'text-green-700' : 'text-amber-700'}`}>{numerosSaisis(r.series).length} / {attendus}</span>
+                            <textarea value={r.series} rows={Math.min(6, Math.max(2, attendus))} onChange={e => changer(r.cle, { series: e.target.value })}
+                              className={`${classeChamp} font-mono mt-1`} placeholder={tr.serialsHelp} />
+                          </label>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

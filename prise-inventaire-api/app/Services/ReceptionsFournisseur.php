@@ -42,7 +42,7 @@ class ReceptionsFournisseur
     /** Commandes qui attendent encore de la marchandise. */
     public const RECEVABLES = [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE];
 
-    public function __construct(private readonly ReliquatsClients $reliquats, private readonly RetoursFournisseurs $retours) {}
+    public function __construct(private readonly ReliquatsClients $reliquats, private readonly RetoursFournisseurs $retours, private readonly LotsSeries $lots) {}
 
     /**
      * Enregistre une livraison, tout ou rien : le document et ses lignes, puis la clôture des lignes indiquées.
@@ -88,6 +88,8 @@ class ReceptionsFournisseur
                 }
             }
             $this->verifierQuantites($saisies, $lignes, (bool) ($donnees['accepter_surplus'] ?? false));
+            // Produits suivis par lot ou par numéro de série (phase 2.8).
+            $this->lots->verifierReception($saisies, $lignes);
 
             $fournisseur = Fournisseur::withTrashed()->findOrFail($commandes->first()->fournisseur_id);
             $reception = null;
@@ -120,6 +122,7 @@ class ReceptionsFournisseur
                         'notes' => $saisie['notes'] ?? null,
                         'received_by' => $auteur?->id,
                     ]);
+                    $this->lots->enregistrerReception(end($creees), $ligne, $saisie, $fournisseur, $auteur);
                 }
                 $this->retenirCouts($reception, $creees, $lignes, $commandes, $fournisseur, $auteur);
                 $this->remplacerFrais($reception, $donnees['frais'] ?? []);
@@ -208,6 +211,8 @@ class ReceptionsFournisseur
                 $commandes[$ligneCommande->com_four_entete_id] = true;
             }
 
+            // Lots contre-passés, numéros de série retirés (refusé si un exemplaire est déjà sorti).
+            $this->lots->receptionAnnulee($lignes, $auteur);
             ReceptionArrivagesLigne::query()->whereIn('id', $lignes->pluck('id'))->update(['annulee' => true]);
             $reception->update([
                 'statut' => Reception::ANNULEE, 'annulee_le' => now(), 'annulee_par' => $auteur?->id,

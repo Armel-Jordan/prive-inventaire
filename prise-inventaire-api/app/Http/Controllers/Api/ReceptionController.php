@@ -65,6 +65,9 @@ class ReceptionController extends Controller
             'secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'lot_numero' => 'nullable|string|max:50',
             'date_peremption' => 'nullable|date',
+            // Produit suivi par numéro de série : un numéro par unité de stock reçue.
+            'numeros_serie' => 'nullable|array|max:10000',
+            'numeros_serie.*' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
         ]);
 
@@ -95,7 +98,7 @@ class ReceptionController extends Controller
             $resultat = $this->receptions->enregistrer([
                 'date_reception' => $validated['date_reception'],
                 'receptions' => [array_intersect_key($validated, array_flip([
-                    'com_four_ligne_id', 'quantite_recue', 'cout_unitaire', 'secteur_id', 'lot_numero', 'date_peremption', 'notes',
+                    'com_four_ligne_id', 'quantite_recue', 'cout_unitaire', 'secteur_id', 'lot_numero', 'date_peremption', 'numeros_serie', 'notes',
                 ]))],
             ], $commande->tenant_id, $request->user());
 
@@ -128,6 +131,8 @@ class ReceptionController extends Controller
             'receptions.*.secteur_id' => ['nullable', TenantRule::exists('secteurs')],
             'receptions.*.lot_numero' => 'nullable|string|max:50',
             'receptions.*.date_peremption' => 'nullable|date',
+            'receptions.*.numeros_serie' => 'nullable|array|max:10000',
+            'receptions.*.numeros_serie.*' => 'nullable|string|max:100',
             'receptions.*.notes' => 'nullable|string',
             'clotures' => 'nullable|array',
             'clotures.*' => 'integer',

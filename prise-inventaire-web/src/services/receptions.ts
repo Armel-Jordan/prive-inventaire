@@ -80,6 +80,8 @@ export interface SaisieReception {
   secteur_id?: number;
   lot_numero?: string;
   date_peremption?: string;
+  /** Produit suivi par numéro de série : un numéro par unité de stock reçue. */
+  numeros_serie?: string[];
   notes?: string;
 }
 
