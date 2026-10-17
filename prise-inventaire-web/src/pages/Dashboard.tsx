@@ -23,6 +23,7 @@ import {
 import { getScans, getProduits, getSecteurs, getEmployes } from '@/services/api';
 import { apiFetch } from '@/services/http';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDevise } from '@/lib/documents';
 
 const REFRESH_INTERVAL = 30000; // 30 secondes
 
@@ -135,12 +136,9 @@ const defaultInventaire: InventaireStats = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatCurrency = (value: string | number) =>
-  new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(Number(value));
+/** Montant arrondi à l'unité, avec le symbole de la devise de l'entreprise (et non en euros d'office). */
+const formatMontantArrondi = (value: string | number, devise: string) =>
+  `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(value) || 0)} ${devise}`.trim();
 
 const formatCount = (value: number) => new Intl.NumberFormat('fr-FR').format(value);
 
@@ -208,6 +206,8 @@ function SectionHeader({ title, dotColor }: SectionHeaderProps) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const devise = useDevise();
+  const formatCurrency = (value: string | number) => formatMontantArrondi(value, devise);
   // Sections Ventes, Achats et Finance seulement pour les modules souscrits (elles s'affichaient à 0).
   const { tenant } = useAuth();
   const moduleActif = (module: string) => !Array.isArray(tenant?.modules) || tenant.modules.includes(module);
