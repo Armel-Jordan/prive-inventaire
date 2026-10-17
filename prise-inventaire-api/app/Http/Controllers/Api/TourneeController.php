@@ -8,7 +8,9 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\Tournee;
 use App\Models\TourneeBon;
+use App\Services\FeuilleDeRoutePdf;
 use App\Services\MatieresDangereusesPdf;
+use App\Services\SequencesLivraison;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,7 +50,7 @@ class TourneeController extends Controller
      */
     private function detail(Tournee $tournee): Tournee
     {
-        $tournee = $tournee->fresh(['camion', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes.produit']);
+        $tournee = $tournee->fresh(['camion', 'itineraire:id,code,nom', 'tourneeBons.bonLivraison.facture.client', 'tourneeBons.bonLivraison.lignes.produit']);
         // Charge estimée (poids des produits encore à livrer) et matières dangereuses à bord.
         $poids = 0.0;
         $dangereuses = 0;
@@ -64,6 +66,41 @@ class TourneeController extends Controller
         }
 
         return $tournee->setAttribute('poids_total_kg', round($poids, 2))->setAttribute('matieres_dangereuses', $dangereuses);
+    }
+
+    /** Range les arrêts de la tournée planifiée par rang de passage des clients. */
+    public function ordonner(int $id, SequencesLivraison $sequences): JsonResponse
+    {
+        $tournee = Tournee::findOrFail($id);
+        if ($tournee->statut !== 'planifiee') {
+            return response()->json(['message' => "Impossible de modifier l'ordre"], 422);
+        }
+        $sequences->ordonner($tournee);
+
+        return response()->json($this->detail($tournee));
+    }
+
+    /** Ajoute à la tournée planifiée les bons prêts des clients de sa route, dans l'ordre de passage. */
+    public function ajouterRoute(int $id, SequencesLivraison $sequences): JsonResponse
+    {
+        $tournee = Tournee::findOrFail($id);
+        if ($tournee->statut !== 'planifiee') {
+            return response()->json(['message' => "Impossible d'ajouter des bons à cette tournée"], 422);
+        }
+        if (! $tournee->itineraire_id) {
+            return response()->json(['message' => 'Cette tournée ne suit pas de route.'], 422);
+        }
+        $ajoutes = $sequences->ajouterLaRoute($tournee);
+
+        return response()->json(['message' => "{$ajoutes} bon(s) ajouté(s).", 'ajoutes' => $ajoutes] + $this->detail($tournee)->toArray());
+    }
+
+    /** Feuille de route du livreur (PDF) : les arrêts dans l'ordre de passage. */
+    public function feuilleDeRoute(int $id, FeuilleDeRoutePdf $feuilles): Response
+    {
+        $tournee = Tournee::findOrFail($id);
+
+        return $feuilles->pdf($tournee)->stream("feuille-de-route-{$tournee->numero}.pdf");
     }
 
     /** Document de transport des matières dangereuses de la tournée (PDF), s'il y en a à bord. */
@@ -87,6 +124,8 @@ class TourneeController extends Controller
             'livreur_id' => 'nullable|integer',
             'zone' => 'nullable|string|max:100',
             'heure_depart' => 'nullable|date_format:H:i',
+            // Route suivie : ses bons prêts s'ajoutent d'un coup, dans l'ordre de passage des clients.
+            'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;
@@ -102,6 +141,7 @@ class TourneeController extends Controller
             'livreur_id' => $validated['livreur_id'] ?? null,
             'zone' => $validated['zone'] ?? null,
             'heure_depart' => $validated['heure_depart'] ?? null,
+            'itineraire_id' => $validated['itineraire_id'] ?? null,
             'statut' => 'planifiee',
         ]));
 

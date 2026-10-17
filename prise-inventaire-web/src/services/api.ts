@@ -1131,6 +1131,9 @@ export interface Client {
   devise?: string | null;
   /** Fiche du client de passage : ses coordonnées se notent sur chaque document. */
   de_passage?: boolean;
+  /** Route de livraison (itinéraire du référentiel) et rang de passage sur cette route. */
+  itineraire_id?: number | null;
+  sequence_livraison?: number | null;
   actif: boolean;
   conditions_paiement?: ConditionPaiement[];
   categorie_id?: number | null;
@@ -1315,6 +1318,9 @@ export interface Tournee {
   heure_depart?: string;
   heure_retour?: string;
   tournee_bons?: TourneeBon[];
+  /** Route suivie (itinéraire du référentiel) : ses bons prêts s'ajoutent d'un coup, dans l'ordre de passage. */
+  itineraire_id?: number | null;
+  itineraire?: { id: number; code: string; nom: string } | null;
   /** Détail : charge estimée (poids des produits encore à livrer) et lignes de matières dangereuses à bord. */
   poids_total_kg?: number;
   matieres_dangereuses?: number;
@@ -1731,8 +1737,24 @@ export async function createTournee(data: {
   camion_id: number;
   livreur_id?: number;
   zone?: string;
+  itineraire_id?: number;
 }): Promise<Tournee> {
   return fetchApi('/tournees', { method: 'POST', body: JSON.stringify(data) });
+}
+
+/** Range les arrêts d'une tournée planifiée par rang de passage des clients. */
+export async function ordonnerTournee(id: number): Promise<Tournee> {
+  return fetchApi(`/tournees/${id}/ordonner`, { method: 'POST' });
+}
+
+/** Ajoute à une tournée planifiée les bons prêts des clients de sa route, dans l'ordre de passage. */
+export async function ajouterRouteTournee(id: number): Promise<Tournee & { message: string; ajoutes: number }> {
+  return fetchApi(`/tournees/${id}/ajouter-route`, { method: 'POST' });
+}
+
+/** Ordre de passage des arrêts fixé à la main. */
+export async function ordreTournee(id: number, ordre: { bon_livraison_id: number; ordre_livraison: number }[]): Promise<Tournee> {
+  return fetchApi(`/tournees/${id}/ordre`, { method: 'PUT', body: JSON.stringify({ ordre }) });
 }
 
 export async function ajouterBonATournee(tourneeId: number, bonLivraisonId: number): Promise<Tournee> {

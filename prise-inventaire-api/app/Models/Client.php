@@ -25,6 +25,9 @@ class Client extends Model
         'frais_livraison_id',
         // Fiche du client de passage de l'entreprise (une seule, créée à sa première utilisation).
         'de_passage',
+        // Route de livraison (itinéraire du référentiel) et rang de passage sur cette route.
+        'itineraire_id',
+        'sequence_livraison',
         'adresse_facturation',
         'adresse_livraison',
         'ville',
@@ -46,7 +49,14 @@ class Client extends Model
         'taux_remise_global' => 'decimal:2',
         'actif' => 'boolean',
         'de_passage' => 'boolean',
+        'sequence_livraison' => 'integer',
     ];
+
+    /** Route de livraison du client (itinéraire du référentiel logistique). */
+    public function itineraire(): BelongsTo
+    {
+        return $this->belongsTo(Itineraire::class);
+    }
 
     public static function generateCode(): string
     {

@@ -969,6 +969,24 @@ export const translations = {
       deleted: 'Demande supprimée.',
       deposit: 'Acompte',
     },
+    // Séquences de livraison : routes, ordre de passage, feuille de route
+    sequences: {
+      route: 'Route de livraison',
+      noRoute: 'Sans route',
+      routeHelp: "Les bons prêts des clients de cette route pourront être ajoutés d'un coup, dans leur ordre de passage.",
+      sequence: 'Rang de passage',
+      sequenceHelp: 'Ordre de passage du client sur sa route (10, 20, 30… laisse de la place pour en intercaler).',
+      sequenceShort: 'séq.',
+      addRoute: 'Ajouter les bons de la route',
+      addRouteHelp: 'Ajoute les bons prêts des clients de cette route, dans leur ordre de passage',
+      sort: 'Trier par séquence',
+      sortHelp: 'Range les arrêts par rang de passage des clients (sans rang : à la fin)',
+      sheet: 'Feuille de route',
+      sheetHelp: "Feuille du livreur : arrêts dans l'ordre, adresses, téléphones, cases à remplir",
+      up: 'Monter',
+      down: 'Descendre',
+      move: 'Déplacer',
+    },
     // Transport : matières dangereuses, poids et volume
     hazmat: {
       transport: 'Transport',
@@ -3616,6 +3634,24 @@ export const translations = {
       confirmDelete: 'Delete this request?',
       deleted: 'Request deleted.',
       deposit: 'Deposit',
+    },
+    // Delivery sequences: routes, stop order, route sheet
+    sequences: {
+      route: 'Delivery route',
+      noRoute: 'No route',
+      routeHelp: 'The ready delivery notes of the customers on this route can be added at once, in their stop order.',
+      sequence: 'Stop order',
+      sequenceHelp: "Customer's position on their route (10, 20, 30… leaves room to insert others).",
+      sequenceShort: 'seq.',
+      addRoute: "Add the route's delivery notes",
+      addRouteHelp: 'Adds the ready delivery notes of the customers on this route, in their stop order',
+      sort: 'Sort by sequence',
+      sortHelp: "Orders the stops by the customers' stop order (no order: at the end)",
+      sheet: 'Route sheet',
+      sheetHelp: "Driver's sheet: stops in order, addresses, phone numbers, boxes to fill in",
+      up: 'Move up',
+      down: 'Move down',
+      move: 'Move',
     },
     // Transport: dangerous goods, weight and volume
     hazmat: {

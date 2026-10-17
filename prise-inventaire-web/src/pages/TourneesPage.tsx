@@ -1,6 +1,6 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Eye, Play, Square, PackagePlus, X, Truck, Trash2, MinusCircle, AlertTriangle, ArrowUp, ArrowDown, ListOrdered, Route, FileText } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import {
   getTournees,
@@ -15,7 +15,12 @@ import {
   getBonsLivraison,
   getConfiguration,
   ouvrirPdf,
+  getReferentiel,
+  ordonnerTournee,
+  ajouterRouteTournee,
+  ordreTournee,
 } from '../services/api';
+import type { FicheReferentiel } from '../services/api';
 import type { Tournee, Camion, BonLivraison } from '../services/api';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
@@ -31,6 +36,9 @@ export default function TourneesPage() {
   const { peut } = usePermissions();
   const { t } = useLanguage();
   const th = t.hazmat;
+  const ts = t.sequences;
+  // Routes de livraison (référentiel des itinéraires), proposées à la création d'une tournée.
+  const [itineraires, setItineraires] = useState<FicheReferentiel[]>([]);
   const kg = (valeur: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(valeur);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
@@ -49,6 +57,7 @@ export default function TourneesPage() {
     date_tournee: aujourdhui(),
     camion_id: '',
     zone: '',
+    itineraire_id: '',
   });
   const [configNumero, setConfigNumero] = useState<{ prefixe: string; separateur: string; longueur: number; prochain_numero: number; suffixe: string } | null>(null);
 
@@ -91,8 +100,10 @@ export default function TourneesPage() {
       date_tournee: aujourdhui(),
       camion_id: '',
       zone: '',
+      itineraire_id: '',
     });
     loadCamionsDisponibles(aujourdhui());
+    getReferentiel('itineraires', true).then(setItineraires).catch(() => setItineraires([]));
     setShowModal(true);
   };
 
@@ -103,11 +114,47 @@ export default function TourneesPage() {
         date_tournee: formData.date_tournee,
         camion_id: parseInt(formData.camion_id),
         zone: formData.zone || undefined,
+        itineraire_id: formData.itineraire_id ? Number(formData.itineraire_id) : undefined,
       });
       setShowModal(false);
       loadTournees();
     } catch (error) {
       signaler(error, 'Erreur lors de la création de la tournée');
+    }
+  };
+
+  // Séquences : ajouter les bons de la route, ranger les arrêts, déplacer un arrêt.
+  const handleAjouterRoute = async () => {
+    if (!selectedTournee) return;
+    try {
+      const resultat = await ajouterRouteTournee(selectedTournee.id);
+      setSelectedTournee(resultat);
+      alert(resultat.message);
+      loadTournees();
+    } catch (error) {
+      signaler(error, ts.addRoute);
+    }
+  };
+
+  const handleOrdonner = async () => {
+    if (!selectedTournee) return;
+    try {
+      setSelectedTournee(await ordonnerTournee(selectedTournee.id));
+    } catch (error) {
+      signaler(error, ts.sort);
+    }
+  };
+
+  const handleDeplacer = async (index: number, sens: -1 | 1) => {
+    if (!selectedTournee?.tournee_bons) return;
+    const arrets = [...selectedTournee.tournee_bons].sort((a, b) => a.ordre_livraison - b.ordre_livraison);
+    const cible = index + sens;
+    if (cible < 0 || cible >= arrets.length) return;
+    [arrets[index], arrets[cible]] = [arrets[cible], arrets[index]];
+    try {
+      setSelectedTournee(await ordreTournee(selectedTournee.id, arrets.map((a, i) => ({ bon_livraison_id: a.bon_livraison_id, ordre_livraison: i + 1 }))));
+    } catch (error) {
+      signaler(error, ts.move);
     }
   };
 
@@ -389,6 +436,15 @@ export default function TourneesPage() {
                   placeholder="Ex: Nord, Centre-ville..."
                 />
               </div>
+              <div>
+                <label htmlFor="tournee-route" className="block text-sm font-medium mb-1 dark:text-gray-300">{ts.route}</label>
+                <select id="tournee-route" value={formData.itineraire_id} onChange={(e) => setFormData({ ...formData, itineraire_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">{ts.noRoute}</option>
+                  {itineraires.map(i => <option key={String(i.id)} value={String(i.id)}>{String(i.code)} — {String(i.nom)}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">{ts.routeHelp}</p>
+              </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
@@ -524,18 +580,55 @@ export default function TourneesPage() {
                 );
               })() : null}
 
+              {/* Séquences : route suivie, bons de la route, rangement, feuille de route du livreur. */}
+              <div className="border-t pt-3 flex flex-wrap items-center gap-2 text-sm dark:border-gray-700">
+                <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                  <Route size={14} /> {selectedTournee.itineraire ? `${selectedTournee.itineraire.code} — ${selectedTournee.itineraire.nom}` : ts.noRoute}
+                </span>
+                {selectedTournee.statut === 'planifiee' && peut('tournees', 'piloter') && selectedTournee.itineraire_id && (
+                  <button type="button" onClick={handleAjouterRoute} title={ts.addRouteHelp}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded border border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300">
+                    <PackagePlus size={14} /> {ts.addRoute}
+                  </button>
+                )}
+                {selectedTournee.statut === 'planifiee' && peut('tournees', 'piloter') && (selectedTournee.tournee_bons?.length ?? 0) > 1 && (
+                  <button type="button" onClick={handleOrdonner} title={ts.sortHelp}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                    <ListOrdered size={14} /> {ts.sort}
+                  </button>
+                )}
+                {(selectedTournee.tournee_bons?.length ?? 0) > 0 && (
+                  <button type="button" title={ts.sheetHelp}
+                    onClick={() => { ouvrirPdf(`/tournees/${selectedTournee.id}/feuille-de-route`, `feuille-de-route-${selectedTournee.numero}.pdf`).catch(e => signaler(e, ts.sheet)); }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                    <FileText size={14} /> {ts.sheet}
+                  </button>
+                )}
+              </div>
+
               {selectedTournee.tournee_bons && selectedTournee.tournee_bons.length > 0 && (
                 <div className="border-t pt-4 dark:border-gray-700">
                   <h3 className="font-medium mb-2 dark:text-white">Bons de livraison ({selectedTournee.tournee_bons.length})</h3>
                   <div className="space-y-2">
-                    {selectedTournee.tournee_bons.map((tb) => (
+                    {[...selectedTournee.tournee_bons].sort((a, b) => a.ordre_livraison - b.ordre_livraison).map((tb, index, arrets) => (
                       <div key={tb.id} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                        <div>
+                        <div className="flex items-center gap-2">
+                          {selectedTournee.statut === 'planifiee' && peut('tournees', 'piloter') && (
+                            <span className="flex flex-col">
+                              <button type="button" onClick={() => handleDeplacer(index, -1)} disabled={index === 0} aria-label={`${ts.up} — ${tb.bon_livraison?.numero}`}
+                                className="text-gray-500 hover:text-gray-900 disabled:opacity-30 dark:text-gray-300"><ArrowUp size={12} /></button>
+                              <button type="button" onClick={() => handleDeplacer(index, 1)} disabled={index === arrets.length - 1} aria-label={`${ts.down} — ${tb.bon_livraison?.numero}`}
+                                className="text-gray-500 hover:text-gray-900 disabled:opacity-30 dark:text-gray-300"><ArrowDown size={12} /></button>
+                            </span>
+                          )}
                           <span className="font-mono text-sm dark:text-white">
                             #{tb.ordre_livraison} - {tb.bon_livraison?.numero}
                           </span>
                           {tb.bon_livraison?.facture?.client?.raison_sociale && (
-                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">{tb.bon_livraison.facture.client.raison_sociale}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {tb.bon_livraison.facture.client.raison_sociale}
+                              {tb.bon_livraison.facture.client.sequence_livraison != null && ` · ${ts.sequenceShort} ${tb.bon_livraison.facture.client.sequence_livraison}`}
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">

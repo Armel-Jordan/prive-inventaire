@@ -742,6 +742,10 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{id}/terminer', [TourneeController::class, 'terminer']);
         // Document de transport des matières dangereuses à bord (PDF).
         Route::get('/{id}/matieres-dangereuses', [TourneeController::class, 'matieresDangereuses']);
+        // Séquences de livraison : ranger les arrêts, ajouter les bons de la route, feuille de route du livreur.
+        Route::post('/{id}/ordonner', [TourneeController::class, 'ordonner']);
+        Route::post('/{id}/ajouter-route', [TourneeController::class, 'ajouterRoute']);
+        Route::get('/{id}/feuille-de-route', [TourneeController::class, 'feuilleDeRoute']);
     });
 
     // Zones de Préparation
