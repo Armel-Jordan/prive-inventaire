@@ -111,6 +111,11 @@ class Permissions
                 'aide_fr' => 'Créer les factures des échéances dues (en brouillon ou émises) et relier une échéance à une facture existante. Demande aussi le droit de créer des factures.',
                 'aide_en' => 'Create the invoices of due billing dates (draft or issued) and link a billing date to an existing invoice. Also requires the right to create invoices.'],
         ]],
+        'consignations' => ['onglet' => 'ventes', 'fr' => 'Consignations', 'en' => 'Consignments', 'actions' => [
+            'facturer' => ['base' => 'creer', 'fr' => 'Facturer la consommation en consignation', 'en' => 'Invoice consumed consignment goods',
+                'aide_fr' => 'Créer la facture de la marchandise consignée que le client a consommée. Demande aussi le droit de créer des factures.',
+                'aide_en' => 'Create the invoice of the consignment goods the customer consumed. Also requires the right to create invoices.'],
+        ]],
         'contrats_location' => ['onglet' => 'ventes', 'fr' => 'Contrats de location', 'en' => 'Rental contracts', 'actions' => [
             'facturer' => ['base' => 'creer', 'fr' => 'Facturer les contrats de location', 'en' => 'Invoice rental contracts',
                 'aide_fr' => 'Créer la facture des prix de contrat et les factures des loyers dus. Demande aussi le droit de créer des factures.',

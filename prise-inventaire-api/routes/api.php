@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\CommandeFournisseurController;
 use App\Http\Controllers\Api\CompteClientController;
 use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
+use App\Http\Controllers\Api\ConsignationController;
 use App\Http\Controllers\Api\ContratLocationController;
 use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
@@ -670,6 +671,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}/releves', [AbonnementClientController::class, 'releves'])->whereNumber('id');
         Route::post('/{id}/releves', [AbonnementClientController::class, 'ajouterReleve'])->whereNumber('id');
         Route::delete('/{id}/releves/{releveId}', [AbonnementClientController::class, 'supprimerReleve'])->whereNumber(['id', 'releveId']);
+    });
+
+    // Consignation chez le client : bons de dépôt, relevé, reprise, facturation de la consommation, historique, rapport.
+    Route::prefix('consignations')->middleware('module:ventes')->group(function () {
+        Route::get('/', [ConsignationController::class, 'index']);
+        Route::post('/', [ConsignationController::class, 'store']);
+        Route::get('/releve', [ConsignationController::class, 'releve']);
+        Route::get('/historique', [ConsignationController::class, 'historique']);
+        Route::get('/rapport', [ConsignationController::class, 'rapport']);
+        Route::post('/reprise', [ConsignationController::class, 'reprise']);
+        Route::post('/facturer', [ConsignationController::class, 'facturer']);
+        Route::get('/{id}', [ConsignationController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/pdf', [ConsignationController::class, 'pdf'])->whereNumber('id');
     });
 
     // Contrats de location : produits loués, prix de contrat et loyers, retours, renouvellement.

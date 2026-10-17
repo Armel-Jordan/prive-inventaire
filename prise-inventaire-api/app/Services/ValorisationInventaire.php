@@ -76,12 +76,13 @@ class ValorisationInventaire
     }
 
     /**
-     * Coût unitaire (unité de stock, devise de l'entreprise) par numéro de produit, avec sa référence.
+     * Coût unitaire (unité de stock, devise de l'entreprise) par numéro de produit, avec sa référence. Sert aussi à
+     * valoriser la marchandise en consignation chez les clients.
      *
      * @param  Collection<string, ProduitTenant>  $produits
      * @return array<string, array{cout: float, reference: ?string}>
      */
-    private function couts(string $methode, Collection $produits): array
+    public function couts(string $methode, Collection $produits): array
     {
         if ($methode === 'prix_vente') {
             return $produits->filter(fn (ProduitTenant $p) => $p->prix_unitaire !== null)

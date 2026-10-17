@@ -52,6 +52,7 @@ class Droits
         'reliquats-clients' => 'reliquats_clients',
         'abonnements-clients' => 'abonnements_clients',
         'contrats-location' => 'contrats_location',
+        'consignations' => 'consignations',
         'factures' => 'factures',
         'avoirs' => 'avoirs',
         'retours-clients' => 'retours_clients',
@@ -150,6 +151,9 @@ class Droits
         'POST api/contrats-location/{id}/facturer' => ['contrats_location', 'facturer'],
         'POST api/contrats-location/facturer-loyers' => ['contrats_location', 'facturer'],
         'POST api/contrats-location/{id}/renouveler' => ['contrats_location', 'renouveler'],
+        // Consignation : facturer la consommation (droits des factures contrôlés aussi) ; reprendre de la marchandise.
+        'POST api/consignations/facturer' => ['consignations', 'facturer'],
+        'POST api/consignations/reprise' => ['consignations', 'modifier'],
         'POST api/retours-clients/{id}/crediter' => ['avoirs', 'creer'],
         'POST api/acomptes/{id}/appliquer' => ['acomptes', 'appliquer'],
         'POST api/acomptes/{id}/rembourser' => ['acomptes', 'rembourser'],
