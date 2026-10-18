@@ -173,7 +173,8 @@ export default function RapportsPage() {
               onChange={(e) => setAnnee(parseInt(e.target.value))}
               className="px-3 py-2 border rounded-lg"
             >
-              {[2024, 2025, 2026].map(a => (
+              {/* Les cinq dernières années, l'année en cours comprise (et non une liste écrite une fois pour toutes). */}
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(a => (
                 <option key={a} value={a}>{a}</option>
               ))}
             </select>

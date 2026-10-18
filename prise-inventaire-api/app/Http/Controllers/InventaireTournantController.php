@@ -7,6 +7,7 @@ use App\Models\ScanTenant;
 use App\Models\Secteur;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class InventaireTournantController extends Controller
 {
@@ -17,38 +18,24 @@ class InventaireTournantController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         $secteurs = Secteur::where('actif', true)->get();
+        $derniers = $this->derniersScans($tenantId, $secteurs);
 
-        $suggestions = $secteurs->map(function ($secteur) use ($tenantId) {
-            // Dernier scan dans ce secteur
-            $dernierScan = ScanTenant::where('tenant_id', $tenantId)
-                ->where('secteur', $secteur->code)
-                ->orderByDesc('date_saisie')
-                ->first();
+        $suggestions = $secteurs->map(function ($secteur) use ($tenantId, $derniers) {
+            // Dernier scan dans ce secteur, sous son code ou son nom.
+            $dernierScan = $derniers[$secteur->id] ?? null;
+            $appellations = $this->appellations($secteur);
 
-            // Nombre de mouvements depuis le dernier scan
-            $mouvementsDepuisScan = 0;
-            if ($dernierScan) {
-                $mouvementsDepuisScan = MouvementTenant::where('tenant_id', $tenantId)
-                    ->where(function ($q) use ($secteur) {
-                        $q->where('secteur_source', $secteur->code)
-                            ->orWhere('secteur_destination', $secteur->code);
-                    })
-                    ->where('created_at', '>', $dernierScan->date_saisie)
-                    ->count();
-            } else {
-                // Si jamais scanné, compter tous les mouvements
-                $mouvementsDepuisScan = MouvementTenant::where('tenant_id', $tenantId)
-                    ->where(function ($q) use ($secteur) {
-                        $q->where('secteur_source', $secteur->code)
-                            ->orWhere('secteur_destination', $secteur->code);
-                    })->count();
-            }
+            // Nombre de mouvements depuis le dernier scan (tous, si le secteur n'a jamais été scanné).
+            $mouvementsDepuisScan = MouvementTenant::where('tenant_id', $tenantId)
+                ->where(fn ($q) => $q->whereIn('secteur_source', $appellations)->orWhereIn('secteur_destination', $appellations))
+                ->when($dernierScan, fn ($q) => $q->where('created_at', '>', $dernierScan))
+                ->count();
 
             // Calculer le score de priorité
             // Jours écoulés, toujours positifs (l'écart signé donnait « -0,14 jour » pour un scan du jour) ;
             // null si le secteur n'a jamais été scanné.
             $joursDepuisScan = $dernierScan
-                ? (int) Carbon::parse($dernierScan->date_saisie)->diffInDays(now(), true)
+                ? (int) $dernierScan->diffInDays(now(), true)
                 : null;
 
             // Score = jours depuis scan + (mouvements * 2) ; un secteur jamais scanné compte pour 365 jours.
@@ -57,7 +44,7 @@ class InventaireTournantController extends Controller
             return [
                 'secteur' => $secteur->code,
                 'nom' => $secteur->nom,
-                'dernier_scan' => $dernierScan ? $dernierScan->date_saisie : null,
+                'dernier_scan' => $dernierScan?->toJSON(),
                 'jours_depuis_scan' => $joursDepuisScan,
                 'mouvements_depuis_scan' => $mouvementsDepuisScan,
                 'score_priorite' => $score,
@@ -81,35 +68,13 @@ class InventaireTournantController extends Controller
         $tenantId = auth()->user()->tenant_id;
         $secteurs = Secteur::where('actif', true)->get();
         $totalSecteurs = $secteurs->count();
+        $derniers = $this->derniersScans($tenantId, $secteurs);
 
-        // Secteurs scannés ce mois
-        $scannesCeMois = ScanTenant::where('tenant_id', $tenantId)
-            ->whereMonth('date_saisie', now()->month)
-            ->whereYear('date_saisie', now()->year)
-            ->distinct('secteur')
-            ->count('secteur');
-
-        // Secteurs jamais scannés
-        $secteursAvecScans = ScanTenant::where('tenant_id', $tenantId)->distinct('secteur')->pluck('secteur');
-        $jamaisScannes = $secteurs->whereNotIn('code', $secteursAvecScans)->count();
-
-        // Secteurs non scannés depuis 30 jours
+        // Secteurs scannés ce mois, jamais scannés, non scannés depuis 30 jours (sous leur code ou leur nom).
+        $scannesCeMois = collect($derniers)->filter(fn (Carbon $date) => $date->isSameMonth(now()))->count();
+        $jamaisScannes = $totalSecteurs - count($derniers);
         $dateLimite = now()->subDays(30);
-        $derniersScansParSecteur = ScanTenant::where('tenant_id', $tenantId)
-            ->select('secteur')
-            ->selectRaw('MAX(date_saisie) as dernier_scan')
-            ->groupBy('secteur')
-            ->get()
-            ->keyBy('secteur');
-
-        $nonScannes30Jours = $secteurs->filter(function ($secteur) use ($derniersScansParSecteur, $dateLimite) {
-            $dernierScan = $derniersScansParSecteur->get($secteur->code);
-            if (! $dernierScan) {
-                return true;
-            }
-
-            return $dernierScan->dernier_scan < $dateLimite;
-        })->count();
+        $nonScannes30Jours = $secteurs->filter(fn (Secteur $secteur) => ! isset($derniers[$secteur->id]) || $derniers[$secteur->id]->lt($dateLimite))->count();
 
         // Couverture
         $couverture = $totalSecteurs > 0
@@ -126,13 +91,14 @@ class InventaireTournantController extends Controller
     }
 
     /**
-     * Historique des inventaires par secteur
+     * Historique des inventaires par secteur (sous son code ou son nom).
      */
     public function historiqueSecteur(string $secteur): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
+        $fiche = Secteur::where('code', $secteur)->first();
         $scans = ScanTenant::where('tenant_id', $tenantId)
-            ->where('secteur', $secteur)
+            ->whereIn('secteur', $fiche ? $this->appellations($fiche) : [$secteur])
             ->orderByDesc('date_saisie')
             ->limit(50)
             ->get();
@@ -149,6 +115,42 @@ class InventaireTournantController extends Controller
             'scans' => $scans,
             'stats' => $stats,
         ]);
+    }
+
+    /** Appellations d'un secteur dans les scans et les mouvements : son code, et son nom (noté par l'application mobile). */
+    private function appellations(Secteur $secteur): array
+    {
+        return array_values(array_unique(array_filter([(string) $secteur->code, (string) $secteur->nom], fn (string $texte) => $texte !== '')));
+    }
+
+    /**
+     * Dernier scan de chaque secteur (id => date), qu'il ait été noté sous son code ou sous son nom, sans tenir compte
+     * des majuscules ; un code l'emporte sur le nom d'un autre secteur.
+     *
+     * @return array<int, Carbon>
+     */
+    private function derniersScans(int $tenantId, Collection $secteurs): array
+    {
+        $index = [];
+        foreach ($secteurs as $secteur) {
+            $index[mb_strtolower((string) $secteur->nom)] = $secteur->id;
+        }
+        foreach ($secteurs as $secteur) {
+            $index[mb_strtolower((string) $secteur->code)] = $secteur->id;
+        }
+
+        $derniers = [];
+        $parAppellation = ScanTenant::where('tenant_id', $tenantId)->whereNotNull('secteur')
+            ->select('secteur')->selectRaw('MAX(date_saisie) as dernier')->groupBy('secteur')->get();
+        foreach ($parAppellation as $ligne) {
+            $id = $index[mb_strtolower((string) $ligne->secteur)] ?? null;
+            $date = Carbon::parse($ligne->dernier);
+            if ($id !== null && (! isset($derniers[$id]) || $date->gt($derniers[$id]))) {
+                $derniers[$id] = $date;
+            }
+        }
+
+        return $derniers;
     }
 
     /**

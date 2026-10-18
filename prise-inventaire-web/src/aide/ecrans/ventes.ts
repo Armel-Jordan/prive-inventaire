@@ -13,7 +13,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Joignez des documents à la fiche avec le trombone « Pièces jointes ».",
       ],
       astuces: [
-        "Un client qui a des devis, des commandes ou des factures ne peut pas être supprimé.",
+        "Un client qui a des devis, des commandes ou des factures ne peut pas être supprimé : décochez « Client actif » dans sa modification, il ne sera plus proposé.",
         "L'encours passe en rouge au-delà de 80 % de l'encours maximum ; une commande qui le ferait dépasser ne peut pas être acceptée. Laissé vide, l'encours maximum est illimité.",
         "La devise du client est reprise par ses devis, commandes et factures, où ses frais de livraison sont aussi proposés. Sa condition de paiement fixe l'échéance de ses factures.",
         "Si un autre compte modifie ce client, un bandeau dit qui et depuis quand, et l'enregistrement est bloqué : « Réessayer » plus tard, ou « Prendre la main » si votre rôle le permet.",
@@ -30,7 +30,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Attach documents to the record with the paper clip “Attachments” button.",
       ],
       astuces: [
-        "A customer with quotes, orders or invoices cannot be deleted.",
+        "A customer with quotes, orders or invoices cannot be deleted: untick “Client actif” when editing it, and it will no longer be offered.",
         "The outstanding balance turns red above 80% of the credit limit; an order that would exceed the limit cannot be accepted. Left empty, the credit limit is unlimited.",
         "The customer's currency carries over to their quotes, orders and invoices, where their delivery fee is also suggested. Their payment terms set the due date of their invoices.",
         "If another account is editing this customer, a banner shows who and since when, and saving is blocked: “Try again” later, or “Take over” if your role allows it.",

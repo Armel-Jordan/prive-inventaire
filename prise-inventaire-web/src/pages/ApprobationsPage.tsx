@@ -362,7 +362,7 @@ export default function ApprobationsPage() {
             </div>
             <div className="p-4 space-y-4">
               <p className="text-sm text-gray-500">
-                Les mouvements dépassant ces quantités nécessiteront une approbation.
+                Les mouvements atteignant ou dépassant ces quantités nécessiteront une approbation.
               </p>
               {seuils.map((seuil, index) => (
                 <div key={seuil.type_mouvement} className="flex items-center gap-4">

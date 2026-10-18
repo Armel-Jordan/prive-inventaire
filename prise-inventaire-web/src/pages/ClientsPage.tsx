@@ -65,6 +65,7 @@ export default function ClientsPage() {
     frais_livraison_id: '',
     itineraire_id: '',
     sequence_livraison: '',
+    actif: true,
   });
   // Conditions de paiement et devises du référentiel, frais de livraison.
   const [fraisLivraison, setFraisLivraison] = useState<Frais[]>([]);
@@ -161,6 +162,7 @@ export default function ClientsPage() {
       frais_livraison_id: client.frais_livraison_id ? String(client.frais_livraison_id) : '',
       itineraire_id: client.itineraire_id ? String(client.itineraire_id) : '',
       sequence_livraison: client.sequence_livraison != null ? String(client.sequence_livraison) : '',
+      actif: client.actif !== false,
     });
     setShowModal(true);
   };
@@ -195,6 +197,7 @@ export default function ClientsPage() {
       frais_livraison_id: '',
       itineraire_id: '',
       sequence_livraison: '',
+      actif: true,
     });
   };
 
@@ -528,6 +531,16 @@ export default function ClientsPage() {
                   <span className="text-xs text-gray-500">{t.sequences.sequenceHelp}</span>
                 </div>
               </div>
+              {editingClient && (
+                // Un client qui a des documents ne se supprime pas : on le rend inactif.
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium dark:text-gray-300">
+                    <input type="checkbox" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} />
+                    Client actif
+                  </label>
+                  <span className="text-xs text-gray-500">Un client inactif n'est plus proposé dans les devis, commandes et factures ; ses documents restent.</span>
+                </div>
+              )}
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"

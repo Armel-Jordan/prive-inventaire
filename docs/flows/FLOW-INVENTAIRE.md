@@ -327,10 +327,16 @@ L'**inventaire tournant** est une méthode de comptage continu : plutôt que de 
 
 ### 7.2 Score de priorité
 
-Chaque secteur reçoit un **score de priorité** basé sur :
-- Ancienneté du dernier comptage (plus c'est vieux, plus la priorité est haute)
-- Nombre de mouvements récents (plus il y a eu de mouvements, plus il faut recompter)
-- Présence d'alertes de stock dans ce secteur
+Chaque secteur actif reçoit un **score de priorité** :
+
+```
+score = jours depuis son dernier scan (365 s'il n'a jamais été scanné) + 2 × mouvements depuis ce scan
+```
+
+- Plus le dernier comptage est ancien, plus la priorité est haute.
+- Plus il y a eu de mouvements depuis, plus il faut recompter.
+- Un secteur est reconnu dans les scans et les mouvements **sous son code ou sous son nom**, sans tenir compte des
+  majuscules : l'application mobile note le nom du secteur, l'écran son code.
 
 ### 7.3 Ce que l'application propose
 
@@ -338,7 +344,9 @@ Chaque secteur reçoit un **score de priorité** basé sur :
 - Liste des secteurs à compter en priorité, triés par score
 - Indique quand le secteur a été compté pour la dernière fois, et depuis combien de jours (toujours positif ;
   absent pour un secteur jamais scanné, qui compte pour 365 jours dans le score)
-- Affiche `"Tous les secteurs sont à jour !"` si tout a été compté récemment
+- Tous les secteurs actifs sont listés, même ceux comptés récemment (en bas de la liste)
+
+**Statistiques :** secteurs actifs, scannés ce mois, jamais scannés, non scannés depuis 30 jours, couverture du mois.
 
 **Onglet Planning :**
 - Calendrier des secteurs à compter dans les prochains jours

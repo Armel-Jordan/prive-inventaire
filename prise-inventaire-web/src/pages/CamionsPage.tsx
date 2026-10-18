@@ -7,6 +7,7 @@ import {
   deleteCamion,
 } from '../services/api';
 import type { Camion } from '../services/api';
+import { signaler } from '@/lib/erreurs';
 
 export default function CamionsPage() {
   const [camions, setCamions] = useState<Camion[]>([]);
@@ -58,7 +59,8 @@ export default function CamionsPage() {
       resetForm();
       loadCamions();
     } catch (error) {
-      console.error('Erreur sauvegarde camion:', error);
+      // Message de l'API (immatriculation déjà prise, champ invalide…), et non plus seulement dans la console.
+      signaler(error, "Le camion n'a pas pu être enregistré.");
     }
   };
 
@@ -82,7 +84,8 @@ export default function CamionsPage() {
       await deleteCamion(id);
       loadCamions();
     } catch (error) {
-      console.error('Erreur suppression:', error);
+      // Un camion dont une tournée est planifiée ou en cours ne se supprime pas : le message le dit.
+      signaler(error, "Le camion n'a pas pu être supprimé.");
     }
   };
 

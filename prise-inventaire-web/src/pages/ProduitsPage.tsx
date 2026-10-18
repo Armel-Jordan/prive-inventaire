@@ -15,6 +15,7 @@ import { getProduits, createProduit, updateProduit, deleteProduit, getSecteurs, 
 import type { Produit, Secteur } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import { messageErreur } from '@/lib/erreurs';
+import { useCodeDevise } from '@/lib/documents';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -42,6 +43,8 @@ interface ProduitForm extends ValeursFiche {
   qte_par_unite_achat: number;
   type: string;
   secteur_id: string;
+  // Prix de vente de base, dans la devise de l'entreprise : saisi comme du texte, envoyé vide (null) ou en nombre.
+  prix_unitaire: string;
   // Transport : saisis comme du texte, envoyés vides (null) ou en nombre.
   numero_onu: string;
   classe_danger: string;
@@ -54,7 +57,7 @@ interface ProduitForm extends ValeursFiche {
 }
 
 const emptyForm: ProduitForm = {
-  numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '',
+  numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '', prix_unitaire: '',
   numero_onu: '', classe_danger: '', groupe_emballage: '', poids_kg: '', volume_m3: '',
   fabricant_id: '', reference_fabricant: '', description_longue: '', traductions: {}, image_id: null,
   suivi: '', peremption: false,
@@ -91,6 +94,7 @@ export default function ProduitsPage() {
   // Fiche verrouillée pendant sa modification : un autre compte voit qui la modifie.
   const verrou = useVerrou('produit', showModal ? editingId : null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
+  const codeDevise = useCodeDevise();
   const [importing, setImporting] = useState(false);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
@@ -173,6 +177,7 @@ export default function ProduitsPage() {
       qte_par_unite_achat: produit.qte_par_unite_achat ?? 1,
       type: produit.type || '',
       secteur_id: produit.secteur_id?.toString() || '',
+      prix_unitaire: produit.prix_unitaire != null ? String(Number(produit.prix_unitaire)) : '',
       numero_onu: produit.numero_onu ?? '',
       classe_danger: produit.classe_danger ?? '',
       groupe_emballage: produit.groupe_emballage ?? '',
@@ -198,6 +203,7 @@ export default function ProduitsPage() {
         secteur_id: form.secteur_id ? parseInt(form.secteur_id) : undefined,
         unite_achat: form.unite_achat || null,
         qte_par_unite_achat: form.qte_par_unite_achat,
+        prix_unitaire: form.prix_unitaire === '' ? null : Number(form.prix_unitaire),
         numero_onu: form.numero_onu.trim() || null,
         classe_danger: form.classe_danger.trim() || null,
         groupe_emballage: form.groupe_emballage || null,
@@ -484,18 +490,18 @@ export default function ProduitsPage() {
                         </Link>
                       )}
                       {canEdit('produits') && (
-                        <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
+                        <button onClick={() => openEdit(produit)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier" aria-label={`Modifier ${produit.numero}`}>
                           <Edit2 size={16} />
                         </button>
                       )}
                       {produit.actif === false ? (
                         canEdit('produits') && (
-                          <button onClick={() => handleReactiver(produit)} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label="Réactiver">
+                          <button onClick={() => handleReactiver(produit)} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded" title="Réactiver" aria-label={`Réactiver ${produit.numero}`}>
                             <RotateCcw size={16} />
                           </button>
                         )
                       ) : canDelete('produits') && (
-                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label="Désactiver">
+                        <button onClick={() => setConfirmId(produit.id!)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Désactiver" aria-label={`Désactiver ${produit.numero}`}>
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -569,6 +575,17 @@ export default function ProduitsPage() {
                     {types.map(t => <option key={t} value={t} />)}
                   </datalist>
                 </div>
+              </div>
+              <div>
+                <label htmlFor="produit-prix" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Prix de vente{codeDevise ? ` (${codeDevise})` : ''}
+                </label>
+                <input id="produit-prix" type="number" min={0} step="any" value={form.prix_unitaire}
+                  onChange={e => setForm({ ...form, prix_unitaire: e.target.value })}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Prix de base par unité de mesure, dans la devise de l'entreprise : les listes de prix et les règles de « Tarifs & Prix » partent de lui.
+                </p>
               </div>
               <ChampsFicheProduit key={editingId ?? 'nouveau'} valeurs={form} onChange={modification => setForm(actuel => ({ ...actuel, ...modification }))}
                 produitId={editingId} fabricantActuel={produits.find(p => p.id === editingId)?.fabricant ?? null} />

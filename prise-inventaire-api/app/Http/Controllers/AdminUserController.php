@@ -26,7 +26,7 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'nom' => 'required|string|max:100',
             'email' => 'required|email|unique:admin_users,email',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
             'role' => 'required|in:admin,manager,user',
         ]);
 
@@ -54,7 +54,7 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'nom' => 'sometimes|string|max:100',
             'email' => ['sometimes', 'email', Rule::unique('admin_users')->ignore($id)],
-            'password' => 'sometimes|string|min:6',
+            'password' => 'sometimes|string|min:8',
             'role' => 'sometimes|in:admin,manager,user',
             'actif' => 'sometimes|boolean',
         ]);

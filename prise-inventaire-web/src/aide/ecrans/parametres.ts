@@ -226,7 +226,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       ],
       astuces: [
         "La corbeille désactive le produit : il quitte les listes de choix et l'application mobile, son historique reste ; le filtre « Désactivés » permet de le réactiver.",
-        "Le prix de base se règle dans « Tarifs & Prix », onglet « Grille de prix ».",
+        "Le prix de base se saisit dans le champ « Prix de vente » du produit, ou pour plusieurs produits dans « Tarifs & Prix », onglet « Grille de prix ».",
         "Le suivi par lot ou par numéro de série ne change plus dès que des lots ou des numéros sont enregistrés.",
         "Pour importer, partez d'un fichier exporté (colonnes séparées par des points-virgules) : chaque ligne crée un produit, avec un code de secteur existant.",
       ],
@@ -243,7 +243,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       ],
       astuces: [
         "The bin icon deactivates the product: it leaves pick lists and the mobile app but keeps its history; the “Désactivés” filter lets you reactivate it.",
-        "The base price is set in “Tarifs & Prix”, “Price grid” tab.",
+        "The base price is entered in the product’s “Prix de vente” field, or for several products in “Tarifs & Prix”, “Price grid” tab.",
         "Lot or serial number tracking can no longer change once lots or numbers are recorded.",
         "To import, start from an exported file (semicolon-separated columns): each line creates a product, with an existing sector code.",
       ],
@@ -365,7 +365,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       resume: "Les personnes de l'entreprise et leur accès à l'application : création, rôle, mot de passe, droits détaillés, désactivation, import et export.",
       etapes: [
         "Cliquez sur « Ajouter », saisissez le nom, le prénom et le courriel ; le numéro peut être généré automatiquement.",
-        "Pour donner l'accès, choisissez un « Rôle » dans « Accès à l'application » et un mot de passe (6 caractères au moins) : le courriel sert d'identifiant.",
+        "Pour donner l'accès, choisissez un « Rôle » dans « Accès à l'application » et un mot de passe (8 caractères au moins) : le courriel sert d'identifiant.",
         "Cliquez sur « Créer », puis communiquez à l'employé son courriel et son mot de passe.",
         "Administrateurs : réglez ses groupes et ses exceptions avec la clé « Accès et permissions » de sa ligne.",
         "Pour retirer l'accès, modifiez l'employé et choisissez « Supprimer l'accès » ; pour un départ, utilisez la corbeille « Désactiver ».",
@@ -382,7 +382,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       resume: "The company's people and their access to the application: creation, role, password, detailed rights, deactivation, import and export.",
       etapes: [
         "Click “Ajouter”, enter the last name, first name and email; the number can be generated automatically.",
-        "To grant access, choose a “Rôle” under “Accès à l'application” and a password (at least 6 characters): the email is the login.",
+        "To grant access, choose a “Rôle” under “Accès à l'application” and a password (at least 8 characters): the email is the login.",
         "Click “Créer”, then give the employee their email and password.",
         "Administrators: set their groups and exceptions with the “Access and permissions” key on their row.",
         "To remove access, edit the employee and choose “Supprimer l'accès”; when someone leaves, use the “Désactiver” bin icon.",

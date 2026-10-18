@@ -150,6 +150,8 @@ class AlerteStockController extends Controller
             'en_alerte' => 0,
             'critiques' => 0,
             'warnings' => 0,
+            // Sous le seuil, à plus de la moitié : ni critiques ni avertissements (comme dans la liste et ses filtres).
+            'informations' => 0,
             'ok' => 0,
         ];
 
@@ -162,11 +164,11 @@ class AlerteStockController extends Controller
             if ($stockActuel < $produit->seuil_alerte) {
                 $stats['en_alerte']++;
                 $criticite = $this->calculerCriticite($stockActuel, $produit->seuil_alerte);
-                if ($criticite === 'critique') {
-                    $stats['critiques']++;
-                } else {
-                    $stats['warnings']++;
-                }
+                $stats[match ($criticite) {
+                    'critique' => 'critiques',
+                    'warning' => 'warnings',
+                    default => 'informations',
+                }]++;
             } else {
                 $stats['ok']++;
             }

@@ -44,7 +44,7 @@ class EmployeTenantController extends Controller
             'email' => 'required_with:role|nullable|email|max:100',
             'role' => 'nullable|in:'.self::ROLES,
             'role_custom_id' => $this->regleRolePersonnalise(),
-            'password' => 'required_with:role|nullable|string|min:6',
+            'password' => 'required_with:role|nullable|string|min:8',
         ], ['email.required_with' => 'Un courriel est nécessaire pour donner l\'accès à l\'application.']);
 
         $tenantId = auth()->user()->tenant_id;
@@ -129,7 +129,7 @@ class EmployeTenantController extends Controller
             'actif' => 'sometimes|boolean',
             'role' => 'nullable|in:'.self::ROLES.',remove',
             'role_custom_id' => $this->regleRolePersonnalise(),
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:8',
         ]);
 
         // Désactivation ou réactivation : elle s'applique aussi au compte d'accès (voir destroy).
