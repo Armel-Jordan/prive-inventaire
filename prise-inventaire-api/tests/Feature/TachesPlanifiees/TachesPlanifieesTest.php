@@ -86,11 +86,11 @@ class TachesPlanifieesTest extends TestCase
             'transferts_planifies', 'transferts_imminents', 'alertes_stock', 'nettoyage_notifications',
             'factures_impayees', 'relances_paiement', 'relances_devis', 'facturation_abonnements', 'facturation_locations', 'renouvellement_contrats',
             'commandes_fournisseur_en_retard', 'livraisons_en_retard', 'controles_techniques', 'peremptions', 'ecritures_recurrentes', 'comptabilisation',
-            'rapports_programmes',
+            'rapports_programmes', 'revisions_prix',
         ], array_column($taches, 'code'));
         // Inactives par défaut, y compris les relances et la facturation automatiques : rien ne part sans activation.
-        $this->assertSame(array_fill(0, 17, false), array_column($taches, 'actif'));
-        $this->assertSame(array_fill(0, 17, null), array_column($taches, 'prochaine_execution'));
+        $this->assertSame(array_fill(0, 18, false), array_column($taches, 'actif'));
+        $this->assertSame(array_fill(0, 18, null), array_column($taches, 'prochaine_execution'));
 
         $this->connecter($this->tenant, 'user');
         $this->getJson('/api/taches-planifiees')->assertForbidden();

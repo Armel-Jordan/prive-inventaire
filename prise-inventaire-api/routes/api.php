@@ -126,6 +126,7 @@ use App\Http\Controllers\Prix\CalculController as PrixCalculController;
 use App\Http\Controllers\Prix\GrilleController as PrixGrilleController;
 use App\Http\Controllers\Prix\ListeController as PrixListeController;
 use App\Http\Controllers\Prix\RegleController as PrixRegleController;
+use App\Http\Controllers\Prix\RevisionController as PrixRevisionController;
 use App\Http\Controllers\ProduitCodeBarreController;
 use App\Http\Controllers\ProduitLienController;
 use App\Http\Controllers\ProduitTenantController;
@@ -1063,6 +1064,17 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/regles-prix', [PrixRegleController::class, 'store']);
         Route::put('/regles-prix/{id}', [PrixRegleController::class, 'update'])->whereNumber('id');
         Route::delete('/regles-prix/{id}', [PrixRegleController::class, 'destroy'])->whereNumber('id');
+
+        // Révisions de prix planifiées : préparer en lot, planifier à une date, appliquer une fois (phase 1.2d).
+        Route::get('/revisions-prix', [PrixRevisionController::class, 'index']);
+        Route::get('/revisions-prix/{id}', [PrixRevisionController::class, 'show'])->whereNumber('id');
+        Route::post('/revisions-prix/apercu', [PrixRevisionController::class, 'apercu']);
+        Route::post('/revisions-prix', [PrixRevisionController::class, 'store']);
+        Route::put('/revisions-prix/{id}', [PrixRevisionController::class, 'update'])->whereNumber('id');
+        Route::post('/revisions-prix/{id}/planifier', [PrixRevisionController::class, 'planifier'])->whereNumber('id');
+        Route::post('/revisions-prix/{id}/appliquer', [PrixRevisionController::class, 'appliquer'])->whereNumber('id');
+        Route::post('/revisions-prix/{id}/annuler', [PrixRevisionController::class, 'annuler'])->whereNumber('id');
+        Route::delete('/revisions-prix/{id}', [PrixRevisionController::class, 'destroy'])->whereNumber('id');
     });
 
     // Comptabilité générale (module Finance) : plan comptable, exercices et périodes, journal général et états.

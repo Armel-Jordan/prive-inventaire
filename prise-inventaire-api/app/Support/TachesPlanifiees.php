@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Taches\AppliquerRevisionsPrix;
 use App\Taches\ComptabiliserDocuments;
 use App\Taches\ConvertirEcrituresRecurrentes;
 use App\Taches\EnvoyerRapportsProgrammes;
@@ -48,6 +49,8 @@ final class TachesPlanifiees
         'comptabilisation' => [ComptabiliserDocuments::class, 'quotidienne', '23:30'],
         // Envois programmés des rapports de la bibliothèque.
         'rapports_programmes' => [EnvoyerRapportsProgrammes::class, 'quotidienne', '06:30'],
+        // Révisions de prix planifiées arrivées à leur date d'entrée en vigueur.
+        'revisions_prix' => [AppliquerRevisionsPrix::class, 'quotidienne', '00:05'],
     ];
 
     /**
@@ -84,6 +87,7 @@ final class TachesPlanifiees
         'controles_techniques' => 'ventes',
         'ecritures_recurrentes' => 'finance',
         'comptabilisation' => 'finance',
+        'revisions_prix' => 'ventes',
     ];
 
     public static function codes(): array

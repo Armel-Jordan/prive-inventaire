@@ -18,4 +18,6 @@ export const couleursTypeNotification: Record<string, string> = {
   // Réponse d'un client à un devis, donnée en ligne.
   devis_accepte: 'bg-green-500',
   devis_refuse: 'bg-red-500',
+  // Révision de prix appliquée à sa date par la tâche planifiée.
+  revision_prix: 'bg-purple-500',
 };
