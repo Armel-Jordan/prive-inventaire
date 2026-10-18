@@ -35,6 +35,12 @@ class CommandeClientController extends Controller
         if ($request->has('client_id')) {
             $query->where('client_id', $request->client_id);
         }
+        // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
+        if ($request->filled('recherche')) {
+            $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)
+                ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif)));
+        }
         if ($request->has('date_debut')) {
             $query->whereDate('date_commande', '>=', $request->date_debut);
         }

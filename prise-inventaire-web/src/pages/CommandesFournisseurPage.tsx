@@ -1,6 +1,7 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useCallback } from 'react';
+import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Eye, Send, Ban, Trash2, Package, PackageMinus } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -56,8 +57,9 @@ export default function CommandesFournisseurPage() {
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [recherche, setRecherche] = useState('');
+  // Pré-remplie par « ?recherche= » (recherche globale, autres écrans) : la première liste est déjà filtrée.
+  const [search, setSearch] = useRechercheAdresse();
+  const [recherche, setRecherche] = useState(() => search.trim());
   const [statutFilter, setStatutFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });

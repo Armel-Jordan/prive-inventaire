@@ -1566,9 +1566,10 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
   if (params?.page) queryParams.append('page', String(params.page));
   return fetchApi(`/commandes-client?${queryParams.toString()}`);
@@ -1687,9 +1688,10 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
+export async function getBonsLivraison(params?: { statut?: string; recherche?: string; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
+  if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.page) queryParams.append('page', String(params.page));
   if (params?.per_page) queryParams.append('per_page', String(params.per_page));
   if (params?.sans_tournee) queryParams.append('sans_tournee', '1');

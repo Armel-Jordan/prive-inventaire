@@ -50,10 +50,10 @@ class FactureController extends Controller
         if ($request->filled('statuts')) {
             $query->whereIn('statut', explode(',', (string) $request->statuts));
         }
-        // Numéro de facture, nom ou code du client.
+        // Numéro de facture, nom ou code du client, nom noté pour un client de passage.
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
-            $query->where(fn ($q) => $q->where('numero', 'like', $motif)
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)
                 ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif)));
         }
         if ($request->has('client_id')) {

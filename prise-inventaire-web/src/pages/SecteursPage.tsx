@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload, QrCode, Printer, X, RotateCcw, Search } from 'lucide-react';
+import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import { getSecteurs, createSecteur, updateSecteur, deleteSecteur, getConfiguration } from '@/services/api';
 import type { Secteur } from '@/types';
 import QRCode from 'qrcode';
@@ -20,6 +21,9 @@ interface ConfigNumero {
   prochain_numero: number;
 }
 
+/** Texte sans accents ni majuscules, pour la recherche. */
+const normaliser = (texte: string) => texte.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 export default function SecteursPage() {
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +40,8 @@ export default function SecteursPage() {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   // Secteurs désactivés : masqués par défaut, retrouvés par ce filtre pour être réactivés.
   const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
+  // Recherche par code ou nom, pré-remplie par « ?recherche= » (recherche globale).
+  const [search, setSearch] = useRechercheAdresse();
   const [qrSecteur, setQrSecteur] = useState<Secteur | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -203,7 +209,9 @@ export default function SecteursPage() {
 
   // Colonne et filtre des entrepôts dès que l'entreprise en a (sinon l'écran reste comme avant).
   const avecEntrepots = entrepots.length > 0 || secteurs.some(s => s.entrepot);
-  const visibles = secteurs.filter(s => !filterEntrepot || (filterEntrepot === 'aucun' ? !s.entrepot_id : String(s.entrepot_id) === filterEntrepot));
+  const cherche = normaliser(search.trim());
+  const visibles = secteurs.filter(s => (!filterEntrepot || (filterEntrepot === 'aucun' ? !s.entrepot_id : String(s.entrepot_id) === filterEntrepot))
+    && (!cherche || normaliser(`${s.code} ${s.nom}`).includes(cherche)));
   const choixEntrepots = entrepots.filter(e => e.actif || String(e.id) === form.entrepot_id);
 
   return (
@@ -218,6 +226,12 @@ export default function SecteursPage() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="relative min-w-[200px]">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par code ou nom..."
+              aria-label="Rechercher un secteur"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm" />
+          </div>
           {avecEntrepots && (
             <select value={filterEntrepot} onChange={e => setFilterEntrepot(e.target.value)} aria-label={tw.warehouse}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm">
