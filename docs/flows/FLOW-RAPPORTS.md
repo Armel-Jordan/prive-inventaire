@@ -1,6 +1,7 @@
 # Flow — Bibliothèque des rapports
 
-> Plan de parité fripv2, phases 5.1 (bibliothèque) et 5.2 (fichiers, envoi par courriel, envois programmés).
+> Plan de parité fripv2, phases 5.1 (bibliothèque), 5.2 (fichiers, envoi par courriel, envois programmés) et 5.4
+> (questions à l'IA).
 
 Menu Inventaire → **Bibliothèque de rapports** (`/bibliotheque-rapports`). Les rapports sont rangés par domaine :
 ventes, clients, achats, inventaire, finance. On choisit un rapport, on règle ses paramètres, puis on l'affiche, on le
@@ -108,6 +109,46 @@ l'onglet le signale.
 | POST | `/rapports/programmes/{id}/envoyer` | Envoi immédiat |
 | GET | `/courriels/envois?type=rapport&rapport={code}` | Historique des envois d'un rapport |
 
+## Questions à l'IA (phase 5.4)
+
+L'onglet **Questions à l'IA** répond en langage naturel (« Quel est mon meilleur client depuis le début de
+l'année ? ») avec le service d'IA d'Anthropic (Claude).
+
+- **Pas d'accès direct à la base.** Contrairement au « Rapport IA » de fripv2, qui fait écrire du SQL à l'IA :
+  - l'IA choisit des rapports de la bibliothèque et leurs paramètres ;
+  - l'application les exécute avec les droits du compte, dans son entreprise ;
+  - l'IA rédige ensuite sa réponse à partir de ces seuls résultats.
+
+  Elle ne peut ni lire d'autres données, ni rien modifier. Un rapport non permis ou des paramètres invalides lui sont
+  refusés.
+- **La réponse** :
+  - titre et texte (gras, listes) ;
+  - les rapports consultés ;
+  - un bouton pour ouvrir le rapport cité avec ses paramètres. Le filtre par défaut du rapport ne s'applique pas alors.
+- **Historique** : les 30 dernières questions du compte. Chacun ne voit que les siennes.
+- **Données transmises** : la question, la liste des rapports permis et les lignes des rapports exécutés (200 au plus
+  par rapport, avec les totaux sur toutes les lignes). L'écran le signale.
+- **Disponibilité** :
+  - la clé de l'API sur le serveur (`ANTHROPIC_API_KEY`, jamais dans le dépôt). Sans elle, l'onglet dit que le service
+    n'est pas configuré ;
+  - le module « Intelligence artificielle » de l'entreprise, activé par le super-administrateur. Il est hors des plans
+    par défaut ;
+  - le droit « Poser des questions à l'IA sur les rapports » ; il suit au départ le droit de voir les rapports.
+- **Réglages du serveur** :
+  - `IA_MODELE` : `claude-opus-5-5` par défaut ;
+  - `IA_DELAI` : 120 s par appel ;
+  - `IA_TOURS` : 6 échanges au plus ;
+  - `IA_LIGNES` : 200 lignes par rapport ;
+  - `IA_QUESTIONS_PAR_JOUR` : 50 questions par compte et par jour ;
+  - et 10 questions par minute au plus.
+- **Suivi** : chaque question est gardée dans `questions_ia`, avec le statut, la réponse ou l'erreur, les rapports
+  exécutés, le modèle, les jetons d'entrée et de sortie et la durée.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/rapports/ia/questions?langue=` | Disponibilité (`cle`, `module` ou rien), questions restantes du jour, historique du compte |
+| POST | `/rapports/ia/questions` | `question` (1 000 caractères au plus), `langue` : la réponse |
+
 ## Ajouter un rapport
 
 1. Une classe dans `app/Rapports` qui étend `Rapport` (ou `RapportVentes` pour les factures émises) : code,
@@ -126,7 +167,10 @@ Code :
   - `RapportBibliothequeController`, `RapportProgrammeController` ;
   - `App\Support\ClasseurXlsx` (classeur Excel minimal, sans dépendance) ; vue `pdf/rapport.blade.php` ;
   - courriel de type `rapport` dans `EnvoiCourriel` (`preparerRapport`, `creerRapport`, fichier refait à l'envoi) ;
-  - modèle `RapportProgramme` ; tâche `App\Taches\EnvoyerRapportsProgrammes` (`rapports_programmes`).
+  - modèle `RapportProgramme` ; tâche `App\Taches\EnvoyerRapportsProgrammes` (`rapports_programmes`) ;
+  - questions à l'IA : `App\Rapports\AssistantRapports` (consignes, outils `executer_rapport` et `repondre`, échanges),
+    `App\Services\Ia\ClientClaude` (API Messages d'Anthropic), `RapportIaController`, modèle `QuestionIa`, `config/ia.php`,
+    module `ia` de `config/modules.php`, migration `2026_10_17_100083_questions_ia`.
 - Droits :
   - `Droits::PARTICULIERES` : `rapports.voir`, `rapports.envoyer`, `rapports.programmer` ;
   - droit du module de chaque rapport dans `Catalogue::pour`.
@@ -136,7 +180,8 @@ Code :
   - actions des groupes.
 - Web :
   - `BibliothequeRapportsPage` ;
-  - `components/rapports` : `ChampParametre`, `CourrielRapport`, `FenetreProgramme`, `EnvoisProgrammes` ;
+  - `components/rapports` : `ChampParametre`, `CourrielRapport`, `FenetreProgramme`, `EnvoisProgrammes`, `QuestionsIa` ;
   - `ComposerCourriel` (source d'envoi autre qu'un document) ;
   - `services/bibliothequeRapports.ts`, `lib/programmesRapports.ts`, traductions `reportsLibrary`.
-- Tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`, `EnvoiRapportsTest.php`.
+- Tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`, `EnvoiRapportsTest.php`, `QuestionsIaTest.php` (API
+  d'Anthropic simulée).

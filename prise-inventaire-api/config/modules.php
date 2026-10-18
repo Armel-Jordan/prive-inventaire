@@ -19,7 +19,8 @@ return [
 
     'core' => ['inventaire', 'parametres'],
 
-    'optional' => ['achats', 'ventes', 'finance'],
+    // ia : questions en langage naturel sur les rapports (Anthropic) ; activé par le super-admin seulement.
+    'optional' => ['achats', 'ventes', 'finance', 'ia'],
 
     'labels' => [
         'inventaire' => 'Inventaire',
@@ -27,6 +28,7 @@ return [
         'achats' => 'Achats',
         'ventes' => 'Ventes',
         'finance' => 'Finance',
+        'ia' => 'Intelligence artificielle',
     ],
 
     'plans' => [

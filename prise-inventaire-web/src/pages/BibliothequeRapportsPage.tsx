@@ -9,6 +9,7 @@ import { texteFiltre } from '@/services/filtresMemorises';
 import ChampParametre, { type ListesParametres } from '@/components/rapports/ChampParametre';
 import CourrielRapport from '@/components/rapports/CourrielRapport';
 import FiltresMemorises from '@/components/FiltresMemorises';
+import QuestionsIa from '@/components/rapports/QuestionsIa';
 import EnvoisProgrammes from '@/components/rapports/EnvoisProgrammes';
 import FenetreProgramme from '@/components/rapports/FenetreProgramme';
 import {
@@ -20,7 +21,7 @@ import {
 const valeursParDefaut = (rapport: DefinitionRapport) =>
   Object.fromEntries(rapport.parametres.map(p => [p.cle, p.defaut !== undefined && p.defaut !== null ? String(p.defaut) : '']));
 
-type Onglet = 'rapports' | 'programmes';
+type Onglet = 'rapports' | 'programmes' | 'ia';
 
 /**
  * Bibliothèque des rapports (plan de parité fripv2, phases 5.1 et 5.2) : les rapports par catégorie (ceux que les
@@ -33,6 +34,8 @@ export default function BibliothequeRapportsPage() {
   const tr = t.reportsLibrary;
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
   const [onglet, setOnglet] = useState<Onglet>('rapports');
+  // Rapport ouvert depuis une réponse de l'IA : ses paramètres sont ceux de la réponse, pas le filtre par défaut.
+  const [ouvertParIa, setOuvertParIa] = useState(false);
   const [categories, setCategories] = useState<CatalogueRapports['categories'] | null>(null);
   const [categoriesProduits, setCategoriesProduits] = useState<string[]>([]);
   const [choisi, setChoisi] = useState<DefinitionRapport | null>(null);
@@ -101,6 +104,17 @@ export default function BibliothequeRapportsPage() {
     setTri(null);
     setErreur('');
     setAnnonce('');
+    setOuvertParIa(false);
+  }
+
+  /** Ouvre un rapport cité par l'IA, avec les paramètres de sa réponse. */
+  function ouvrirRapportCite(code: string, parametres: Record<string, string | number | null>) {
+    const rapport = (categories ?? []).flatMap(c => c.rapports).find(r => r.code === code);
+    if (!rapport) return;
+    choisir(rapport);
+    setValeurs({ ...valeursParDefaut(rapport), ...Object.fromEntries(Object.entries(parametres).map(([cle, valeur]) => [cle, valeur === null ? '' : String(valeur)])) });
+    setOuvertParIa(true);
+    setOnglet('rapports');
   }
 
   async function afficher() {
@@ -170,11 +184,11 @@ export default function BibliothequeRapportsPage() {
       </div>
 
       <div role="tablist" aria-label={tr.title} className="flex gap-1 border-b dark:border-gray-700">
-        {(['rapports', 'programmes'] as const).map(o => (
+        {(['rapports', 'programmes', 'ia'] as const).filter(o => o !== 'ia' || peut('rapports', 'questionner')).map(o => (
           <button key={o} type="button" role="tab" id={`onglet-${o}`} aria-selected={onglet === o} aria-controls={`panneau-${o}`}
             onClick={() => { setOnglet(o); setAnnonce(''); }}
             className={`px-4 py-2 -mb-px text-sm border-b-2 ${onglet === o ? 'border-indigo-600 text-indigo-700 font-medium dark:text-indigo-300' : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}`}>
-            {o === 'rapports' ? tr.tabReports : `${tr.tabSchedules}${programmes ? ` (${programmes.programmes.length})` : ''}`}
+            {o === 'rapports' ? tr.tabReports : o === 'ia' ? tr.tabAi : `${tr.tabSchedules}${programmes ? ` (${programmes.programmes.length})` : ''}`}
           </button>
         ))}
       </div>
@@ -183,7 +197,9 @@ export default function BibliothequeRapportsPage() {
       {annonce && <p role="status" className="px-3 py-2 rounded-lg text-sm bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-200">{annonce}</p>}
 
       <div role="tabpanel" id={`panneau-${onglet}`} aria-labelledby={`onglet-${onglet}`}>
-        {onglet === 'programmes' ? (
+        {onglet === 'ia' ? (
+          <QuestionsIa onOuvrirRapport={ouvrirRapportCite} />
+        ) : onglet === 'programmes' ? (
           <EnvoisProgrammes liste={programmes} peutProgrammer={peut('rapports', 'programmer')} estAdmin={isAdmin()}
             onNouveau={() => setFenetre({ programme: null })} onModifier={programme => setFenetre({ programme })} onRecharger={rechargerProgrammes} />
         ) : (
@@ -221,7 +237,7 @@ export default function BibliothequeRapportsPage() {
                       </div>
                       {choisi.parametres.length > 0 && (
                         // Filtres mémorisés du rapport : ses paramètres ; une valeur absente reprend sa valeur par défaut.
-                        <FiltresMemorises key={choisi.code} ecran={`rapport:${choisi.code}`} valeurs={valeurs}
+                        <FiltresMemorises key={choisi.code} ecran={`rapport:${choisi.code}`} valeurs={valeurs} sansDefaut={ouvertParIa}
                           onAppliquer={v => setValeurs({ ...valeursParDefaut(choisi), ...Object.fromEntries(Object.entries(v).map(([cle, x]) => [cle, texteFiltre(x)])) })} />
                       )}
                     </div>

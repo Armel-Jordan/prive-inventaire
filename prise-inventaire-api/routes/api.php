@@ -132,6 +132,7 @@ use App\Http\Controllers\ProduitUniteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RapportBibliothequeController;
 use App\Http\Controllers\RapportController;
+use App\Http\Controllers\RapportIaController;
 use App\Http\Controllers\RapportProgrammeController;
 use App\Http\Controllers\RechercheController;
 use App\Http\Controllers\RoleController;
@@ -462,6 +463,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/programmes/{id}', [RapportProgrammeController::class, 'destroy'])->whereNumber('id');
         Route::post('/programmes/{id}/envoyer', [RapportProgrammeController::class, 'envoyer'])->whereNumber('id')
             ->middleware('throttle:30,1,courriel-envoi');
+        // Questions à l'IA sur les rapports (module « ia » de l'entreprise, clé de l'API sur le serveur).
+        Route::get('/ia/questions', [RapportIaController::class, 'index']);
+        Route::post('/ia/questions', [RapportIaController::class, 'store'])->middleware('throttle:10,1');
     });
 
     // Balises de classement des fiches et documents.

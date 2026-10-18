@@ -156,3 +156,47 @@ export function supprimerProgrammeRapport(id: number): Promise<void> {
 export function envoyerProgrammeRapport(id: number, langue: string): Promise<{ envoi: EnvoiCourriel; programme: ProgrammeRapport }> {
   return apiFetch(`/rapports/programmes/${id}/envoyer?langue=${langue}`, { method: 'POST', timeoutMs: 120000 });
 }
+
+/** Rapport cité par une réponse de l'IA ; « permis » à faux si le compte ne peut plus l'ouvrir. */
+export interface RapportCite {
+  code: string;
+  titre: string;
+  parametres: Record<string, string | number | null>;
+  permis: boolean;
+}
+
+/** Question posée à l'IA sur les rapports, avec sa réponse. */
+export interface QuestionIa {
+  id: number;
+  question: string;
+  langue: 'fr' | 'en';
+  statut: 'en_cours' | 'reussie' | 'echec';
+  titre: string | null;
+  reponse: string | null;
+  erreur: string | null;
+  modele: string | null;
+  jetons_entree: number;
+  jetons_sortie: number;
+  duree_ms: number | null;
+  /** Rapport à ouvrir pour le détail. */
+  rapport: RapportCite | null;
+  /** Rapports exécutés pour répondre. */
+  rapports: RapportCite[];
+  created_at: string | null;
+}
+
+export interface EtatQuestionsIa {
+  /** null quand l'IA est disponible ; « cle » : serveur non configuré ; « module » : module de l'entreprise inactif. */
+  indisponible: 'cle' | 'module' | null;
+  restantes: number;
+  questions: QuestionIa[];
+}
+
+export function getQuestionsIa(langue: string): Promise<EtatQuestionsIa> {
+  return apiFetch(`/rapports/ia/questions?langue=${langue}`);
+}
+
+/** Pose une question ; l'IA peut exécuter plusieurs rapports avant de répondre (délai long). */
+export function poserQuestionIa(question: string, langue: string): Promise<QuestionIa> {
+  return apiFetch(`/rapports/ia/questions?langue=${langue}`, { method: 'POST', body: JSON.stringify({ question, langue }), timeoutMs: 300000 });
+}
