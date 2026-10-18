@@ -160,19 +160,28 @@ marge_brute_% = (marge_brute / prix_achat) × 100
 
 ### 4.1 Ce que c'est
 
-Les prévisions de stock permettent d'anticiper les besoins d'achat en croisant :
-- Le stock actuel
-- Les commandes clients à venir (besoins futurs)
-- Les commandes fournisseurs en cours (stock attendu)
+Les prévisions de stock (Finance → Prévisions) estiment, pour chaque produit actif, combien de jours son stock va
+durer au rythme des 30 derniers jours. Elles montrent quoi racheter en premier.
 
 ### 4.2 Calcul prévisionnel
 
 ```
-Stock projeté =
-  stock_actuel
-  + quantite_commandée_fournisseur (commandes envoyées non encore reçues)
-  - quantite_commandée_client (commandes acceptées non encore livrées)
+stock actuel        = somme des scans du produit
+consommation / jour = sorties de stock des 30 derniers jours ÷ 30
+jours restants      = stock actuel ÷ consommation par jour (vide sans aucune sortie)
 ```
+
+- **Statut**, avec un stock minimum (seuil d'alerte, réglé dans Alertes Stock › Configurer seuils) :
+  - **critique** à la moitié du minimum ou moins ;
+  - **bas** jusqu'au minimum.
+- **Statut**, sans minimum, d'après les jours restants :
+  - **critique** à 7 jours ou moins ;
+  - **bas** jusqu'à 14 jours.
+- **Ordre** : critiques, puis bas, puis les autres, et par jours restants.
+- **Quantité à commander** proposée pour un produit critique ou bas qui a un minimum : de quoi revenir au double du
+  minimum.
+- Les commandes clients et fournisseurs en cours n'entrent pas dans ce calcul. Les besoins réservés et le stock
+  attendu se lisent dans Ventes → Disponibilités et dans les suggestions d'achat.
 
 ### 4.3 Valeur du stock
 

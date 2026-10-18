@@ -1,47 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package,
-  Paperclip,
-  Users,
-  MapPin, 
-  ClipboardList,
-  Menu,
-  X,
-  LogOut,
-  Building2,
-  ArrowRightLeft,
-  Coins,
-  Timer,
-  BarChart3,
-  Bell,
-  ListChecks,
-  GitCompare,
-  History,
-  CalendarClock,
-  ShieldCheck,
-  Route,
-  Tag,
-  FileBarChart,
-  RotateCcw,
-  User,
-  Shield,
-  ListPlus,
-  Truck,
-  ShoppingCart,
-  PackageCheck,
-  ChevronDown,
-  ChevronRight,
-  Warehouse,
-  Layers,
-  HandCoins,
-  Settings,
-  Library,
-  Mail,
-  Globe
-} from 'lucide-react';
-import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, LifeBuoy, Lightbulb, Lock, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight, CircleHelp, LayoutDashboard, LifeBuoy, LogOut, Menu, Shield, ShieldCheck, User, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -49,142 +8,10 @@ import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 import RechercheGlobale from './RechercheGlobale';
 import { useLanguage } from '@/i18n/useLanguage';
-import { ClipboardCheck } from 'lucide-react';
 import { NOM_APPLICATION } from '@/config/application';
-
-interface NavItem {
-  path: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number }>;
-  module: string;
-  /** Action nommée exigée en plus (ex. « etats » de la comptabilité) ; sinon le droit de consulter le module. */
-  action?: string;
-}
-
-interface NavCategory {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number }>;
-  items: NavItem[];
-}
-
-const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[] => [
-  {
-    id: 'inventaire',
-    label: 'Inventaire',
-    icon: ClipboardList,
-    items: [
-      { path: '/scans', label: t.nav.scans, icon: ClipboardList, module: 'inventaires' },
-      { path: '/prises-inventaire', label: t.stocktake.nav, icon: ClipboardCheck, module: 'inventaires' },
-      { path: '/valorisation-inventaire', label: t.valuation.nav, icon: Coins, module: 'valorisation' },
-      { path: '/stock-entrepots', label: t.warehouses.stockNav, icon: Warehouse, module: 'inventaires' },
-      { path: '/lots', label: t.lots.nav, icon: Layers, module: 'lots' },
-      { path: '/statistiques', label: t.nav.statistics, icon: BarChart3, module: 'statistiques' },
-      { path: '/comparaison', label: t.nav.comparison, icon: GitCompare, module: 'comparaison' },
-      { path: '/alertes', label: t.nav.alerts, icon: Bell, module: 'alertes' },
-      { path: '/audit', label: t.nav.history, icon: History, module: 'historique' },
-      { path: '/tracabilite', label: t.nav.traceability, icon: Route, module: 'tracabilite' },
-      { path: '/relocalisation', label: t.nav.relocation, icon: ArrowRightLeft, module: 'relocalisation' },
-      { path: '/planification', label: t.nav.planning, icon: CalendarClock, module: 'planification' },
-      { path: '/approbations', label: t.nav.approvals, icon: ShieldCheck, module: 'approbations' },
-      { path: '/rapports', label: t.nav.reports, icon: FileBarChart, module: 'rapports' },
-      { path: '/bibliotheque-rapports', label: t.reportsLibrary.nav, icon: LibraryBig, module: 'rapports' },
-      { path: '/inventaire-tournant', label: 'Inv. Tournant', icon: RotateCcw, module: 'inventaire_tournant' },
-    ],
-  },
-  {
-    id: 'achats',
-    label: 'Achats',
-    icon: Warehouse,
-    items: [
-      { path: '/fournisseurs', label: 'Fournisseurs', icon: Truck, module: 'fournisseurs' },
-      { path: '/suggestions-achat', label: t.purchaseSuggestions.nav, icon: Lightbulb, module: 'suggestions_achat' },
-      { path: '/commandes-fournisseur', label: 'Commandes', icon: ShoppingCart, module: 'commandes_fournisseur' },
-      { path: '/receptions', label: 'Réceptions', icon: PackageCheck, module: 'receptions' },
-      { path: '/retours-fournisseurs', label: t.supplierReturns.nav, icon: PackageMinus, module: 'retours_fournisseurs' },
-      { path: '/factures-fournisseurs', label: t.supplierInvoices.nav, icon: FileInput, module: 'factures_fournisseurs' },
-      { path: '/debourses', label: t.supplierPayments.nav, icon: BanknoteArrowUp, module: 'debourses' },
-      { path: '/paiements-dus', label: t.paymentsDue.nav, icon: CalendarClock, module: 'debourses' },
-      { path: '/virements', label: t.transfers.nav, icon: Send, module: 'debourses' },
-    ],
-  },
-  {
-    id: 'ventes',
-    label: 'Ventes',
-    icon: HandCoins,
-    items: [
-      { path: '/clients', label: 'Clients', icon: Users, module: 'clients' },
-      { path: '/espace-client', label: t.portalAdmin.nav, icon: Globe, module: 'espace_client' },
-      { path: '/devis', label: 'Devis', icon: FileBarChart, module: 'devis' },
-      { path: '/commandes-client', label: 'Commandes', icon: ShoppingCart, module: 'commandes_client' },
-      { path: '/reliquats-clients', label: t.backOrders.nav, icon: Hourglass, module: 'reliquats_clients' },
-      { path: '/disponibilites', label: t.availability.nav, icon: PackageSearch, module: 'commandes_client' },
-      { path: '/factures', label: 'Factures', icon: FileBarChart, module: 'factures' },
-      { path: '/abonnements-clients', label: t.subscriptions.nav, icon: Repeat, module: 'abonnements_clients' },
-      { path: '/contrats-location', label: t.rentals.nav, icon: FileSignature, module: 'contrats_location' },
-      { path: '/consignations', label: t.consignment.nav, icon: PackageOpen, module: 'consignations' },
-      { path: '/notes-credit', label: t.creditNotes.nav, icon: ReceiptText, module: 'avoirs' },
-      { path: '/retours-clients', label: t.customerReturns.nav, icon: ArchiveRestore, module: 'retours_clients' },
-      { path: '/encaissements', label: t.customerPayments.nav, icon: Coins, module: 'encaissements' },
-      { path: '/acomptes', label: t.deposits.nav, icon: Wallet, module: 'acomptes' },
-      { path: '/demandes-acompte', label: t.depositRequests.nav, icon: FileClock, module: 'demandes_acompte' },
-      { path: '/point-de-vente', label: t.pointOfSale.nav, icon: ShoppingBasket, module: 'point_de_vente' },
-      { path: '/caisses', label: t.cashRegisters.nav, icon: Banknote, module: 'caisses' },
-      { path: '/cartes-cadeaux', label: t.giftCards.nav, icon: Gift, module: 'cartes_cadeaux' },
-      { path: '/comptes-clients', label: t.receivables.nav, icon: HandCoins, module: 'comptes_clients' },
-      { path: '/relances', label: t.reminders.nav, icon: BellRing, module: 'relances' },
-      { path: '/bons-livraison', label: 'Bons Livraison', icon: PackageCheck, module: 'bons_livraison' },
-      { path: '/camions', label: 'Camions', icon: Truck, module: 'camions' },
-      { path: '/tournees', label: 'Tournées', icon: Route, module: 'tournees' },
-    ],
-  },
-  {
-    id: 'finance',
-    label: 'Finance',
-    icon: BarChart3,
-    items: [
-      { path: '/comptabilite', label: 'Comptabilité', icon: FileBarChart, module: 'comptabilite' },
-      { path: '/plan-comptable', label: t.accounting.chartNav, icon: BookOpen, module: 'comptabilite' },
-      { path: '/exercices-comptables', label: t.accounting.yearsNav, icon: CalendarRange, module: 'comptabilite' },
-      { path: '/journal-comptable', label: t.accounting.journalNav, icon: BookText, module: 'comptabilite' },
-      { path: '/ecritures-recurrentes', label: t.accounting.recurringNav, icon: Repeat, module: 'comptabilite' },
-      { path: '/comptabilisation', label: t.accounting.autoPostingNav, icon: Calculator, module: 'comptabilite' },
-      { path: '/banque', label: t.bank.nav, icon: Landmark, module: 'banque' },
-      { path: '/budgets', label: t.budgets.nav, icon: PiggyBank, module: 'budgets' },
-      { path: '/grand-livre', label: t.accounting.ledgerNav, icon: ScrollText, module: 'comptabilite', action: 'etats' },
-      { path: '/balance-comptable', label: t.accounting.trialBalanceNav, icon: Scale, module: 'comptabilite', action: 'etats' },
-      { path: '/etats-financiers', label: t.accounting.statementsNav, icon: FileSpreadsheet, module: 'comptabilite', action: 'etats' },
-      { path: '/rapport-taxes', label: t.taxReport.nav, icon: BadgePercent, module: 'comptabilite', action: 'etats' },
-      { path: '/previsions-stock', label: 'Prévisions', icon: BarChart3, module: 'previsions_stock' },
-      { path: '/gestion-prix', label: 'Tarifs & Prix', icon: FileBarChart, module: 'gestion_prix' },
-    ],
-  },
-  {
-    id: 'parametres',
-    label: 'Paramètres',
-    icon: Settings,
-    items: [
-      { path: '/pieces-jointes', label: t.attachments.title, icon: Paperclip, module: 'configuration' },
-      { path: '/produits', label: t.nav.products, icon: Package, module: 'produits' },
-      { path: '/etiquettes', label: t.labels.nav, icon: Tags, module: 'etiquettes' },
-      { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
-      { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
-      { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
-      { path: '/taches-planifiees', label: t.scheduledTasks.title, icon: Timer, module: 'configuration' },
-      // Paramètres (module toujours actif) : les alertes portent aussi sur le stock, les achats et les ventes.
-      { path: '/alertes-config', label: t.alertsConfig.nav, icon: Bell, module: 'alertes_config' },
-      { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
-      { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
-      { path: '/roles', label: t.permissions.nav, icon: Shield, module: 'roles' },
-      { path: '/fiches-en-cours', label: t.locks.nav, icon: Lock, module: 'verrous' },
-      { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
-      { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
-      { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
-      { path: '/frais', label: t.fees.nav, icon: BadgePercent, module: 'configuration' },
-      { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
-    ],
-  },
-];
+import { ecranDuMenu, getNavCategories, type NavItem } from '@/navigation';
+import { AideContext } from '@/aide/contexte';
+import PanneauAide from './aide/PanneauAide';
 
 export default function Layout() {
   const location = useLocation();
@@ -197,6 +24,28 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['inventaire']);
   const allCategories = getNavCategories(t);
+
+  // Aide (phase 6.6) : le panneau suit l'écran affiché ; ouvert depuis la carte des écrans sur un autre écran, il le
+  // montre jusqu'au changement de page. Touche F1 : ouvrir ou fermer l'aide de l'écran.
+  const [aideOuverte, setAideOuverte] = useState(false);
+  const [aideCible, setAideCible] = useState<{ chemin: string; page: string } | null>(null);
+  const cheminAide = !aideOuverte ? null : aideCible && aideCible.page === location.key ? aideCible.chemin : location.pathname;
+  const ouvrirAide = useCallback((cible?: string) => {
+    setAideCible(cible ? { chemin: cible, page: location.key } : null);
+    setAideOuverte(true);
+  }, [location.key]);
+  const fermerAide = useCallback(() => setAideOuverte(false), []);
+  const contexteAide = useMemo(() => ({ chemin: cheminAide, ouvrir: ouvrirAide, fermer: fermerAide }), [cheminAide, ouvrirAide, fermerAide]);
+  useEffect(() => {
+    const touche = (evenement: KeyboardEvent) => {
+      if (evenement.key !== 'F1') return;
+      evenement.preventDefault();
+      setAideCible(null);
+      setAideOuverte(ouverte => !ouverte);
+    };
+    window.addEventListener('keydown', touche);
+    return () => window.removeEventListener('keydown', touche);
+  }, []);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -238,8 +87,7 @@ export default function Layout() {
 
   // Page du menu ouverte par son adresse sans le droit de la consulter : « Accès refusé » au lieu de la page
   // (l'API refuse de toute façon les écritures que le rôle ne permet pas).
-  const pageCourante = allCategories.flatMap(cat => cat.items)
-    .find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
+  const pageCourante = ecranDuMenu(allCategories, location.pathname);
   const accesRefuse = !permissionsLoading && permissions !== null && pageCourante !== undefined && !permise(pageCourante);
   // Page d'un module que l'entreprise n'a pas souscrit (Achats, Ventes, Finance) : message au lieu d'une page
   // vide, voire d'une erreur (les appels de l'API sont refusés).
@@ -252,6 +100,7 @@ export default function Layout() {
   };
 
   return (
+    <AideContext.Provider value={contexteAide}>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
@@ -385,6 +234,16 @@ export default function Layout() {
           <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
+          <button
+            type="button"
+            onClick={() => (aideOuverte ? fermerAide() : ouvrirAide())}
+            aria-expanded={aideOuverte}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            title={t.help.button}
+            aria-label={t.help.button}
+          >
+            <CircleHelp size={20} className="text-gray-600 dark:text-gray-300" />
+          </button>
           {(peut('support', 'creer') || canView('support')) && (
             // Support et suggestions : la nouvelle demande retient l'écran d'où elle part.
             <Link
@@ -435,5 +294,7 @@ export default function Layout() {
         </div>
       </main>
     </div>
+    {cheminAide && <PanneauAide chemin={cheminAide} onFermer={fermerAide} />}
+    </AideContext.Provider>
   );
 }

@@ -23,6 +23,9 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 | Secteurs | code, nom | — |
 | Employés | numéro, nom, prénom, courriel | — |
 
+- **Écrans** (en tête des résultats) : au plus 6 écrans ouverts au compte (mêmes droits que le menu) dont le nom, le
+  résumé de l'aide ou les mots-clés répondent à la recherche ; un écran s'ouvre directement, sans aperçu. Voir
+  [FLOW-AIDE.md](./FLOW-AIDE.md).
 - **2 caractères** au moins. Les majuscules ne comptent pas.
 - **Ordre des résultats** : valeur exacte, puis commençant par le texte, puis le reste. On voit 5 résultats par type, avec le nombre des autres.
 - Seuls les types **que l'utilisateur peut consulter** sont cherchés : mêmes droits que le menu. Ceux d'un **module inactif** (Ventes, Achats) sont ignorés.

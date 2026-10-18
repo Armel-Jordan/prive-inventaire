@@ -101,7 +101,7 @@ GET    /fournisseurs          → liste avec pagination et filtre
 GET    /fournisseurs/actifs   → liste simple pour les selects (création commande)
 POST   /fournisseurs          → créer
 PUT    /fournisseurs/{id}     → modifier
-DELETE /fournisseurs/{id}     → désactiver
+DELETE /fournisseurs/{id}     → supprimer (refusé si le fournisseur a des commandes : le rendre inactif)
 ```
 
 ---
@@ -151,7 +151,7 @@ Une **Commande Fournisseur** (appelée aussi "bon de commande" ou "PO — Purcha
 Étape 4 : Ajouter les lignes de produits
           → Chercher le produit par numéro ou description
           → Saisir la quantité désirée
-          → Le prix pré-remplit si le fournisseur a un prix enregistré
+          → Saisir le prix (le prix convenu du catalogue fournisseur ne pré-remplit pas encore la ligne, §2.3)
 Étape 5 : Vérifier le total calculé
 Étape 6 : Sauvegarder en brouillon
 ```
@@ -974,7 +974,7 @@ migration `2026_10_17_100074_unites_achat_fournisseurs` (`produit_fournisseur.un
 
 ## Points d'attention globaux
 
-1. **On ne peut pas réceptionner plus que ce qui est commandé.** La validation bloque si `quantite_recue > quantite_restante`.
+1. **Recevoir plus que ce qui est commandé demande une confirmation** : le surplus est accepté explicitement (§4.3).
 2. **La suppression d'une commande envoyée est impossible.** On peut seulement annuler.
 3. **Un fournisseur inactif ne peut pas recevoir de nouvelles commandes** mais ses commandes historiques restent visibles.
-4. **Les mouvements de stock sont irréversibles.** Une réception validée ne peut pas être annulée (il faudrait un mouvement correctif).
+4. **Une réception enregistrée s'annule** (§4.6) : ses quantités reviennent à recevoir sur les commandes. L'annulation est refusée si la marchandise est repartie au fournisseur, facturée au client d'un reliquat, ou si la réception est facturée.
