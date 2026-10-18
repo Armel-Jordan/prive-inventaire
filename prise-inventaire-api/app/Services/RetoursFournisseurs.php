@@ -125,33 +125,33 @@ class RetoursFournisseurs
     public function enregistrer(array $donnees, ?RetourFournisseur $retour = null, ?int $auteur = null): RetourFournisseur
     {
         if ($retour && $retour->statut !== RetourFournisseur::BROUILLON) {
-            throw new DomainException('Un retour expédié ne se modifie plus.');
+            throw new DomainException(__('Un retour expédié ne se modifie plus.'));
         }
         $commande = $retour ? $retour->commande : (empty($donnees['commande_fournisseur_id']) ? null : ComFourEntete::find($donnees['commande_fournisseur_id']));
         $retourClient = $retour ? $retour->retourClient : (empty($donnees['retour_client_id']) ? null : RetourClient::find($donnees['retour_client_id']));
         $fournisseurId = $commande?->fournisseur_id ?? (int) ($donnees['fournisseur_id'] ?? $retour?->fournisseur_id);
         if ($commande) {
             if (! empty($donnees['fournisseur_id']) && (int) $donnees['fournisseur_id'] !== $commande->fournisseur_id) {
-                throw ValidationException::withMessages(['fournisseur_id' => "La commande {$commande->numero} n'est pas une commande de ce fournisseur."]);
+                throw ValidationException::withMessages(['fournisseur_id' => __("La commande :numero n'est pas une commande de ce fournisseur.", ['numero' => $commande->numero])]);
             }
             if (! in_array($commande->statut, self::COMMANDES_RETOURNABLES, true)) {
-                throw new DomainException("Seule la marchandise reçue d'une commande envoyée peut repartir au fournisseur.");
+                throw new DomainException(__("Seule la marchandise reçue d'une commande envoyée peut repartir au fournisseur."));
             }
             if ($donnees['date_retour'] < Carbon::parse($commande->date_commande)->toDateString()) {
-                throw ValidationException::withMessages(['date_retour' => 'Le retour ne peut pas précéder la commande ('.Carbon::parse($commande->date_commande)->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_retour' => __('Le retour ne peut pas précéder la commande (:date).', ['date' => Carbon::parse($commande->date_commande)->format('d/m/Y')])]);
             }
         }
         if ($retourClient) {
             if ($retourClient->statut !== RetourClient::TRAITE) {
-                throw new DomainException("Traitez d'abord le retour client {$retourClient->numero}.");
+                throw new DomainException(__("Traitez d'abord le retour client :numero.", ['numero' => $retourClient->numero]));
             }
             if ($donnees['date_retour'] < $retourClient->date_retour->toDateString()) {
-                throw ValidationException::withMessages(['date_retour' => 'Le retour ne peut pas précéder le retour client ('.$retourClient->date_retour->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_retour' => __('Le retour ne peut pas précéder le retour client (:date).', ['date' => $retourClient->date_retour->format('d/m/Y')])]);
             }
         }
         $fournisseur = Fournisseur::find($fournisseurId);
         if (! $fournisseur) {
-            throw ValidationException::withMessages(['fournisseur_id' => 'Choisissez le fournisseur.']);
+            throw ValidationException::withMessages(['fournisseur_id' => __('Choisissez le fournisseur.')]);
         }
         // Devise : celle de la commande, sinon celle choisie (celle du fournisseur par défaut).
         $devise = $commande
@@ -196,7 +196,7 @@ class RetoursFournisseurs
     {
         $config = Configuration::pourEntite('retour_fournisseur', $retour->tenant_id);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des retours fournisseurs (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des retours fournisseurs (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($retour, $auteur, $date) {
@@ -206,11 +206,11 @@ class RetoursFournisseurs
             $retour = RetourFournisseur::with(['lignes.produit' => fn ($q) => $q->withTrashed(), 'lignes.secteur', 'lignes.raison'])
                 ->whereKey($retour->id)->lockForUpdate()->firstOrFail();
             if ($retour->statut !== RetourFournisseur::BROUILLON) {
-                throw new DomainException('Ce retour est déjà expédié.');
+                throw new DomainException(__('Ce retour est déjà expédié.'));
             }
             $jour = $date ?? now()->toDateString();
             if ($jour < $retour->date_retour->toDateString()) {
-                throw ValidationException::withMessages(['date_expedition' => "L'expédition ne peut pas précéder le retour (".$retour->date_retour->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_expedition' => __("L'expédition ne peut pas précéder le retour (:date).", ['date' => $retour->date_retour->format('d/m/Y')])]);
             }
             $saisies = $retour->lignes->map(fn (RetourFournisseurLigne $l) => [
                 'com_four_ligne_id' => $l->com_four_ligne_id, 'retour_client_ligne_id' => $l->retour_client_ligne_id, 'quantite' => $l->quantite,
@@ -229,7 +229,7 @@ class RetoursFournisseurs
                     continue;
                 }
                 if (! $ligne->secteur || $ligne->secteur->trashed()) {
-                    throw new DomainException("Le secteur d'où sort {$ligne->produit?->numero} n'existe plus : modifiez le retour.");
+                    throw new DomainException(__("Le secteur d'où sort :produit n'existe plus : modifiez le retour.", ['produit' => $ligne->produit?->numero]));
                 }
                 $mouvement = $this->mouvement($retour, $ligne, MouvementTenant::TYPE_SORTIE, $ligne->secteur, "Retour fournisseur {$retour->numero}".($ligne->raison ? " : {$ligne->raison->libelle}" : ''), $auteur, $moment);
                 $ligne->update(['mouvement_id' => $mouvement->id]);
@@ -253,15 +253,15 @@ class RetoursFournisseurs
         return DB::transaction(function () use ($retour, $donnees, $auteur) {
             $retour = RetourFournisseur::with(['lignes.produit' => fn ($q) => $q->withTrashed()])->whereKey($retour->id)->lockForUpdate()->firstOrFail();
             if ($retour->statut !== RetourFournisseur::EXPEDIE) {
-                throw new DomainException($retour->statut === RetourFournisseur::BROUILLON ? "Expédiez d'abord le retour." : 'Ce retour est déjà clos.');
+                throw new DomainException($retour->statut === RetourFournisseur::BROUILLON ? __("Expédiez d'abord le retour.") : __('Ce retour est déjà clos.'));
             }
             if ($donnees['date_cloture'] < $retour->date_expedition->toDateString()) {
-                throw ValidationException::withMessages(['date_cloture' => "La clôture ne peut pas précéder l'expédition (".$retour->date_expedition->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_cloture' => __("La clôture ne peut pas précéder l'expédition (:date).", ['date' => $retour->date_expedition->format('d/m/Y')])]);
             }
             $entete = ['statut' => RetourFournisseur::CLOS, 'date_cloture' => $donnees['date_cloture'], 'clos_par' => $auteur?->id];
             if ($retour->type === RetourFournisseur::REMBOURSEMENT) {
                 if (! isset($donnees['montant_credite']) || ! is_numeric($donnees['montant_credite'])) {
-                    throw ValidationException::withMessages(['montant_credite' => 'Indiquez le crédit obtenu du fournisseur.']);
+                    throw ValidationException::withMessages(['montant_credite' => __('Indiquez le crédit obtenu du fournisseur.')]);
                 }
                 $entete += ['montant_credite' => round((float) $donnees['montant_credite'], 2), 'reference_avoir' => $donnees['reference_avoir'] ?? null];
             }
@@ -284,7 +284,7 @@ class RetoursFournisseurs
     public function supprimer(RetourFournisseur $retour): void
     {
         if ($retour->statut !== RetourFournisseur::BROUILLON) {
-            throw new DomainException('Seuls les retours en brouillon peuvent être supprimés.');
+            throw new DomainException(__('Seuls les retours en brouillon peuvent être supprimés.'));
         }
         $retour->delete();
     }
@@ -322,7 +322,7 @@ class RetoursFournisseurs
             if ($commande) {
                 $ligne = $lignesCommande[(int) ($saisie['com_four_ligne_id'] ?? 0)] ?? null;
                 if (! $ligne) {
-                    throw ValidationException::withMessages(["lignes.{$index}.com_four_ligne_id" => "Cette ligne n'appartient pas à la commande {$commande->numero}."]);
+                    throw ValidationException::withMessages(["lignes.{$index}.com_four_ligne_id" => __("Cette ligne n'appartient pas à la commande :numero.", ['numero' => $commande->numero])]);
                 }
                 $produitId = $ligne->produit_id;
                 $prix ??= round((float) $ligne->prix_unitaire, 2);
@@ -330,24 +330,26 @@ class RetoursFournisseurs
             } elseif ($retourClient) {
                 $ligne = $lignesClient[(int) ($saisie['retour_client_ligne_id'] ?? 0)] ?? null;
                 if (! $ligne) {
-                    throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => "Cette ligne n'appartient pas au retour client {$retourClient->numero}."]);
+                    throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => __("Cette ligne n'appartient pas au retour client :numero.", ['numero' => $retourClient->numero])]);
                 }
                 // Un retour fournisseur se compte en unités de stock : une ligne rapportée dans une autre unité (la
                 // caisse de 12) ne s'y relie pas.
                 if ($ligne->facteur !== null) {
                     $produit = $ligne->produit;
-                    throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => "{$produit?->numero} a été rapporté en {$ligne->unite} : faites ce retour au fournisseur sans le relier au retour client, en {$produit?->mesure}."]);
+                    throw ValidationException::withMessages(["lignes.{$index}.retour_client_ligne_id" => __(':produit a été rapporté en :unite : faites ce retour au fournisseur sans le relier au retour client, en :mesure.', [
+                        'produit' => $produit?->numero, 'unite' => $ligne->unite, 'mesure' => $produit?->mesure,
+                    ])]);
                 }
                 $produitId = $ligne->produit_id;
                 $origine['retour_client_ligne_id'] = $ligne->id;
             } else {
                 $produitId = (int) ($saisie['produit_id'] ?? 0);
                 if (! ProduitTenant::whereKey($produitId)->exists()) {
-                    throw ValidationException::withMessages(["lignes.{$index}.produit_id" => 'Choisissez le produit renvoyé.']);
+                    throw ValidationException::withMessages(["lignes.{$index}.produit_id" => __('Choisissez le produit renvoyé.')]);
                 }
             }
             if ($raisonExigee && empty($saisie['raison_id'])) {
-                throw ValidationException::withMessages(["lignes.{$index}.raison_id" => 'Choisissez la raison du retour.']);
+                throw ValidationException::withMessages(["lignes.{$index}.raison_id" => __('Choisissez la raison du retour.')]);
             }
             $lotId = isset($saisie['lot_id']) ? (int) $saisie['lot_id'] : null;
             app(LotsSeries::class)->verifierLotDuProduit($lotId, $produitId, "lignes.{$index}.lot_id");
@@ -384,7 +386,9 @@ class RetoursFournisseurs
             $parLigne[$id] = ($parLigne[$id] ?? 0) + (int) $ligne['quantite'];
             $reste = (int) ($lignesCommande[$id]->quantite_recue ?? 0) - ($repartis[$id] ?? 0);
             if ($parLigne[$id] > $reste) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => 'Au plus '.max(0, $reste).' (quantité reçue'.(($repartis[$id] ?? 0) > 0 ? ', retours déjà expédiés déduits' : '').').']);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => ($repartis[$id] ?? 0) > 0
+                    ? __('Au plus :quantite (quantité reçue, retours déjà expédiés déduits).', ['quantite' => max(0, $reste)])
+                    : __('Au plus :quantite (quantité reçue).', ['quantite' => max(0, $reste)])]);
             }
         }
     }
@@ -400,7 +404,9 @@ class RetoursFournisseurs
             $parLigne[$id] = ($parLigne[$id] ?? 0) + (int) $ligne['quantite'];
             $reste = (int) ($lignesClient[$id]->quantite ?? 0) - ($repartis[$id] ?? 0);
             if ($parLigne[$id] > $reste) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => 'Au plus '.max(0, $reste).' (quantité rapportée par le client'.(($repartis[$id] ?? 0) > 0 ? ', retours déjà expédiés déduits' : '').').']);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => ($repartis[$id] ?? 0) > 0
+                    ? __('Au plus :quantite (quantité rapportée par le client, retours déjà expédiés déduits).', ['quantite' => max(0, $reste)])
+                    : __('Au plus :quantite (quantité rapportée par le client).', ['quantite' => max(0, $reste)])]);
             }
         }
     }

@@ -36,15 +36,15 @@ class IdentifyTenant
 
         if (! $tenant) {
             return response()->json([
-                'error' => 'Tenant non identifié',
-                'message' => 'Veuillez spécifier un tenant valide',
+                'error' => __('Tenant non identifié'),
+                'message' => __('Veuillez spécifier un tenant valide'),
             ], 400);
         }
 
         if ($tenant->isExpired()) {
             return response()->json([
-                'error' => 'Abonnement expiré',
-                'message' => 'Votre abonnement a expiré. Veuillez contacter le support.',
+                'error' => __('Abonnement expiré'),
+                'message' => __('Votre abonnement a expiré. Veuillez contacter le support.'),
             ], 403);
         }
 

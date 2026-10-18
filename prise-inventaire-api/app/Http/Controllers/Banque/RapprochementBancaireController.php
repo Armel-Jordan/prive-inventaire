@@ -88,7 +88,7 @@ class RapprochementBancaireController extends Controller
         return $this->executer(function () use ($rapprochement) {
             $this->rapprochements->supprimer($rapprochement);
 
-            return response()->json(['message' => 'Rapprochement supprimé : ses mouvements sont libérés.']);
+            return response()->json(['message' => __('Rapprochement supprimé : ses mouvements sont libérés.')]);
         });
     }
 

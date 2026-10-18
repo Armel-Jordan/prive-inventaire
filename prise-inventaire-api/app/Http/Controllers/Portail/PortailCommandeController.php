@@ -101,7 +101,7 @@ class PortailCommandeController extends Controller
             'date_livraison_souhaitee' => ['nullable', 'date', 'after_or_equal:today'],
             'adresse_livraison_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], ['date_livraison_souhaitee.after_or_equal' => 'La date de livraison souhaitée ne peut pas être passée.']);
+        ], ['date_livraison_souhaitee.after_or_equal' => __('La date de livraison souhaitée ne peut pas être passée.')]);
         $commande = $this->commandes->commander($request->attributes->get('portail_compte'), $this->client($request), ['lignes' => $this->lignes($donnees)] + $donnees);
 
         return response()->json(['commande' => $commande->only(['id', 'numero', 'statut', 'montant_ht', 'montant_ttc'])], 201);
@@ -112,11 +112,11 @@ class PortailCommandeController extends Controller
     {
         $commande = $this->commandeDuClient($request, $id);
         if (! $this->annulable($commande)) {
-            return response()->json(['message' => 'Cette commande ne peut plus être annulée : contactez-nous.'], 422);
+            return response()->json(['message' => __('Cette commande ne peut plus être annulée : contactez-nous.')], 422);
         }
         $commande->update(['statut' => 'annulee']);
 
-        return response()->json(['message' => "Commande {$commande->numero} annulée."]);
+        return response()->json(['message' => __('Commande :numero annulée.', ['numero' => $commande->numero])]);
     }
 
     public function pdfCommande(Request $request, int $id): Response

@@ -94,10 +94,10 @@ class Budgets
         foreach ($cellules as $i => $cellule) {
             $compte = $comptes[$cellule['compte_id']] ?? null;
             $erreur = match (true) {
-                ! $compte => 'Compte introuvable.',
-                $compte->type === CompteComptable::EN_TETE => "Le compte {$compte->numero} est un en-tête : il ne reçoit pas de budget.",
-                ! $compte->budgetable && ! isset($avecBudget[$compte->id]) => "Le compte {$compte->numero} n'est pas budgétable : ajoutez-le aux comptes du budget.",
-                ! isset($periodes[$cellule['periode_id']]) => "Cette période n'appartient pas à l'exercice {$exercice->libelle}.",
+                ! $compte => __('Compte introuvable.'),
+                $compte->type === CompteComptable::EN_TETE => __('Le compte :numero est un en-tête : il ne reçoit pas de budget.', ['numero' => $compte->numero]),
+                ! $compte->budgetable && ! isset($avecBudget[$compte->id]) => __("Le compte :numero n'est pas budgétable : ajoutez-le aux comptes du budget.", ['numero' => $compte->numero]),
+                ! isset($periodes[$cellule['periode_id']]) => __("Cette période n'appartient pas à l'exercice :exercice.", ['exercice' => $exercice->libelle]),
                 default => null,
             };
             if ($erreur) {
@@ -129,7 +129,7 @@ class Budgets
     {
         $periodes = $exercice->periodes()->pluck('id')->all();
         if ($periodes === []) {
-            throw new DomainException("L'exercice {$exercice->libelle} n'a pas de périodes.");
+            throw new DomainException(__("L'exercice :exercice n'a pas de périodes.", ['exercice' => $exercice->libelle]));
         }
         $parts = $this->parts((int) round($total * 100), count($periodes));
         $this->enregistrer($exercice, array_map(fn (int $periode, int $centimes) => [
@@ -149,7 +149,7 @@ class Budgets
     {
         $this->exigerModifiable($cible);
         if ($source->id === $cible->id) {
-            throw new DomainException('Choisissez un autre exercice que celui du budget.');
+            throw new DomainException(__('Choisissez un autre exercice que celui du budget.'));
         }
         $mois = ($cible->date_debut->year - $source->date_debut->year) * 12 + $cible->date_debut->month - $source->date_debut->month;
         $periodesCible = $cible->periodes()->get();
@@ -226,15 +226,15 @@ class Budgets
     {
         $periodes = $exercice->periodes()->get();
         if ($periodes->isEmpty()) {
-            throw new DomainException("L'exercice {$exercice->libelle} n'a pas de périodes.");
+            throw new DomainException(__("L'exercice :exercice n'a pas de périodes.", ['exercice' => $exercice->libelle]));
         }
         $debut = $periodeDu ? $periodes->firstWhere('id', $periodeDu) : $periodes->first();
         $fin = $periodeAu ? $periodes->firstWhere('id', $periodeAu) : $periodes->last();
         if (! $debut || ! $fin) {
-            throw ValidationException::withMessages(['periode_du' => "Choisissez des périodes de l'exercice {$exercice->libelle}."]);
+            throw ValidationException::withMessages(['periode_du' => __("Choisissez des périodes de l'exercice :exercice.", ['exercice' => $exercice->libelle])]);
         }
         if ($debut->date_debut->gt($fin->date_debut)) {
-            throw ValidationException::withMessages(['periode_au' => 'La dernière période ne peut pas précéder la première.']);
+            throw ValidationException::withMessages(['periode_au' => __('La dernière période ne peut pas précéder la première.')]);
         }
         $selection = $periodes->filter(fn (PeriodeComptable $p) => $p->date_debut->gte($debut->date_debut) && $p->date_debut->lte($fin->date_debut))->pluck('id');
         $budgets = BudgetComptable::query()->whereIn('periode_id', $selection)->groupBy('compte_id')->selectRaw('compte_id, SUM(montant) as total')->pluck('total', 'compte_id');
@@ -353,7 +353,7 @@ class Budgets
     private function exigerModifiable(ExerciceComptable $exercice): void
     {
         if ($exercice->estCloture()) {
-            throw new DomainException("L'exercice {$exercice->libelle} est clôturé : son budget ne se modifie plus.");
+            throw new DomainException(__("L'exercice :exercice est clôturé : son budget ne se modifie plus.", ['exercice' => $exercice->libelle]));
         }
     }
 }

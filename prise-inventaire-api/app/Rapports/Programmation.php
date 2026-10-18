@@ -137,9 +137,9 @@ final class Programmation
         }
         $entreprise = Tenant::find($this->contexte->getTenantId());
         $raison = match (true) {
-            AssistantRapports::indisponibilite($entreprise) === 'cle' => "le service d'IA n'est pas configuré sur ce serveur",
-            AssistantRapports::indisponibilite($entreprise) === 'module' => "le module « Intelligence artificielle » n'est pas activé",
-            ! $this->droits->permet($compte, 'rapports', 'questionner') => "{$compte->nom} n'a pas le droit de poser des questions à l'IA",
+            AssistantRapports::indisponibilite($entreprise) === 'cle' => __("le service d'IA n'est pas configuré sur ce serveur"),
+            AssistantRapports::indisponibilite($entreprise) === 'module' => __("le module « Intelligence artificielle » n'est pas activé"),
+            ! $this->droits->permet($compte, 'rapports', 'questionner') => __(":nom n'a pas le droit de poser des questions à l'IA", ['nom' => $compte->nom]),
             default => null,
         };
         if ($raison === null) {
@@ -150,21 +150,21 @@ final class Programmation
             }
         }
 
-        return [null, "Envoyé sans l'analyse de l'IA : ".rtrim($raison, '.').'.'];
+        return [null, __("Envoyé sans l'analyse de l'IA : :raison.", ['raison' => rtrim($raison, '.')])];
     }
 
     /** Le rapport, si le compte peut encore l'ouvrir (et programmer des envois, pour un envoi planifié). */
     private function rapportPermis(RapportProgramme $programme, ?AdminUser $compte, bool $planifie): Rapport
     {
         if (! $compte || ! $compte->actif) {
-            throw new DomainException("Le compte qui a réglé cet envoi n'est plus actif : modifiez l'envoi pour le reprendre à votre nom.");
+            throw new DomainException(__("Le compte qui a réglé cet envoi n'est plus actif : modifiez l'envoi pour le reprendre à votre nom."));
         }
         if ($planifie && ! $this->droits->permet($compte, 'rapports', 'programmer')) {
-            throw new DomainException("{$compte->nom} n'a plus le droit de programmer l'envoi des rapports.");
+            throw new DomainException(__(":nom n'a plus le droit de programmer l'envoi des rapports.", ['nom' => $compte->nom]));
         }
         $rapport = Catalogue::pour($compte, Tenant::find($this->contexte->getTenantId()))->get($programme->code);
         if (! $rapport) {
-            throw new DomainException("{$compte->nom} ne peut plus ouvrir ce rapport : l'envoi est suspendu.");
+            throw new DomainException(__(':nom ne peut plus ouvrir ce rapport : l\'envoi est suspendu.', ['nom' => $compte->nom]));
         }
 
         return $rapport;

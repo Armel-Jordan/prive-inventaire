@@ -120,7 +120,7 @@ class RetourFournisseurController extends Controller
         $retour = RetourFournisseur::findOrFail($id);
         // L'application compte en UTC : un jour de marge laisse passer la date du jour de l'utilisateur, quel que soit son fuseau.
         $donnees = $request->validate(['date_expedition' => 'nullable|date_format:Y-m-d|before_or_equal:tomorrow'], [
-            'date_expedition.before_or_equal' => "L'expédition ne peut pas être datée dans le futur.",
+            'date_expedition.before_or_equal' => __("L'expédition ne peut pas être datée dans le futur."),
         ]);
 
         return $this->executer(fn () => response()->json(
@@ -137,7 +137,7 @@ class RetourFournisseurController extends Controller
             'reference_avoir' => 'nullable|string|max:50',
             'secteur_remplacement_id' => ['nullable', 'integer', TenantRule::exists('secteurs')->whereNull('deleted_at')],
         ], [
-            'date_cloture.before_or_equal' => 'La clôture ne peut pas être datée dans le futur.',
+            'date_cloture.before_or_equal' => __('La clôture ne peut pas être datée dans le futur.'),
         ]);
 
         return $this->executer(fn () => response()->json($this->retours->cloturer($retour, $donnees, $request->user())->load('lignes')));
@@ -157,7 +157,7 @@ class RetourFournisseurController extends Controller
         return $this->executer(function () use ($retour) {
             $this->retours->supprimer($retour);
 
-            return response()->json(['message' => 'Retour supprimé.']);
+            return response()->json(['message' => __('Retour supprimé.')]);
         });
     }
 
@@ -188,16 +188,18 @@ class RetourFournisseurController extends Controller
             'lignes.*.numeros_serie.*' => 'nullable|string|max:100',
             'lignes.*.notes' => 'nullable|string|max:255',
         ], [
-            'fournisseur_id.exists' => 'Choisissez un fournisseur actif.',
-            'date_retour.before_or_equal' => 'Le retour ne peut pas être daté dans le futur.',
-            'lignes.*.raison_id.exists' => 'Choisissez une raison de retour active.',
+            'fournisseur_id.exists' => __('Choisissez un fournisseur actif.'),
+            'date_retour.before_or_equal' => __('Le retour ne peut pas être daté dans le futur.'),
+            'lignes.*.raison_id.exists' => __('Choisissez une raison de retour active.'),
         ]);
         if ($creation && empty($donnees['fournisseur_id']) && empty($donnees['commande_fournisseur_id'])) {
-            abort(response()->json(['message' => 'Choisissez le fournisseur.', 'errors' => ['fournisseur_id' => ['Choisissez le fournisseur.']]], 422));
+            $erreur = __('Choisissez le fournisseur.');
+            abort(response()->json(['message' => $erreur, 'errors' => ['fournisseur_id' => [$erreur]]], 422));
         }
         $donnees['lignes'] = array_values(array_filter($donnees['lignes'], fn (array $l) => (int) $l['quantite'] > 0));
         if ($donnees['lignes'] === []) {
-            abort(response()->json(['message' => 'Indiquez au moins une quantité renvoyée.', 'errors' => ['lignes' => ['Indiquez au moins une quantité renvoyée.']]], 422));
+            $erreur = __('Indiquez au moins une quantité renvoyée.');
+            abort(response()->json(['message' => $erreur, 'errors' => ['lignes' => [$erreur]]], 422));
         }
 
         return $donnees;

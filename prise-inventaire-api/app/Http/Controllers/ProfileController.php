@@ -86,7 +86,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Profil mis à jour avec succès',
+            'message' => __('Profil mis à jour avec succès'),
             'employe' => $employe,
         ]);
     }
@@ -111,7 +111,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Photo mise à jour avec succès',
+            'message' => __('Photo mise à jour avec succès'),
             'photo_url' => Storage::url($path),
         ]);
     }

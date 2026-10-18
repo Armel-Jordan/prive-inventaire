@@ -117,14 +117,14 @@ class Etiquettes
             'rangees', 'marge_haut_mm', 'marge_gauche_mm', 'espace_colonnes_mm', 'espace_rangees_mm', 'contenu', 'taille_police']) : []));
         $valeurs['nom'] = trim((string) ($donnees['nom'] ?? $format?->nom));
         if (EtiquetteFormat::query()->where('nom', $valeurs['nom'])->when($format, fn ($q) => $q->whereKeyNot($format->id))->exists()) {
-            throw ValidationException::withMessages(['nom' => "Un format s'appelle déjà « {$valeurs['nom']} »."]);
+            throw ValidationException::withMessages(['nom' => __("Un format s'appelle déjà « :nom ».", ['nom' => $valeurs['nom']])]);
         }
         $this->controlerGrille($valeurs);
         $this->controlerContenu(new EtiquetteFormat($valeurs));
 
         $actif = (bool) ($donnees['actif'] ?? $format?->actif ?? true);
         if (! $actif && ! EtiquetteFormat::query()->where('actif', true)->when($format, fn ($q) => $q->whereKeyNot($format->id))->exists()) {
-            throw ValidationException::withMessages(['actif' => 'Gardez au moins un format actif.']);
+            throw ValidationException::withMessages(['actif' => __('Gardez au moins un format actif.')]);
         }
 
         return DB::transaction(function () use ($format, $donnees, $valeurs, $actif) {
@@ -151,7 +151,7 @@ class Etiquettes
     public function supprimer(EtiquetteFormat $format): void
     {
         if (! EtiquetteFormat::query()->where('actif', true)->whereKeyNot($format->id)->exists()) {
-            throw ValidationException::withMessages(['format' => 'Gardez au moins un format actif.']);
+            throw ValidationException::withMessages(['format' => __('Gardez au moins un format actif.')]);
         }
         DB::transaction(function () use ($format) {
             $format->delete();
@@ -204,17 +204,23 @@ class Etiquettes
             return;
         }
         if (! isset(self::PAGES[$valeurs['page']])) {
-            throw ValidationException::withMessages(['page' => 'Choisissez une page A4 ou Letter.']);
+            throw ValidationException::withMessages(['page' => __('Choisissez une page A4 ou Letter.')]);
         }
         [$largeurPage, $hauteurPage] = self::PAGES[$valeurs['page']];
         $largeur = $valeurs['marge_gauche_mm'] + $valeurs['colonnes'] * $valeurs['largeur_mm'] + ($valeurs['colonnes'] - 1) * $valeurs['espace_colonnes_mm'];
         $hauteur = $valeurs['marge_haut_mm'] + $valeurs['rangees'] * $valeurs['hauteur_mm'] + ($valeurs['rangees'] - 1) * $valeurs['espace_rangees_mm'];
         $nombre = fn (float $valeur) => number_format($valeur, 2, ',', ' ');
         if ($largeur > $largeurPage + 0.01) {
-            throw ValidationException::withMessages(['colonnes' => "La grille est trop large : {$nombre($largeur)} mm, marge comprise, pour une page de {$nombre($largeurPage)} mm."]);
+            throw ValidationException::withMessages(['colonnes' => __('La grille est trop large : :largeur mm, marge comprise, pour une page de :page mm.', [
+                'largeur' => $nombre($largeur),
+                'page' => $nombre($largeurPage),
+            ])]);
         }
         if ($hauteur > $hauteurPage + 0.01) {
-            throw ValidationException::withMessages(['rangees' => "La grille est trop haute : {$nombre($hauteur)} mm, marge comprise, pour une page de {$nombre($hauteurPage)} mm."]);
+            throw ValidationException::withMessages(['rangees' => __('La grille est trop haute : :hauteur mm, marge comprise, pour une page de :page mm.', [
+                'hauteur' => $nombre($hauteur),
+                'page' => $nombre($hauteurPage),
+            ])]);
         }
     }
 
@@ -222,18 +228,20 @@ class Etiquettes
     private function controlerContenu(EtiquetteFormat $format): void
     {
         if ($format->contenu === []) {
-            throw ValidationException::withMessages(['contenu' => "Choisissez ce que porte l'étiquette."]);
+            throw ValidationException::withMessages(['contenu' => __("Choisissez ce que porte l'étiquette.")]);
         }
         $disposition = $this->disposition($format);
         if (in_array('code_barres', $format->contenu, true) && $disposition['code_barres'] < self::HAUTEUR_CODE_MINIMALE) {
             $reste = $disposition['code_barres'] < 0.05
-                ? 'il ne resterait rien'
-                : 'il resterait '.number_format($disposition['code_barres'], 1, ',', ' ').' mm';
-            throw ValidationException::withMessages(['contenu' => "L'étiquette est trop petite pour tout ce qu'elle porte : {$reste} pour le code-barres (au moins "
-                .number_format(self::HAUTEUR_CODE_MINIMALE, 0).' mm). Réduisez le texte ou retirez un élément.']);
+                ? __('il ne resterait rien')
+                : __('il resterait :hauteur mm', ['hauteur' => number_format($disposition['code_barres'], 1, ',', ' ')]);
+            throw ValidationException::withMessages(['contenu' => __("L'étiquette est trop petite pour tout ce qu'elle porte : :reste pour le code-barres (au moins :minimum mm). Réduisez le texte ou retirez un élément.", [
+                'reste' => $reste,
+                'minimum' => number_format(self::HAUTEUR_CODE_MINIMALE, 0),
+            ])]);
         }
         if ($disposition['libre'] < 0) {
-            throw ValidationException::withMessages(['contenu' => "L'étiquette est trop petite pour tout ce qu'elle porte. Réduisez le texte ou retirez un élément."]);
+            throw ValidationException::withMessages(['contenu' => __("L'étiquette est trop petite pour tout ce qu'elle porte. Réduisez le texte ou retirez un élément.")]);
         }
     }
 
@@ -297,8 +305,10 @@ class Etiquettes
     {
         $total = array_sum(array_map(fn (array $ligne) => (int) $ligne['copies'], $lignes));
         if ($total > self::MAXIMUM) {
-            throw ValidationException::withMessages(['lignes' => 'Au plus '.number_format(self::MAXIMUM, 0, ',', ' ')
-                .' étiquettes par impression ('.number_format($total, 0, ',', ' ').' demandées).']);
+            throw ValidationException::withMessages(['lignes' => __('Au plus :maximum étiquettes par impression (:total demandées).', [
+                'maximum' => number_format(self::MAXIMUM, 0, ',', ' '),
+                'total' => number_format($total, 0, ',', ' '),
+            ])]);
         }
         $ids = array_values(array_unique(array_map(fn (array $ligne) => (int) $ligne['produit_id'], $lignes)));
         $produits = ProduitTenant::query()->whereIn('id', $ids)->with('codesBarres')->get()->keyBy('id');
@@ -312,7 +322,7 @@ class Etiquettes
         foreach ($lignes as $rang => $ligne) {
             $produit = $produits->get((int) $ligne['produit_id']);
             if (! $produit) {
-                throw ValidationException::withMessages(["lignes.{$rang}.produit_id" => 'Produit introuvable.']);
+                throw ValidationException::withMessages(["lignes.{$rang}.produit_id" => __('Produit introuvable.')]);
             }
             [$code, $type] = $this->code($produit, $ligne['code_barre_id'] ?? null, $rang);
             if (! array_key_exists($code, $images)) {
@@ -442,7 +452,7 @@ class Etiquettes
         if ($codeBarreId) {
             $choisi = $produit->codesBarres->firstWhere('id', (int) $codeBarreId);
             if (! $choisi) {
-                throw ValidationException::withMessages(["lignes.{$rang}.code_barre_id" => "Ce code-barres n'est pas celui du produit {$produit->numero}."]);
+                throw ValidationException::withMessages(["lignes.{$rang}.code_barre_id" => __("Ce code-barres n'est pas celui du produit :numero.", ['numero' => $produit->numero])]);
             }
 
             return [$choisi->code, $choisi->type];
@@ -478,7 +488,7 @@ class Etiquettes
         if (! empty($options['liste_prix_id'])) {
             $liste = ListePrix::query()->find($options['liste_prix_id']);
             if (! $liste) {
-                throw ValidationException::withMessages(['liste_prix_id' => 'Liste de prix introuvable.']);
+                throw ValidationException::withMessages(['liste_prix_id' => __('Liste de prix introuvable.')]);
             }
         }
         $saisis = $liste
@@ -490,7 +500,7 @@ class Etiquettes
                 ? GroupeTaxe::query()->find($options['groupe_taxe_id'])
                 : GroupeTaxe::query()->where('par_defaut', true)->where('actif', true)->first();
             if (! empty($options['groupe_taxe_id']) && ! $groupe) {
-                throw ValidationException::withMessages(['groupe_taxe_id' => 'Groupe de taxes introuvable.']);
+                throw ValidationException::withMessages(['groupe_taxe_id' => __('Groupe de taxes introuvable.')]);
             }
         }
 
@@ -531,7 +541,7 @@ class Etiquettes
         $parPage = $format->parPage();
         $depart = $format->support === 'planche' ? (int) ($options['depart'] ?? 1) : 1;
         if ($depart < 1 || $depart > $parPage) {
-            throw ValidationException::withMessages(['depart' => "La position de départ va de 1 à {$parPage}."]);
+            throw ValidationException::withMessages(['depart' => __('La position de départ va de 1 à :maximum.', ['maximum' => $parPage])]);
         }
 
         $pages = [];

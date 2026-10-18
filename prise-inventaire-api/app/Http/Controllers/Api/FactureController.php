@@ -117,7 +117,7 @@ class FactureController extends Controller
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         // Condition de paiement, devise, taxes par ligne : voir App\Services\FacturesVente.
         $facture = $this->factures->creer($validated, $tenantId);
@@ -130,17 +130,17 @@ class FactureController extends Controller
         $commande = ComClientEntete::with(['client', 'lignes'])->findOrFail($commandeId);
 
         if ($commande->statut !== 'acceptee') {
-            return response()->json(['message' => 'La commande doit être acceptée pour créer une facture'], 422);
+            return response()->json(['message' => __('La commande doit être acceptée pour créer une facture')], 422);
         }
 
         if ($commande->facture) {
-            return response()->json(['message' => 'Une facture existe déjà pour cette commande'], 422);
+            return response()->json(['message' => __('Une facture existe déjà pour cette commande')], 422);
         }
 
         $tenantId = $request->attributes->get('tenant')->id;
         $configFacture = Configuration::pourEntite('facture', $tenantId);
         if (! $configFacture || ! $configFacture->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $condition = $this->conditions->pourFacture(null, $commande->client);
         $facture = DB::transaction(function () use ($commande, $tenantId, $condition) {
@@ -220,7 +220,7 @@ class FactureController extends Controller
         $facture = Facture::findOrFail($id);
 
         if ($facture->statut !== 'brouillon') {
-            return response()->json(['message' => 'Cette facture ne peut pas être émise'], 422);
+            return response()->json(['message' => __('Cette facture ne peut pas être émise')], 422);
         }
 
         $factures->emettre($facture, auth()->id());
@@ -253,22 +253,22 @@ class FactureController extends Controller
                 $facture = Facture::where('id', $id)->lockForUpdate()->firstOrFail();
 
                 if (! in_array($facture->statut, ['emise', 'partiellement_payee'])) {
-                    throw new \DomainException('Cette facture ne peut pas recevoir de paiement');
+                    throw new \DomainException(__('Cette facture ne peut pas recevoir de paiement'));
                 }
 
                 if ($validated['montant'] > $facture->reste_a_payer) {
-                    throw new \DomainException('Le montant dépasse le reste à payer');
+                    throw new \DomainException(__('Le montant dépasse le reste à payer'));
                 }
                 $escompte = 0.0;
                 if ($validated['escompte'] ?? false) {
                     $propose = $this->conditions->escompte($facture, Carbon::parse($validated['date_paiement'])->toDateString());
                     if (! $propose || ! $propose['applicable']) {
                         throw new \DomainException($propose
-                            ? 'Escompte impossible : le paiement doit être fait au plus tard le '.Carbon::parse($propose['date_limite'])->format('d/m/Y').'.'
-                            : 'Aucun escompte possible sur cette facture.');
+                            ? __('Escompte impossible : le paiement doit être fait au plus tard le :date.', ['date' => Carbon::parse($propose['date_limite'])->format('d/m/Y')])
+                            : __('Aucun escompte possible sur cette facture.'));
                     }
                     if (abs((float) $validated['montant'] - $propose['a_payer']) > 0.01) {
-                        throw new \DomainException('Avec l\'escompte, le paiement règle tout le reste : '.number_format($propose['a_payer'], 2, ',', ' ').'.');
+                        throw new \DomainException(__("Avec l'escompte, le paiement règle tout le reste : :montant.", ['montant' => number_format($propose['a_payer'], 2, ',', ' ')]));
                     }
                     $escompte = $propose['escompte'];
                 }
@@ -321,17 +321,17 @@ class FactureController extends Controller
 
         // Un bon annulé ne compte pas : la facture doit pouvoir être livrée avec un nouveau bon.
         if (BonLivraison::where('facture_id', $facture->id)->where('statut', '!=', 'annule')->exists()) {
-            return response()->json(['message' => 'Un bon de livraison existe déjà'], 422);
+            return response()->json(['message' => __('Un bon de livraison existe déjà')], 422);
         }
 
         if (! in_array($facture->statut, ['emise', 'partiellement_payee', 'payee'])) {
-            return response()->json(['message' => 'La facture doit être émise'], 422);
+            return response()->json(['message' => __('La facture doit être émise')], 422);
         }
 
         $tenantId = $request->attributes->get('tenant')->id;
         $configBon = Configuration::pourEntite('bon_livraison', $tenantId);
         if (! $configBon || ! $configBon->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $bon = DB::transaction(function () use ($facture, $tenantId) {
             $numeroBon = Configuration::consommerNumero('bon_livraison', $tenantId);
@@ -366,11 +366,11 @@ class FactureController extends Controller
         $facture = Facture::findOrFail($id);
 
         if ($facture->statut !== 'brouillon') {
-            return response()->json(['message' => 'Seules les factures en brouillon peuvent être supprimées.'], 422);
+            return response()->json(['message' => __('Seules les factures en brouillon peuvent être supprimées.')], 422);
         }
 
         $facture->delete();
 
-        return response()->json(['message' => 'Facture supprimée.']);
+        return response()->json(['message' => __('Facture supprimée.')]);
     }
 }

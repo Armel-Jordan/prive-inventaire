@@ -57,10 +57,10 @@ class ReceptionsFournisseur
         $saisies = array_values($donnees['receptions'] ?? []);
         $clotures = array_values(array_unique(array_map('intval', $donnees['clotures'] ?? [])));
         if ($saisies === [] && $clotures === []) {
-            throw ValidationException::withMessages(['receptions' => 'Saisissez au moins une quantité reçue, ou clôturez une ligne.']);
+            throw ValidationException::withMessages(['receptions' => __('Saisissez au moins une quantité reçue, ou clôturez une ligne.')]);
         }
         if ($saisies === [] && ($donnees['frais'] ?? []) !== []) {
-            throw ValidationException::withMessages(['frais' => 'Les coûts annexes accompagnent une réception : saisissez au moins une quantité reçue.']);
+            throw ValidationException::withMessages(['frais' => __('Les coûts annexes accompagnent une réception : saisissez au moins une quantité reçue.')]);
         }
 
         return DB::transaction(function () use ($donnees, $saisies, $clotures, $tenantId, $auteur) {
@@ -69,22 +69,22 @@ class ReceptionsFournisseur
             $lignes = ComFourLigne::query()->whereIn('id', $ids)->whereHas('commande')->with('produit')->lockForUpdate()->get()->keyBy('id');
             foreach ($saisies as $index => $saisie) {
                 if (! $lignes->has((int) $saisie['com_four_ligne_id'])) {
-                    throw ValidationException::withMessages(["receptions.{$index}.com_four_ligne_id" => 'Ligne de commande introuvable.']);
+                    throw ValidationException::withMessages(["receptions.{$index}.com_four_ligne_id" => __('Ligne de commande introuvable.')]);
                 }
             }
             foreach ($clotures as $index => $id) {
                 if (! $lignes->has($id)) {
-                    throw ValidationException::withMessages(["clotures.{$index}" => 'Ligne de commande introuvable.']);
+                    throw ValidationException::withMessages(["clotures.{$index}" => __('Ligne de commande introuvable.')]);
                 }
             }
 
             $commandes = ComFourEntete::query()->whereIn('id', $lignes->pluck('com_four_entete_id')->unique())->lockForUpdate()->get()->keyBy('id');
             if ($commandes->pluck('fournisseur_id')->unique()->count() > 1) {
-                throw ValidationException::withMessages(['receptions' => "Une réception ne regroupe que des commandes d'un même fournisseur."]);
+                throw ValidationException::withMessages(['receptions' => __("Une réception ne regroupe que des commandes d'un même fournisseur.")]);
             }
             foreach ($commandes as $commande) {
                 if (! in_array($commande->statut, self::RECEVABLES, true)) {
-                    throw new DomainException("La commande {$commande->numero} n'attend pas de livraison : seules les commandes envoyées ou reçues en partie se réceptionnent.");
+                    throw new DomainException(__("La commande :numero n'attend pas de livraison : seules les commandes envoyées ou reçues en partie se réceptionnent.", ['numero' => $commande->numero]));
                 }
             }
             $this->verifierQuantites($saisies, $lignes, (bool) ($donnees['accepter_surplus'] ?? false));
@@ -133,7 +133,7 @@ class ReceptionsFournisseur
                 $commande = ComFourEntete::query()->findOrFail($commandeId);
                 if ($cloturees !== [] && (int) $commande->lignes()->sum('quantite_recue') === 0
                     && ! $commande->lignes()->whereColumn('quantite_recue', '<', 'quantite_commandee')->exists()) {
-                    throw new DomainException("Rien n'a été reçu sur la commande {$commande->numero} : annulez-la plutôt que de clôturer toutes ses lignes.");
+                    throw new DomainException(__("Rien n'a été reçu sur la commande :numero : annulez-la plutôt que de clôturer toutes ses lignes.", ['numero' => $commande->numero]));
                 }
                 $commande->updateStatut();
             }
@@ -153,7 +153,7 @@ class ReceptionsFournisseur
     public function modifier(Reception $reception, array $donnees): Reception
     {
         if ($reception->statut !== Reception::ENREGISTREE) {
-            throw new DomainException('Une réception annulée ne se modifie plus.');
+            throw new DomainException(__('Une réception annulée ne se modifie plus.'));
         }
 
         return DB::transaction(function () use ($reception, $donnees) {
@@ -163,7 +163,7 @@ class ReceptionsFournisseur
             }
             foreach (array_values($donnees['lignes'] ?? []) as $index => $saisie) {
                 $ligne = $reception->lignes()->whereKey((int) $saisie['id'])->first()
-                    ?? throw ValidationException::withMessages(["lignes.{$index}.id" => "Cette ligne n'appartient pas à la réception."]);
+                    ?? throw ValidationException::withMessages(["lignes.{$index}.id" => __("Cette ligne n'appartient pas à la réception.")]);
                 if (array_key_exists('cout_unitaire', $saisie)) {
                     $ligne->update(['cout_unitaire' => $this->cout($saisie['cout_unitaire'])]);
                 }
@@ -190,11 +190,11 @@ class ReceptionsFournisseur
         return DB::transaction(function () use ($reception, $motif, $auteur) {
             $reception = Reception::query()->lockForUpdate()->findOrFail($reception->id);
             if ($reception->statut !== Reception::ENREGISTREE) {
-                throw new DomainException('Cette réception est déjà annulée.');
+                throw new DomainException(__('Cette réception est déjà annulée.'));
             }
             if ($reception->facture_fournisseur_id) {
                 $facture = $reception->factureFournisseur()->value('numero');
-                throw new DomainException("Cette réception est facturée ({$facture}) : annulez d'abord la facture fournisseur.");
+                throw new DomainException(__("Cette réception est facturée (:facture) : annulez d'abord la facture fournisseur.", ['facture' => $facture]));
             }
 
             $lignes = $reception->lignes()->where('annulee', false)->get();
@@ -204,7 +204,9 @@ class ReceptionsFournisseur
                 $ligneCommande->quantite_recue = max(0, $ligneCommande->quantite_recue - (int) $groupe->sum('quantite_recue'));
                 $repartis = $this->retours->dejaRepartiCommande($ligneCommande->commande)[$ligneCommande->id] ?? 0;
                 if ($ligneCommande->quantite_recue < $repartis) {
-                    throw new DomainException("{$repartis} {$ligneCommande->produit?->numero} de la commande {$ligneCommande->commande->numero} sont déjà repartis au fournisseur (retour) : la réception ne peut plus être annulée.");
+                    throw new DomainException(__(':quantite :produit de la commande :commande sont déjà repartis au fournisseur (retour) : la réception ne peut plus être annulée.', [
+                        'quantite' => $repartis, 'produit' => $ligneCommande->produit?->numero, 'commande' => $ligneCommande->commande->numero,
+                    ]));
                 }
                 $ligneCommande->save();
                 $this->reliquats->receptionAnnulee($ligneCommande);
@@ -252,7 +254,7 @@ class ReceptionsFournisseur
             $etrangere = $devise !== '' && $devise !== $reference;
             $taux = (float) ($saisie['taux_change'] ?? 0);
             if ($etrangere && $taux <= 0) {
-                throw ValidationException::withMessages(["frais.{$index}.taux_change" => "Indiquez le taux de change {$devise} → {$reference}."]);
+                throw ValidationException::withMessages(["frais.{$index}.taux_change" => __('Indiquez le taux de change :devise → :reference.', ['devise' => $devise, 'reference' => $reference])]);
             }
             ReceptionFrais::create([
                 'tenant_id' => $reception->tenant_id,
@@ -285,10 +287,14 @@ class ReceptionsFournisseur
             $bases = $lignes->mapWithKeys(fn (ReceptionArrivagesLigne $l) => [$l->id => $this->base($l, $cout->repartition)]);
             $total = $bases->sum();
             if ($total <= 0) {
-                $mesures = ['poids' => 'de poids', 'volume' => 'de volume', 'valeur' => 'de valeur', 'quantite' => 'de quantité'];
                 throw ValidationException::withMessages([
-                    "frais.{$index}.repartition" => "Impossible de répartir ce coût : aucune ligne de la réception n'a ".($mesures[$cout->repartition] ?? 'de base')
-                        .($cout->repartition === 'poids' || $cout->repartition === 'volume' ? ' sur sa fiche produit' : '').'. Choisissez une autre répartition.',
+                    "frais.{$index}.repartition" => match ($cout->repartition) {
+                        'poids' => __("Impossible de répartir ce coût : aucune ligne de la réception n'a de poids sur sa fiche produit. Choisissez une autre répartition."),
+                        'volume' => __("Impossible de répartir ce coût : aucune ligne de la réception n'a de volume sur sa fiche produit. Choisissez une autre répartition."),
+                        'valeur' => __("Impossible de répartir ce coût : aucune ligne de la réception n'a de valeur. Choisissez une autre répartition."),
+                        'quantite' => __("Impossible de répartir ce coût : aucune ligne de la réception n'a de quantité. Choisissez une autre répartition."),
+                        default => __("Impossible de répartir ce coût : aucune ligne de la réception n'a de base. Choisissez une autre répartition."),
+                    },
                 ]);
             }
             foreach ($bases as $id => $base) {
@@ -327,7 +333,9 @@ class ReceptionsFournisseur
             if (! $surplus && $parLigne[$ligne->id] > $reste) {
                 // Clé « receptions » : celle de l'erreur de sur-réception avant les documents de réception.
                 throw ValidationException::withMessages([
-                    'receptions' => "La quantité reçue ({$parLigne[$ligne->id]}) dépasse la quantité restante ({$reste}) pour le produit {$ligne->produit?->description} : confirmez la sur-réception.",
+                    'receptions' => __('La quantité reçue (:recue) dépasse la quantité restante (:reste) pour le produit :produit : confirmez la sur-réception.', [
+                        'recue' => $parLigne[$ligne->id], 'reste' => $reste, 'produit' => $ligne->produit?->description,
+                    ]),
                 ]);
             }
         }
@@ -418,7 +426,7 @@ class ReceptionsFournisseur
     {
         $config = Configuration::pourEntite('reception', $tenantId);
         if (! $config?->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des réceptions (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des réceptions (Configuration → Numérotation).'));
         }
 
         return Configuration::consommerNumero('reception', $tenantId);

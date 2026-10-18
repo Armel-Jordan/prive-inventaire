@@ -82,10 +82,10 @@ class AbonnementClientController extends Controller
         // Une fois une échéance facturée (ou close), le début et le client ne changent plus (le reste du calendrier, si).
         if ($abonnement->echeances()->traitee()->exists()) {
             if (! Carbon::parse($donnees['date_debut'])->isSameDay($abonnement->date_debut)) {
-                throw ValidationException::withMessages(['date_debut' => 'La date de début ne peut pas être modifiée : des factures existent déjà pour cet abonnement.']);
+                throw ValidationException::withMessages(['date_debut' => __('La date de début ne peut pas être modifiée : des factures existent déjà pour cet abonnement.')]);
             }
             if ((int) $donnees['client_id'] !== (int) $abonnement->client_id) {
-                throw ValidationException::withMessages(['client_id' => 'Le client ne peut pas changer : des factures existent déjà pour cet abonnement.']);
+                throw ValidationException::withMessages(['client_id' => __('Le client ne peut pas changer : des factures existent déjà pour cet abonnement.')]);
             }
         }
         DB::transaction(function () use ($abonnement, $donnees) {
@@ -105,7 +105,7 @@ class AbonnementClientController extends Controller
             $abonnement->delete();
         });
 
-        return response()->json(['message' => 'Abonnement supprimé.']);
+        return response()->json(['message' => __('Abonnement supprimé.')]);
     }
 
     /** Aperçu avant d'enregistrer : première échéance, période couverte, description rendue, prix et nombre d'échéances. */
@@ -139,7 +139,7 @@ class AbonnementClientController extends Controller
             'jusquau' => ['required', 'date', 'before_or_equal:'.today()->addYear()->toDateString()],
             'client_id' => ['nullable', 'integer', TenantRule::exists('clients')],
             'emettre' => ['boolean'],
-        ], ['jusquau.before_or_equal' => 'La date limite ne peut pas dépasser un an.']);
+        ], ['jusquau.before_or_equal' => __('La date limite ne peut pas dépasser un an.')]);
         $emettre = (bool) ($donnees['emettre'] ?? false);
         // Facturer crée des factures (et les émet si demandé) : ces droits-là aussi.
         foreach (array_filter(['creer' => true, 'emettre' => $emettre]) as $action => $requis) {
@@ -151,10 +151,10 @@ class AbonnementClientController extends Controller
 
         return response()->json([
             'message' => $resultat['factures'] === [] && $resultat['erreurs'] === [] && $resultat['sans_facture'] === 0
-                ? 'Aucune échéance à facturer pour cette date.'
-                : count($resultat['factures']).' facture(s) créée(s) pour '.$resultat['echeances'].' échéance(s)'
-                    .($resultat['sans_facture'] ? ', '.$resultat['sans_facture'].' sans rien à facturer' : '')
-                    .($resultat['erreurs'] ? ', '.count($resultat['erreurs']).' erreur(s)' : '').'.',
+                ? __('Aucune échéance à facturer pour cette date.')
+                : __(':nombre facture(s) créée(s) pour :echeances échéance(s)', ['nombre' => count($resultat['factures']), 'echeances' => $resultat['echeances']])
+                    .($resultat['sans_facture'] ? ', '.__(':nombre sans rien à facturer', ['nombre' => $resultat['sans_facture']]) : '')
+                    .($resultat['erreurs'] ? ', '.__(':nombre erreur(s)', ['nombre' => count($resultat['erreurs'])]) : '').'.',
             'factures' => array_map(fn (Facture $f) => $f->fresh()->only(['id', 'numero', 'client_id', 'date_facture', 'statut', 'montant_ttc', 'devise']), $resultat['factures']),
             'echeances' => $resultat['echeances'],
             'sans_facture' => $resultat['sans_facture'],
@@ -185,7 +185,7 @@ class AbonnementClientController extends Controller
     {
         $abonnement = AbonnementClient::findOrFail($id);
         if (! $abonnement->aLUsage()) {
-            throw ValidationException::withMessages(['abonnement' => "Cet abonnement n'est pas facturé à l'usage."]);
+            throw ValidationException::withMessages(['abonnement' => __("Cet abonnement n'est pas facturé à l'usage.")]);
         }
         $donnees = $request->validate([
             'date_releve' => ['required', 'date', 'before_or_equal:tomorrow'],
@@ -194,7 +194,7 @@ class AbonnementClientController extends Controller
         ]);
         $releve = new AbonnementReleve($donnees + ['abonnement_id' => $abonnement->id, 'cree_par' => $request->user()?->id]);
         if ($this->abonnements->releveFacture($releve)) {
-            throw ValidationException::withMessages(['date_releve' => 'Cette période est déjà facturée : le relevé ne peut plus y entrer.']);
+            throw ValidationException::withMessages(['date_releve' => __('Cette période est déjà facturée : le relevé ne peut plus y entrer.')]);
         }
         $releve->save();
 
@@ -205,7 +205,7 @@ class AbonnementClientController extends Controller
     {
         $releve = AbonnementReleve::where('abonnement_id', $id)->findOrFail($releveId);
         if ($this->abonnements->releveFacture($releve)) {
-            throw ValidationException::withMessages(['releve' => 'Ce relevé est déjà facturé.']);
+            throw ValidationException::withMessages(['releve' => __('Ce relevé est déjà facturé.')]);
         }
         $releve->delete();
 
@@ -215,10 +215,10 @@ class AbonnementClientController extends Controller
     /** Import d'un fichier CSV de relevés (client, produit, date, quantité, note) : tout ou rien. */
     public function importerReleves(Request $request): JsonResponse
     {
-        $request->validate(['fichier' => ['required', 'file', 'max:5120', 'mimes:csv,txt']], ['fichier.mimes' => 'Le fichier doit être un CSV.']);
+        $request->validate(['fichier' => ['required', 'file', 'max:5120', 'mimes:csv,txt']], ['fichier.mimes' => __('Le fichier doit être un CSV.')]);
         $resultat = $this->abonnements->importerReleves((string) file_get_contents($request->file('fichier')->getRealPath()), $request->user()?->id);
 
-        return response()->json($resultat + ['message' => $resultat['erreurs'] ? 'Aucun relevé importé.' : "{$resultat['importes']} relevé(s) importé(s)."], $resultat['erreurs'] ? 422 : 200);
+        return response()->json($resultat + ['message' => $resultat['erreurs'] ? __('Aucun relevé importé.') : __(':nombre relevé(s) importé(s).', ['nombre' => $resultat['importes']])], $resultat['erreurs'] ? 422 : 200);
     }
 
     /** Une ligne de la liste : l'abonnement, son statut, son prix du jour et ses totaux ramenés au mois et à l'année. */
@@ -287,13 +287,13 @@ class AbonnementClientController extends Controller
             'brouillon' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:500'],
         ], [
-            'jour_facturation.between' => 'Le jour de facturation va de 1 à 28 (le même jour tous les mois).',
-            'jour_debut_periode.between' => 'Le jour de début de période va de 1 à 28.',
-            'date_fin.after' => 'La date de fin doit être postérieure à la date de début.',
-            'prix_unitaire.required_if' => 'Indiquez le prix fixe.',
+            'jour_facturation.between' => __('Le jour de facturation va de 1 à 28 (le même jour tous les mois).'),
+            'jour_debut_periode.between' => __('Le jour de début de période va de 1 à 28.'),
+            'date_fin.after' => __('La date de fin doit être postérieure à la date de début.'),
+            'prix_unitaire.required_if' => __('Indiquez le prix fixe.'),
         ]);
         if (Carbon::parse($donnees['date_fin'])->gt(Carbon::parse($donnees['date_debut'])->addYears(AbonnementsClients::DUREE_MAX_ANNEES))) {
-            throw ValidationException::withMessages(['date_fin' => 'Un abonnement dure au plus '.AbonnementsClients::DUREE_MAX_ANNEES.' ans.']);
+            throw ValidationException::withMessages(['date_fin' => __('Un abonnement dure au plus :annees ans.', ['annees' => AbonnementsClients::DUREE_MAX_ANNEES])]);
         }
         $mensuel = $donnees['frequence'] === 'mensuelle';
         // Au-delà du mois : mois de facturation (par défaut celui du début) et mois de début de période.

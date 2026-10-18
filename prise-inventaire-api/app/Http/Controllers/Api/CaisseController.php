@@ -63,7 +63,7 @@ class CaisseController extends Controller
             'du' => 'nullable|date_format:Y-m-d',
             'au' => 'nullable|date_format:Y-m-d|after_or_equal:du',
             'fuseau' => 'nullable|string|max:64',
-        ], ['au.after_or_equal' => 'La fin de la période précède son début.']);
+        ], ['au.after_or_equal' => __('La fin de la période précède son début.')]);
         $fuseau = $this->fuseau($request);
         $au = $donnees['au'] ?? now($fuseau)->toDateString();
         $du = $donnees['du'] ?? now($fuseau)->subDays(6)->toDateString();
@@ -86,7 +86,7 @@ class CaisseController extends Controller
             'devise' => self::DEVISE,
             'montant' => 'required|numeric|min:0.01|max:9999999999',
             'note' => 'nullable|required_if:type,sortie|string|max:255',
-        ], ['note.required_if' => "Indiquez la raison de la sortie d'argent."]);
+        ], ['note.required_if' => __("Indiquez la raison de la sortie d'argent.")]);
 
         return $this->executer(function () use ($session, $donnees, $request) {
             $this->caisses->mouvement($session, $donnees['type'], $donnees['mode'], $donnees['devise'] ?? null, (float) $donnees['montant'],
@@ -118,7 +118,7 @@ class CaisseController extends Controller
     {
         $session = CaisseSession::findOrFail($id);
         if ($session->estOuverte()) {
-            return response()->json(['message' => "Fermez la caisse avant d'imprimer son sommaire."], 422);
+            return response()->json(['message' => __("Fermez la caisse avant d'imprimer son sommaire.")], 422);
         }
 
         return $documents->sommaire($session, $this->fuseau($request))->stream('sommaire-caisse-'.($session->caisse?->code ?? $session->caisse_id).'-'.$session->ouverte_le->format('Y-m-d').'.pdf');

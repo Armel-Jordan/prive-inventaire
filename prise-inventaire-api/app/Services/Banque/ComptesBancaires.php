@@ -48,15 +48,18 @@ class ComptesBancaires
         if (! empty($donnees['compte_comptable_id'])) {
             $compteComptable = CompteComptable::query()->find($donnees['compte_comptable_id']);
             if (! $compteComptable || $compteComptable->type !== 'tresorerie' || ! $compteComptable->estImputable() || ! $compteComptable->actif) {
-                throw ValidationException::withMessages(['compte_comptable_id' => 'Choisissez un compte de trésorerie actif, de détail (pas un en-tête).']);
+                throw ValidationException::withMessages(['compte_comptable_id' => __('Choisissez un compte de trésorerie actif, de détail (pas un en-tête).')]);
             }
             $autre = CompteBancaire::query()->where('compte_comptable_id', $compteComptable->id)->whereKeyNot($compte->id)->value('nom');
             if ($autre) {
-                throw ValidationException::withMessages(['compte_comptable_id' => "Le compte {$compteComptable->numero} est déjà celui du compte bancaire « {$autre} » : chaque compte bancaire a le sien."]);
+                throw ValidationException::withMessages(['compte_comptable_id' => __('Le compte :numero est déjà celui du compte bancaire « :nom » : chaque compte bancaire a le sien.', [
+                    'numero' => $compteComptable->numero,
+                    'nom' => $autre,
+                ])]);
             }
         }
         if (! empty($donnees['journal_id']) && ! JournalComptable::query()->where('actif', true)->whereKey($donnees['journal_id'])->exists()) {
-            throw ValidationException::withMessages(['journal_id' => 'Choisissez un journal actif.']);
+            throw ValidationException::withMessages(['journal_id' => __('Choisissez un journal actif.')]);
         }
         // Seuls les réglages envoyés changent : le compte comptable, le journal, le prochain numéro de chèque.
         $compte->update(array_intersect_key([
@@ -73,7 +76,7 @@ class ComptesBancaires
     {
         $compte->loadMissing('compteComptable');
         if (! $compte->compteComptable) {
-            throw new DomainException("Reliez d'abord le compte bancaire « {$compte->nom} » à son compte comptable.");
+            throw new DomainException(__("Reliez d'abord le compte bancaire « :nom » à son compte comptable.", ['nom' => $compte->nom]));
         }
 
         return ['compte_bancaire' => $compte->only(['id', 'nom', 'banque', 'devise_code'])] + $this->soldes->grandLivre($compte->compteComptable, $du, $au, $recherche);

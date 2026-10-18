@@ -60,8 +60,9 @@ final class Fiches
 
     public static function verifierModule(Request $request, string $entite): void
     {
-        $module = self::module($entite);
-        abort_unless(self::accessible($request, $entite), 403, "Le module « {$module} » n'est pas activé pour cette entreprise.");
+        if (! self::accessible($request, $entite)) {
+            abort(403, __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => self::module($entite)]));
+        }
     }
 
     /** Fiches de l'entreprise courante, supprimées comprises, indexées par identifiant. */

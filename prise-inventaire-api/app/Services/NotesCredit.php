@@ -96,17 +96,17 @@ class NotesCredit
     public function enregistrer(Facture $facture, array $donnees, ?Avoir $avoir = null, ?int $auteur = null): Avoir
     {
         if ($avoir && $avoir->statut !== Avoir::BROUILLON) {
-            throw new DomainException('Une note de crédit émise ne se modifie plus.');
+            throw new DomainException(__('Une note de crédit émise ne se modifie plus.'));
         }
         $this->verifierCreditable($facture);
         if ($donnees['date_avoir'] < $facture->date_facture->toDateString()) {
-            throw ValidationException::withMessages(['date_avoir' => 'La note de crédit ne peut pas précéder la facture ('.$facture->date_facture->format('d/m/Y').').']);
+            throw ValidationException::withMessages(['date_avoir' => __('La note de crédit ne peut pas précéder la facture (:date).', ['date' => $facture->date_facture->format('d/m/Y')])]);
         }
         $facture->loadMissing('lignes');
         $lignes = $this->calculerLignes($facture, $donnees['lignes'], $avoir?->id);
         $totaux = $this->totaux($facture, $lignes, $avoir?->id);
         if ($totaux['ttc'] <= 0) {
-            throw ValidationException::withMessages(['lignes' => 'La note de crédit doit porter sur un montant.']);
+            throw ValidationException::withMessages(['lignes' => __('La note de crédit doit porter sur un montant.')]);
         }
 
         return DB::transaction(function () use ($facture, $donnees, $avoir, $auteur, $lignes, $totaux) {
@@ -150,7 +150,7 @@ class NotesCredit
     {
         $config = Configuration::pourEntite('avoir', $avoir->tenant_id);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des notes de crédit (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des notes de crédit (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($avoir, $auteur) {
@@ -158,7 +158,7 @@ class NotesCredit
             $facture = Facture::with('lignes')->whereKey($avoir->facture_id)->lockForUpdate()->firstOrFail();
             $avoir = Avoir::with('lignes')->whereKey($avoir->id)->lockForUpdate()->firstOrFail();
             if ($avoir->statut !== Avoir::BROUILLON) {
-                throw new DomainException('Cette note de crédit est déjà émise.');
+                throw new DomainException(__('Cette note de crédit est déjà émise.'));
             }
             $this->verifierCreditable($facture);
             $lignes = $this->calculerLignes($facture, $avoir->lignes->map(fn (AvoirLigne $l) => [
@@ -198,19 +198,19 @@ class NotesCredit
             $facture = Facture::whereKey($factureId)->lockForUpdate()->first();
             $this->verifierDisponible($avoir, $montant, $date, 'date');
             if (! $facture || $facture->client_id !== $avoir->client_id) {
-                throw ValidationException::withMessages(['facture_id' => 'Choisissez une facture du même client.']);
+                throw ValidationException::withMessages(['facture_id' => __('Choisissez une facture du même client.')]);
             }
             if (! DevisesVente::memeDevise($avoir->devise, $facture->devise)) {
-                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} n'est pas dans la devise de la note de crédit."]);
+                throw ValidationException::withMessages(['facture_id' => __("La facture :numero n'est pas dans la devise de la note de crédit.", ['numero' => $facture->numero])]);
             }
             if (! in_array($facture->statut, self::FACTURES_DUES, true)) {
-                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} ne reste pas due."]);
+                throw ValidationException::withMessages(['facture_id' => __('La facture :numero ne reste pas due.', ['numero' => $facture->numero])]);
             }
             if ($montant > (float) $facture->reste_a_payer + self::TOLERANCE) {
-                throw ValidationException::withMessages(['montant' => 'Le montant dépasse le reste à payer de la facture ('.$this->montant($facture->reste_a_payer).').']);
+                throw ValidationException::withMessages(['montant' => __('Le montant dépasse le reste à payer de la facture (:montant).', ['montant' => $this->montant($facture->reste_a_payer)])]);
             }
             if ($date < $facture->date_facture->toDateString()) {
-                throw ValidationException::withMessages(['date' => 'L\'imputation ne peut pas précéder la facture ('.$facture->date_facture->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date' => __("L'imputation ne peut pas précéder la facture (:date).", ['date' => $facture->date_facture->format('d/m/Y')])]);
             }
 
             AvoirImputation::create([
@@ -254,7 +254,7 @@ class NotesCredit
     public function supprimer(Avoir $avoir): void
     {
         if ($avoir->statut !== Avoir::BROUILLON) {
-            throw new DomainException('Seules les notes de crédit en brouillon peuvent être supprimées.');
+            throw new DomainException(__('Seules les notes de crédit en brouillon peuvent être supprimées.'));
         }
         DB::transaction(function () use ($avoir) {
             $this->taxes->supprimer('avoir', $avoir->lignes()->pluck('id'));
@@ -276,21 +276,21 @@ class NotesCredit
         foreach (array_values($saisies) as $index => $saisie) {
             $ligne = $lignesFacture[(int) $saisie['facture_ligne_id']] ?? null;
             if (! $ligne) {
-                throw ValidationException::withMessages(["lignes.{$index}.facture_ligne_id" => "Cette ligne n'appartient pas à la facture {$facture->numero}."]);
+                throw ValidationException::withMessages(["lignes.{$index}.facture_ligne_id" => __("Cette ligne n'appartient pas à la facture :numero.", ['numero' => $facture->numero])]);
             }
             $quantite = (int) $saisie['quantite'];
             $prix = round((float) ($saisie['prix_unitaire_ht'] ?? $ligne->prix_unitaire_ht), 2);
             if ($quantite > (int) $ligne->quantite) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => "Au plus {$ligne->quantite} (quantité facturée)."]);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => __('Au plus :quantite (quantité facturée).', ['quantite' => $ligne->quantite])]);
             }
             if ($prix > (float) $ligne->prix_unitaire_ht + 0.0001) {
-                throw ValidationException::withMessages(["lignes.{$index}.prix_unitaire_ht" => 'Au plus le prix facturé ('.$this->montant($ligne->prix_unitaire_ht).').']);
+                throw ValidationException::withMessages(["lignes.{$index}.prix_unitaire_ht" => __('Au plus le prix facturé (:montant).', ['montant' => $this->montant($ligne->prix_unitaire_ht)])]);
             }
             $remise = (float) $ligne->remise_ligne;
             $ht = CalculTaxes::arrondir($quantite * $prix * (1 - $remise / 100));
             $reste = round((float) $ligne->montant_ht - ($credites[$ligne->id]['ht'] ?? 0.0), 2);
             if ($ht > $reste + self::TOLERANCE) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => 'Dépasse ce qui reste à créditer sur cette ligne ('.$this->montant(max(0.0, $reste)).' HT).']);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => __('Dépasse ce qui reste à créditer sur cette ligne (:montant HT).', ['montant' => $this->montant(max(0.0, $reste))])]);
             }
             [$tva, $detail] = $this->taxesAuProrata($ligne, $ht);
             $calculees[] = [
@@ -402,24 +402,24 @@ class NotesCredit
     {
         if (! in_array($facture->statut, self::FACTURES_CREDITABLES, true)) {
             throw new DomainException($facture->statut === 'creditee'
-                ? "La facture {$facture->numero} est déjà entièrement créditée."
-                : 'Seule une facture émise peut être créditée.');
+                ? __('La facture :numero est déjà entièrement créditée.', ['numero' => $facture->numero])
+                : __('Seule une facture émise peut être créditée.'));
         }
     }
 
     private function verifierDisponible(Avoir $avoir, float $montant, string $date, string $champDate): void
     {
         if ($avoir->statut === Avoir::BROUILLON) {
-            throw new DomainException("Émettez d'abord la note de crédit.");
+            throw new DomainException(__("Émettez d'abord la note de crédit."));
         }
         if ($avoir->statut !== Avoir::EMIS || $avoir->credit_disponible <= 0) {
-            throw new DomainException("La note de crédit {$avoir->numero} n'a plus de crédit disponible.");
+            throw new DomainException(__("La note de crédit :numero n'a plus de crédit disponible.", ['numero' => $avoir->numero]));
         }
         if ($montant > $avoir->credit_disponible + self::TOLERANCE) {
-            throw ValidationException::withMessages(['montant' => 'Le montant dépasse le crédit disponible ('.$this->montant($avoir->credit_disponible).').']);
+            throw ValidationException::withMessages(['montant' => __('Le montant dépasse le crédit disponible (:montant).', ['montant' => $this->montant($avoir->credit_disponible)])]);
         }
         if ($date < $avoir->date_avoir->toDateString()) {
-            throw ValidationException::withMessages([$champDate => 'La date ne peut pas précéder la note de crédit ('.$avoir->date_avoir->format('d/m/Y').').']);
+            throw ValidationException::withMessages([$champDate => __('La date ne peut pas précéder la note de crédit (:date).', ['date' => $avoir->date_avoir->format('d/m/Y')])]);
         }
     }
 

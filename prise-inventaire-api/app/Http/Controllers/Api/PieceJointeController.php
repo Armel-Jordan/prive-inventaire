@@ -90,7 +90,7 @@ class PieceJointeController extends Controller
             'descriptions.*' => ['nullable', 'string', 'max:500'],
             'categorie' => ['nullable', 'string', 'max:100'],
         ], [
-            'fichiers.*.max' => 'Le fichier dépasse la taille maximale autorisée.',
+            'fichiers.*.max' => __('Le fichier dépasse la taille maximale autorisée.'),
         ]);
 
         $fiche = $this->fiche($request, $donnees['entite'], (int) $donnees['entite_id']);
@@ -140,7 +140,7 @@ class PieceJointeController extends Controller
         $this->verifierModule($request, $piece->entite);
 
         $stockage = Storage::disk($piece->disque);
-        abort_unless($stockage->exists($piece->chemin), 404, 'Le fichier n\'existe plus sur le serveur.');
+        abort_unless($stockage->exists($piece->chemin), 404, __("Le fichier n'existe plus sur le serveur."));
 
         return $stockage->download($piece->chemin, $piece->nom_original, [
             'Content-Type' => in_array($piece->type_mime, PiecesJointes::TYPES_AFFICHABLES, true) ? $piece->type_mime : 'application/octet-stream',
@@ -169,7 +169,7 @@ class PieceJointeController extends Controller
         Storage::disk($piece->disque)->delete($piece->chemin);
         $piece->delete();
 
-        return response()->json(['message' => 'Pièce jointe supprimée.']);
+        return response()->json(['message' => __('Pièce jointe supprimée.')]);
     }
 
     private function presenter(PieceJointe $piece): array
@@ -194,7 +194,7 @@ class PieceJointeController extends Controller
         $module = PiecesJointes::module($entite);
         $tenant = $request->attributes->get('tenant');
 
-        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, "Le module « {$module} » n'est pas activé pour cette entreprise.");
+        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => $module]));
     }
 
     /** Types de fiches dont le module est actif : les pièces des autres restent masquées. */
@@ -233,7 +233,7 @@ class PieceJointeController extends Controller
 
         return function (string $attribut, mixed $fichier, Closure $echec) use ($refusees) {
             if ($fichier instanceof UploadedFile && in_array(mb_strtolower($fichier->getClientOriginalExtension()), $refusees, true)) {
-                $echec('Type de fichier refusé pour des raisons de sécurité : '.$fichier->getClientOriginalName());
+                $echec(__('Type de fichier refusé pour des raisons de sécurité : :fichier', ['fichier' => $fichier->getClientOriginalName()]));
             }
         };
     }

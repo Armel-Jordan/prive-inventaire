@@ -27,15 +27,15 @@ class AuthentifierPortail
         $compte = $jeton?->compte;
         $tenant = $compte ? Tenant::find($compte->tenant_id) : null;
         if (! $compte || ! $compte->actif || ! $tenant?->actif || $tenant->isExpired() || ! $tenant->hasModule('ventes')) {
-            return response()->json(['message' => 'Votre session a expiré : reconnectez-vous.'], 401);
+            return response()->json(['message' => __('Votre session a expiré : reconnectez-vous.')], 401);
         }
 
         app(TenantContext::class)->setTenantId((int) $tenant->id);
         if (! PortailParametres::courants()->actif) {
-            return response()->json(['message' => 'Le portail est fermé pour le moment.', 'portail_ferme' => true], 403);
+            return response()->json(['message' => __('Le portail est fermé pour le moment.'), 'portail_ferme' => true], 403);
         }
         if (! Client::where('id', $compte->client_id)->where('actif', true)->exists()) {
-            return response()->json(['message' => 'Votre accès au portail est suspendu.'], 401);
+            return response()->json(['message' => __('Votre accès au portail est suspendu.')], 401);
         }
 
         // Dernière utilisation : au plus une écriture par minute.

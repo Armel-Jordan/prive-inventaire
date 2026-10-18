@@ -75,7 +75,7 @@ class CommandeFournisseurController extends Controller
         // qui avait alors des trous.
         $config = Configuration::pourEntite('commande_fournisseur', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $commande = DB::transaction(function () use ($validated, $request, $tenantId) {
             $numero = Configuration::consommerNumero('commande_fournisseur', $tenantId);
@@ -133,7 +133,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être modifiées.',
+                'message' => __('Seules les commandes en brouillon peuvent être modifiées.'),
             ], 422);
         }
 
@@ -198,14 +198,14 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être validées.',
+                'message' => __('Seules les commandes en brouillon peuvent être validées.'),
             ], 422);
         }
 
         $commandes->valider($commande, $request->user()?->id);
 
         return response()->json([
-            'message' => 'Commande validée et envoyée.',
+            'message' => __('Commande validée et envoyée.'),
             'commande' => $commande->fresh()->load(['fournisseur', 'lignes.produit']),
         ]);
     }
@@ -214,13 +214,13 @@ class CommandeFournisseurController extends Controller
     {
         if (in_array($commande->statut, [ComFourEntete::STATUT_COMPLETE, ComFourEntete::STATUT_ANNULEE])) {
             return response()->json([
-                'message' => 'Cette commande ne peut pas être annulée.',
+                'message' => __('Cette commande ne peut pas être annulée.'),
             ], 422);
         }
 
         if ($commande->lignes()->where('quantite_recue', '>', 0)->exists()) {
             return response()->json([
-                'message' => 'Impossible d\'annuler une commande avec des réceptions. Utilisez "Clôturer le reste" pour fermer une commande partielle.',
+                'message' => __('Impossible d\'annuler une commande avec des réceptions. Utilisez "Clôturer le reste" pour fermer une commande partielle.'),
             ], 422);
         }
 
@@ -230,7 +230,7 @@ class CommandeFournisseurController extends Controller
         app(ReliquatsClients::class)->liberer($commande->lignes()->pluck('id'));
 
         return response()->json([
-            'message' => 'Commande annulée.',
+            'message' => __('Commande annulée.'),
             'commande' => $commande,
         ]);
     }
@@ -239,7 +239,7 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_PARTIELLE) {
             return response()->json([
-                'message' => 'Seules les commandes partiellement reçues peuvent être clôturées.',
+                'message' => __('Seules les commandes partiellement reçues peuvent être clôturées.'),
             ], 422);
         }
 
@@ -260,7 +260,7 @@ class CommandeFournisseurController extends Controller
         app(ReliquatsClients::class)->commandeCloturee($commande);
 
         return response()->json([
-            'message' => 'Commande clôturée. Le reste non reçu a été annulé.',
+            'message' => __('Commande clôturée. Le reste non reçu a été annulé.'),
             'commande' => $commande->load('lignes.produit', 'fournisseur'),
         ]);
     }
@@ -269,13 +269,13 @@ class CommandeFournisseurController extends Controller
     {
         if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
             return response()->json([
-                'message' => 'Seules les commandes en brouillon peuvent être supprimées.',
+                'message' => __('Seules les commandes en brouillon peuvent être supprimées.'),
             ], 422);
         }
 
         app(ReliquatsClients::class)->liberer($commande->lignes()->pluck('id'));
         $commande->delete();
 
-        return response()->json(['message' => 'Commande supprimée.']);
+        return response()->json(['message' => __('Commande supprimée.')]);
     }
 }

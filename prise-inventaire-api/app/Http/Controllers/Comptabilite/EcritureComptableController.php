@@ -92,11 +92,11 @@ class EcritureComptableController extends Controller
             return response()->json(['message' => $raison], 422);
         }
         if ($inverse = EcritureComptable::where('contrepassation_de', $id)->value('numero')) {
-            return response()->json(['message' => "Cette écriture a été contre-passée par {$inverse} : supprimez d'abord la contre-passation."], 422);
+            return response()->json(['message' => __("Cette écriture a été contre-passée par :numero : supprimez d'abord la contre-passation.", ['numero' => $inverse])], 422);
         }
         $ecriture->delete();
 
-        return response()->json(['message' => "Écriture {$ecriture->numero} supprimée."]);
+        return response()->json(['message' => __('Écriture :numero supprimée.', ['numero' => $ecriture->numero])]);
     }
 
     /** Écriture inverse, datée dans une période ouverte : corrige une écriture d'une période fermée. */
@@ -141,8 +141,8 @@ class EcritureComptableController extends Controller
             'lignes.*.debit' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
             'lignes.*.credit' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
         ], [
-            'lignes.min' => 'Une écriture compte au moins deux lignes.',
-            'lignes.*.compte_id.required' => 'Choisissez le compte de chaque ligne.',
+            'lignes.min' => __('Une écriture compte au moins deux lignes.'),
+            'lignes.*.compte_id.required' => __('Choisissez le compte de chaque ligne.'),
         ]);
     }
 

@@ -123,7 +123,7 @@ class RetourClientController extends Controller
         return $this->executer(function () use ($retour) {
             $this->retours->supprimer($retour);
 
-            return response()->json(['message' => 'Retour supprimé.']);
+            return response()->json(['message' => __('Retour supprimé.')]);
         });
     }
 
@@ -149,12 +149,13 @@ class RetourClientController extends Controller
             'lignes.*.numeros_serie' => 'nullable|array|max:10000',
             'lignes.*.numeros_serie.*' => 'nullable|string|max:100',
         ], [
-            'date_retour.before_or_equal' => 'Le retour ne peut pas être daté dans le futur.',
-            'lignes.*.raison_id.exists' => 'Choisissez une raison de retour active.',
+            'date_retour.before_or_equal' => __('Le retour ne peut pas être daté dans le futur.'),
+            'lignes.*.raison_id.exists' => __('Choisissez une raison de retour active.'),
         ]);
         $donnees['lignes'] = array_values(array_filter($donnees['lignes'], fn (array $l) => (int) $l['quantite'] > 0));
         if ($donnees['lignes'] === []) {
-            abort(response()->json(['message' => 'Indiquez au moins une quantité retournée.', 'errors' => ['lignes' => ['Indiquez au moins une quantité retournée.']]], 422));
+            $erreur = __('Indiquez au moins une quantité retournée.');
+            abort(response()->json(['message' => $erreur, 'errors' => ['lignes' => [$erreur]]], 422));
         }
 
         return $donnees;

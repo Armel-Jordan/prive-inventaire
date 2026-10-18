@@ -45,7 +45,7 @@ class EmployeTenantController extends Controller
             'role' => 'nullable|in:'.self::ROLES,
             'role_custom_id' => $this->regleRolePersonnalise(),
             'password' => 'required_with:role|nullable|string|min:8',
-        ], ['email.required_with' => 'Un courriel est nécessaire pour donner l\'accès à l\'application.']);
+        ], ['email.required_with' => __("Un courriel est nécessaire pour donner l'accès à l'application.")]);
 
         $tenantId = auth()->user()->tenant_id;
 
@@ -59,7 +59,7 @@ class EmployeTenantController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Le numéro est requis (pas de configuration auto-increment)',
+                    'message' => __('Le numéro est requis (pas de configuration auto-increment)'),
                 ], 422);
             }
         }
@@ -79,7 +79,7 @@ class EmployeTenantController extends Controller
                 $adminUserId = $existing->id;
             } else {
                 if (! $request->filled('password')) {
-                    return response()->json(['success' => false, 'message' => 'Le mot de passe est requis'], 422);
+                    return response()->json(['success' => false, 'message' => __('Le mot de passe est requis')], 422);
                 }
                 $adminUser = AdminUser::create([
                     'tenant_id' => $tenantId,
@@ -105,7 +105,7 @@ class EmployeTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Employé créé avec succès',
+            'message' => __('Employé créé avec succès'),
             'employe' => $employe->load(self::COMPTE),
         ], 201);
     }
@@ -176,7 +176,7 @@ class EmployeTenantController extends Controller
                     // Chercher un AdminUser existant avec cet email
                     $email = $request->email ?? $employe->email;
                     if (! $email) {
-                        throw ValidationException::withMessages(['email' => 'Un courriel est nécessaire pour donner l\'accès à l\'application.']);
+                        throw ValidationException::withMessages(['email' => __("Un courriel est nécessaire pour donner l'accès à l'application.")]);
                     }
                     $existing = AdminUser::where('email', $email)->where('tenant_id', $employe->tenant_id)->first();
                     $this->autoriserAcces($request, $existing, $request->role);
@@ -205,7 +205,7 @@ class EmployeTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Employé modifié avec succès',
+            'message' => __('Employé modifié avec succès'),
             'employe' => $employe->load(self::COMPTE),
         ]);
     }
@@ -222,7 +222,7 @@ class EmployeTenantController extends Controller
     {
         $demande = $request->input('role_custom_id');
         if ($request->user()->role !== 'admin' && $demande !== null && (int) $demande !== (int) $compte?->role_custom_id) {
-            abort(403, 'Seul un administrateur peut attribuer un rôle personnalisé.');
+            abort(403, __('Seul un administrateur peut attribuer un rôle personnalisé.'));
         }
     }
 
@@ -233,7 +233,7 @@ class EmployeTenantController extends Controller
     private function changerStatut(EmployeTenant $employe, bool $actif): void
     {
         $compte = $employe->adminUser;
-        abort_if(! $actif && $compte?->estDernierAdministrateur(), 422, "L'entreprise doit garder au moins un administrateur actif.");
+        abort_if(! $actif && $compte?->estDernierAdministrateur(), 422, __("L'entreprise doit garder au moins un administrateur actif."));
 
         DB::transaction(function () use ($employe, $compte, $actif) {
             $employe->actif = $actif;
@@ -255,11 +255,11 @@ class EmployeTenantController extends Controller
     private function autoriserAcces(Request $request, ?AdminUser $compte, string $role): void
     {
         if ($request->user()->role !== 'admin') {
-            abort_unless(in_array($role, ['user', 'readonly', 'remove'], true), 403, 'Seul un administrateur peut attribuer ce rôle.');
-            abort_if($compte && ! in_array($compte->role, ['user', 'readonly'], true), 403, "Seul un administrateur peut modifier l'accès d'un administrateur ou d'un manager.");
+            abort_unless(in_array($role, ['user', 'readonly', 'remove'], true), 403, __('Seul un administrateur peut attribuer ce rôle.'));
+            abort_if($compte && ! in_array($compte->role, ['user', 'readonly'], true), 403, __("Seul un administrateur peut modifier l'accès d'un administrateur ou d'un manager."));
         }
 
-        abort_if($role !== 'admin' && $compte?->estDernierAdministrateur(), 422, "L'entreprise doit garder au moins un administrateur actif.");
+        abort_if($role !== 'admin' && $compte?->estDernierAdministrateur(), 422, __("L'entreprise doit garder au moins un administrateur actif."));
     }
 
     public function destroy($id): JsonResponse
@@ -269,7 +269,7 @@ class EmployeTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Employé désactivé avec succès',
+            'message' => __('Employé désactivé avec succès'),
         ]);
     }
 

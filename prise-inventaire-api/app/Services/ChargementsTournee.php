@@ -97,7 +97,7 @@ class ChargementsTournee
     {
         $this->verifierStatut($tournee);
         if (! $this->liens($tournee)->contains('bon_livraison_id', $colis->bon_livraison_id)) {
-            throw ValidationException::withMessages(['colis' => "Le colis {$colis->numero} n'est pas dans cette tournée."]);
+            throw ValidationException::withMessages(['colis' => __("Le colis :numero n'est pas dans cette tournée.", ['numero' => $colis->numero])]);
         }
         // Déjà chargé : on garde le premier pointage.
         if ($charge && $colis->charge_le) {
@@ -116,7 +116,7 @@ class ChargementsTournee
         $numero = trim($numero);
         $colis = ColisLivraison::where('numero', $numero)->first();
         if (! $colis) {
-            throw ValidationException::withMessages(['numero' => "Colis inconnu : {$numero}."]);
+            throw ValidationException::withMessages(['numero' => __('Colis inconnu : :numero.', ['numero' => $numero])]);
         }
         $deja = $colis->charge_le !== null;
         $this->chargerColis($tournee, $colis, true, $auteur);
@@ -130,7 +130,7 @@ class ChargementsTournee
         $this->verifierStatut($tournee);
         $lien = $this->liens($tournee)->firstWhere('bon_livraison_id', $bonId);
         if (! $lien) {
-            throw ValidationException::withMessages(['bon_livraison_id' => "Ce bon n'est pas dans cette tournée."]);
+            throw ValidationException::withMessages(['bon_livraison_id' => __("Ce bon n'est pas dans cette tournée.")]);
         }
         if ($charge && $lien->vrac_charge_le) {
             return;
@@ -178,7 +178,7 @@ class ChargementsTournee
     private function verifierStatut(Tournee $tournee): void
     {
         if ($tournee->statut !== 'planifiee') {
-            throw ValidationException::withMessages(['tournee' => 'Le chargement se coche avant le départ de la tournée.']);
+            throw ValidationException::withMessages(['tournee' => __('Le chargement se coche avant le départ de la tournée.')]);
         }
     }
 }

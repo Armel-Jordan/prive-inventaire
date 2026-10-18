@@ -91,7 +91,7 @@ class CommandeClientController extends Controller
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Configuration numérotation manquante'], 422);
+            return response()->json(['success' => false, 'message' => __('Configuration numérotation manquante')], 422);
         }
         $commande = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('commande', $tenantId);
@@ -138,7 +138,7 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::findOrFail($id);
 
         if ($commande->statut !== 'brouillon') {
-            return response()->json(['message' => 'Seules les commandes en brouillon peuvent être modifiées'], 422);
+            return response()->json(['message' => __('Seules les commandes en brouillon peuvent être modifiées')], 422);
         }
 
         $validated = $request->validate([
@@ -205,7 +205,7 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::findOrFail($id);
 
         if ($commande->statut !== 'brouillon') {
-            return response()->json(['message' => 'Cette commande ne peut pas être soumise'], 422);
+            return response()->json(['message' => __('Cette commande ne peut pas être soumise')], 422);
         }
 
         $commande->statut = 'en_attente';
@@ -219,14 +219,14 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::with('lignes', 'client')->findOrFail($id);
 
         if ($commande->statut !== 'en_attente') {
-            return response()->json(['message' => 'Cette commande ne peut pas être acceptée'], 422);
+            return response()->json(['message' => __('Cette commande ne peut pas être acceptée')], 422);
         }
 
         $client = $commande->client;
         // Encours dans la devise de l'entreprise : la commande à son taux.
         if (! $client->peutCommander((float) $commande->montant_ttc * (float) ($commande->taux_change ?: 1))) {
             return response()->json([
-                'message' => 'Dépassement de l\'encours maximum autorisé',
+                'message' => __("Dépassement de l'encours maximum autorisé"),
                 'encours_actuel' => $client->encours_actuel,
                 'encours_max' => $client->encours_max,
                 'montant_commande' => $commande->montant_ttc,
@@ -266,7 +266,7 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::findOrFail($id);
 
         if ($commande->statut !== 'en_attente') {
-            return response()->json(['message' => 'Cette commande ne peut pas être refusée'], 422);
+            return response()->json(['message' => __('Cette commande ne peut pas être refusée')], 422);
         }
 
         $validated = $request->validate([
@@ -286,11 +286,11 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::findOrFail($id);
 
         if ($commande->statut !== 'brouillon') {
-            return response()->json(['message' => 'Seules les commandes en brouillon peuvent être supprimées'], 422);
+            return response()->json(['message' => __('Seules les commandes en brouillon peuvent être supprimées')], 422);
         }
 
         $commande->delete();
 
-        return response()->json(['message' => 'Commande supprimée']);
+        return response()->json(['message' => __('Commande supprimée')]);
     }
 }

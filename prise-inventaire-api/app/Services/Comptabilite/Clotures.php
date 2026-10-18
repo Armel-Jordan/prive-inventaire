@@ -87,12 +87,12 @@ class Clotures
     public function rouvrir(ExerciceComptable $exercice): ExerciceComptable
     {
         if (! $exercice->estCloture()) {
-            throw ValidationException::withMessages(['exercice' => 'Cet exercice n\'est pas clôturé.']);
+            throw ValidationException::withMessages(['exercice' => __("Cet exercice n'est pas clôturé.")]);
         }
         $suivant = ExerciceComptable::whereDate('date_debut', '>', $exercice->date_fin->toDateString())
             ->where('statut', ExerciceComptable::CLOTURE)->orderBy('date_debut')->first();
         if ($suivant) {
-            throw ValidationException::withMessages(['exercice' => "Rouvrez d'abord l'exercice {$suivant->libelle}, clôturé lui aussi."]);
+            throw ValidationException::withMessages(['exercice' => __("Rouvrez d'abord l'exercice :exercice, clôturé lui aussi.", ['exercice' => $suivant->libelle])]);
         }
 
         DB::transaction(function () use ($exercice) {
@@ -127,15 +127,15 @@ class Clotures
     private function bloquant(ExerciceComptable $exercice, ?CompteComptable $compte, array $soldes): ?string
     {
         if ($exercice->estCloture()) {
-            return 'Cet exercice est déjà clôturé.';
+            return __('Cet exercice est déjà clôturé.');
         }
         $precedent = ExerciceComptable::whereDate('date_fin', '<', $exercice->date_debut->toDateString())
             ->where('statut', ExerciceComptable::OUVERT)->orderBy('date_debut')->first();
         if ($precedent) {
-            return "Clôturez d'abord l'exercice {$precedent->libelle}.";
+            return __("Clôturez d'abord l'exercice :exercice.", ['exercice' => $precedent->libelle]);
         }
         if ($soldes && ! $compte) {
-            return 'Désignez d\'abord, dans le plan comptable, le compte qui reçoit le résultat (type « Résultat de l\'exercice »).';
+            return __("Désignez d'abord, dans le plan comptable, le compte qui reçoit le résultat (type « Résultat de l'exercice »).");
         }
 
         return null;

@@ -79,7 +79,7 @@ class RelanceController extends Controller
             'notes' => 'nullable|string|max:2000',
         ]);
         if (in_array($facture->statut, ['brouillon', 'annulee'], true)) {
-            return response()->json(['message' => 'Seule une facture émise se relance.'], 422);
+            return response()->json(['message' => __('Seule une facture émise se relance.')], 422);
         }
 
         return response()->json($this->relances->noter($facture, $donnees['mode'], $donnees['date'], $donnees['notes'] ?? null, $request->user()?->id), 201);

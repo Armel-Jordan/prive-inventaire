@@ -68,7 +68,7 @@ class ContratLocationController extends Controller
         $tenantId = $request->user()->tenant_id;
         $config = Configuration::pourEntite('contrat_location', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['numero' => 'La numérotation automatique des contrats de location doit être active.']);
+            throw ValidationException::withMessages(['numero' => __('La numérotation automatique des contrats de location doit être active.')]);
         }
         $contrat = DB::transaction(function () use ($donnees, $request, $tenantId) {
             $contrat = ContratLocation::create(array_diff_key($donnees, ['lignes' => 0]) + [
@@ -94,18 +94,18 @@ class ContratLocationController extends Controller
         $donnees = $this->valider($request);
         $facturees = $contrat->lignes->whereNotNull('facture_id')->keyBy('id');
         if (($facturees->isNotEmpty() || $contrat->factures()->exists()) && (int) $donnees['client_id'] !== (int) $contrat->client_id) {
-            throw ValidationException::withMessages(['client_id' => 'Le client ne peut pas changer : ce contrat est déjà facturé.']);
+            throw ValidationException::withMessages(['client_id' => __('Le client ne peut pas changer : ce contrat est déjà facturé.')]);
         }
         // Les lignes facturées restent telles quelles ; on ajoute des lignes pour louer davantage.
         $recues = collect($donnees['lignes'])->keyBy(fn ($l, $i) => $l['id'] ?? "nouvelle-{$i}");
         foreach ($facturees as $ligneId => $ligne) {
             $saisie = $recues->get($ligneId);
             if (! $saisie) {
-                throw ValidationException::withMessages(['lignes' => 'Une ligne facturée ne se retire pas.']);
+                throw ValidationException::withMessages(['lignes' => __('Une ligne facturée ne se retire pas.')]);
             }
             foreach (['produit_id', 'quantite', 'quantite_exemptee', 'prix_contrat', 'prix_location'] as $champ) {
                 if ((float) $saisie[$champ] !== (float) $ligne->{$champ}) {
-                    throw ValidationException::withMessages(['lignes' => 'Une ligne facturée ne change plus : ajoutez une ligne pour louer davantage.']);
+                    throw ValidationException::withMessages(['lignes' => __('Une ligne facturée ne change plus : ajoutez une ligne pour louer davantage.')]);
                 }
             }
         }
@@ -140,14 +140,14 @@ class ContratLocationController extends Controller
     {
         $contrat = ContratLocation::findOrFail($id);
         if ($contrat->lignes()->whereNotNull('facture_id')->exists() || $contrat->factures()->exists()) {
-            throw ValidationException::withMessages(['contrat' => 'Ce contrat a des factures : désactivez-le plutôt.']);
+            throw ValidationException::withMessages(['contrat' => __('Ce contrat a des factures : désactivez-le plutôt.')]);
         }
         DB::transaction(function () use ($contrat) {
             $contrat->lignes()->delete();
             $contrat->delete();
         });
 
-        return response()->json(['message' => 'Contrat supprimé.']);
+        return response()->json(['message' => __('Contrat supprimé.')]);
     }
 
     /** Facture brouillon des prix de contrat pas encore facturés. */
@@ -158,7 +158,7 @@ class ContratLocationController extends Controller
         }
         $facture = $this->contrats->facturerContrat(ContratLocation::findOrFail($id), $request->user()->tenant_id);
 
-        return response()->json(['message' => "Facture {$facture->numero} créée.", 'facture' => $facture->only(['id', 'numero', 'statut', 'montant_ttc', 'devise'])], 201);
+        return response()->json(['message' => __('Facture :numero créée.', ['numero' => $facture->numero]), 'facture' => $facture->only(['id', 'numero', 'statut', 'montant_ttc', 'devise'])], 201);
     }
 
     /** Factures des loyers dus jusqu'à une date, pour tous les clients ou un seul ; bilan. */
@@ -168,7 +168,7 @@ class ContratLocationController extends Controller
             'jusquau' => ['required', 'date', 'before_or_equal:'.today()->addYear()->toDateString()],
             'client_id' => ['nullable', 'integer', TenantRule::exists('clients')],
             'emettre' => ['boolean'],
-        ], ['jusquau.before_or_equal' => 'La date limite ne peut pas dépasser un an.']);
+        ], ['jusquau.before_or_equal' => __('La date limite ne peut pas dépasser un an.')]);
         $emettre = (bool) ($donnees['emettre'] ?? false);
         if ($refus = $this->refusFactures($request, $droits, $emettre)) {
             return $refus;
@@ -177,8 +177,9 @@ class ContratLocationController extends Controller
 
         return response()->json([
             'message' => $resultat['factures'] === [] && $resultat['erreurs'] === []
-                ? 'Aucun loyer à facturer pour cette date.'
-                : count($resultat['factures']).' facture(s) de loyer créée(s)'.($resultat['erreurs'] ? ', '.count($resultat['erreurs']).' erreur(s)' : '').'.',
+                ? __('Aucun loyer à facturer pour cette date.')
+                : __(':nombre facture(s) de loyer créée(s)', ['nombre' => count($resultat['factures'])])
+                    .($resultat['erreurs'] ? ', '.__(':nombre erreur(s)', ['nombre' => count($resultat['erreurs'])]) : '').'.',
             'factures' => array_map(fn (Facture $f) => $f->fresh()->only(['id', 'numero', 'client_id', 'contrat_location_id', 'date_facture', 'statut', 'montant_ttc', 'devise']), $resultat['factures']),
             'erreurs' => $resultat['erreurs'],
         ]);
@@ -261,13 +262,13 @@ class ContratLocationController extends Controller
             'lignes.*.prix_contrat' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'lignes.*.prix_location' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ], [
-            'date_fin.after' => 'La date de fin doit être postérieure à la date de début.',
-            'jour_facturation.between' => 'Le jour de facturation va de 1 à 28 (le même jour tous les mois).',
-            'lignes.required' => 'Ajoutez au moins un produit loué.',
+            'date_fin.after' => __('La date de fin doit être postérieure à la date de début.'),
+            'jour_facturation.between' => __('Le jour de facturation va de 1 à 28 (le même jour tous les mois).'),
+            'lignes.required' => __('Ajoutez au moins un produit loué.'),
         ]);
         foreach ($donnees['lignes'] as $i => $ligne) {
             if (($ligne['quantite_exemptee'] ?? 0) > $ligne['quantite']) {
-                throw ValidationException::withMessages(["lignes.{$i}.quantite_exemptee" => 'Les unités exemptées ne dépassent pas la quantité louée.']);
+                throw ValidationException::withMessages(["lignes.{$i}.quantite_exemptee" => __('Les unités exemptées ne dépassent pas la quantité louée.')]);
             }
         }
 

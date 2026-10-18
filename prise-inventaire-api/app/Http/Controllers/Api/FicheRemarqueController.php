@@ -57,7 +57,7 @@ abstract class FicheRemarqueController extends Controller
     {
         $this->remarque($request, $parent, $id)->delete();
 
-        return response()->json(['message' => 'Remarque supprimée.']);
+        return response()->json(['message' => __('Remarque supprimée.')]);
     }
 
     private function remarque(Request $request, int $parent, int $id): Model
@@ -65,7 +65,7 @@ abstract class FicheRemarqueController extends Controller
         $parent = $this->modeleParent()::findOrFail($parent);
         $remarque = $this->modele()::where($this->cleParent(), $parent->getKey())->findOrFail($id);
         $utilisateur = $request->user();
-        abort_unless((int) $remarque->auteur_id === (int) $utilisateur->id || $utilisateur->isAdmin(), 403, 'Seul son auteur ou un administrateur peut modifier cette remarque.');
+        abort_unless((int) $remarque->auteur_id === (int) $utilisateur->id || $utilisateur->isAdmin(), 403, __('Seul son auteur ou un administrateur peut modifier cette remarque.'));
 
         return $remarque;
     }

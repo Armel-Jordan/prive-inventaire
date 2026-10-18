@@ -57,7 +57,7 @@ class PointDeVenteController extends Controller
             'caisse_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:2000',
             ...ClientsDePassage::regles(),
-        ], ['lignes.required' => 'Ajoutez au moins un produit.', 'lignes.min' => 'Ajoutez au moins un produit.', 'paiements.*.carte_cadeau.required_if' => 'Saisissez ou scannez le numéro de la carte cadeau.']);
+        ], ['lignes.required' => __('Ajoutez au moins un produit.'), 'lignes.min' => __('Ajoutez au moins un produit.'), 'paiements.*.carte_cadeau.required_if' => __('Saisissez ou scannez le numéro de la carte cadeau.')]);
         foreach (array_filter(['creer' => true, 'emettre' => true, 'encaisser' => $donnees['paiements'] !== []]) as $action => $requis) {
             if (! $droits->permet($request->user(), 'factures', $action)) {
                 return response()->json(['message' => $droits->messageRefus('factures', $action), 'module' => 'factures', 'action' => $action], 403);
@@ -72,7 +72,8 @@ class PointDeVenteController extends Controller
         $facture = $vente['facture'];
 
         return response()->json($vente + [
-            'message' => "Vente {$facture->numero} enregistrée.".((float) $facture->reste_a_payer > 0.004 ? ' Le reste est porté au compte du client.' : ''),
+            'message' => __('Vente :numero enregistrée.', ['numero' => $facture->numero])
+                .((float) $facture->reste_a_payer > 0.004 ? ' '.__('Le reste est porté au compte du client.') : ''),
         ], 201);
     }
 
@@ -82,7 +83,7 @@ class PointDeVenteController extends Controller
         $numero = (string) $request->validate(['numero' => 'required|string|max:30'])['numero'];
         $carte = $cartes->consulter($numero);
         if (! $carte) {
-            return response()->json(['message' => 'Carte cadeau '.mb_strtoupper(trim($numero)).' introuvable.'], 404);
+            return response()->json(['message' => __('Carte cadeau :numero introuvable.', ['numero' => mb_strtoupper(trim($numero))])], 404);
         }
 
         return response()->json($carte->only(['id', 'numero', 'devise', 'solde', 'expire_le', 'etat']));
@@ -93,7 +94,7 @@ class PointDeVenteController extends Controller
     {
         $facture = Facture::findOrFail($factureId);
         if ($facture->statut === 'brouillon') {
-            return response()->json(['message' => "Une facture brouillon n'a pas de reçu."], 422);
+            return response()->json(['message' => __("Une facture brouillon n'a pas de reçu.")], 422);
         }
         $fuseau = (string) $request->query('fuseau', '');
 

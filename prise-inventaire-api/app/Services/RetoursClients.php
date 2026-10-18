@@ -78,17 +78,17 @@ class RetoursClients
     public function enregistrer(array $donnees, ?RetourClient $retour = null, ?int $auteur = null): RetourClient
     {
         if ($retour && $retour->statut !== RetourClient::BROUILLON) {
-            throw new DomainException('Un retour traité ne se modifie plus.');
+            throw new DomainException(__('Un retour traité ne se modifie plus.'));
         }
         $facture = $retour ? $retour->facture : (empty($donnees['facture_id']) ? null : Facture::find($donnees['facture_id']));
         $clientId = $retour?->client_id ?? (int) ($donnees['client_id'] ?? $facture?->client_id);
         if ($facture) {
             if ($facture->client_id !== $clientId) {
-                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} n'est pas une facture de ce client."]);
+                throw ValidationException::withMessages(['facture_id' => __("La facture :numero n'est pas une facture de ce client.", ['numero' => $facture->numero])]);
             }
             $this->verifierRetournable($facture);
             if ($donnees['date_retour'] < $facture->date_facture->toDateString()) {
-                throw ValidationException::withMessages(['date_retour' => 'Le retour ne peut pas précéder la facture ('.$facture->date_facture->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_retour' => __('Le retour ne peut pas précéder la facture (:date).', ['date' => $facture->date_facture->format('d/m/Y')])]);
             }
         }
         $lignes = $this->preparerLignes($facture, $donnees['lignes'], $retour?->id);
@@ -122,7 +122,7 @@ class RetoursClients
     {
         $config = Configuration::pourEntite('retour_client', $retour->tenant_id);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des retours clients (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des retours clients (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($retour, $auteur) {
@@ -131,7 +131,7 @@ class RetoursClients
             $retour = RetourClient::with(['lignes.produit' => fn ($q) => $q->withTrashed(), 'lignes.secteur', 'lignes.raison'])
                 ->whereKey($retour->id)->lockForUpdate()->firstOrFail();
             if ($retour->statut !== RetourClient::BROUILLON) {
-                throw new DomainException('Ce retour est déjà traité.');
+                throw new DomainException(__('Ce retour est déjà traité.'));
             }
             if ($facture) {
                 $this->verifierRetournable($facture);
@@ -147,7 +147,7 @@ class RetoursClients
                     continue;
                 }
                 if (! $ligne->secteur || $ligne->secteur->trashed()) {
-                    throw new DomainException("Le secteur de remise en stock de {$ligne->produit?->numero} n'existe plus : modifiez le retour.");
+                    throw new DomainException(__("Le secteur de remise en stock de :produit n'existe plus : modifiez le retour.", ['produit' => $ligne->produit?->numero]));
                 }
                 $mouvement = MouvementTenant::create([
                     'tenant_id' => $retour->tenant_id,
@@ -181,14 +181,16 @@ class RetoursClients
         return DB::transaction(function () use ($retour, $auteur) {
             $retour = RetourClient::with('lignes', 'facture')->whereKey($retour->id)->lockForUpdate()->firstOrFail();
             if ($retour->statut !== RetourClient::TRAITE) {
-                throw new DomainException("Traitez d'abord le retour.");
+                throw new DomainException(__("Traitez d'abord le retour."));
             }
             if (! $retour->facture) {
-                throw new DomainException("Ce retour n'a pas de facture d'origine : il n'y a rien à créditer.");
+                throw new DomainException(__("Ce retour n'a pas de facture d'origine : il n'y a rien à créditer."));
             }
             $existante = $retour->avoir_id ? Avoir::find($retour->avoir_id) : null;
             if ($existante) {
-                throw new DomainException('La note de crédit de ce retour existe déjà ('.($existante->numero ?? 'brouillon').').');
+                throw new DomainException($existante->numero !== null
+                    ? __('La note de crédit de ce retour existe déjà (:numero).', ['numero' => $existante->numero])
+                    : __('La note de crédit de ce retour existe déjà (brouillon).'));
             }
 
             $facture = $retour->facture;
@@ -202,7 +204,7 @@ class RetoursClients
                 }
             }
             if ($lignes === []) {
-                throw new DomainException("Rien à créditer : la facture {$facture->numero} est déjà créditée pour ces produits.");
+                throw new DomainException(__('Rien à créditer : la facture :numero est déjà créditée pour ces produits.', ['numero' => $facture->numero]));
             }
 
             $avoir = $this->notes->enregistrer($facture, [
@@ -220,7 +222,7 @@ class RetoursClients
     public function supprimer(RetourClient $retour): void
     {
         if ($retour->statut !== RetourClient::BROUILLON) {
-            throw new DomainException('Seuls les retours en brouillon peuvent être supprimés.');
+            throw new DomainException(__('Seuls les retours en brouillon peuvent être supprimés.'));
         }
         $retour->delete();
     }
@@ -238,21 +240,21 @@ class RetoursClients
             if ($facture) {
                 $ligne = $lignesFacture[(int) ($saisie['facture_ligne_id'] ?? 0)] ?? null;
                 if (! $ligne) {
-                    throw ValidationException::withMessages(["lignes.{$index}.facture_ligne_id" => "Cette ligne n'appartient pas à la facture {$facture->numero}."]);
+                    throw ValidationException::withMessages(["lignes.{$index}.facture_ligne_id" => __("Cette ligne n'appartient pas à la facture :numero.", ['numero' => $facture->numero])]);
                 }
                 $produitId = $ligne->produit_id;
             } else {
                 $produitId = (int) ($saisie['produit_id'] ?? 0);
                 if (! ProduitTenant::whereKey($produitId)->exists()) {
-                    throw ValidationException::withMessages(["lignes.{$index}.produit_id" => 'Choisissez le produit retourné.']);
+                    throw ValidationException::withMessages(["lignes.{$index}.produit_id" => __('Choisissez le produit retourné.')]);
                 }
             }
             $traitement = $saisie['traitement'];
             if ($traitement === RetourClientLigne::REMISE_EN_STOCK && empty($saisie['secteur_id'])) {
-                throw ValidationException::withMessages(["lignes.{$index}.secteur_id" => 'Choisissez le secteur où remettre la marchandise en stock.']);
+                throw ValidationException::withMessages(["lignes.{$index}.secteur_id" => __('Choisissez le secteur où remettre la marchandise en stock.')]);
             }
             if ($raisonExigee && empty($saisie['raison_id'])) {
-                throw ValidationException::withMessages(["lignes.{$index}.raison_id" => 'Choisissez la raison du retour.']);
+                throw ValidationException::withMessages(["lignes.{$index}.raison_id" => __('Choisissez la raison du retour.')]);
             }
             $lotId = isset($saisie['lot_id']) ? (int) $saisie['lot_id'] : null;
             app(LotsSeries::class)->verifierLotDuProduit($lotId, $produitId, "lignes.{$index}.lot_id");
@@ -292,7 +294,9 @@ class RetoursClients
             $parLigne[$id] = ($parLigne[$id] ?? 0) + (int) $ligne['quantite'];
             $reste = (int) ($lignesFacture[$id]->quantite ?? 0) - ($retournes[$id] ?? 0);
             if ($parLigne[$id] > $reste) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => 'Au plus '.max(0, $reste).' (quantité facturée'.(($retournes[$id] ?? 0) > 0 ? ', retours déjà traités déduits' : '').').']);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => ($retournes[$id] ?? 0) > 0
+                    ? __('Au plus :quantite (quantité facturée, retours déjà traités déduits).', ['quantite' => max(0, $reste)])
+                    : __('Au plus :quantite (quantité facturée).', ['quantite' => max(0, $reste)])]);
             }
         }
     }
@@ -318,7 +322,7 @@ class RetoursClients
     private function verifierRetournable(Facture $facture): void
     {
         if (! in_array($facture->statut, self::FACTURES_RETOURNABLES, true)) {
-            throw new DomainException('Seule la marchandise d\'une facture émise peut faire l\'objet d\'un retour.');
+            throw new DomainException(__("Seule la marchandise d'une facture émise peut faire l'objet d'un retour."));
         }
     }
 

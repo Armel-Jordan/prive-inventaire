@@ -39,7 +39,7 @@ class ResolveTenantContext
             $slugTenant = $request->attributes->get('tenant');
             if ($slugTenant && (int) $slugTenant->id !== (int) $user->tenant_id) {
                 return response()->json([
-                    'message' => 'Accès tenant non autorisé',
+                    'message' => __('Accès tenant non autorisé'),
                     'status' => 403,
                 ], 403);
             }

@@ -137,16 +137,16 @@ class ReponsesDevis
             $verrouille = Devis::whereKey($devis->getKey())->lockForUpdate()->firstOrFail();
             if ($verrouille->statut !== Devis::STATUT_ENVOYE) {
                 return match ($verrouille->statut) {
-                    Devis::STATUT_ACCEPTE => 'Ce devis a déjà été accepté.',
-                    Devis::STATUT_REFUSE => 'Ce devis a déjà été refusé.',
-                    Devis::STATUT_EXPIRE => 'Ce devis a expiré : demandez-en un nouveau.',
-                    default => 'Ce devis ne peut pas recevoir de réponse pour le moment.',
+                    Devis::STATUT_ACCEPTE => __('Ce devis a déjà été accepté.'),
+                    Devis::STATUT_REFUSE => __('Ce devis a déjà été refusé.'),
+                    Devis::STATUT_EXPIRE => __('Ce devis a expiré : demandez-en un nouveau.'),
+                    default => __('Ce devis ne peut pas recevoir de réponse pour le moment.'),
                 };
             }
             if ($verrouille->estExpire()) {
                 $verrouille->update(['statut' => Devis::STATUT_EXPIRE]);
 
-                return "Ce devis a expiré le {$verrouille->date_validite->format('d/m/Y')} : demandez-en un nouveau.";
+                return __('Ce devis a expiré le :date : demandez-en un nouveau.', ['date' => $verrouille->date_validite->format('d/m/Y')]);
             }
 
             $verrouille->update([

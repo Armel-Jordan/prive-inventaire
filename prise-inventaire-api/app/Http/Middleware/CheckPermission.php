@@ -16,7 +16,7 @@ class CheckPermission
         if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Non authentifié',
+                'message' => __('Non authentifié'),
             ], 401);
         }
 
@@ -33,7 +33,7 @@ class CheckPermission
         if (! $hasPermission) {
             return response()->json([
                 'success' => false,
-                'message' => 'Permission refusée',
+                'message' => __('Permission refusée'),
                 'required_permission' => $permission,
             ], 403);
         }

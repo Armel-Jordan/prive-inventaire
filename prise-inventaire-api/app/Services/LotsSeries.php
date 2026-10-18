@@ -71,23 +71,26 @@ class LotsSeries
                 $numeros = $this->numeros($saisie);
                 $cle = "receptions.{$index}.numeros_serie";
                 if (count($numeros) !== $attendus) {
-                    $erreurs[$cle] = "{$produit->numero} se suit par numéro de série : saisissez {$attendus} numéro(s), un par unité ("
-                        .count($numeros).' saisi(s)).';
+                    $erreurs[$cle] = __(':numero se suit par numéro de série : saisissez :attendus numéro(s), un par unité (:saisis saisi(s)).', [
+                        'numero' => $produit->numero,
+                        'attendus' => $attendus,
+                        'saisis' => count($numeros),
+                    ]);
 
                     continue;
                 }
                 foreach ($numeros as $numero) {
                     $doublon = $produit->id.'|'.mb_strtolower($numero);
                     if (mb_strlen($numero) > 100) {
-                        $erreurs[$cle] = "Le numéro de série « {$numero} » dépasse 100 caractères.";
+                        $erreurs[$cle] = __('Le numéro de série « :numero » dépasse 100 caractères.', ['numero' => $numero]);
                     } elseif (isset($vus[$doublon])) {
-                        $erreurs[$cle] = "Le numéro de série {$numero} de {$produit->numero} est saisi deux fois.";
+                        $erreurs[$cle] = __('Le numéro de série :numero de :produit est saisi deux fois.', ['numero' => $numero, 'produit' => $produit->numero]);
                     }
                     $vus[$doublon] = true;
                 }
                 $existants = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->pluck('numero');
                 if ($existants->isNotEmpty() && ! isset($erreurs[$cle])) {
-                    $erreurs[$cle] = "Déjà enregistré(s) pour {$produit->numero} : {$existants->take(5)->implode(', ')}.";
+                    $erreurs[$cle] = __('Déjà enregistré(s) pour :produit : :numeros.', ['produit' => $produit->numero, 'numeros' => $existants->take(5)->implode(', ')]);
                 }
             }
         }
@@ -101,15 +104,19 @@ class LotsSeries
     {
         $numero = trim((string) ($saisie['lot_numero'] ?? ''));
         if ($numero === '') {
-            return ['lot_numero', "{$produit->numero} se suit par lot : indiquez le numéro de lot."];
+            return ['lot_numero', __(':numero se suit par lot : indiquez le numéro de lot.', ['numero' => $produit->numero])];
         }
         $peremption = $saisie['date_peremption'] ?? null;
         if ($produit->peremption && blank($peremption)) {
-            return ['date_peremption', "{$produit->numero} : indiquez la date de péremption du lot {$numero}."];
+            return ['date_peremption', __(':produit : indiquez la date de péremption du lot :lot.', ['produit' => $produit->numero, 'lot' => $numero])];
         }
         $lot = Lot::query()->where('produit_id', $produit->id)->where('numero', $numero)->first();
         if ($lot?->date_peremption && filled($peremption) && ! $lot->date_peremption->isSameDay(Carbon::parse($peremption))) {
-            return ['date_peremption', "Le lot {$numero} de {$produit->numero} est enregistré avec la péremption du {$lot->date_peremption->format('d/m/Y')}."];
+            return ['date_peremption', __('Le lot :lot de :produit est enregistré avec la péremption du :date.', [
+                'lot' => $numero,
+                'produit' => $produit->numero,
+                'date' => $lot->date_peremption->format('d/m/Y'),
+            ])];
         }
 
         return null;
@@ -149,7 +156,7 @@ class LotsSeries
         $ids = $lignes->pluck('id');
         $sortis = NumeroSerie::query()->whereIn('reception_ligne_id', $ids)->where('statut', '!=', NumeroSerie::EN_STOCK)->pluck('numero');
         if ($sortis->isNotEmpty()) {
-            throw new DomainException("Numéro(s) de série déjà sorti(s) : {$sortis->take(5)->implode(', ')}. La réception ne peut plus être annulée.");
+            throw new DomainException(__('Numéro(s) de série déjà sorti(s) : :numeros. La réception ne peut plus être annulée.', ['numeros' => $sortis->take(5)->implode(', ')]));
         }
         NumeroSerie::query()->whereIn('reception_ligne_id', $ids)->delete();
 
@@ -161,7 +168,11 @@ class LotsSeries
             $lot = Lot::query()->lockForUpdate()->findOrFail($ligne->lot_id);
             $solde = (float) LotMouvement::query()->where('lot_id', $lot->id)->sum('quantite');
             if ($solde + 1e-6 < $entree) {
-                throw new DomainException("Le lot {$lot->numero} a déjà été entamé ({$this->quantite($solde)} sur {$this->quantite($entree)} reçus) : la réception ne peut plus être annulée.");
+                throw new DomainException(__('Le lot :lot a déjà été entamé (:solde sur :recus reçus) : la réception ne peut plus être annulée.', [
+                    'lot' => $lot->numero,
+                    'solde' => $this->quantite($solde),
+                    'recus' => $this->quantite($entree),
+                ]));
             }
             LotMouvement::create(['lot_id' => $lot->id, 'type' => LotMouvement::ANNULATION_RECEPTION, 'quantite' => -$entree,
                 'reception_ligne_id' => $ligne->id, 'date_mouvement' => today(), 'cree_par' => $auteur?->id]);
@@ -256,16 +267,20 @@ class LotsSeries
             $lot = $disponibles->get((int) $saisie['lot_id']);
             $quantite = round((float) $saisie['quantite'], 4);
             if (! $lot) {
-                throw ValidationException::withMessages(["{$champ}.lots.{$index}.lot_id" => "Ce lot n'a plus de stock ou n'est pas un lot de {$produit->numero}."]);
+                throw ValidationException::withMessages(["{$champ}.lots.{$index}.lot_id" => __("Ce lot n'a plus de stock ou n'est pas un lot de :produit.", ['produit' => $produit->numero])]);
             }
             if ($quantite > (float) $lot->solde + 1e-6) {
-                throw ValidationException::withMessages(["{$champ}.lots.{$index}.quantite" => "Il ne reste que {$this->quantite($lot->solde)} du lot {$lot->numero}."]);
+                throw ValidationException::withMessages(["{$champ}.lots.{$index}.quantite" => __('Il ne reste que :reste du lot :lot.', ['reste' => $this->quantite($lot->solde), 'lot' => $lot->numero])]);
             }
             $allocations[] = [$lot->id, $quantite];
             $total += $quantite;
         }
         if ($total > $unites + 1e-6) {
-            throw ValidationException::withMessages(["{$champ}.lots" => "Les lots de {$produit->numero} dépassent la quantité livrée ({$this->quantite($total)} pour {$this->quantite($unites)})."]);
+            throw ValidationException::withMessages(["{$champ}.lots" => __('Les lots de :produit dépassent la quantité livrée (:total pour :livre).', [
+                'produit' => $produit->numero,
+                'total' => $this->quantite($total),
+                'livre' => $this->quantite($unites),
+            ])]);
         }
 
         return $allocations;
@@ -281,17 +296,21 @@ class LotsSeries
     {
         $numeros = array_values(array_unique(array_filter(array_map(fn ($n) => trim((string) $n), $numeros), fn (string $n) => $n !== '')));
         if (count($numeros) > $unites) {
-            throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$this->quantite($unites)} unité(s) livrée(s)."]);
+            throw ValidationException::withMessages([$champ => __(':produit : :nombre numéro(s) de série pour :unites unité(s) livrée(s).', [
+                'produit' => $produit->numero,
+                'nombre' => count($numeros),
+                'unites' => $this->quantite($unites),
+            ])]);
         }
         $series = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->lockForUpdate()->get();
         $parNumero = $series->keyBy(fn (NumeroSerie $s) => mb_strtolower($s->numero));
         foreach ($numeros as $numero) {
             $serie = $parNumero->get(mb_strtolower($numero));
             if (! $serie) {
-                throw ValidationException::withMessages([$champ => "Numéro de série inconnu pour {$produit->numero} : {$numero}."]);
+                throw ValidationException::withMessages([$champ => __('Numéro de série inconnu pour :produit : :numero.', ['produit' => $produit->numero, 'numero' => $numero])]);
             }
             if ($serie->statut !== NumeroSerie::EN_STOCK) {
-                throw ValidationException::withMessages([$champ => "Le numéro de série {$numero} n'est pas en stock."]);
+                throw ValidationException::withMessages([$champ => __("Le numéro de série :numero n'est pas en stock.", ['numero' => $numero])]);
             }
         }
 
@@ -346,7 +365,7 @@ class LotsSeries
     public function verifierLotDuProduit(?int $lotId, int $produitId, string $champ): void
     {
         if ($lotId !== null && ! Lot::query()->whereKey($lotId)->where('produit_id', $produitId)->exists()) {
-            throw ValidationException::withMessages([$champ => "Ce lot n'est pas un lot du produit."]);
+            throw ValidationException::withMessages([$champ => __("Ce lot n'est pas un lot du produit.")]);
         }
     }
 
@@ -371,14 +390,18 @@ class LotsSeries
                 $champ = "lignes.{$index}.numeros_serie";
                 $numeros = $this->numeros(['numeros_serie' => $ligne->numeros_serie]);
                 if (count($numeros) > $unites) {
-                    throw ValidationException::withMessages([$champ => "{$produit->numero} : ".count($numeros)." numéro(s) de série pour {$this->quantite($unites)} unité(s) retournée(s)."]);
+                    throw ValidationException::withMessages([$champ => __(':produit : :nombre numéro(s) de série pour :unites unité(s) retournée(s).', [
+                        'produit' => $produit->numero,
+                        'nombre' => count($numeros),
+                        'unites' => $this->quantite($unites),
+                    ])]);
                 }
                 $series = NumeroSerie::query()->where('produit_id', $produit->id)->whereIn('numero', $numeros)->lockForUpdate()->get()
                     ->keyBy(fn (NumeroSerie $s) => mb_strtolower($s->numero));
                 foreach ($numeros as $numero) {
                     $serie = $series->get(mb_strtolower($numero));
                     if (! $serie || $serie->statut !== NumeroSerie::LIVRE || ($serie->client_id && $serie->client_id !== $retour->client_id)) {
-                        throw ValidationException::withMessages([$champ => "Le numéro de série {$numero} de {$produit->numero} n'a pas été livré à ce client."]);
+                        throw ValidationException::withMessages([$champ => __("Le numéro de série :numero de :produit n'a pas été livré à ce client.", ['numero' => $numero, 'produit' => $produit->numero])]);
                     }
                 }
                 $remis = $ligne->traitement === RetourClientLigne::REMISE_EN_STOCK;

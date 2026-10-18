@@ -101,8 +101,9 @@ class SuggestionsAchat
     {
         $existante = SuggestionAchat::where('produit_id', $produitId)->whereIn('statut', [SuggestionAchat::EN_ATTENTE, SuggestionAchat::ACCEPTEE])->first();
         if ($existante && ! $forcer) {
-            $etat = $existante->statut === SuggestionAchat::ACCEPTEE ? 'acceptée' : 'en attente';
-            throw ValidationException::withMessages(['deja' => "Une suggestion existe déjà pour ce produit ({$existante->quantite_suggeree} unité(s), {$etat})."]);
+            throw ValidationException::withMessages(['deja' => $existante->statut === SuggestionAchat::ACCEPTEE
+                ? __('Une suggestion existe déjà pour ce produit (:quantite unité(s), acceptée).', ['quantite' => $existante->quantite_suggeree])
+                : __('Une suggestion existe déjà pour ce produit (:quantite unité(s), en attente).', ['quantite' => $existante->quantite_suggeree])]);
         }
 
         return SuggestionAchat::create([
@@ -145,21 +146,21 @@ class SuggestionsAchat
     {
         $config = Configuration::pourEntite('commande_fournisseur', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des commandes fournisseur (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des commandes fournisseur (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($fusionner, $tenantId, $auteur) {
             $acceptees = SuggestionAchat::with(['produit', 'reliquat'])->where('statut', SuggestionAchat::ACCEPTEE)->lockForUpdate()->orderBy('id')->get();
             if ($acceptees->isEmpty()) {
-                throw new DomainException('Aucune suggestion acceptée : cochez celles à commander.');
+                throw new DomainException(__('Aucune suggestion acceptée : cochez celles à commander.'));
             }
             $sansFournisseur = $acceptees->first(fn (SuggestionAchat $s) => ! $s->fournisseur_id);
             if ($sansFournisseur) {
-                throw ValidationException::withMessages(['fournisseur_id' => "Choisissez le fournisseur de {$sansFournisseur->produit?->numero} : il n'a pas de fournisseur principal."]);
+                throw ValidationException::withMessages(['fournisseur_id' => __("Choisissez le fournisseur de :produit : il n'a pas de fournisseur principal.", ['produit' => $sansFournisseur->produit?->numero])]);
             }
             $reliquatPris = $acceptees->first(fn (SuggestionAchat $s) => $s->reliquat && $s->reliquat->statut !== ReliquatClient::CREE);
             if ($reliquatPris) {
-                throw new DomainException("Le reliquat de {$reliquatPris->produit?->numero} est déjà commandé, reçu ou annulé : retirez sa suggestion.");
+                throw new DomainException(__('Le reliquat de :produit est déjà commandé, reçu ou annulé : retirez sa suggestion.', ['produit' => $reliquatPris->produit?->numero]));
             }
 
             return $acceptees->groupBy('fournisseur_id')->map(function (Collection $groupe, $fournisseurId) use ($fusionner, $tenantId, $auteur) {

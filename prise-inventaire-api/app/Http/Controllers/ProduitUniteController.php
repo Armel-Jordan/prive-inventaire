@@ -47,7 +47,7 @@ class ProduitUniteController extends Controller
         $produit = ProduitTenant::query()->findOrFail($produit);
         $this->unites->supprimer(ProduitUnite::query()->where('produit_id', $produit->id)->findOrFail($id));
 
-        return response()->json(['message' => 'Unité retirée.']);
+        return response()->json(['message' => __('Unité retirée.')]);
     }
 
     private function valider(Request $request, bool $creation): array

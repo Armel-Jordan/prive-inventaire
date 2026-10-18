@@ -29,15 +29,17 @@ class ImportPrixFournisseurController extends Controller
             'colonne_cout' => 'required|integer|min:1|max:200',
             'ligne_debut' => 'nullable|integer|min:1|max:1000',
             'simuler' => 'boolean',
-        ], ['fichier.mimes' => 'Choisissez un fichier CSV (enregistrez un classeur Excel au format CSV).']);
+        ], ['fichier.mimes' => __('Choisissez un fichier CSV (enregistrez un classeur Excel au format CSV).')]);
 
         $rapport = $this->imports->importer((string) file_get_contents($request->file('fichier')->getRealPath()), $donnees, $request->boolean('simuler'));
         $simulation = $request->boolean('simuler');
+        $nombres = ['mises_a_jour' => $rapport['mises_a_jour'], 'inchangees' => $rapport['inchangees'], 'ignorees' => count($rapport['ignorees'])];
 
         return response()->json($rapport + [
             'simulation' => $simulation,
-            'message' => ($simulation ? 'Simulation : ' : '')."{$rapport['mises_a_jour']} prix ".($simulation ? 'à mettre à jour' : 'mis à jour')
-                .", {$rapport['inchangees']} inchangé(s), ".count($rapport['ignorees']).' ligne(s) ignorée(s).',
+            'message' => $simulation
+                ? __('Simulation : :mises_a_jour prix à mettre à jour, :inchangees inchangé(s), :ignorees ligne(s) ignorée(s).', $nombres)
+                : __(':mises_a_jour prix mis à jour, :inchangees inchangé(s), :ignorees ligne(s) ignorée(s).', $nombres),
         ]);
     }
 
@@ -73,6 +75,6 @@ class ImportPrixFournisseurController extends Controller
     {
         ProfilImport::findOrFail($id)->delete();
 
-        return response()->json(['message' => "Profil d'import supprimé."]);
+        return response()->json(['message' => __("Profil d'import supprimé.")]);
     }
 }

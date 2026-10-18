@@ -41,7 +41,7 @@ class Consignations
     {
         $config = Configuration::pourEntite('consignation', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['numero' => 'La numérotation automatique des consignations doit être active.']);
+            throw ValidationException::withMessages(['numero' => __('La numérotation automatique des consignations doit être active.')]);
         }
         $quantites = collect($donnees['lignes'])->groupBy('produit_id')->map(fn (Collection $l) => (int) $l->sum('quantite'));
         $produits = ProduitTenant::withTrashed()->whereKey($quantites->keys())->get()->keyBy('numero');
@@ -123,7 +123,7 @@ class Consignations
     {
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['facture' => 'La numérotation automatique des factures doit être active.']);
+            throw ValidationException::withMessages(['facture' => __('La numérotation automatique des factures doit être active.')]);
         }
 
         return DB::transaction(function () use ($clientId, $lignes, $emettre, $auteur, $tenantId) {
@@ -135,7 +135,7 @@ class Consignations
             $lignesFacture = $quantites->map(function (int $quantite, int $produitId) use ($prix, $devise) {
                 if (($prix[$produitId]['prix'] ?? null) === null) {
                     $numero = ProduitTenant::withTrashed()->find($produitId)?->numero ?? "#{$produitId}";
-                    throw ValidationException::withMessages(['lignes' => "Aucun prix pour {$numero} : fixez son prix avant de facturer."]);
+                    throw ValidationException::withMessages(['lignes' => __('Aucun prix pour :numero : fixez son prix avant de facturer.', ['numero' => $numero])]);
                 }
                 $unitaire = (float) $prix[$produitId]['prix'];
 
@@ -181,14 +181,14 @@ class Consignations
         Client::withTrashed()->whereKey($clientId)->lockForUpdate()->first();
         $quantites = collect($lignes)->groupBy('produit_id')->map(fn (Collection $l) => (int) $l->sum('quantite'))->filter();
         if ($quantites->isEmpty()) {
-            throw ValidationException::withMessages(['lignes' => 'Saisissez au moins une quantité.']);
+            throw ValidationException::withMessages(['lignes' => __('Saisissez au moins une quantité.')]);
         }
         $soldes = $this->soldes($clientId, true)->keyBy('produit_id');
         foreach ($quantites as $produitId => $quantite) {
             $solde = $soldes[$produitId]['quantite'] ?? 0;
             if ($quantite > $solde) {
                 $numero = ProduitTenant::withTrashed()->find($produitId)?->numero ?? "#{$produitId}";
-                throw ValidationException::withMessages(['lignes' => "Quantité trop grande pour {$numero} : le client en détient {$solde}."]);
+                throw ValidationException::withMessages(['lignes' => __('Quantité trop grande pour :numero : le client en détient :solde.', ['numero' => $numero, 'solde' => $solde])]);
             }
         }
 

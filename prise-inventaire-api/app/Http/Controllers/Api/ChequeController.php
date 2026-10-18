@@ -28,7 +28,7 @@ class ChequeController extends Controller
         $donnees = $request->validate(['debourses' => 'required|string|max:3000', 'langue' => 'nullable|in:fr,en']);
         $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $donnees['debourses'])))));
         if ($ids === [] || count($ids) > 200) {
-            throw ValidationException::withMessages(['debourses' => 'Choisissez de 1 à 200 déboursés.']);
+            throw ValidationException::withMessages(['debourses' => __('Choisissez de 1 à 200 déboursés.')]);
         }
 
         return $this->cheques->pdf($ids, $donnees['langue'] ?? 'fr')->stream(count($ids) === 1 ? 'cheque.pdf' : 'cheques.pdf');

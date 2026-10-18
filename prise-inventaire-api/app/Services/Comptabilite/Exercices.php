@@ -42,10 +42,10 @@ class Exercices
     public function controlerDates(Carbon $debut, Carbon $fin, ?ExerciceComptable $exercice = null): ?string
     {
         if ($fin->lte($debut)) {
-            return 'La fin de l\'exercice doit suivre son début.';
+            return __("La fin de l'exercice doit suivre son début.");
         }
         if ($fin->gte($debut->copy()->addMonthsNoOverflow(self::MOIS_MAX))) {
-            return 'Un exercice ne peut pas dépasser '.self::MOIS_MAX.' mois.';
+            return __('Un exercice ne peut pas dépasser :mois mois.', ['mois' => self::MOIS_MAX]);
         }
         $chevauche = ExerciceComptable::whereDate('date_debut', '<=', $fin->toDateString())
             ->whereDate('date_fin', '>=', $debut->toDateString())
@@ -53,7 +53,9 @@ class Exercices
             ->first();
 
         return $chevauche
-            ? "Ces dates chevauchent l'exercice {$chevauche->libelle} ({$chevauche->date_debut->format('d/m/Y')} – {$chevauche->date_fin->format('d/m/Y')})."
+            ? __("Ces dates chevauchent l'exercice :libelle (:debut – :fin).", [
+                'libelle' => $chevauche->libelle, 'debut' => $chevauche->date_debut->format('d/m/Y'), 'fin' => $chevauche->date_fin->format('d/m/Y'),
+            ])
             : null;
     }
 

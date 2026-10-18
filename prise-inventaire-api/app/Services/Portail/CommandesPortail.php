@@ -110,20 +110,20 @@ class CommandesPortail
         $tenantId = (int) app(TenantContext::class)->getTenantId();
         $config = Configuration::pourEntite('commande', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['lignes' => 'Les commandes en ligne ne sont pas encore prêtes chez nous : contactez-nous pour passer votre commande.']);
+            throw ValidationException::withMessages(['lignes' => __('Les commandes en ligne ne sont pas encore prêtes chez nous : contactez-nous pour passer votre commande.')]);
         }
 
         $lignes = $this->prix($client, $donnees['lignes']);
         foreach ($lignes as $index => $ligne) {
             if ($ligne['indisponible']) {
-                throw ValidationException::withMessages(["lignes.{$index}" => 'Un produit de votre panier n\'est plus proposé : retirez-le pour commander.']);
+                throw ValidationException::withMessages(["lignes.{$index}" => __("Un produit de votre panier n'est plus proposé : retirez-le pour commander.")]);
             }
         }
 
         $adresse = null;
         if (! empty($donnees['adresse_livraison_id'])) {
             $adresse = ClientAdresse::where('client_id', $client->id)->where('actif', true)->find($donnees['adresse_livraison_id'])
-                ?? throw ValidationException::withMessages(['adresse_livraison_id' => 'Adresse de livraison inconnue.']);
+                ?? throw ValidationException::withMessages(['adresse_livraison_id' => __('Adresse de livraison inconnue.')]);
         }
         $notes = array_filter([
             'Commande passée sur le portail client par '.$compte->nom.' ('.$compte->email.').',

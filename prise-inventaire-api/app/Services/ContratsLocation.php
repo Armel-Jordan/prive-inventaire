@@ -76,7 +76,7 @@ class ContratsLocation
             ContratLocation::whereKey($contrat->id)->lockForUpdate()->first();
             $lignes = $contrat->lignes()->whereNull('facture_id')->where('prix_contrat', '>', 0)->get();
             if ($lignes->isEmpty()) {
-                throw ValidationException::withMessages(['contrat' => 'Tous les produits de ce contrat sont déjà facturés.']);
+                throw ValidationException::withMessages(['contrat' => __('Tous les produits de ce contrat sont déjà facturés.')]);
             }
             $facture = $this->creerFacture($contrat, today(), $lignes->map(fn (ContratLocationLigne $l) => [
                 'produit_id' => $l->produit_id,
@@ -148,7 +148,7 @@ class ContratsLocation
     {
         $reste = $ligne->quantite - $ligne->quantite_retournee;
         if ($quantite < 1 || $quantite > $reste) {
-            throw ValidationException::withMessages(['quantite' => "Quantité rendue trop grande : il reste {$reste} unité(s) chez le client."]);
+            throw ValidationException::withMessages(['quantite' => __('Quantité rendue trop grande : il reste :reste unité(s) chez le client.', ['reste' => $reste])]);
         }
         $ligne->update(['quantite_retournee' => $ligne->quantite_retournee + $quantite, 'date_retour' => $date]);
     }
@@ -163,11 +163,11 @@ class ContratsLocation
         return DB::transaction(function () use ($contrat, $automatique, $auteur, $tenantId) {
             $contrat = ContratLocation::with(['lignes', 'type'])->lockForUpdate()->findOrFail($contrat->id);
             if ($contrat->renouvele_par_id) {
-                throw ValidationException::withMessages(['contrat' => 'Ce contrat est déjà renouvelé.']);
+                throw ValidationException::withMessages(['contrat' => __('Ce contrat est déjà renouvelé.')]);
             }
             $config = Configuration::pourEntite('contrat_location', $tenantId);
             if (! $config || ! $config->auto_increment) {
-                throw ValidationException::withMessages(['contrat' => 'La numérotation automatique des contrats de location doit être active.']);
+                throw ValidationException::withMessages(['contrat' => __('La numérotation automatique des contrats de location doit être active.')]);
             }
             // Un produit par ligne : unités encore chez le client, prix de la ligne la plus récente.
             $lignes = $contrat->lignes->sortBy('id')->groupBy('produit_id')->map(function (Collection $groupe) use ($contrat, $automatique) {
@@ -184,7 +184,7 @@ class ContratsLocation
                 ];
             })->filter(fn (array $l) => $l['quantite'] > 0)->values();
             if ($lignes->isEmpty()) {
-                throw ValidationException::withMessages(['contrat' => 'Plus aucune unité louée : rien à renouveler.']);
+                throw ValidationException::withMessages(['contrat' => __('Plus aucune unité louée : rien à renouveler.')]);
             }
             $mois = max(1, $contrat->type?->duree_mois ?? (int) round(Carbon::parse($contrat->date_debut)->floatDiffInMonths(Carbon::parse($contrat->date_fin)->addDay())));
             $debut = Carbon::parse($contrat->date_fin)->addDay();
@@ -242,7 +242,7 @@ class ContratsLocation
     {
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['facture' => 'La numérotation automatique des factures doit être active.']);
+            throw ValidationException::withMessages(['facture' => __('La numérotation automatique des factures doit être active.')]);
         }
     }
 }

@@ -35,7 +35,10 @@ class JournalComptableController extends Controller
         $journal = JournalComptable::findOrFail($id);
         $donnees = $this->valider($request, $journal);
         if ($donnees['code'] !== $journal->code && $journal->ecritures()->exists()) {
-            return response()->json(['message' => 'Ce journal a des écritures : son code, qui préfixe leurs numéros, ne peut plus changer.', 'errors' => ['code' => ['Ce journal a des écritures : son code ne peut plus changer.']]], 422);
+            return response()->json([
+                'message' => __('Ce journal a des écritures : son code, qui préfixe leurs numéros, ne peut plus changer.'),
+                'errors' => ['code' => [__('Ce journal a des écritures : son code ne peut plus changer.')]],
+            ], 422);
         }
         $journal->update($donnees);
 
@@ -46,11 +49,11 @@ class JournalComptableController extends Controller
     {
         $journal = JournalComptable::findOrFail($id);
         if ($journal->ecritures()->exists()) {
-            return response()->json(['message' => 'Ce journal a des écritures : désactivez-le plutôt.'], 422);
+            return response()->json(['message' => __('Ce journal a des écritures : désactivez-le plutôt.')], 422);
         }
         $journal->delete();
 
-        return response()->json(['message' => 'Journal supprimé.']);
+        return response()->json(['message' => __('Journal supprimé.')]);
     }
 
     private function valider(Request $request, ?JournalComptable $journal = null): array
@@ -63,8 +66,8 @@ class JournalComptableController extends Controller
             'type' => ['required', Rule::in(JournalComptable::TYPES)],
             'actif' => ['sometimes', 'boolean'],
         ], [
-            'code.unique' => 'Ce code de journal existe déjà.',
-            'code.regex' => 'Le code ne contient que des lettres et des chiffres.',
+            'code.unique' => __('Ce code de journal existe déjà.'),
+            'code.regex' => __('Le code ne contient que des lettres et des chiffres.'),
         ]);
     }
 }

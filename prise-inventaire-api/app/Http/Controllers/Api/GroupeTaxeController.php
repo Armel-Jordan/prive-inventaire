@@ -47,7 +47,7 @@ class GroupeTaxeController extends Controller
     {
         GroupeTaxe::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Groupe de taxes supprimé.']);
+        return response()->json(['message' => __('Groupe de taxes supprimé.')]);
     }
 
     /** Détail des taxes du groupe sur un montant HT. */
@@ -73,7 +73,7 @@ class GroupeTaxeController extends Controller
 
         if (($donnees['lignes'][0]['applique_sur'] ?? null) === 'taxe_precedente') {
             throw ValidationException::withMessages([
-                'lignes.0.applique_sur' => 'La première taxe ne peut pas s\'appliquer sur une taxe précédente.',
+                'lignes.0.applique_sur' => __("La première taxe ne peut pas s'appliquer sur une taxe précédente."),
             ]);
         }
 

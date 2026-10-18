@@ -68,12 +68,12 @@ class Caisses
         }
         $caisse = Caisse::find((int) $caisseId);
         if (! $caisse) {
-            throw new DomainException("La caisse de ce poste n'existe plus : choisissez-en une autre dans Gestion de caisse.");
+            throw new DomainException(__("La caisse de ce poste n'existe plus : choisissez-en une autre dans Gestion de caisse."));
         }
         // Verrou partagé : les encaissements passent ensemble ; la fermeture attend qu'ils soient enregistrés.
         $session = CaisseSession::where('caisse_id', $caisse->id)->where('statut', CaisseSession::OUVERTE)->sharedLock()->first();
         if (! $session) {
-            throw ValidationException::withMessages(['caisse_id' => "La caisse {$caisse->code} n'est pas ouverte : ouvrez-la avant d'encaisser."]);
+            throw ValidationException::withMessages(['caisse_id' => __("La caisse :code n'est pas ouverte : ouvrez-la avant d'encaisser.", ['code' => $caisse->code])]);
         }
 
         return $session->id;
@@ -86,10 +86,10 @@ class Caisses
             // Verrou sur la caisse : deux ouvertures simultanées ne créent pas deux sessions.
             $caisse = Caisse::whereKey($caisse->id)->lockForUpdate()->firstOrFail();
             if (! $caisse->actif) {
-                throw new DomainException("La caisse {$caisse->code} est désactivée.");
+                throw new DomainException(__('La caisse :code est désactivée.', ['code' => $caisse->code]));
             }
             if (CaisseSession::where('caisse_id', $caisse->id)->where('statut', CaisseSession::OUVERTE)->exists()) {
-                throw new DomainException("La caisse {$caisse->code} est déjà ouverte.");
+                throw new DomainException(__('La caisse :code est déjà ouverte.', ['code' => $caisse->code]));
             }
             $session = CaisseSession::create([
                 'caisse_id' => $caisse->id, 'statut' => CaisseSession::OUVERTE, 'ouverte_le' => now(), 'ouverte_par' => $auteur,
@@ -111,7 +111,7 @@ class Caisses
         return DB::transaction(function () use ($session, $type, $mode, $devise, $montant, $note, $auteur) {
             $session = CaisseSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
             if (! $session->estOuverte()) {
-                throw new DomainException('Cette session de caisse est fermée.');
+                throw new DomainException(__('Cette session de caisse est fermée.'));
             }
 
             return CaisseMouvement::create([
@@ -133,7 +133,7 @@ class Caisses
             // Verrou exclusif : les encaissements en cours sur la caisse finissent d'abord, les suivants sont refusés.
             $session = CaisseSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
             if (! $session->estOuverte()) {
-                throw new DomainException('Cette session de caisse est déjà fermée.');
+                throw new DomainException(__('Cette session de caisse est déjà fermée.'));
             }
             $lignes = [];
             foreach ($this->chiffres($session) as $ligne) {

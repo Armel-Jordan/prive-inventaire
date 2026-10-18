@@ -41,7 +41,7 @@ class DevisesVente
             return ['devise' => $code, 'taux_change' => round((float) $referentiel, 8)];
         }
 
-        throw ValidationException::withMessages(['taux_change' => "Indiquez le taux de change {$code} → {$this->reference()}."]);
+        throw ValidationException::withMessages(['taux_change' => __('Indiquez le taux de change :devise → :reference.', ['devise' => $code, 'reference' => $this->reference()])]);
     }
 
     /** Règles de validation des champs devise et taux d'un document. */

@@ -45,9 +45,9 @@ class TachePlanifieController extends Controller
             // Facturation des abonnements : factures créées émises plutôt qu'en brouillon.
             'parametres.emettre' => ['sometimes', 'boolean'],
         ], [
-            'heure.regex' => 'L\'heure doit être au format HH:MM.',
-            'jours_semaine.required_if' => 'Choisissez au moins un jour de la semaine.',
-            'jour_du_mois.required_if' => 'Indiquez le jour du mois.',
+            'heure.regex' => __("L'heure doit être au format HH:MM."),
+            'jours_semaine.required_if' => __('Choisissez au moins un jour de la semaine.'),
+            'jour_du_mois.required_if' => __('Indiquez le jour du mois.'),
         ]);
 
         if (array_key_exists('parametres', $donnees)) {
@@ -68,8 +68,8 @@ class TachePlanifieController extends Controller
         ]);
 
         if ($tache->actif && $tache->recurrence === 'une_fois' && (! $tache->prochaine_execution || $tache->prochaine_execution <= now())) {
-            return response()->json(['message' => 'Choisissez une date et une heure à venir pour une exécution unique.', 'errors' => [
-                'prochaine_execution' => ['Choisissez une date et une heure à venir pour une exécution unique.'],
+            return response()->json(['message' => __('Choisissez une date et une heure à venir pour une exécution unique.'), 'errors' => [
+                'prochaine_execution' => [__('Choisissez une date et une heure à venir pour une exécution unique.')],
             ]], 422);
         }
 
@@ -86,7 +86,7 @@ class TachePlanifieController extends Controller
         $tache = TachePlanifiee::findOrFail($id);
         $execution = $this->planificateur->executer($tache, 'manuel', $request->user()?->id);
         if (! $execution) {
-            return response()->json(['message' => 'Cette tâche est déjà en cours d\'exécution.'], 409);
+            return response()->json(['message' => __("Cette tâche est déjà en cours d'exécution.")], 409);
         }
 
         return response()->json(['execution' => $this->presenterExecution($execution->load('auteur:id,nom')), 'tache' => $this->presenter($tache->refresh())]);

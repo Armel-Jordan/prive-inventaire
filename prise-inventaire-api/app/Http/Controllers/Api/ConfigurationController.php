@@ -30,7 +30,7 @@ class ConfigurationController extends Controller
         $configuration = Configuration::pourEntite($entite, $this->getTenantId($request));
 
         if (! $configuration) {
-            return response()->json(['message' => 'Configuration non trouvée'], 404);
+            return response()->json(['message' => __('Configuration non trouvée')], 404);
         }
 
         return response()->json($configuration);
@@ -63,7 +63,7 @@ class ConfigurationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Configuration mise à jour',
+            'message' => __('Configuration mise à jour'),
             'configuration' => $configuration,
         ]);
     }
@@ -74,11 +74,11 @@ class ConfigurationController extends Controller
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
         if (! $configuration) {
-            return response()->json(['message' => 'Configuration non trouvée'], 404);
+            return response()->json(['message' => __('Configuration non trouvée')], 404);
         }
 
         if (! $configuration->auto_increment) {
-            return response()->json(['message' => 'La numérotation automatique n\'est pas activée'], 400);
+            return response()->json(['message' => __("La numérotation automatique n'est pas activée")], 400);
         }
 
         $numero = $configuration->genererNumero();
@@ -95,11 +95,11 @@ class ConfigurationController extends Controller
         $configuration = Configuration::where('tenant_id', $tenantId)->where('entite', $entite)->first();
 
         if (! $configuration) {
-            return response()->json(['message' => 'Configuration non trouvée'], 404);
+            return response()->json(['message' => __('Configuration non trouvée')], 404);
         }
 
         if (! $configuration->auto_increment) {
-            return response()->json(['message' => 'La numérotation automatique n\'est pas activée'], 400);
+            return response()->json(['message' => __("La numérotation automatique n'est pas activée")], 400);
         }
 
         $numero = $configuration->genererNumero();

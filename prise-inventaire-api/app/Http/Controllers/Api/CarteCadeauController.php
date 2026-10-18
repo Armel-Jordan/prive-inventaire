@@ -72,8 +72,8 @@ class CarteCadeauController extends Controller
             'notes' => 'nullable|string|max:1000',
             'caisse_id' => 'nullable|integer',
         ], [
-            'numero.regex' => 'Le numéro ne contient que des lettres, des chiffres et des tirets.',
-            'expire_le.after_or_equal' => "L'expiration ne peut pas précéder la vente.",
+            'numero.regex' => __('Le numéro ne contient que des lettres, des chiffres et des tirets.'),
+            'expire_le.after_or_equal' => __("L'expiration ne peut pas précéder la vente."),
         ]);
 
         return $this->executer(fn () => response()->json(
@@ -91,10 +91,10 @@ class CarteCadeauController extends Controller
             'notes' => 'sometimes|nullable|string|max:1000',
         ]);
         if ($carte->annulee) {
-            return response()->json(['message' => 'Une carte annulée ne se modifie plus.'], 422);
+            return response()->json(['message' => __('Une carte annulée ne se modifie plus.')], 422);
         }
         if (! empty($donnees['expire_le']) && $donnees['expire_le'] < $carte->date_vente->toDateString()) {
-            return response()->json(['message' => "L'expiration ne peut pas précéder la vente.", 'errors' => ['expire_le' => ["L'expiration ne peut pas précéder la vente."]]], 422);
+            return response()->json(['message' => __("L'expiration ne peut pas précéder la vente."), 'errors' => ['expire_le' => [__("L'expiration ne peut pas précéder la vente.")]]], 422);
         }
         $carte->update($donnees);
 

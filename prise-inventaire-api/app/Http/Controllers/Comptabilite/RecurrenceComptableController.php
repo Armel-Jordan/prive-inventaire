@@ -69,7 +69,7 @@ class RecurrenceComptableController extends Controller
             $recurrence->delete();
         }
 
-        return response()->json(['message' => "Récurrence n° {$recurrence->numero} supprimée : ses écritures déjà créées restent au journal."]);
+        return response()->json(['message' => __('Récurrence n° :numero supprimée : ses écritures déjà créées restent au journal.', ['numero' => $recurrence->numero])]);
     }
 
     /** Convertit en écritures les dates échues (à ce jour) ou les dates choisies. */
@@ -87,7 +87,9 @@ class RecurrenceComptableController extends Controller
         );
 
         return response()->json($resultat + [
-            'message' => $resultat['converties'] > 0 ? "{$resultat['converties']} écriture(s) récurrente(s) créée(s)." : 'Aucune écriture à créer.',
+            'message' => $resultat['converties'] > 0
+                ? __(':nombre écriture(s) récurrente(s) créée(s).', ['nombre' => $resultat['converties']])
+                : __('Aucune écriture à créer.'),
         ]);
     }
 

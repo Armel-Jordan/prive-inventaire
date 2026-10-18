@@ -42,7 +42,7 @@ class ListeController extends Controller
     {
         $liste = ListePrix::findOrFail($id);
         if (ReglePrix::where('liste_prix_id', $liste->id)->exists()) {
-            return response()->json(['message' => 'Des règles de prix visent cette liste : modifiez-les ou supprimez-les d\'abord.'], 422);
+            return response()->json(['message' => __("Des règles de prix visent cette liste : modifiez-les ou supprimez-les d'abord.")], 422);
         }
 
         DB::transaction(function () use ($liste) {
@@ -50,7 +50,7 @@ class ListeController extends Controller
             $liste->delete();
         });
 
-        return response()->json(['message' => 'Liste de prix supprimée.']);
+        return response()->json(['message' => __('Liste de prix supprimée.')]);
     }
 
     public function clients(int $id): JsonResponse
@@ -79,7 +79,7 @@ class ListeController extends Controller
             'ajustement_pourcentage' => ['required', 'numeric', 'min:-100', 'max:1000'],
             'precision' => ['required', 'integer', 'min:0', 'max:4'],
             'actif' => ['sometimes', 'boolean'],
-        ], ['nom.unique' => 'Une liste de prix porte déjà ce nom.']);
+        ], ['nom.unique' => __('Une liste de prix porte déjà ce nom.')]);
         $donnees['nom'] = trim($donnees['nom']);
 
         return $donnees;

@@ -24,7 +24,7 @@ class VerifierDroits
         }
 
         if (! $compte->actif) {
-            return response()->json(['message' => 'Ce compte est désactivé.'], 401);
+            return response()->json(['message' => __('Ce compte est désactivé.')], 401);
         }
 
         $regle = $this->droits->regle($request);

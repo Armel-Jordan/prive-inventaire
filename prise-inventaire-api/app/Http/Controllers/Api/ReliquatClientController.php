@@ -107,7 +107,9 @@ class ReliquatClientController extends Controller
         ]);
         $lignes = array_values(array_filter($donnees['lignes'], fn (array $l) => (int) $l['quantite'] > 0));
         if ($lignes === []) {
-            return response()->json(['message' => 'Indiquez au moins une quantité en reliquat.', 'errors' => ['lignes' => ['Indiquez au moins une quantité en reliquat.']]], 422);
+            $erreur = __('Indiquez au moins une quantité en reliquat.');
+
+            return response()->json(['message' => $erreur, 'errors' => ['lignes' => [$erreur]]], 422);
         }
 
         return $this->executer(fn () => response()->json($this->reliquats->depuisCommande($commande, $lignes, $request->user()?->id), 201));
@@ -141,7 +143,7 @@ class ReliquatClientController extends Controller
         return $this->executer(function () use ($reliquat) {
             $this->reliquats->supprimer($reliquat);
 
-            return response()->json(['message' => 'Reliquat supprimé.']);
+            return response()->json(['message' => __('Reliquat supprimé.')]);
         });
     }
 

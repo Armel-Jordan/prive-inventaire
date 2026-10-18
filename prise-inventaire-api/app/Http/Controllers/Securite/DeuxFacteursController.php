@@ -28,7 +28,7 @@ class DeuxFacteursController extends Controller
     {
         $utilisateur = $this->verifierMotDePasse($request);
         if ($utilisateur->deuxFacteursActive()) {
-            return response()->json(['message' => 'La double authentification est déjà active.'], 422);
+            return response()->json(['message' => __('La double authentification est déjà active.')], 422);
         }
 
         return response()->json($this->deuxFacteurs->preparer($utilisateur));
@@ -40,12 +40,12 @@ class DeuxFacteursController extends Controller
         $utilisateur = $request->user();
         $donnees = $request->validate(['code' => ['required', 'string', 'max:20']]);
         if ($utilisateur->deuxFacteursActive()) {
-            return response()->json(['message' => 'La double authentification est déjà active.'], 422);
+            return response()->json(['message' => __('La double authentification est déjà active.')], 422);
         }
 
         $codes = $this->deuxFacteurs->activer($utilisateur, $donnees['code']);
         if ($codes === null) {
-            throw ValidationException::withMessages(['code' => 'Code invalide : vérifiez l\'heure de votre téléphone et saisissez le code affiché.']);
+            throw ValidationException::withMessages(['code' => __("Code invalide : vérifiez l'heure de votre téléphone et saisissez le code affiché.")]);
         }
 
         return response()->json([...$this->etatDe($utilisateur->refresh()), 'codes_secours' => $codes]);
@@ -63,7 +63,7 @@ class DeuxFacteursController extends Controller
     {
         $utilisateur = $this->verifierMotDePasse($request);
         if (! $utilisateur->deuxFacteursActive()) {
-            return response()->json(['message' => 'La double authentification n\'est pas active.'], 422);
+            return response()->json(['message' => __("La double authentification n'est pas active.")], 422);
         }
         $codes = $this->deuxFacteurs->regenererCodes($utilisateur);
 
@@ -91,7 +91,7 @@ class DeuxFacteursController extends Controller
         $utilisateur = AdminUser::where('tenant_id', $request->user()->tenant_id)->findOrFail($id);
         $this->deuxFacteurs->desactiver($utilisateur);
 
-        return response()->json(['message' => "Double authentification désactivée pour {$utilisateur->nom}."]);
+        return response()->json(['message' => __('Double authentification désactivée pour :nom.', ['nom' => $utilisateur->nom])]);
     }
 
     private function etatDe(AdminUser $utilisateur): array
@@ -108,7 +108,7 @@ class DeuxFacteursController extends Controller
         $donnees = $request->validate(['password' => ['required', 'string']]);
         $utilisateur = $request->user();
         if (! Hash::check($donnees['password'], $utilisateur->password)) {
-            throw ValidationException::withMessages(['password' => 'Mot de passe incorrect.']);
+            throw ValidationException::withMessages(['password' => __('Mot de passe incorrect.')]);
         }
 
         return $utilisateur;

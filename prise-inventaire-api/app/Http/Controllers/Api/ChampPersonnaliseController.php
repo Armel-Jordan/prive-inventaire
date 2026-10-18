@@ -82,7 +82,7 @@ class ChampPersonnaliseController extends Controller
             $champ->delete();
         });
 
-        return response()->json(['message' => 'Champ personnalisé supprimé, avec ses valeurs.']);
+        return response()->json(['message' => __('Champ personnalisé supprimé, avec ses valeurs.')]);
     }
 
     /** Nouvel ordre d'affichage des champs d'un type de fiche. */
@@ -129,14 +129,14 @@ class ChampPersonnaliseController extends Controller
             $noms["valeurs.{$champ->id}"] = $champ->libelle;
             $noms["valeurs.{$champ->id}.*"] = $champ->libelle;
         }
-        $saisies = Validator::make($request->all(), $regles, ValeursChampsPersonnalises::MESSAGES, $noms)->validate()['valeurs'] ?? [];
+        $saisies = Validator::make($request->all(), $regles, $this->messagesValeurs(), $noms)->validate()['valeurs'] ?? [];
 
         $aEnregistrer = [];
         $doublons = [];
         foreach ($champs as $champ) {
             $stockee = $this->valeurs->versStockage($champ, $saisies[$champ->id] ?? null);
             if ($stockee !== null && $champ->sans_doublon && $this->valeurs->estUnDoublon($champ, $stockee, $entiteId)) {
-                $doublons["valeurs.{$champ->id}"] = "« {$champ->libelle} » : cette valeur est déjà utilisée par une autre fiche.";
+                $doublons["valeurs.{$champ->id}"] = __('« :champ » : cette valeur est déjà utilisée par une autre fiche.', ['champ' => $champ->libelle]);
             }
             $aEnregistrer[$champ->id] = $stockee;
         }
@@ -205,7 +205,7 @@ class ChampPersonnaliseController extends Controller
             'sans_doublon' => ['boolean'],
             'aide' => ['nullable', 'string', 'max:240'],
             'actif' => ['boolean'],
-        ], ['options.required' => 'Ajoutez au moins un choix à la liste.']);
+        ], ['options.required' => __('Ajoutez au moins un choix à la liste.')]);
 
         $estAChoix = in_array($champ->type, ChampsPersonnalises::TYPES_A_CHOIX, true);
         $donnees['options'] = $estAChoix ? array_values(array_map('trim', $donnees['options'] ?? [])) : null;
@@ -218,8 +218,8 @@ class ChampPersonnaliseController extends Controller
         $defaut = Validator::make(
             ['valeur_defaut' => $request->input('valeur_defaut')],
             $this->valeurs->regles($essai, 'valeur_defaut', obligatoireApplique: false),
-            ValeursChampsPersonnalises::MESSAGES,
-            ['valeur_defaut' => 'valeur par défaut', 'valeur_defaut.*' => 'valeur par défaut'],
+            $this->messagesValeurs(),
+            ['valeur_defaut' => __('valeur par défaut'), 'valeur_defaut.*' => __('valeur par défaut')],
         )->validate()['valeur_defaut'] ?? null;
         $donnees['valeur_defaut'] = $this->valeurs->versStockage($essai, $defaut);
 
@@ -274,7 +274,13 @@ class ChampPersonnaliseController extends Controller
         $module = ChampsPersonnalises::module($entite);
         $tenant = $request->attributes->get('tenant');
 
-        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, "Le module « {$module} » n'est pas activé pour cette entreprise.");
+        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => $module]));
+    }
+
+    /** Messages de validation des valeurs (textes français de ValeursChampsPersonnalises::MESSAGES), dans la langue de la requête. */
+    private function messagesValeurs(): array
+    {
+        return array_map(fn (string $message) => __($message), ValeursChampsPersonnalises::MESSAGES);
     }
 
     private function entitesAccessibles(Request $request): array

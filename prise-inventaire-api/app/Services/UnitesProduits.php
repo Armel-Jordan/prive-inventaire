@@ -40,24 +40,26 @@ class UnitesProduits
     {
         $unite = Unite::query()->find($donnees['unite_id'] ?? $existant?->unite_id);
         if (! $unite || (! $unite->actif && $unite->id !== $existant?->unite_id)) {
-            throw ValidationException::withMessages(['unite_id' => 'Choisissez une unité active du référentiel (Paramètres → Référentiels).']);
+            throw ValidationException::withMessages(['unite_id' => __('Choisissez une unité active du référentiel (Paramètres → Référentiels).')]);
         }
         if (ConversionsUnites::cle($unite->code) === ConversionsUnites::cle((string) $produit->mesure)) {
-            throw ValidationException::withMessages(['unite_id' => "{$unite->code} est l'unité de stock du produit : elle vaut toujours 1."]);
+            throw ValidationException::withMessages(['unite_id' => __(":unite est l'unité de stock du produit : elle vaut toujours 1.", ['unite' => $unite->code])]);
         }
         $doublon = ProduitUnite::query()->where('produit_id', $produit->id)->where('unite_id', $unite->id)
             ->when($existant, fn ($q) => $q->whereKeyNot($existant->id))->exists();
         if ($doublon) {
-            throw ValidationException::withMessages(['unite_id' => "Le produit se vend déjà en {$unite->code}."]);
+            throw ValidationException::withMessages(['unite_id' => __('Le produit se vend déjà en :unite.', ['unite' => $unite->code])]);
         }
         $facteur = array_key_exists('facteur', $donnees) && $donnees['facteur'] !== null
             ? round((float) $donnees['facteur'], 6)
             : ($existant?->facteur ?? $this->facteurPropose($produit, $unite));
         if ($facteur === null) {
-            throw ValidationException::withMessages(['facteur' => "Indiquez combien de {$produit->mesure} contient une unité {$unite->code} : aucune conversion du référentiel ne les relie."]);
+            throw ValidationException::withMessages(['facteur' => __('Indiquez combien de :mesure contient une unité :unite : aucune conversion du référentiel ne les relie.', [
+                'mesure' => $produit->mesure, 'unite' => $unite->code,
+            ])]);
         }
         if ($facteur <= 0) {
-            throw ValidationException::withMessages(['facteur' => 'Le facteur est un nombre positif.']);
+            throw ValidationException::withMessages(['facteur' => __('Le facteur est un nombre positif.')]);
         }
 
         return DB::transaction(function () use ($produit, $donnees, $existant, $unite, $facteur) {
@@ -107,7 +109,9 @@ class UnitesProduits
             }
             $unite = ($unites[$produit->id] ?? collect())->first(fn (ProduitUnite $u) => ConversionsUnites::cle((string) $u->code) === ConversionsUnites::cle($code));
             if (! $unite) {
-                throw ValidationException::withMessages(["{$prefixe}.{$rang}.unite" => "Le produit {$produit->numero} ne se vend pas en {$code} : ajoutez cette unité à ses unités de vente."]);
+                throw ValidationException::withMessages(["{$prefixe}.{$rang}.unite" => __('Le produit :produit ne se vend pas en :unite : ajoutez cette unité à ses unités de vente.', [
+                    'produit' => $produit->numero, 'unite' => $code,
+                ])]);
             }
             $resultat[] = ['unite' => $unite->code, 'facteur' => (float) $unite->facteur];
         }

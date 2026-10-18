@@ -42,7 +42,7 @@ class EtiquetteController extends Controller
     {
         $this->etiquettes->supprimer(EtiquetteFormat::query()->findOrFail($id));
 
-        return response()->json(['message' => 'Format retiré.']);
+        return response()->json(['message' => __('Format retiré.')]);
     }
 
     /** Le PDF des étiquettes : produits et exemplaires, liste de prix, position de départ sur une planche entamée. */
@@ -62,7 +62,7 @@ class EtiquetteController extends Controller
         ]);
         $format = EtiquetteFormat::query()->where('actif', true)->find($donnees['format_id']);
         if (! $format) {
-            throw ValidationException::withMessages(['format_id' => 'Format introuvable ou désactivé.']);
+            throw ValidationException::withMessages(['format_id' => __('Format introuvable ou désactivé.')]);
         }
         $nombre = array_sum(array_map(fn (array $ligne) => (int) $ligne['copies'], $donnees['lignes']));
 

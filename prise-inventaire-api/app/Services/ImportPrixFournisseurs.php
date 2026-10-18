@@ -32,15 +32,15 @@ class ImportPrixFournisseurs
         $lignes = preg_split('/\r\n|\r|\n/', preg_replace('/^\xEF\xBB\xBF/', '', $contenu));
         $nonVides = array_values(array_filter($lignes, fn (string $l) => trim($l) !== ''));
         if ($nonVides === []) {
-            throw ValidationException::withMessages(['fichier' => 'Le fichier est vide.']);
+            throw ValidationException::withMessages(['fichier' => __('Le fichier est vide.')]);
         }
         if (count($lignes) > self::MAX_LIGNES) {
-            throw ValidationException::withMessages(['fichier' => 'Le fichier dépasse '.self::MAX_LIGNES.' lignes.']);
+            throw ValidationException::withMessages(['fichier' => __('Le fichier dépasse :max lignes.', ['max' => self::MAX_LIGNES])]);
         }
         $separateur = collect([';', "\t", ','])->sortByDesc(fn (string $s) => substr_count($nonVides[0], $s))->first();
         $fixe = ! empty($reglages['fournisseur_id']) ? Fournisseur::findOrFail((int) $reglages['fournisseur_id']) : null;
         if (! $fixe && empty($reglages['colonne_fournisseur'])) {
-            throw ValidationException::withMessages(['colonne_fournisseur' => 'Indiquez la colonne du code fournisseur, ou choisissez le fournisseur de tout le fichier.']);
+            throw ValidationException::withMessages(['colonne_fournisseur' => __('Indiquez la colonne du code fournisseur, ou choisissez le fournisseur de tout le fichier.')]);
         }
 
         $fournisseurs = ($fixe ? collect([$fixe]) : Fournisseur::query()->get(['id', 'code', 'raison_sociale']))->keyBy(fn (Fournisseur $f) => mb_strtoupper(trim((string) $f->code)));
@@ -75,12 +75,12 @@ class ImportPrixFournisseurs
             $produitId = $fournisseur ? ($parReference[$fournisseur->id][mb_strtoupper($code)] ?? $parNumero[mb_strtoupper($code)] ?? null) : null;
             $cle = $fournisseur && $produitId ? "{$fournisseur->id}|{$produitId}" : null;
             $motif = match (true) {
-                ! $fournisseur => 'Fournisseur introuvable avec ce numéro',
-                $code === '' => 'Code article vide',
-                $cout === null => 'Coût illisible ou négatif',
-                ! $produitId => 'Produit introuvable',
-                ! array_key_exists($produitId, $prix[$fournisseur->id] ?? []) => 'Produit non rattaché à ce fournisseur',
-                isset($vues[$cle]) => "Déjà présent à la ligne {$vues[$cle]}",
+                ! $fournisseur => __('Fournisseur introuvable avec ce numéro'),
+                $code === '' => __('Code article vide'),
+                $cout === null => __('Coût illisible ou négatif'),
+                ! $produitId => __('Produit introuvable'),
+                ! array_key_exists($produitId, $prix[$fournisseur->id] ?? []) => __('Produit non rattaché à ce fournisseur'),
+                isset($vues[$cle]) => __('Déjà présent à la ligne :ligne', ['ligne' => $vues[$cle]]),
                 default => null,
             };
             if ($motif) {

@@ -58,7 +58,7 @@ class MouvementInventaireController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Mouvement enregistré avec succès',
+            'message' => __('Mouvement enregistré avec succès'),
             'mouvement' => $mouvement,
         ], 201);
     }

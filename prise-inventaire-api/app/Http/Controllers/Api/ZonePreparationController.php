@@ -61,6 +61,6 @@ class ZonePreparationController extends Controller
         $zone = ZonePreparation::findOrFail($id);
         $zone->delete();
 
-        return response()->json(['message' => 'Zone supprimée']);
+        return response()->json(['message' => __('Zone supprimée')]);
     }
 }

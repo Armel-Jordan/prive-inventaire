@@ -82,7 +82,7 @@ final class AssistantRapports
                 $messages[] = ['role' => 'user', 'content' => $resultats];
             }
 
-            throw new RuntimeException("L'IA n'a pas pu conclure : reformulez la question, plus précisément.");
+            throw new RuntimeException(__("L'IA n'a pas pu conclure : reformulez la question, plus précisément."));
         } catch (Throwable $erreur) {
             Log::warning("Question à l'IA {$journal->id} en échec : {$erreur->getMessage()}");
             $journal->fill([
@@ -90,7 +90,7 @@ final class AssistantRapports
                 'duree_ms' => (int) round((microtime(true) - $debut) * 1000),
             ])->save();
 
-            throw new RuntimeException($erreur instanceof RuntimeException ? $erreur->getMessage() : "L'IA n'a pas pu répondre ; réessayez dans un moment.");
+            throw new RuntimeException($erreur instanceof RuntimeException ? $erreur->getMessage() : __("L'IA n'a pas pu répondre ; réessayez dans un moment."));
         }
     }
 
@@ -131,7 +131,7 @@ final class AssistantRapports
             ]], 1024);
             $texte = trim(implode("\n\n", array_column(array_filter($reponse['content'], fn (array $b) => ($b['type'] ?? null) === 'text'), 'text')));
             if ($texte === '') {
-                throw new RuntimeException("L'IA n'a rien répondu.");
+                throw new RuntimeException(__("L'IA n'a rien répondu."));
             }
             $journal->fill([
                 'statut' => QuestionIa::REUSSIE, 'titre' => Str::limit($question, 120, '…'), 'reponse' => $texte,
@@ -144,7 +144,7 @@ final class AssistantRapports
         } catch (Throwable $erreur) {
             $journal->fill(['statut' => QuestionIa::ECHEC, 'erreur' => Str::limit($erreur->getMessage(), 500, ''), 'duree_ms' => (int) round((microtime(true) - $debut) * 1000)])->save();
 
-            throw new RuntimeException($erreur instanceof RuntimeException ? $erreur->getMessage() : "L'IA n'a pas pu analyser le rapport.");
+            throw new RuntimeException($erreur instanceof RuntimeException ? $erreur->getMessage() : __("L'IA n'a pas pu analyser le rapport."));
         }
     }
 

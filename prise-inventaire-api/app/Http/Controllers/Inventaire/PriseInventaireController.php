@@ -42,18 +42,18 @@ class PriseInventaireController extends Controller
             'secteur_ids.*' => ['integer', TenantRule::exists('secteurs')],
             'date_debut' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], ['secteur_ids.required_unless' => 'Choisissez au moins un secteur, ou tous les secteurs.']);
+        ], ['secteur_ids.required_unless' => __('Choisissez au moins un secteur, ou tous les secteurs.')]);
         $tous = (bool) ($donnees['tous_secteurs'] ?? false);
         $secteurIds = $tous ? [] : array_values(array_unique($donnees['secteur_ids'] ?? []));
         if (! $tous && ! $secteurIds) {
-            return response()->json(['message' => 'Choisissez au moins un secteur, ou tous les secteurs.'], 422);
+            return response()->json(['message' => __('Choisissez au moins un secteur, ou tous les secteurs.')], 422);
         }
 
         // Deux sessions en cours ne peuvent pas compter le même secteur : les scans seraient comptés deux fois.
         $enCours = PriseInventaire::where('statut', PriseInventaire::EN_COURS)->with('secteurs:secteurs.id')->get();
         $conflit = $enCours->first(fn (PriseInventaire $p) => $tous || $p->tous_secteurs || $p->secteurs->pluck('id')->intersect($secteurIds)->isNotEmpty());
         if ($conflit) {
-            return response()->json(['message' => "La prise {$conflit->numero} est déjà en cours sur ces secteurs : validez-la ou annulez-la d'abord."], 422);
+            return response()->json(['message' => __("La prise :numero est déjà en cours sur ces secteurs : validez-la ou annulez-la d'abord.", ['numero' => $conflit->numero])], 422);
         }
 
         $prise = DB::transaction(function () use ($request, $donnees, $tous, $secteurIds) {
@@ -124,7 +124,7 @@ class PriseInventaireController extends Controller
     {
         $prise = PriseInventaire::findOrFail($id);
         if ($prise->statut !== PriseInventaire::EN_COURS) {
-            return response()->json(['message' => 'Seule une prise en cours peut être corrigée.'], 422);
+            return response()->json(['message' => __('Seule une prise en cours peut être corrigée.')], 422);
         }
         $donnees = $request->validate([
             'secteur' => ['required', 'string', 'max:255'],
@@ -154,7 +154,7 @@ class PriseInventaireController extends Controller
     {
         $prise = $this->prises->valider(PriseInventaire::findOrFail($id), $request->user());
         if (! $prise) {
-            return response()->json(['message' => 'Seule une prise en cours peut être validée.'], 422);
+            return response()->json(['message' => __('Seule une prise en cours peut être validée.')], 422);
         }
 
         return response()->json($prise->load(['secteurs:secteurs.id,code,nom', 'cloturePar:id,nom'])->loadCount('lignes'));
@@ -164,7 +164,7 @@ class PriseInventaireController extends Controller
     {
         $prise = PriseInventaire::findOrFail($id);
         if ($prise->statut !== PriseInventaire::EN_COURS) {
-            return response()->json(['message' => 'Seule une prise en cours peut être annulée.'], 422);
+            return response()->json(['message' => __('Seule une prise en cours peut être annulée.')], 422);
         }
         $prise->update([
             'statut' => PriseInventaire::ANNULEE,

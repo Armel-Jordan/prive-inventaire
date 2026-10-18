@@ -80,7 +80,7 @@ class DevisController extends Controller
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('devis', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
+            return response()->json(['success' => false, 'message' => __('Configuration numéro devis manquante')], 422);
         }
         $devis = DB::transaction(function () use ($validated, $request, $tenantId, $devise) {
             $numero = Configuration::consommerNumero('devis', $tenantId);
@@ -126,7 +126,7 @@ class DevisController extends Controller
     public function update(Request $request, Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_BROUILLON) {
-            return response()->json(['message' => 'Seuls les devis en brouillon peuvent être modifiés.'], 422);
+            return response()->json(['message' => __('Seuls les devis en brouillon peuvent être modifiés.')], 422);
         }
 
         $validated = $request->validate([
@@ -181,42 +181,42 @@ class DevisController extends Controller
     public function envoyer(Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_BROUILLON) {
-            return response()->json(['message' => 'Seuls les devis en brouillon peuvent être envoyés.'], 422);
+            return response()->json(['message' => __('Seuls les devis en brouillon peuvent être envoyés.')], 422);
         }
 
         $devis->statut = Devis::STATUT_ENVOYE;
         $devis->envoye_le = now();
         $devis->save();
 
-        return response()->json(['message' => 'Devis envoyé.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
+        return response()->json(['message' => __('Devis envoyé.'), 'devis' => $devis->load(['client', 'lignes.produit'])]);
     }
 
     public function accepter(Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_ENVOYE) {
-            return response()->json(['message' => 'Seuls les devis envoyés peuvent être acceptés.'], 422);
+            return response()->json(['message' => __('Seuls les devis envoyés peuvent être acceptés.')], 422);
         }
         if ($devis->estExpire()) {
             $devis->update(['statut' => Devis::STATUT_EXPIRE]);
 
-            return response()->json(['message' => "Ce devis a expiré le {$devis->date_validite->format('d/m/Y')} : faites-en un nouveau."], 422);
+            return response()->json(['message' => __('Ce devis a expiré le :date : faites-en un nouveau.', ['date' => $devis->date_validite->format('d/m/Y')])], 422);
         }
 
         // Réponse notée par un employé (le client a répondu autrement qu'en ligne).
         $devis->fill(['statut' => Devis::STATUT_ACCEPTE, 'reponse_le' => now(), 'reponse_en_ligne' => false, 'reponse_nom' => null])->save();
 
-        return response()->json(['message' => 'Devis accepté.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
+        return response()->json(['message' => __('Devis accepté.'), 'devis' => $devis->load(['client', 'lignes.produit'])]);
     }
 
     public function refuser(Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_ENVOYE) {
-            return response()->json(['message' => 'Seuls les devis envoyés peuvent être refusés.'], 422);
+            return response()->json(['message' => __('Seuls les devis envoyés peuvent être refusés.')], 422);
         }
 
         $devis->fill(['statut' => Devis::STATUT_REFUSE, 'reponse_le' => now(), 'reponse_en_ligne' => false, 'reponse_nom' => null])->save();
 
-        return response()->json(['message' => 'Devis refusé.', 'devis' => $devis->load(['client', 'lignes.produit'])]);
+        return response()->json(['message' => __('Devis refusé.'), 'devis' => $devis->load(['client', 'lignes.produit'])]);
     }
 
     /**
@@ -227,16 +227,16 @@ class DevisController extends Controller
     {
         $donnees = $request->validate(['origine' => ['nullable', 'string', 'max:255']]);
         if (! $reponses->ouvert($devis)) {
-            return response()->json(['message' => 'Ce devis ne peut plus recevoir de réponse (déjà décidé ou expiré).'], 422);
+            return response()->json(['message' => __('Ce devis ne peut plus recevoir de réponse (déjà décidé ou expiré).')], 422);
         }
         if (! $reponses->active()) {
-            return response()->json(['message' => 'La réponse en ligne aux devis est désactivée dans les paramètres des courriels.'], 422);
+            return response()->json(['message' => __('La réponse en ligne aux devis est désactivée dans les paramètres des courriels.')], 422);
         }
         // Adresse du site de l'espace client connue du back-office, comme pour les invitations au portail.
         $acces->memoriserAdresse($donnees['origine'] ?? null);
         $lien = $reponses->lien($devis);
         if (! $lien) {
-            return response()->json(['message' => "Adresse du site de l'espace client inconnue : réglez-la dans Ventes → Espace client."], 422);
+            return response()->json(['message' => __("Adresse du site de l'espace client inconnue : réglez-la dans Ventes → Espace client.")], 422);
         }
         $reponses->marquerEnvoye($devis->id);
 
@@ -246,7 +246,7 @@ class DevisController extends Controller
     public function convertirEnCommande(Request $request, Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_ACCEPTE) {
-            return response()->json(['message' => 'Seuls les devis acceptés peuvent être convertis en commande.'], 422);
+            return response()->json(['message' => __('Seuls les devis acceptés peuvent être convertis en commande.')], 422);
         }
         if ($deja = $this->dejaConverti($devis)) {
             return $deja;
@@ -257,7 +257,7 @@ class DevisController extends Controller
         $tenantId = $devis->tenant_id;
         $configCommande = Configuration::pourEntite('commande', $tenantId);
         if (! $configCommande || ! $configCommande->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Configuration numéro commande manquante'], 422);
+            return response()->json(['success' => false, 'message' => __('Configuration numéro commande manquante')], 422);
         }
 
         $commande = DB::transaction(function () use ($devis, $request, $tenantId) {
@@ -313,11 +313,11 @@ class DevisController extends Controller
         });
 
         if (! $commande) {
-            return $this->dejaConverti($devis->refresh()) ?? response()->json(['message' => 'Conversion impossible pour l\'instant : réessayez.'], 409);
+            return $this->dejaConverti($devis->refresh()) ?? response()->json(['message' => __("Conversion impossible pour l'instant : réessayez.")], 409);
         }
 
         return response()->json([
-            'message' => 'Devis converti en commande.',
+            'message' => __('Devis converti en commande.'),
             'commande' => $commande->load(['client', 'lignes']),
         ]);
     }
@@ -327,12 +327,12 @@ class DevisController extends Controller
     {
         $commande = $devis->commande_id ? $devis->commande()->first(['id', 'numero']) : null;
         if ($commande) {
-            return response()->json(['message' => "Ce devis a déjà été converti en commande {$commande->numero}.", 'commande' => $commande], 422);
+            return response()->json(['message' => __('Ce devis a déjà été converti en commande :numero.', ['numero' => $commande->numero]), 'commande' => $commande], 422);
         }
         $facture = $devis->facture_id ? $devis->facture()->first(['id', 'numero']) : null;
 
         return $facture
-            ? response()->json(['message' => "Ce devis a déjà été facturé : facture {$facture->numero}.", 'facture' => $facture], 422)
+            ? response()->json(['message' => __('Ce devis a déjà été facturé : facture :numero.', ['numero' => $facture->numero]), 'facture' => $facture], 422)
             : null;
     }
 
@@ -347,14 +347,14 @@ class DevisController extends Controller
             return response()->json(['message' => $droits->messageRefus('factures', 'creer'), 'module' => 'factures', 'action' => 'creer'], 403);
         }
         if ($devis->statut !== Devis::STATUT_ACCEPTE) {
-            return response()->json(['message' => 'Seuls les devis acceptés peuvent être facturés.'], 422);
+            return response()->json(['message' => __('Seuls les devis acceptés peuvent être facturés.')], 422);
         }
         if ($deja = $this->dejaConverti($devis)) {
             return $deja;
         }
         $config = Configuration::pourEntite('facture', $devis->tenant_id);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Configuration numéro facture manquante'], 422);
+            return response()->json(['success' => false, 'message' => __('Configuration numéro facture manquante')], 422);
         }
 
         $facture = DB::transaction(function () use ($devis, $factures) {
@@ -385,10 +385,10 @@ class DevisController extends Controller
         });
 
         if (! $facture) {
-            return $this->dejaConverti($devis->refresh()) ?? response()->json(['message' => "Conversion impossible pour l'instant : réessayez."], 409);
+            return $this->dejaConverti($devis->refresh()) ?? response()->json(['message' => __("Conversion impossible pour l'instant : réessayez.")], 409);
         }
 
-        return response()->json(['message' => "Devis facturé : facture {$facture->numero} (brouillon).", 'facture' => $facture->load(['client', 'lignes'])], 201);
+        return response()->json(['message' => __('Devis facturé : facture :numero (brouillon).', ['numero' => $facture->numero]), 'facture' => $facture->load(['client', 'lignes'])], 201);
     }
 
     /**
@@ -399,7 +399,7 @@ class DevisController extends Controller
     {
         $config = Configuration::pourEntite('devis', $devis->tenant_id);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Configuration numéro devis manquante'], 422);
+            return response()->json(['success' => false, 'message' => __('Configuration numéro devis manquante')], 422);
         }
         $devise = app(DevisesVente::class)->pourDocument($devis->devise ?: app(DevisesVente::class)->reference(), null, Client::find($devis->client_id));
 
@@ -432,17 +432,17 @@ class DevisController extends Controller
             return $copie;
         });
 
-        return response()->json(['message' => "Devis copié : {$copie->numero}.", 'devis' => $copie->load(['client', 'lignes.produit'])], 201);
+        return response()->json(['message' => __('Devis copié : :numero.', ['numero' => $copie->numero]), 'devis' => $copie->load(['client', 'lignes.produit'])], 201);
     }
 
     public function destroy(Devis $devis): JsonResponse
     {
         if ($devis->statut !== Devis::STATUT_BROUILLON) {
-            return response()->json(['message' => 'Seuls les devis en brouillon peuvent être supprimés.'], 422);
+            return response()->json(['message' => __('Seuls les devis en brouillon peuvent être supprimés.')], 422);
         }
 
         $devis->delete();
 
-        return response()->json(['message' => 'Devis supprimé.']);
+        return response()->json(['message' => __('Devis supprimé.')]);
     }
 }

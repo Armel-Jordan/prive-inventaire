@@ -32,14 +32,14 @@ class AuthController extends Controller
         if (! $tenant) {
             return response()->json([
                 'success' => false,
-                'message' => 'Entreprise non trouvée ou inactive',
+                'message' => __('Entreprise non trouvée ou inactive'),
             ], 404);
         }
 
         if ($tenant->isExpired()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Votre abonnement a expiré',
+                'message' => __('Votre abonnement a expiré'),
             ], 403);
         }
 
@@ -51,7 +51,7 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Identifiants invalides',
+                'message' => __('Identifiants invalides'),
             ], 401);
         }
 
@@ -63,7 +63,7 @@ class AuthController extends Controller
                 'success' => false,
                 'deux_facteurs' => true,
                 'defi' => $this->deuxFacteurs->creerDefi($user),
-                'message' => 'Double authentification requise : saisissez le code de votre application d\'authentification. Sur mobile, mettez l\'application à jour si elle ne vous le demande pas.',
+                'message' => __("Double authentification requise : saisissez le code de votre application d'authentification. Sur mobile, mettez l'application à jour si elle ne vous le demande pas."),
             ], 403);
         }
 
@@ -81,17 +81,17 @@ class AuthController extends Controller
         $user = $this->deuxFacteurs->utilisateurDuDefi($donnees['defi']);
         $tenant = $user?->tenant;
         if (! $user || ! $tenant?->actif || $tenant->isExpired()) {
-            return response()->json(['success' => false, 'defi_expire' => true, 'message' => 'La connexion a expiré : saisissez de nouveau votre mot de passe.'], 422);
+            return response()->json(['success' => false, 'defi_expire' => true, 'message' => __('La connexion a expiré : saisissez de nouveau votre mot de passe.')], 422);
         }
 
         if ($this->deuxFacteurs->bloque($user)) {
-            return response()->json(['success' => false, 'message' => 'Trop de codes invalides : réessayez dans '.DeuxFacteurs::BLOCAGE_MINUTES.' minutes.'], 429);
+            return response()->json(['success' => false, 'message' => __('Trop de codes invalides : réessayez dans :minutes minutes.', ['minutes' => DeuxFacteurs::BLOCAGE_MINUTES])], 429);
         }
 
         if (! $this->deuxFacteurs->verifier($user, $donnees['code'])) {
             $this->deuxFacteurs->echec($donnees['defi'], $user);
 
-            return response()->json(['success' => false, 'message' => 'Code invalide.'], 422);
+            return response()->json(['success' => false, 'message' => __('Code invalide.')], 422);
         }
 
         $this->deuxFacteurs->oublierDefi($donnees['defi']);
@@ -120,7 +120,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Connexion réussie',
+            'message' => __('Connexion réussie'),
             'user' => [
                 'id' => $user->id,
                 'nom' => $user->nom,
@@ -147,7 +147,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Déconnexion réussie',
+            'message' => __('Déconnexion réussie'),
         ]);
     }
 
@@ -206,7 +206,7 @@ class AuthController extends Controller
         $user->profil_complete = true;
         $user->save();
 
-        return response()->json(['success' => true, 'message' => 'Profil complété']);
+        return response()->json(['success' => true, 'message' => __('Profil complété')]);
     }
 
     public function uploadPhoto(Request $request): JsonResponse
@@ -215,7 +215,7 @@ class AuthController extends Controller
         $employe = EmployeTenant::where('admin_user_id', $user->id)->first();
 
         if (! $employe) {
-            return response()->json(['success' => false, 'message' => 'Fiche employé non trouvée'], 404);
+            return response()->json(['success' => false, 'message' => __('Fiche employé non trouvée')], 404);
         }
 
         $request->validate([

@@ -29,7 +29,7 @@ class DemandesAcompte
         $this->verifierDocuments((int) $donnees['client_id'], $donnees);
         $config = Configuration::pourEntite('demande_acompte', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException("Numéro requis : activez la numérotation automatique des demandes d'acompte (Configuration → Numérotation).");
+            throw new DomainException(__("Numéro requis : activez la numérotation automatique des demandes d'acompte (Configuration → Numérotation)."));
         }
 
         // Devise de la demande : celle demandée, sinon celle du client.
@@ -46,7 +46,7 @@ class DemandesAcompte
     public function modifier(DemandeAcompte $demande, array $donnees): DemandeAcompte
     {
         if ($demande->statut !== DemandeAcompte::BROUILLON) {
-            throw new DomainException("Une demande d'acompte envoyée ou payée ne se modifie plus.");
+            throw new DomainException(__("Une demande d'acompte envoyée ou payée ne se modifie plus."));
         }
         $client = (int) ($donnees['client_id'] ?? $demande->client_id);
         $this->verifierDocuments($client, $donnees + $demande->only(['devis_id', 'commande_id']));
@@ -85,10 +85,10 @@ class DemandesAcompte
         return DB::transaction(function () use ($demande, $paiement, $auteur) {
             $demande = DemandeAcompte::whereKey($demande->id)->lockForUpdate()->firstOrFail();
             if ($demande->statut === DemandeAcompte::PAYEE) {
-                throw new DomainException("La demande d'acompte {$demande->numero} est déjà payée.");
+                throw new DomainException(__("La demande d'acompte :numero est déjà payée.", ['numero' => $demande->numero]));
             }
             if ($paiement['date'] < $demande->date_demande->toDateString()) {
-                throw ValidationException::withMessages(['date' => 'Le paiement ne peut pas précéder la demande ('.$demande->date_demande->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date' => __('Le paiement ne peut pas précéder la demande (:date).', ['date' => $demande->date_demande->format('d/m/Y')])]);
             }
             $commande = $demande->commande_id ? ComClientEntete::find($demande->commande_id) : null;
             $acompte = $this->acomptes->recevoir([
@@ -115,7 +115,7 @@ class DemandesAcompte
     public function supprimer(DemandeAcompte $demande): void
     {
         if ($demande->statut === DemandeAcompte::PAYEE) {
-            throw new DomainException("Une demande d'acompte payée ne se supprime plus.");
+            throw new DomainException(__("Une demande d'acompte payée ne se supprime plus."));
         }
         $demande->delete();
     }
@@ -131,13 +131,13 @@ class DemandesAcompte
         if (! empty($donnees['devis_id'])) {
             $devis = Devis::find((int) $donnees['devis_id']);
             if (! $devis || $devis->client_id !== $clientId) {
-                throw ValidationException::withMessages(['devis_id' => 'Choisissez un devis du même client.']);
+                throw ValidationException::withMessages(['devis_id' => __('Choisissez un devis du même client.')]);
             }
         }
         if (! empty($donnees['commande_id'])) {
             $commande = ComClientEntete::find((int) $donnees['commande_id']);
             if (! $commande || $commande->client_id !== $clientId || in_array($commande->statut, ['refusee', 'annulee'], true)) {
-                throw ValidationException::withMessages(['commande_id' => 'Choisissez une commande en cours du même client.']);
+                throw ValidationException::withMessages(['commande_id' => __('Choisissez une commande en cours du même client.')]);
             }
         }
     }

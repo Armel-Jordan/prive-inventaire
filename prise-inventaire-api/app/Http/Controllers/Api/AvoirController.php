@@ -139,7 +139,7 @@ class AvoirController extends Controller
         return $this->executer(function () use ($avoir) {
             $this->notes->supprimer($avoir);
 
-            return response()->json(['message' => 'Note de crédit supprimée.']);
+            return response()->json(['message' => __('Note de crédit supprimée.')]);
         });
     }
 
@@ -158,7 +158,7 @@ class AvoirController extends Controller
         ]);
         $donnees['lignes'] = array_values(array_filter($donnees['lignes'], fn (array $l) => (int) $l['quantite'] > 0));
         if ($donnees['lignes'] === []) {
-            abort(response()->json(['message' => 'Indiquez au moins une quantité à créditer.', 'errors' => ['lignes' => ['Indiquez au moins une quantité à créditer.']]], 422));
+            abort(response()->json(['message' => __('Indiquez au moins une quantité à créditer.'), 'errors' => ['lignes' => [__('Indiquez au moins une quantité à créditer.')]]], 422));
         }
 
         return $donnees;

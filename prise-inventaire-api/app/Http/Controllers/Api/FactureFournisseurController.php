@@ -87,7 +87,7 @@ class FactureFournisseurController extends Controller
             $alignees = $this->factures->alignerCouts($facture);
 
             return response()->json([
-                'message' => $alignees > 0 ? "{$alignees} coût(s) de réception aligné(s) sur la facture." : 'Les coûts des réceptions correspondent déjà à la facture.',
+                'message' => $alignees > 0 ? __(':nombre coût(s) de réception aligné(s) sur la facture.', ['nombre' => $alignees]) : __('Les coûts des réceptions correspondent déjà à la facture.'),
                 'facture' => $this->presenter($facture->fresh($this->factures->relations())),
             ]);
         });

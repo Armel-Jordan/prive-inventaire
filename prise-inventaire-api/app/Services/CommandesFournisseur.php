@@ -20,7 +20,7 @@ class CommandesFournisseur
             // Verrou : deux validations simultanées (bouton et courriel) n'inscrivent pas deux fois les prix.
             $commande = ComFourEntete::query()->lockForUpdate()->findOrFail($commande->getKey());
             if ($commande->statut !== ComFourEntete::STATUT_BROUILLON) {
-                throw ValidationException::withMessages(['statut' => 'Seules les commandes en brouillon peuvent être validées.']);
+                throw ValidationException::withMessages(['statut' => __('Seules les commandes en brouillon peuvent être validées.')]);
             }
 
             $commande->update(['statut' => ComFourEntete::STATUT_ENVOYEE, 'envoyee_le' => now(), 'envoyee_par' => $auteur]);

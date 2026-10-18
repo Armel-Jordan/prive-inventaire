@@ -106,7 +106,7 @@ class AcompteController extends Controller
         return $this->executer(function () use ($acompte) {
             $this->acomptes->supprimer($acompte);
 
-            return response()->json(['message' => 'Acompte supprimé.']);
+            return response()->json(['message' => __('Acompte supprimé.')]);
         });
     }
 

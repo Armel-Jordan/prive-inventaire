@@ -14,6 +14,9 @@ class DefinirLangue
 {
     public const LANGUES = ['fr', 'en'];
 
+    /** Langue de l'application quand l'écran n'en donne pas, et hors requête (tâches planifiées, files d'attente). */
+    public const PAR_DEFAUT = 'fr';
+
     public function handle(Request $request, Closure $next): Response
     {
         app()->setLocale($this->langue($request));
@@ -31,6 +34,6 @@ class DefinirLangue
             }
         }
 
-        return 'fr';
+        return self::PAR_DEFAUT;
     }
 }

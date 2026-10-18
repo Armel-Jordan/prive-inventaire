@@ -40,7 +40,7 @@ class Rapprochements
     public function commencer(CompteBancaire $compte, array $donnees, ?int $auteur): RapprochementBancaire
     {
         if (! $compte->compte_comptable_id) {
-            throw new DomainException("Reliez d'abord le compte bancaire « {$compte->nom} » à son compte comptable.");
+            throw new DomainException(__("Reliez d'abord le compte bancaire « :nom » à son compte comptable.", ['nom' => $compte->nom]));
         }
 
         return DB::transaction(function () use ($compte, $donnees, $auteur) {
@@ -48,7 +48,7 @@ class Rapprochements
             CompteBancaire::query()->whereKey($compte->id)->lockForUpdate()->first();
             $enCours = RapprochementBancaire::query()->where('compte_bancaire_id', $compte->id)->where('statut', RapprochementBancaire::EN_COURS)->first();
             if ($enCours) {
-                throw new DomainException("Un rapprochement est déjà en cours pour ce compte (relevé du {$enCours->date_releve->format('d/m/Y')}).");
+                throw new DomainException(__('Un rapprochement est déjà en cours pour ce compte (relevé du :date).', ['date' => $enCours->date_releve->format('d/m/Y')]));
             }
             $dernier = $this->dernierTermine($compte);
             $date = Carbon::parse($donnees['date_releve'])->toDateString();
@@ -154,7 +154,7 @@ class Rapprochements
                 $lignes = $lignes->where('rapprochement_id', $rapprochement->id);
             }
             if ($lignes->count() !== count(array_unique($ids))) {
-                throw ValidationException::withMessages(['lignes' => 'Choisissez des mouvements de ce compte, datés au plus tard du relevé et pas déjà pointés ailleurs.']);
+                throw ValidationException::withMessages(['lignes' => __('Choisissez des mouvements de ce compte, datés au plus tard du relevé et pas déjà pointés ailleurs.')]);
             }
             $lignes->update(['rapprochement_id' => $pointee ? $rapprochement->id : null]);
         });
@@ -185,7 +185,7 @@ class Rapprochements
         $this->exigerEnCours($rapprochement);
         $resume = $this->detail($rapprochement)['resume'];
         if (abs($resume['ecart']) > self::TOLERANCE) {
-            throw new DomainException("L'écart avec le relevé doit être nul pour terminer le rapprochement : ".number_format($resume['ecart'], 2, ',', ' ').'.');
+            throw new DomainException(__("L'écart avec le relevé doit être nul pour terminer le rapprochement : :ecart.", ['ecart' => number_format($resume['ecart'], 2, ',', ' ')]));
         }
         $rapprochement->update(['statut' => RapprochementBancaire::TERMINE, 'termine_le' => now(), 'termine_par' => $auteur]);
 
@@ -196,14 +196,14 @@ class Rapprochements
     public function rouvrir(RapprochementBancaire $rapprochement): RapprochementBancaire
     {
         if ($rapprochement->statut !== RapprochementBancaire::TERMINE) {
-            throw new DomainException("Ce rapprochement n'est pas terminé.");
+            throw new DomainException(__("Ce rapprochement n'est pas terminé."));
         }
         $autres = RapprochementBancaire::query()->where('compte_bancaire_id', $rapprochement->compte_bancaire_id)->whereKeyNot($rapprochement->id);
         if ((clone $autres)->where('statut', RapprochementBancaire::EN_COURS)->exists()) {
-            throw new DomainException('Un autre rapprochement est en cours pour ce compte : terminez-le ou supprimez-le d\'abord.');
+            throw new DomainException(__("Un autre rapprochement est en cours pour ce compte : terminez-le ou supprimez-le d'abord."));
         }
         if ((clone $autres)->where('date_releve', '>', $rapprochement->date_releve->toDateString())->exists()) {
-            throw new DomainException('Seul le dernier rapprochement terminé du compte se rouvre.');
+            throw new DomainException(__('Seul le dernier rapprochement terminé du compte se rouvre.'));
         }
         $rapprochement->update(['statut' => RapprochementBancaire::EN_COURS, 'termine_le' => null, 'termine_par' => null]);
 
@@ -231,7 +231,10 @@ class Rapprochements
             ->join('rapprochements_bancaires as r', 'r.id', '=', 'ecritures_comptables_lignes.rapprochement_id')
             ->value('r.date_releve');
         if ($date) {
-            throw new DomainException("{$document} : son mouvement est pointé dans le rapprochement bancaire du ".Carbon::parse($date)->format('d/m/Y').' ; retirez-le d\'abord du rapprochement.');
+            throw new DomainException(__(":document : son mouvement est pointé dans le rapprochement bancaire du :date ; retirez-le d'abord du rapprochement.", [
+                'document' => $document,
+                'date' => Carbon::parse($date)->format('d/m/Y'),
+            ]));
         }
     }
 
@@ -277,14 +280,14 @@ class Rapprochements
     private function verifierDate(string $date, ?RapprochementBancaire $dernier): void
     {
         if ($dernier && $date <= $dernier->date_releve->toDateString()) {
-            throw ValidationException::withMessages(['date_releve' => 'Le relevé doit suivre celui du dernier rapprochement terminé ('.$dernier->date_releve->format('d/m/Y').').']);
+            throw ValidationException::withMessages(['date_releve' => __('Le relevé doit suivre celui du dernier rapprochement terminé (:date).', ['date' => $dernier->date_releve->format('d/m/Y')])]);
         }
     }
 
     private function exigerEnCours(RapprochementBancaire $rapprochement): void
     {
         if ($rapprochement->statut !== RapprochementBancaire::EN_COURS) {
-            throw new DomainException('Ce rapprochement est terminé : rouvrez-le pour le modifier.');
+            throw new DomainException(__('Ce rapprochement est terminé : rouvrez-le pour le modifier.'));
         }
     }
 }

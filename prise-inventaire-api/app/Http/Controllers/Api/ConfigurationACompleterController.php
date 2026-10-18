@@ -67,12 +67,12 @@ class ConfigurationACompleterController extends Controller
     {
         $tache = $this->tache($cle);
         if ($tache['obligatoire']) {
-            return response()->json(['message' => 'Un réglage obligatoire ne peut pas être ignoré.'], 422);
+            return response()->json(['message' => __('Un réglage obligatoire ne peut pas être ignoré.')], 422);
         }
 
         $raison = $request->validate(
             ['raison' => ['required', 'string', 'max:255']],
-            ['raison.required' => 'Indiquez pourquoi ce réglage ne vous concerne pas.'],
+            ['raison.required' => __('Indiquez pourquoi ce réglage ne vous concerne pas.')],
         )['raison'];
         ConfigurationTacheIgnoree::updateOrCreate(['cle' => $cle], ['raison' => trim($raison), 'ignore_par' => $request->user()?->id]);
 
@@ -94,6 +94,6 @@ class ConfigurationACompleterController extends Controller
                 return $taches[$cle];
             }
         }
-        abort(404, 'Réglage inconnu.');
+        abort(404, __('Réglage inconnu.'));
     }
 }

@@ -95,14 +95,14 @@ class Encaissements
             ->map(fn (array $ligne) => ['facture_id' => (int) $ligne['facture_id'], 'montant' => round((float) $ligne['montant'], 2)])
             ->filter(fn (array $ligne) => $ligne['montant'] > 0)->values();
         if ($lignes->pluck('facture_id')->duplicates()->isNotEmpty()) {
-            throw ValidationException::withMessages(['lignes' => 'Une facture ne figure qu\'une fois dans un encaissement.']);
+            throw ValidationException::withMessages(['lignes' => __("Une facture ne figure qu'une fois dans un encaissement.")]);
         }
         $applique = round($lignes->sum('montant'), 2);
         $ecart = round($montant - $applique, 2);
         $escompte = 0.0;
         if ($ecart < -self::TOLERANCE) {
             if (! ($donnees['escompte'] ?? false)) {
-                throw ValidationException::withMessages(['montant' => 'La répartition dépasse de '.$this->montant(-$ecart).' le montant reçu : réduisez-la, ou accordez la différence en escompte.']);
+                throw ValidationException::withMessages(['montant' => __('La répartition dépasse de :montant le montant reçu : réduisez-la, ou accordez la différence en escompte.', ['montant' => $this->montant(-$ecart)])]);
             }
             $escompte = -$ecart;
         }
@@ -182,7 +182,7 @@ class Encaissements
     public function modifier(Encaissement $encaissement, array $donnees): Encaissement
     {
         if ($encaissement->statut === Encaissement::ANNULE) {
-            throw new DomainException("L'encaissement {$encaissement->numero} est annulé : il ne se modifie plus.");
+            throw new DomainException(__("L'encaissement :numero est annulé : il ne se modifie plus.", ['numero' => $encaissement->numero]));
         }
 
         return DB::transaction(function () use ($encaissement, $donnees) {
@@ -207,12 +207,12 @@ class Encaissements
         return DB::transaction(function () use ($encaissement, $motif, $auteur) {
             $encaissement = Encaissement::query()->whereKey($encaissement->id)->lockForUpdate()->firstOrFail();
             if ($encaissement->statut === Encaissement::ANNULE) {
-                throw new DomainException("L'encaissement {$encaissement->numero} est déjà annulé.");
+                throw new DomainException(__("L'encaissement :numero est déjà annulé.", ['numero' => $encaissement->numero]));
             }
-            app(Rapprochements::class)->verifierDocument('encaissement', $encaissement->id, "L'encaissement {$encaissement->numero}");
+            app(Rapprochements::class)->verifierDocument('encaissement', $encaissement->id, __("L'encaissement :numero", ['numero' => $encaissement->numero]));
             $acompte = $encaissement->acompte_id ? Acompte::query()->whereKey($encaissement->acompte_id)->lockForUpdate()->first() : null;
             if ($acompte && ((float) $acompte->montant_applique > 0 || (float) $acompte->montant_rembourse > 0)) {
-                throw new DomainException("Le surplus de l'encaissement {$encaissement->numero}, laissé en acompte, a déjà été appliqué ou remboursé : l'encaissement ne s'annule plus.");
+                throw new DomainException(__("Le surplus de l'encaissement :numero, laissé en acompte, a déjà été appliqué ou remboursé : l'encaissement ne s'annule plus.", ['numero' => $encaissement->numero]));
             }
             $factures = Facture::query()->whereIn('id', $encaissement->lignes()->pluck('facture_id'))->orderBy('id')->lockForUpdate()->get();
 
@@ -254,19 +254,25 @@ class Encaissements
     private function verifierFacture(?Facture $facture, Client $client, ?string $devise, float $montant, string $date): void
     {
         if (! $facture || $facture->client_id !== $client->id) {
-            throw ValidationException::withMessages(['lignes' => 'Choisissez des factures du client.']);
+            throw ValidationException::withMessages(['lignes' => __('Choisissez des factures du client.')]);
         }
         if (! in_array($facture->statut, Acomptes::FACTURES_DUES, true)) {
-            throw ValidationException::withMessages(['lignes' => "La facture {$facture->numero} ne reste pas due."]);
+            throw ValidationException::withMessages(['lignes' => __('La facture :numero ne reste pas due.', ['numero' => $facture->numero])]);
         }
         if (! DevisesVente::memeDevise($facture->devise, $devise)) {
-            throw ValidationException::withMessages(['lignes' => "La facture {$facture->numero} n'est pas dans la devise de l'encaissement."]);
+            throw ValidationException::withMessages(['lignes' => __("La facture :numero n'est pas dans la devise de l'encaissement.", ['numero' => $facture->numero])]);
         }
         if ($montant > (float) $facture->reste_a_payer + self::TOLERANCE) {
-            throw ValidationException::withMessages(['lignes' => "Le montant dépasse le reste à payer de la facture {$facture->numero} ({$this->montant($facture->reste_a_payer)})."]);
+            throw ValidationException::withMessages(['lignes' => __('Le montant dépasse le reste à payer de la facture :numero (:montant).', [
+                'numero' => $facture->numero,
+                'montant' => $this->montant($facture->reste_a_payer),
+            ])]);
         }
         if ($date < $facture->date_facture->toDateString()) {
-            throw ValidationException::withMessages(['date_encaissement' => "L'encaissement ne peut pas précéder la facture {$facture->numero} ({$facture->date_facture->format('d/m/Y')})."]);
+            throw ValidationException::withMessages(['date_encaissement' => __("L'encaissement ne peut pas précéder la facture :numero (:date).", [
+                'numero' => $facture->numero,
+                'date' => $facture->date_facture->format('d/m/Y'),
+            ])]);
         }
     }
 
@@ -304,14 +310,14 @@ class Encaissements
         }
 
         return CompteBancaire::query()->where('actif', true)->find((int) $id)
-            ?? throw ValidationException::withMessages(['compte_bancaire_id' => 'Choisissez un compte bancaire actif.']);
+            ?? throw ValidationException::withMessages(['compte_bancaire_id' => __('Choisissez un compte bancaire actif.')]);
     }
 
     private function numero(int $tenantId): string
     {
         $config = Configuration::pourEntite('encaissement', $tenantId);
         if (! $config?->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des encaissements (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des encaissements (Configuration → Numérotation).'));
         }
 
         return Configuration::consommerNumero('encaissement', $tenantId);

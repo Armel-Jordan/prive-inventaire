@@ -41,9 +41,9 @@ class RolePermissionController extends Controller
     private function roleModifiable(int $id): object
     {
         $role = $this->rolesVisibles()->find($id);
-        abort_if(! $role, 404, 'Rôle non trouvé');
+        abort_if(! $role, 404, __('Rôle non trouvé'));
         abort_if($role->is_system || $role->tenant_id === null, 403,
-            'Les rôles système sont communs à toutes les entreprises : créez un rôle personnalisé pour adapter les droits.');
+            __('Les rôles système sont communs à toutes les entreprises : créez un rôle personnalisé pour adapter les droits.'));
 
         return $role;
     }
@@ -56,7 +56,7 @@ class RolePermissionController extends Controller
                 $reserve = DB::table('roles_custom')->whereNull('tenant_id')->where('is_system', true)
                     ->whereRaw('LOWER(nom) = ?', [mb_strtolower(trim((string) $valeur))])->exists();
                 if ($reserve) {
-                    $echec('Ce nom est réservé à un rôle système.');
+                    $echec(__('Ce nom est réservé à un rôle système.'));
                 }
             },
         ];
@@ -133,7 +133,7 @@ class RolePermissionController extends Controller
         foreach ($actions as $code => $accorde) {
             [$module, $action] = array_pad(explode('.', (string) $code, 2), 2, '');
             if (! Permissions::existe((string) $code) || in_array($action, Permissions::CRUD, true) || ! ($accorde === null || is_bool($accorde))) {
-                throw ValidationException::withMessages(['actions' => "Permission inconnue : {$code}."]);
+                throw ValidationException::withMessages(['actions' => __('Permission inconnue : :code.', ['code' => $code])]);
             }
             if ($accorde === null) {
                 DB::table('role_actions')->where('role_id', $roleId)->where('permission', $code)->delete();
@@ -163,7 +163,7 @@ class RolePermissionController extends Controller
         $role = $this->rolesVisibles()->find($id);
 
         if (! $role) {
-            return response()->json(['message' => 'Rôle non trouvé'], 404);
+            return response()->json(['message' => __('Rôle non trouvé')], 404);
         }
 
         return response()->json($this->presenterRole($role));
@@ -197,7 +197,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Rôle créé avec succès',
+            'message' => __('Rôle créé avec succès'),
             'role_id' => $roleId,
         ], 201);
     }
@@ -231,7 +231,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Rôle mis à jour avec succès',
+            'message' => __('Rôle mis à jour avec succès'),
         ]);
     }
 
@@ -243,7 +243,7 @@ class RolePermissionController extends Controller
         $usersCount = $this->comptesDuRole($id);
         if ($usersCount > 0) {
             return response()->json([
-                'message' => "Impossible de supprimer ce rôle car $usersCount utilisateur(s) l'utilisent : désactivez-le plutôt.",
+                'message' => __("Impossible de supprimer ce rôle car :nombre utilisateur(s) l'utilisent : désactivez-le plutôt.", ['nombre' => $usersCount]),
             ], 400);
         }
 
@@ -253,7 +253,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Rôle supprimé avec succès',
+            'message' => __('Rôle supprimé avec succès'),
         ]);
     }
 
@@ -315,7 +315,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $request->role_id ? 'Rôle assigné avec succès' : 'Rôle personnalisé retiré',
+            'message' => $request->role_id ? __('Rôle assigné avec succès') : __('Rôle personnalisé retiré'),
         ]);
     }
 }

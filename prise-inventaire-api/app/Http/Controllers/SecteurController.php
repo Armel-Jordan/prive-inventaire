@@ -36,7 +36,7 @@ class SecteurController extends Controller
             $desactive = Secteur::where('code', $valeur)->where('actif', false)
                 ->when($ignorer, fn ($q) => $q->whereKeyNot($ignorer))->first();
             if ($desactive) {
-                $echec("Le code « {$valeur} » appartient au secteur désactivé « {$desactive->nom} » : réactivez-le (filtre « Désactivés » de la liste des secteurs).");
+                $echec(__('Le code « :code » appartient au secteur désactivé « :nom » : réactivez-le (filtre « Désactivés » de la liste des secteurs).', ['code' => $valeur, 'nom' => $desactive->nom]));
             }
         };
     }
@@ -67,7 +67,7 @@ class SecteurController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Le code est requis (pas de configuration auto-increment)',
+                    'message' => __('Le code est requis (pas de configuration auto-increment)'),
                 ], 422);
             }
         }
@@ -82,7 +82,7 @@ class SecteurController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Secteur créé avec succès',
+            'message' => __('Secteur créé avec succès'),
             'secteur' => $secteur->load('entrepot:id,code,nom'),
         ], 201);
     }
@@ -128,7 +128,7 @@ class SecteurController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Secteur modifié avec succès',
+            'message' => __('Secteur modifié avec succès'),
             'secteur' => $secteur->load('entrepot:id,code,nom'),
         ]);
     }
@@ -141,7 +141,7 @@ class SecteurController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Secteur désactivé avec succès',
+            'message' => __('Secteur désactivé avec succès'),
         ]);
     }
 
@@ -159,7 +159,7 @@ class SecteurController extends Controller
         if (! $secteur) {
             return response()->json([
                 'valide' => false,
-                'message' => 'QR code secteur non reconnu',
+                'message' => __('QR code secteur non reconnu'),
             ], 404);
         }
 
@@ -224,7 +224,7 @@ class SecteurController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'QR code mis à jour',
+            'message' => __('QR code mis à jour'),
             'secteur' => $secteur,
         ]);
     }

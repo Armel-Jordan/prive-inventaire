@@ -61,7 +61,7 @@ class TenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Tenant créé avec succès',
+            'message' => __('Tenant créé avec succès'),
             'tenant' => $tenant,
             'admin' => [
                 'id' => $admin->id,
@@ -95,7 +95,7 @@ class TenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Tenant modifié avec succès',
+            'message' => __('Tenant modifié avec succès'),
             'tenant' => $tenant,
         ]);
     }
@@ -108,7 +108,7 @@ class TenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Tenant désactivé avec succès',
+            'message' => __('Tenant désactivé avec succès'),
         ]);
     }
 }

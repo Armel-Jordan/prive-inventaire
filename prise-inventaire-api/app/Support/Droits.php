@@ -338,7 +338,13 @@ class Droits
         'DELETE api/verrous/{id}' => ['verrous', 'liberer'],
     ];
 
-    private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];
+    /** Verbe de chaque droit de base dans le message de refus, par langue des messages. */
+    private const VERBES = [
+        'voir' => ['fr' => 'consulter', 'en' => 'view'],
+        'creer' => ['fr' => 'créer', 'en' => 'create'],
+        'modifier' => ['fr' => 'modifier', 'en' => 'edit'],
+        'supprimer' => ['fr' => 'supprimer', 'en' => 'delete'],
+    ];
 
     /** Permissions effectives déjà calculées pendant la requête : id du compte => code => accordée. */
     private array $memo = [];
@@ -508,19 +514,24 @@ class Droits
         };
     }
 
+    /**
+     * Message du refus dans la langue des messages (voir App\Http\Middleware\DefinirLangue) : en anglais, les libellés
+     * anglais du module et de l'action (App\Support\Permissions) ; sinon les libellés français.
+     */
     public function messageRefus(string $module, string $action): string
     {
-        $libelle = Permissions::libelle($module);
-        $nommee = Permissions::actions($module)[$action]['fr'] ?? null;
+        $langue = app()->getLocale() === 'en' ? 'en' : 'fr';
+        $libelle = Permissions::libelle($module, $langue);
+        $nommee = Permissions::actions($module)[$action][$langue] ?? null;
         if ($nommee !== null) {
-            return "Droit insuffisant : votre rôle ne permet pas de faire « {$nommee} » ({$libelle}).";
+            return __('Droit insuffisant : votre rôle ne permet pas de faire « :action » (:module).', ['action' => $nommee, 'module' => $libelle]);
         }
 
-        return "Droit insuffisant : votre rôle ne permet pas de {$this->verbe($action)} dans « {$libelle} ».";
+        return __('Droit insuffisant : votre rôle ne permet pas de :verbe dans « :module ».', ['verbe' => $this->verbe($action, $langue), 'module' => $libelle]);
     }
 
-    private function verbe(string $action): string
+    private function verbe(string $action, string $langue): string
     {
-        return self::VERBES[$action] ?? $action;
+        return self::VERBES[$action][$langue] ?? $action;
     }
 }

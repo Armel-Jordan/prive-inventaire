@@ -48,6 +48,6 @@ class ProduitLienController extends Controller
         $produit = ProduitTenant::query()->findOrFail($produit);
         $this->liens->retirer(ProduitLien::query()->where('produit_id', $produit->id)->findOrFail($id));
 
-        return response()->json(['message' => 'Lien retiré.']);
+        return response()->json(['message' => __('Lien retiré.')]);
     }
 }

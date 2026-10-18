@@ -42,7 +42,7 @@ class ProduitCodeBarreController extends Controller
         $produit = ProduitTenant::query()->findOrFail($produit);
         $this->codes->supprimer(ProduitCodeBarre::query()->where('produit_id', $produit->id)->findOrFail($id));
 
-        return response()->json(['message' => 'Code-barres retiré.']);
+        return response()->json(['message' => __('Code-barres retiré.')]);
     }
 
     private function valider(Request $request): array

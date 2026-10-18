@@ -43,7 +43,7 @@ class AccesCompteController extends Controller
         $exceptions = [];
         foreach ($donnees['exceptions'] as $code => $accorde) {
             if (! Permissions::existe((string) $code) || ! is_bool($accorde)) {
-                throw ValidationException::withMessages(['exceptions' => "Permission inconnue : {$code}."]);
+                throw ValidationException::withMessages(['exceptions' => __('Permission inconnue : :code.', ['code' => $code])]);
             }
             $exceptions[$code] = $accorde;
         }
@@ -64,7 +64,7 @@ class AccesCompteController extends Controller
 
         $this->droits->oublier();
 
-        return response()->json($this->presenter($compte->fresh()) + ['message' => 'Accès enregistrés.']);
+        return response()->json($this->presenter($compte->fresh()) + ['message' => __('Accès enregistrés.')]);
     }
 
     private function compte(int $id): AdminUser

@@ -78,18 +78,20 @@ class ReceptionController extends Controller
         // Vérifié avant les quantités, pour ne rien révéler d'une ligne d'une autre entreprise.
         $commande = $ligneCommande->commande;
         if (! $commande) {
-            return response()->json(['message' => 'Ligne de commande introuvable.'], 404);
+            return response()->json(['message' => __('Ligne de commande introuvable.')], 404);
         }
 
         $quantiteRestante = $ligneCommande->quantite_commandee - $ligneCommande->quantite_recue;
         if ($validated['quantite_recue'] > $quantiteRestante) {
             return response()->json([
-                'message' => "La quantité reçue ({$validated['quantite_recue']}) dépasse la quantité restante ({$quantiteRestante}).",
+                'message' => __('La quantité reçue (:recue) dépasse la quantité restante (:restante).', [
+                    'recue' => $validated['quantite_recue'], 'restante' => $quantiteRestante,
+                ]),
             ], 422);
         }
         if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
             return response()->json([
-                'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
+                'message' => __('Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.'),
             ], 422);
         }
 
@@ -103,7 +105,7 @@ class ReceptionController extends Controller
             ], $commande->tenant_id, $request->user());
 
             return response()->json([
-                'message' => 'Réception enregistrée avec succès.',
+                'message' => __('Réception enregistrée avec succès.'),
                 'reception' => $resultat['lignes'][0]->load(['ligneCommande.produit', 'secteur']),
                 'document' => $resultat['reception'],
             ], 201);
@@ -143,7 +145,7 @@ class ReceptionController extends Controller
             $commande = ComFourEntete::findOrFail($validated['commande_id']);
             if (! in_array($commande->statut, [ComFourEntete::STATUT_ENVOYEE, ComFourEntete::STATUT_PARTIELLE])) {
                 return response()->json([
-                    'message' => 'Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.',
+                    'message' => __('Les réceptions ne sont possibles que pour les commandes envoyées ou partiellement reçues.'),
                 ], 422);
             }
         }
@@ -151,9 +153,12 @@ class ReceptionController extends Controller
         return $this->executer(function () use ($validated, $request) {
             $resultat = $this->receptions->enregistrer($validated, $request->attributes->get('tenant')->id, $request->user());
             $cloturees = count($resultat['cloturees']);
-            $message = $resultat['reception']
-                ? "Réception {$resultat['reception']->numero} enregistrée : ".count($resultat['lignes']).' ligne(s)'.($cloturees ? ", {$cloturees} ligne(s) clôturée(s)" : '').'.'
-                : "{$cloturees} ligne(s) clôturée(s).";
+            $nombres = ['numero' => $resultat['reception']?->numero, 'lignes' => count($resultat['lignes']), 'cloturees' => $cloturees];
+            $message = match (true) {
+                $resultat['reception'] && $cloturees > 0 => __('Réception :numero enregistrée : :lignes ligne(s), :cloturees ligne(s) clôturée(s).', $nombres),
+                (bool) $resultat['reception'] => __('Réception :numero enregistrée : :lignes ligne(s).', $nombres),
+                default => __(':cloturees ligne(s) clôturée(s).', $nombres),
+            };
 
             return response()->json([
                 'message' => $message,
@@ -261,7 +266,7 @@ class ReceptionController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         if ($commande->tenant_id !== $tenantId) {
-            return response()->json(['message' => 'Non autorisé.'], 403);
+            return response()->json(['message' => __('Non autorisé.')], 403);
         }
 
         $lignes = $commande->lignes()

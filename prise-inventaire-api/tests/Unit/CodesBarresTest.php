@@ -3,9 +3,9 @@
 namespace Tests\Unit;
 
 use App\Support\CodesBarres;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
-/** Types de codes-barres : détection et clés de contrôle des EAN-13, EAN-8 et UPC-A. */
+/** Types de codes-barres : détection et clés de contrôle des EAN-13, EAN-8 et UPC-A (messages traduits : l'application est démarrée). */
 class CodesBarresTest extends TestCase
 {
     public function test_detection_et_cles(): void

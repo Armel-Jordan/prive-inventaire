@@ -79,9 +79,11 @@ class BudgetController extends Controller
 
         return $this->executer(function () use ($source, $cible, $donnees, $request) {
             $resultat = $this->budgets->copier($source, $cible, (float) ($donnees['pourcentage'] ?? 0), $request->boolean('remplacer'), $request->user()?->id);
-            $message = "Budget de l'exercice {$source->libelle} copié : {$resultat['cellules']} cellule(s), {$resultat['comptes']} compte(s).";
+            $message = __("Budget de l'exercice :exercice copié : :cellules cellule(s), :comptes compte(s).", [
+                'exercice' => $source->libelle, 'cellules' => $resultat['cellules'], 'comptes' => $resultat['comptes'],
+            ]);
             if ($resultat['ignorees']) {
-                $message .= " {$resultat['ignorees']} montant(s) hors des dates de l'exercice ignoré(s).";
+                $message .= ' '.__(":ignorees montant(s) hors des dates de l'exercice ignoré(s).", ['ignorees' => $resultat['ignorees']]);
             }
 
             return response()->json(['message' => $message, 'resultat' => $resultat] + $this->budgets->feuille($cible));
@@ -99,7 +101,9 @@ class BudgetController extends Controller
         $nombre = $this->budgets->marquerComptes(array_map('intval', $donnees['comptes']), (bool) $donnees['budgetable']);
 
         return response()->json([
-            'message' => $donnees['budgetable'] ? "{$nombre} compte(s) ajouté(s) au budget." : "{$nombre} compte(s) retiré(s) du budget.",
+            'message' => $donnees['budgetable']
+                ? __(':nombre compte(s) ajouté(s) au budget.', ['nombre' => $nombre])
+                : __(':nombre compte(s) retiré(s) du budget.', ['nombre' => $nombre]),
             'modifies' => $nombre,
         ]);
     }
@@ -118,7 +122,7 @@ class BudgetController extends Controller
         ]);
         $exercice = isset($donnees['exercice_id']) ? ExerciceComptable::query()->findOrFail($donnees['exercice_id']) : $this->budgets->exerciceParDefaut();
         if (! $exercice) {
-            return response()->json(['message' => "Créez d'abord un exercice comptable."], 422);
+            return response()->json(['message' => __("Créez d'abord un exercice comptable.")], 422);
         }
 
         return $this->executer(function () use ($exercice, $donnees) {

@@ -37,7 +37,7 @@ class DevisEnLigneController extends Controller
         $donnees = $request->validate([
             'nom' => ['required', 'string', 'max:150'],
             'commentaire' => ['nullable', 'string', 'max:2000'],
-        ], ['nom.required' => 'Indiquez votre nom pour accepter le devis.']);
+        ], ['nom.required' => __('Indiquez votre nom pour accepter le devis.')]);
 
         return $this->repondre($jeton, true, $donnees);
     }
@@ -63,11 +63,11 @@ class DevisEnLigneController extends Controller
 
         return $refus
             ? response()->json(['message' => $refus] + $this->reponses->presenter($devis), 422)
-            : response()->json(['message' => $accepte ? 'Merci : le devis est accepté.' : 'Votre refus est enregistré.'] + $this->reponses->presenter($devis));
+            : response()->json(['message' => $accepte ? __('Merci : le devis est accepté.') : __('Votre refus est enregistré.')] + $this->reponses->presenter($devis));
     }
 
     private function introuvable(): JsonResponse
     {
-        return response()->json(['message' => 'Ce lien ne correspond à aucun devis.'], 404);
+        return response()->json(['message' => __('Ce lien ne correspond à aucun devis.')], 404);
     }
 }

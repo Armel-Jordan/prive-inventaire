@@ -63,7 +63,7 @@ class MotDePasseController extends Controller
             defer(fn () => Mail::to($utilisateur->email)->send($courriel));
         }
 
-        return response()->json(['message' => 'Si un compte correspond à ces informations, un courriel avec un lien de réinitialisation vient d\'être envoyé.']);
+        return response()->json(['message' => __("Si un compte correspond à ces informations, un courriel avec un lien de réinitialisation vient d'être envoyé.")]);
     }
 
     /** Nouveau mot de passe à partir du lien ; toutes les sessions ouvertes du compte sont fermées. */
@@ -80,7 +80,7 @@ class MotDePasseController extends Controller
             ->first();
         $utilisateur = $demande?->utilisateur;
         if (! $utilisateur || ! $utilisateur->actif || ! $utilisateur->tenant?->actif) {
-            return response()->json(['message' => 'Ce lien n\'est plus valable : demandez-en un nouveau.'], 422);
+            return response()->json(['message' => __("Ce lien n'est plus valable : demandez-en un nouveau.")], 422);
         }
 
         DB::transaction(function () use ($utilisateur, $donnees) {
@@ -89,7 +89,7 @@ class MotDePasseController extends Controller
             $utilisateur->tokens()->delete();
         });
 
-        return response()->json(['message' => 'Mot de passe modifié. Vous pouvez vous connecter.']);
+        return response()->json(['message' => __('Mot de passe modifié. Vous pouvez vous connecter.')]);
     }
 
     /** Changement depuis le compte : mot de passe actuel exigé ; les autres sessions sont fermées. */
@@ -102,7 +102,7 @@ class MotDePasseController extends Controller
         ], $this->messages());
 
         if (! Hash::check($donnees['mot_de_passe_actuel'], $utilisateur->password)) {
-            throw ValidationException::withMessages(['mot_de_passe_actuel' => 'Mot de passe actuel incorrect.']);
+            throw ValidationException::withMessages(['mot_de_passe_actuel' => __('Mot de passe actuel incorrect.')]);
         }
 
         $utilisateur->update(['password' => $donnees['password']]);
@@ -111,7 +111,7 @@ class MotDePasseController extends Controller
             ->when($courant instanceof PersonalAccessToken ? $courant->getKey() : null, fn ($q, $id) => $q->whereKeyNot($id))
             ->delete();
 
-        return response()->json(['message' => 'Mot de passe modifié. Vos autres sessions ont été fermées.']);
+        return response()->json(['message' => __('Mot de passe modifié. Vos autres sessions ont été fermées.')]);
     }
 
     private function reglesNouveauMotDePasse(): array
@@ -122,9 +122,9 @@ class MotDePasseController extends Controller
     private function messages(): array
     {
         return [
-            'password.min' => 'Le mot de passe doit contenir au moins :min caractères.',
-            'password.confirmed' => 'La confirmation ne correspond pas au mot de passe.',
-            'password.different' => 'Le nouveau mot de passe doit être différent de l\'actuel.',
+            'password.min' => __('Le mot de passe doit contenir au moins :min caractères.'),
+            'password.confirmed' => __('La confirmation ne correspond pas au mot de passe.'),
+            'password.different' => __("Le nouveau mot de passe doit être différent de l'actuel."),
         ];
     }
 

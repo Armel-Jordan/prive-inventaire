@@ -38,11 +38,11 @@ class Cheques
         $debourses = $this->debourses($ids);
         foreach ($debourses as $debourse) {
             $refus = match (true) {
-                $debourse->statut !== Debourse::VALIDE => "Le déboursé {$debourse->numero} est annulé.",
-                $debourse->mode !== 'cheque' => "Le déboursé {$debourse->numero} n'est pas payé par chèque.",
-                (float) $debourse->montant <= 0 => "Le déboursé {$debourse->numero} n'a pas de montant à payer.",
-                ! $debourse->reference && ! $debourse->compteBancaire => "Choisissez le compte bancaire du déboursé {$debourse->numero} : le chèque est tiré sur son chéquier.",
-                ! $debourse->reference && ! $debourse->compteBancaire->prochain_cheque => "Indiquez le prochain numéro de chèque du compte « {$debourse->compteBancaire->nom} » (Finance → Banque → Comptes).",
+                $debourse->statut !== Debourse::VALIDE => __('Le déboursé :numero est annulé.', ['numero' => $debourse->numero]),
+                $debourse->mode !== 'cheque' => __("Le déboursé :numero n'est pas payé par chèque.", ['numero' => $debourse->numero]),
+                (float) $debourse->montant <= 0 => __("Le déboursé :numero n'a pas de montant à payer.", ['numero' => $debourse->numero]),
+                ! $debourse->reference && ! $debourse->compteBancaire => __('Choisissez le compte bancaire du déboursé :numero : le chèque est tiré sur son chéquier.', ['numero' => $debourse->numero]),
+                ! $debourse->reference && ! $debourse->compteBancaire->prochain_cheque => __('Indiquez le prochain numéro de chèque du compte « :nom » (Finance → Banque → Comptes).', ['nom' => $debourse->compteBancaire->nom]),
                 default => null,
             };
             if ($refus) {
@@ -88,7 +88,7 @@ class Cheques
     {
         return $this->debourses($ids)->map(function (Debourse $debourse) use ($langue) {
             if ($debourse->mode !== 'cheque' || ! $debourse->reference || ! $debourse->cheque_imprime_le) {
-                throw ValidationException::withMessages(['debourses' => "Numérotez d'abord le chèque du déboursé {$debourse->numero}."]);
+                throw ValidationException::withMessages(['debourses' => __("Numérotez d'abord le chèque du déboursé :numero.", ['numero' => $debourse->numero])]);
             }
 
             return $this->cheque($debourse, $langue);
@@ -142,7 +142,7 @@ class Cheques
         $debourses = Debourse::query()->whereIn('id', $ids)->with(['fournisseur.adresses', 'compteBancaire', 'lignes.facture'])
             ->orderBy('date_debourse')->orderBy('id')->get();
         if ($debourses->count() !== count(array_unique($ids))) {
-            throw ValidationException::withMessages(['debourses' => 'Déboursé introuvable.']);
+            throw ValidationException::withMessages(['debourses' => __('Déboursé introuvable.')]);
         }
 
         return $debourses;

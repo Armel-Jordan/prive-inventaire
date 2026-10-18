@@ -183,7 +183,7 @@ class AbonnementsClients
     {
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['facture' => 'La numérotation automatique des factures doit être active pour facturer les abonnements.']);
+            throw ValidationException::withMessages(['facture' => __('La numérotation automatique des factures doit être active pour facturer les abonnements.')]);
         }
         $dues = AbonnementEcheance::query()
             ->aFacturer()->whereDate('date_prevue', '<=', $jusquau->toDateString())
@@ -218,7 +218,7 @@ class AbonnementsClients
                         }
                         $prix = $this->prixA($abonnement, $date, $devise);
                         if ($prix === null) {
-                            throw ValidationException::withMessages(['prix' => "Aucun prix pour le produit {$abonnement->produit?->numero} : fixez le prix de l'abonnement."]);
+                            throw ValidationException::withMessages(['prix' => __("Aucun prix pour le produit :numero : fixez le prix de l'abonnement.", ['numero' => $abonnement->produit?->numero])]);
                         }
                         $lignes[$echeance->id] = [
                             'produit_id' => $abonnement->produit_id,
@@ -270,7 +270,11 @@ class AbonnementsClients
         }
         $releves = $this->relevesDeLaPeriode($abonnement, $echeance->periode_debut, $echeance->periode_fin);
         if ($releves->isEmpty()) {
-            throw ValidationException::withMessages(['releve' => "Relevé manquant pour {$abonnement->produit?->numero} : période du {$echeance->periode_debut->format('d/m/Y')} au {$echeance->periode_fin->format('d/m/Y')}."]);
+            throw ValidationException::withMessages(['releve' => __('Relevé manquant pour :numero : période du :debut au :fin.', [
+                'numero' => $abonnement->produit?->numero,
+                'debut' => $echeance->periode_debut->format('d/m/Y'),
+                'fin' => $echeance->periode_fin->format('d/m/Y'),
+            ])]);
         }
 
         return max(0, (int) $releves->sum('quantite') - $abonnement->quantite_incluse);
@@ -297,10 +301,10 @@ class AbonnementsClients
     {
         $lignes = preg_split('/\r\n|\r|\n/', trim(preg_replace('/^\xEF\xBB\xBF/', '', $contenu)));
         if (! $lignes || trim($lignes[0]) === '') {
-            return ['importes' => 0, 'erreurs' => ['Le fichier est vide.']];
+            return ['importes' => 0, 'erreurs' => [__('Le fichier est vide.')]];
         }
         if (count($lignes) - 1 > self::MAX_RELEVES) {
-            return ['importes' => 0, 'erreurs' => ['Le fichier dépasse '.self::MAX_RELEVES.' relevés.']];
+            return ['importes' => 0, 'erreurs' => [__('Le fichier dépasse :max relevés.', ['max' => self::MAX_RELEVES])]];
         }
         $separateur = collect([';', "\t", ','])->sortByDesc(fn ($s) => substr_count($lignes[0], $s))->first();
         $alias = ['code_client' => 'client', 'no_client' => 'client', 'numero' => 'produit', 'no_produit' => 'produit', 'numero_produit' => 'produit',
@@ -308,7 +312,7 @@ class AbonnementsClients
         $normaliser = fn (string $v) => Str::of($v)->ascii()->lower()->trim()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_')->toString();
         $entetes = array_map(fn ($e) => $alias[$normaliser($e)] ?? $normaliser($e), str_getcsv($lignes[0], $separateur));
         if ($manquantes = array_diff(['client', 'produit', 'date', 'quantite'], $entetes)) {
-            return ['importes' => 0, 'erreurs' => ['Colonnes obligatoires absentes : '.implode(', ', $manquantes).'. Colonnes attendues : client;produit;date;quantite;note.']];
+            return ['importes' => 0, 'erreurs' => [__('Colonnes obligatoires absentes : :colonnes. Colonnes attendues : client;produit;date;quantite;note.', ['colonnes' => implode(', ', $manquantes)])]];
         }
 
         $clients = Client::query()->pluck('id', 'code');
@@ -326,28 +330,30 @@ class AbonnementsClients
             $clientId = $clients[trim($ligne['client'])] ?? null;
             $produitId = $produits[trim($ligne['produit'])] ?? null;
             $probleme = match (true) {
-                ! $clientId => "client « {$ligne['client']} » inconnu",
-                ! $produitId => "produit « {$ligne['produit']} » inconnu",
-                ! $date => "date « {$ligne['date']} » illisible (AAAA-MM-JJ ou JJ/MM/AAAA)",
-                ! preg_match('/^\d{1,9}$/', $quantite) => "quantité « {$quantite} » invalide (nombre entier)",
+                ! $clientId => __('client « :client » inconnu', ['client' => $ligne['client']]),
+                ! $produitId => __('produit « :produit » inconnu', ['produit' => $ligne['produit']]),
+                ! $date => __('date « :date » illisible (AAAA-MM-JJ ou JJ/MM/AAAA)', ['date' => $ligne['date']]),
+                ! preg_match('/^\d{1,9}$/', $quantite) => __('quantité « :quantite » invalide (nombre entier)', ['quantite' => $quantite]),
                 default => null,
             };
             if ($probleme) {
-                $erreurs[] = "Ligne {$rang} : {$probleme}.";
+                $erreurs[] = __('Ligne :rang : :probleme.', ['rang' => $rang, 'probleme' => $probleme]);
 
                 continue;
             }
             $abonnements = AbonnementClient::query()->where('client_id', $clientId)->where('produit_id', $produitId)->where('mode_quantite', 'releve')
                 ->whereDate('date_debut', '<=', $date->toDateString())->whereDate('date_fin', '>=', $date->toDateString())->get();
             if ($abonnements->count() !== 1) {
-                $erreurs[] = "Ligne {$rang} : ".($abonnements->isEmpty() ? 'aucun abonnement à l\'usage en cours à cette date pour ce client et ce produit.' : 'plusieurs abonnements à l\'usage en cours pour ce client et ce produit.');
+                $erreurs[] = __('Ligne :rang : :probleme.', ['rang' => $rang, 'probleme' => $abonnements->isEmpty()
+                    ? __("aucun abonnement à l'usage en cours à cette date pour ce client et ce produit")
+                    : __("plusieurs abonnements à l'usage en cours pour ce client et ce produit")]);
 
                 continue;
             }
             $releve = new AbonnementReleve(['abonnement_id' => $abonnements->first()->id, 'date_releve' => $date->toDateString(), 'quantite' => (int) $quantite,
                 'note' => mb_substr(trim($ligne['note'] ?? ''), 0, 255) ?: null, 'cree_par' => $auteur]);
             if ($this->releveFacture($releve)) {
-                $erreurs[] = "Ligne {$rang} : cette période est déjà facturée.";
+                $erreurs[] = __('Ligne :rang : :probleme.', ['rang' => $rang, 'probleme' => __('cette période est déjà facturée')]);
 
                 continue;
             }
@@ -389,10 +395,10 @@ class AbonnementsClients
     public function relier(AbonnementEcheance $echeance, Facture $facture): void
     {
         if ($echeance->facture_id || $echeance->rien_a_facturer) {
-            throw ValidationException::withMessages(['echeance' => 'Cette échéance est déjà reliée à une facture.']);
+            throw ValidationException::withMessages(['echeance' => __('Cette échéance est déjà reliée à une facture.')]);
         }
         if ((int) $facture->client_id !== (int) $echeance->abonnement->client_id) {
-            throw ValidationException::withMessages(['facture_id' => "Cette facture n'est pas celle du client de l'abonnement."]);
+            throw ValidationException::withMessages(['facture_id' => __("Cette facture n'est pas celle du client de l'abonnement.")]);
         }
         $echeance->update(['facture_id' => $facture->id]);
     }
