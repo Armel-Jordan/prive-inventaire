@@ -142,6 +142,8 @@ use App\Http\Controllers\SecteurController;
 use App\Http\Controllers\Securite\DeuxFacteursController;
 use App\Http\Controllers\Securite\MotDePasseController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdminSupportController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TachePlanifieController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
@@ -204,6 +206,11 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super-admin', 'tenant
     Route::post('/tenants/{tenantId}/admins', [SuperAdminController::class, 'createTenantAdmin']);
     Route::put('/tenants/{tenantId}/admins/{adminId}', [SuperAdminController::class, 'updateTenantAdmin']);
     Route::delete('/tenants/{tenantId}/admins/{adminId}', [SuperAdminController::class, 'deleteTenantAdmin']);
+    // Demandes de support et suggestions de toutes les entreprises.
+    Route::get('/support', [SuperAdminSupportController::class, 'index']);
+    Route::get('/support/{id}', [SuperAdminSupportController::class, 'show'])->whereNumber('id');
+    Route::post('/support/{id}/messages', [SuperAdminSupportController::class, 'repondre'])->whereNumber('id');
+    Route::put('/support/{id}', [SuperAdminSupportController::class, 'update'])->whereNumber('id');
 });
 
 // ============================================
@@ -427,6 +434,15 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
         Route::post('/cleanup', [NotificationController::class, 'cleanup']);
+    });
+
+    // Support et suggestions : écrire à l'éditeur, suivre ses demandes (module « support »).
+    Route::prefix('support')->group(function () {
+        Route::get('/', [SupportController::class, 'index']);
+        Route::post('/', [SupportController::class, 'store'])->middleware('throttle:20,1');
+        Route::get('/{id}', [SupportController::class, 'show'])->whereNumber('id');
+        Route::post('/{id}/messages', [SupportController::class, 'repondre'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::post('/{id}/fermer', [SupportController::class, 'fermer'])->whereNumber('id');
     });
 
     // Filtres mémorisés : ceux du compte connecté, par écran (données personnelles, sans droit de module).

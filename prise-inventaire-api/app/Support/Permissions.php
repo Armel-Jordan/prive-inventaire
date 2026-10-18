@@ -31,6 +31,9 @@ class Permissions
      */
     public const MODULES = [
         'dashboard' => ['onglet' => 'general', 'fr' => 'Tableau de bord', 'en' => 'Dashboard', 'crud' => ['voir']],
+        // Support et suggestions : « créer » écrit à l'éditeur et suit ses propres demandes ; « voir » ouvre toutes
+        // celles de l'entreprise.
+        'support' => ['onglet' => 'general', 'fr' => 'Support et suggestions', 'en' => 'Support and suggestions', 'crud' => ['voir', 'creer']],
 
         'inventaires' => ['onglet' => 'inventaire', 'fr' => 'Inventaires et scans', 'en' => 'Stock counts and scans', 'actions' => [
             'prises' => ['base' => 'modifier', 'fr' => "Gérer les prises d'inventaire", 'en' => 'Manage stocktakes',
