@@ -46,10 +46,13 @@ L'écran **Finance → Tarifs & Prix** (`/gestion-prix`) gère les prix de vente
 
 | Champ | Rôle |
 |---|---|
-| Portée | Client, liste de prix, produit, catégorie de produits (comparée sans tenir compte des majuscules). Un critère vide vaut « tous » |
+| Portée | Client, **catégorie de clients** (phase 1.2c), liste de prix, produit, catégorie de produits (comparée sans tenir compte des majuscules). Un critère vide vaut « tous » ; les critères remplis s'additionnent |
 | Conditions | Quantité minimale (1 par défaut), période du / au. Une date vide veut dire sans limite ; les bornes sont incluses |
 | Effet | **Prix fixe**, **remise en %** (100 % au plus) ou **remise en montant**, appliqué au prix de la liste du client |
 | Statut | Active ou non. La liste affiche « En vigueur », « À venir », « Expirée » ou « Inactive » |
+
+Une règle par **catégorie de clients** vaut pour tous les clients classés dans cette catégorie (fiche client →
+Catégorie). Une catégorie utilisée par une règle ne se supprime pas : sans elle, la règle vaudrait pour tous les clients.
 
 ---
 
@@ -102,10 +105,10 @@ Code : hook `usePrixAutomatiques`, `lib/prixDocuments`, composant `OriginePrix`.
 | `GET /listes-prix/{id}/clients`, `PUT /clients/{id}/liste-prix` | Clients d'une liste ; rattacher ou détacher un client (`liste_prix_id` ou `null`) |
 | `GET /grille-prix?recherche=&categorie=&page=` | Produits paginés : prix de base et, par liste active, `prix`, `saisi`, `formule`. Renvoie aussi les listes et les catégories |
 | `PUT /grille-prix` | `modifications[{produit_id, liste_prix_id, prix}]`. Sans liste : prix de base. Sur une liste, un prix vide retire le prix saisi |
-| `GET /regles-prix?statut=&recherche=&client_id=&produit_id=` | Règles, avec client, produit et liste |
+| `GET /regles-prix?statut=&recherche=&client_id=&produit_id=` | Règles, avec client, catégorie de clients, produit et liste |
 | `POST` / `PUT` / `DELETE /regles-prix/{id}` | Gestion des règles (administrateurs, responsables) |
 
-**Tables :** `listes_prix`, `listes_prix_produits`, `regles_prix`, plus la colonne facultative `clients.liste_prix_id` (migration `2026_10_15_100016`).
+**Tables :** `listes_prix`, `listes_prix_produits`, `regles_prix`, plus la colonne facultative `clients.liste_prix_id` (migration `2026_10_15_100016`) ; `regles_prix.categorie_client_id` (migration `2026_10_18_100087`).
 
 **Code :**
 - API : `App\Services\CalculPrix`, `App\Http\Controllers\Prix\*` ;
@@ -115,7 +118,8 @@ Code : hook `usePrixAutomatiques`, `lib/prixDocuments`, composant `OriginePrix`.
 
 ## 6. Suite prévue
 
-- Règles par **catégorie de clients**.
 - **Révision de prix planifiée**, avec la tâche planifiée de la phase 0.10.
 - **Import de grilles de prix** (CSV).
-- **Références produit du client.**
+
+Faits en phase 1.2c : les règles par catégorie de clients (§ 3) et les références produits des clients
+([FLOW-FICHE-CLIENT.md](./FLOW-FICHE-CLIENT.md)).

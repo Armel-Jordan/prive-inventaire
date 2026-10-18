@@ -21,11 +21,12 @@ class ReglePrix extends Model
     protected $table = 'regles_prix';
 
     protected $fillable = [
-        'libelle', 'client_id', 'liste_prix_id', 'produit_id', 'categorie_produit',
+        'libelle', 'client_id', 'categorie_client_id', 'liste_prix_id', 'produit_id', 'categorie_produit',
         'quantite_min', 'date_debut', 'date_fin', 'type', 'valeur', 'actif',
     ];
 
     protected $casts = [
+        'categorie_client_id' => 'integer',
         'quantite_min' => 'integer',
         'date_debut' => 'date:Y-m-d',
         'date_fin' => 'date:Y-m-d',
@@ -36,6 +37,12 @@ class ReglePrix extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Catégorie de clients visée (phase 1.2c). */
+    public function categorieClient(): BelongsTo
+    {
+        return $this->belongsTo(ClientCategorie::class, 'categorie_client_id');
     }
 
     public function listePrix(): BelongsTo

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ClientCategorie;
+use App\Models\ReglePrix;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,11 @@ class ClientFicheCategorieController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $categorie = ClientCategorie::findOrFail($id);
+        // Sans sa catégorie, une règle de prix vaudrait pour tous les clients : on la change d'abord.
+        $regles = ReglePrix::where('categorie_client_id', $categorie->id)->count();
+        if ($regles > 0) {
+            return response()->json(['message' => __("Cette catégorie est utilisée par :nombre règle(s) de prix : changez-les ou supprimez-les d'abord (Tarifs & Prix).", ['nombre' => $regles])], 422);
+        }
         DB::transaction(function () use ($categorie) {
             Client::where('categorie_id', $categorie->id)->update(['categorie_id' => null]);
             $categorie->delete();

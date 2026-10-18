@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import {
-  enregistrerReglePrix, getClientsActifs, getListesPrix, getProduits, getReglesPrix, supprimerReglePrix,
+  enregistrerReglePrix, getCategoriesClients, getClientsActifs, getListesPrix, getProduits, getReglesPrix, supprimerReglePrix,
   type Client, type ListePrix, type ReglePrix, type TypeReglePrix,
 } from '@/services/api';
 import type { Produit } from '@/types';
@@ -10,11 +10,11 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { formatDateCourte, formatPrix } from './format';
 
 type Saisie = {
-  id?: number; libelle: string; client_id: string; liste_prix_id: string; produit_id: string; categorie_produit: string;
+  id?: number; libelle: string; client_id: string; categorie_client_id: string; liste_prix_id: string; produit_id: string; categorie_produit: string;
   quantite_min: string; date_debut: string; date_fin: string; type: TypeReglePrix; valeur: string; actif: boolean;
 };
 const vide: Saisie = {
-  libelle: '', client_id: '', liste_prix_id: '', produit_id: '', categorie_produit: '',
+  libelle: '', client_id: '', categorie_client_id: '', liste_prix_id: '', produit_id: '', categorie_produit: '',
   quantite_min: '1', date_debut: '', date_fin: '', type: 'remise_pourcentage', valeur: '', actif: true,
 };
 
@@ -48,6 +48,7 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<(Produit & { categorie?: string | null })[]>([]);
   const [listes, setListes] = useState<ListePrix[]>([]);
+  const [categoriesClients, setCategoriesClients] = useState<{ id: number; nom: string }[]>([]);
 
   useEffect(() => {
     let actif = true;
@@ -62,8 +63,8 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
   useEffect(() => {
     if (!formulaireOuvert || produits.length > 0) return;
     let actif = true;
-    Promise.all([getClientsActifs(), getProduits(), getListesPrix()])
-      .then(([c, p, l]) => { if (actif) { setClients(c); setProduits(p); setListes(l); } })
+    Promise.all([getClientsActifs(), getProduits(), getListesPrix(), getCategoriesClients()])
+      .then(([c, p, l, cc]) => { if (actif) { setClients(c); setProduits(p); setListes(l); setCategoriesClients(cc); } })
       .catch(() => {});
     return () => { actif = false; };
   }, [formulaireOuvert, produits.length]);
@@ -81,7 +82,8 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
   }
 
   function portee(r: ReglePrix): string {
-    const qui = r.client ? `${r.client.raison_sociale}` : r.liste_prix ? `${tr.list} ${r.liste_prix.nom}` : tr.allClients;
+    const qui = r.client ? `${r.client.raison_sociale}` : r.categorie_client ? `${tr.clientCategory} ${r.categorie_client.nom}`
+      : r.liste_prix ? `${tr.list} ${r.liste_prix.nom}` : tr.allClients;
     const quoi = r.produit ? `${r.produit.numero} ${r.produit.description}` : r.categorie_produit ? `${tr.productCategory} ${r.categorie_produit}` : tr.allProducts;
     return `${qui} · ${quoi}`;
   }
@@ -98,7 +100,8 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
     : r.type === 'remise_montant' ? `−${formatPrix(r.valeur, devise, language)}` : formatPrix(r.valeur, devise, language);
 
   const versSaisie = (r: ReglePrix): Saisie => ({
-    id: r.id, libelle: r.libelle, client_id: r.client_id ? String(r.client_id) : '', liste_prix_id: r.liste_prix_id ? String(r.liste_prix_id) : '',
+    id: r.id, libelle: r.libelle, client_id: r.client_id ? String(r.client_id) : '', categorie_client_id: r.categorie_client_id ? String(r.categorie_client_id) : '',
+    liste_prix_id: r.liste_prix_id ? String(r.liste_prix_id) : '',
     produit_id: r.produit_id ? String(r.produit_id) : '', categorie_produit: r.categorie_produit ?? '', quantite_min: String(r.quantite_min),
     date_debut: r.date_debut?.slice(0, 10) ?? '', date_fin: r.date_fin?.slice(0, 10) ?? '', type: r.type, valeur: String(Number(r.valeur)), actif: r.actif,
   });
@@ -136,7 +139,7 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
           executer(async () => {
             await enregistrerReglePrix({
               libelle: saisie.libelle, type: saisie.type, valeur: nombre(saisie.valeur) ?? 0, actif: saisie.actif,
-              client_id: nombre(saisie.client_id), liste_prix_id: nombre(saisie.liste_prix_id), produit_id: nombre(saisie.produit_id),
+              client_id: nombre(saisie.client_id), categorie_client_id: nombre(saisie.categorie_client_id), liste_prix_id: nombre(saisie.liste_prix_id), produit_id: nombre(saisie.produit_id),
               categorie_produit: saisie.categorie_produit || null, quantite_min: nombre(saisie.quantite_min) ?? 1,
               date_debut: saisie.date_debut || null, date_fin: saisie.date_fin || null,
             }, saisie.id);
@@ -154,6 +157,13 @@ export default function ReglesPrix({ modifiable, devise }: { modifiable: boolean
               <select id={`${id}-client`} value={saisie.client_id} onChange={e => setSaisie({ ...saisie, client_id: e.target.value })} className={champ}>
                 <option value="">{tr.allClients}</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.code} — {c.raison_sociale}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor={`${id}-categorie-client`} className={etiquette}>{tr.clientCategory}</label>
+              <select id={`${id}-categorie-client`} value={saisie.categorie_client_id} onChange={e => setSaisie({ ...saisie, categorie_client_id: e.target.value })} className={champ}>
+                <option value="">{tr.allClientCategories}</option>
+                {categoriesClients.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             </div>
             <div>

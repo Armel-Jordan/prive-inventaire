@@ -131,6 +131,7 @@ export default function CataloguePortail() {
                 <article key={produit.id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col">
                   {avecImages && <ImageProduit produit={produit} />}
                   <p className="text-xs text-gray-400 truncate">{produit.numero}{produit.categorie ? ` · ${produit.categorie}` : ''}</p>
+                  {produit.reference_client && <p className="text-xs font-medium text-blue-700">{remplir(tp.yourReference, { ref: produit.reference_client })}</p>}
                   <h2 className="font-medium mt-1 leading-snug">{produit.description}</h2>
                   {fabricant && <p className="text-xs text-gray-500 mt-0.5" title={tp.manufacturer}>{fabricant}</p>}
                   {produit.mesure && <p className="text-xs text-gray-500 mt-0.5">{remplir(tp.unit, { mesure: produit.mesure })}</p>}

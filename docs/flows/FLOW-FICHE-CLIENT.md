@@ -49,6 +49,22 @@ Le **client de passage** (ventes au comptoir, FLOW-VENTES §2.6) a sa fiche comm
 
 ---
 
+## 3 bis. Références produits du client (phase 1.2c)
+
+Onglet **Références produits** : le numéro d'article du client pour chacun de vos produits, et au besoin sa désignation.
+
+- Une référence par produit, et une référence ne désigne qu'un produit chez ce client. Deux clients peuvent employer la
+  même référence.
+- La référence du client est reprise :
+  - dans la saisie des devis, commandes et factures, à côté du produit (« réf. client ART-501 ») ;
+  - sur les PDF des devis, commandes, factures, notes de crédit et bons de livraison, sous la désignation
+    (« Réf. client : ART-501 ») ;
+  - dans l'espace client : sur chaque produit du catalogue (« Votre réf. »), dans le panier, et la recherche du catalogue
+    la trouve.
+- Droit : modifier les clients, pour ajouter, changer ou retirer une référence.
+
+---
+
 ## 4. Catégories et favoris
 
 - **Catégories de clients** (ex. Grossiste, Détaillant, Administration) :
@@ -56,7 +72,8 @@ Le **client de passage** (ventes au comptoir, FLOW-VENTES §2.6) a sa fiche comm
   - un utilisateur classe un client depuis sa fiche ;
   - la liste se filtre par catégorie ;
   - supprimer une catégorie garde ses clients, qui restent sans catégorie ;
-  - elles serviront aux prix par catégorie (phase 1.2).
+  - une règle de prix peut viser une catégorie (Tarifs & Prix → Règles) ; une catégorie utilisée par une règle ne se
+    supprime pas.
 - **Favoris** : chaque utilisateur marque ses clients d'une étoile, dans la liste ou sur la fiche. **Mes favoris** filtre la liste. Les favoris d'un utilisateur ne sont pas ceux de ses collègues.
 
 ---
@@ -77,7 +94,8 @@ Toutes les données sont cloisonnées par entreprise. La fiche d'un client d'une
 
 | Route | Rôle |
 |---|---|
-| `GET /clients/{id}/fiche` | Client avec catégorie, conditions de paiement, nombres de contacts, d'adresses et de remarques, favori de l'utilisateur |
+| `GET /clients/{id}/fiche` | Client avec catégorie, conditions de paiement, nombres de contacts, d'adresses, de remarques et de références produits (`references_count`), favori de l'utilisateur |
+| `GET` / `POST /clients/{id}/references-produits`, `PUT` / `DELETE …/{ref}` | Références produits du client : `produit_id`, `reference` (60 caractères), `description` (facultative) |
 | `GET /clients/{id}/synthese` | Indicateurs, ventes mensuelles, produits les plus achetés |
 | `GET /clients/{id}/historique-achats?du=&au=&recherche=&produit_id=&page=` | Lignes paginées et `totaux` (quantité, montant HT) |
 | `PUT /clients/{id}/categorie` | `categorie_id` (ou `null`) |

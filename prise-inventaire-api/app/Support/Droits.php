@@ -162,6 +162,8 @@ class Droits
     private const PARTICULIERES = [
         'PUT api/approbations/settings' => ['configuration', 'modifier'],
         'PUT api/clients/{client}/liste-prix' => ['gestion_prix', 'modifier'],
+        // Retirer une référence produit d'un client modifie sa fiche (et non supprimer un client).
+        'DELETE api/clients/{client}/references-produits/{id}' => ['clients', 'modifier'],
         'POST api/factures/commande/{commandeId}' => ['factures', 'creer'],
         'POST api/factures/{id}/creer-bl' => ['bons_livraison', 'creer'],
         'POST api/factures/{id}/emettre' => ['factures', 'emettre'],

@@ -54,6 +54,8 @@ export default function PanierPortail() {
       unitaire,
       montant: aJour && calcul ? calcul.montant : unitaire !== null ? unitaire * article.quantite : null,
       indisponible: Boolean(calcul?.indisponible),
+      // Référence du produit chez le client, donnée avec les prix du panier.
+      reference: calcul?.reference_client ?? null,
     };
   });
   const total = details.reduce((somme, d) => somme + (d.indisponible ? 0 : d.montant ?? 0), 0);
@@ -104,11 +106,13 @@ export default function PanierPortail() {
         <div className="lg:col-span-2 space-y-3">
           {erreurPrix && <Message type="erreur">{erreurPrix}</Message>}
           <ul className={`bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 ${aJour ? '' : 'opacity-75'}`}>
-            {details.map(({ article, unitaire, montant: montantLigne, indisponible }) => (
+            {details.map(({ article, unitaire, montant: montantLigne, indisponible, reference }) => (
               <li key={article.produit_id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium leading-snug">{article.description}</p>
-                  <p className="text-xs text-gray-500">{article.numero}{article.mesure ? ` · ${article.mesure}` : ''}</p>
+                  <p className="text-xs text-gray-500">
+                    {article.numero}{article.mesure ? ` · ${article.mesure}` : ''}{reference ? ` · ${remplir(tp.yourReference, { ref: reference })}` : ''}
+                  </p>
                   {unitaire !== null && !indisponible && <p className="text-xs text-gray-500">{tp.unitPrice} : {montant(unitaire, language, devise)}</p>}
                   {indisponible && <p className="text-xs text-red-600 flex items-center gap-1 mt-1"><AlertTriangle size={12} /> {tp.unavailable}</p>}
                 </div>

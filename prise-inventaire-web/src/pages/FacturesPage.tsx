@@ -37,6 +37,7 @@ import { useToast } from '@/hooks/useToast';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import { useReferencesClient } from '@/hooks/useReferencesClient';
 import OriginePrix from '@/components/OriginePrix';
 import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import { annexesALaVente, prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
@@ -104,6 +105,12 @@ export default function FacturesPage() {
   // Coordonnées du client de passage, notées sur la facture.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(createForm.client_id))?.de_passage;
+  // Référence du produit chez le client choisi, à côté de sa désignation (phase 1.2c).
+  const referencesClient = useReferencesClient(createForm.client_id ? Number(createForm.client_id) : null);
+  const avecReference = (produitId?: number) => {
+    const reference = produitId ? referencesClient.get(produitId) : undefined;
+    return reference ? ` — ${t.clientFile.references.short.replace('{ref}', reference)}` : '';
+  };
   // Frais additionnels et de livraison proposés pour la facture en cours de saisie.
   const frais = useFraisAutomatiques({
     document: 'facture',
@@ -751,7 +758,7 @@ export default function FacturesPage() {
                           aria-label="Produit"
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                           <option value={0}>Produit...</option>
-                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}</option>)}
+                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
                         </select>
                         <input type="number" min="1" value={l.quantite}
                           onChange={(e) => modifierLigne(idx, ligne => ({ ...ligne, quantite: parseInt(e.target.value) || 1 }))}

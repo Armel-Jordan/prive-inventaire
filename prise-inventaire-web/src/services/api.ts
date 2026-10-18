@@ -1425,6 +1425,20 @@ export interface FicheClient extends Client {
   contacts_count: number;
   adresses_count: number;
   remarques_count: number;
+  references_count: number;
+}
+
+/** Référence d'un produit chez un client (phase 1.2c) : reprise sur ses documents et dans son espace client. */
+export interface ReferenceProduitClient {
+  id: number;
+  produit_id: number;
+  reference: string;
+  description: string | null;
+  produit?: { id: number; numero: string; description: string; mesure: string | null } | null;
+}
+
+export async function getReferencesProduitsClient(clientId: number): Promise<ReferenceProduitClient[]> {
+  return fetchApi(`/clients/${clientId}/references-produits`);
 }
 
 export interface SyntheseClient {
@@ -1897,6 +1911,8 @@ export interface ReglePrix {
   id: number;
   libelle: string;
   client_id: number | null;
+  /** Catégorie de clients visée (vide : tous les clients). */
+  categorie_client_id: number | null;
   liste_prix_id: number | null;
   produit_id: number | null;
   categorie_produit: string | null;
@@ -1907,6 +1923,7 @@ export interface ReglePrix {
   valeur: number;
   actif: boolean;
   client?: { id: number; code: string; raison_sociale: string } | null;
+  categorie_client?: { id: number; nom: string } | null;
   produit?: { id: number; numero: string; description: string } | null;
   liste_prix?: { id: number; nom: string } | null;
 }

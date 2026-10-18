@@ -62,6 +62,8 @@ final class CalculPrix
     {
         return ReglePrix::enVigueur($date)
             ->where(fn ($q) => $q->whereNull('client_id')->when($client, fn ($q) => $q->orWhere('client_id', $client->id)))
+            // Catégorie de clients : la règle ne vaut que pour les clients de cette catégorie.
+            ->where(fn ($q) => $q->whereNull('categorie_client_id')->when($client?->categorie_id, fn ($q) => $q->orWhere('categorie_client_id', $client->categorie_id)))
             ->where(fn ($q) => $q->whereNull('liste_prix_id')->when($client?->liste_prix_id, fn ($q) => $q->orWhere('liste_prix_id', $client->liste_prix_id)))
             ->orderBy('id')
             ->get();

@@ -40,13 +40,14 @@ export const AIDES_VENTES: AidesEcrans = {
   },
   "/clients/:id": {
     fr: {
-      resume: "La fiche complète d'un client : ses chiffres de vente, son encours, son historique d'achats, ses contacts, ses adresses et les remarques de l'équipe.",
+      resume: "La fiche complète d'un client : ses chiffres de vente, son encours, son historique d'achats, ses contacts, ses adresses, les remarques de l'équipe et ses références produits.",
       etapes: [
         "Ouvrez la fiche depuis la liste « Clients » en cliquant sur le code du client.",
         "Onglet « Synthèse » : ventes de l'année, panier moyen, encours et retards, commandes et devis en cours, produits les plus achetés.",
         "Onglet « Historique d'achats » : filtrez par période (« Du », « Au ») ou par produit ; le total de la sélection s'affiche en bas.",
         "Onglets « Contacts » et « Adresses » : cliquez sur « Ajouter un contact » ou « Ajouter une adresse », remplissez, puis « Enregistrer ».",
         "Onglet « Remarques » : notez un appel, une visite ou une consigne, puis « Ajouter » ; épinglez les remarques importantes.",
+        "Onglet « Références produits » : « Ajouter une référence », choisissez le produit et saisissez le numéro d'article du client ; il figurera sur ses devis, commandes, factures et dans son espace client.",
         "Dans l'en-tête, classez le client avec la liste « Catégorie » et marquez-le d'une étoile pour le retrouver dans « Mes favoris ».",
       ],
       astuces: [
@@ -55,16 +56,17 @@ export const AIDES_VENTES: AidesEcrans = {
         "Un seul contact principal et une seule adresse principale : en marquer un nouveau retire la marque du précédent.",
         "Vos favoris ne sont qu'à vous. Une remarque se modifie, s'épingle ou se supprime par son auteur, un administrateur ou un responsable.",
       ],
-      motsCles: ["historique d'achats", "chiffre d'affaires client", "panier moyen", "contact", "adresse de livraison", "remarque"],
+      motsCles: ["historique d'achats", "chiffre d'affaires client", "contact", "adresse de livraison", "remarque", "référence client"],
     },
     en: {
-      resume: "A customer's full record: sales figures, outstanding balance, purchase history, contacts, addresses and the team's notes.",
+      resume: "A customer's full record: sales figures, outstanding balance, purchase history, contacts, addresses, the team's notes and their product references.",
       etapes: [
         "Open the record from the “Clients” list by clicking the customer's code.",
         "“Summary” tab: sales this year, average invoice, outstanding and overdue amounts, open orders and quotes, most purchased products.",
         "“Purchase history” tab: filter by period (“From”, “To”) or by product; the selection total shows at the bottom.",
         "“Contacts” and “Addresses” tabs: click “Add a contact” or “Add an address”, fill in the form, then “Save”.",
         "“Notes” tab: record a call, a visit or an instruction, then click “Add”; pin the important ones.",
+        "“Product references” tab: “Add a reference”, choose the product and type the customer's item number; it will appear on their quotes, orders, invoices and in their customer area.",
         "In the header, classify the customer with the “Category” list and star them to find them under “My favorites”.",
       ],
       astuces: [
@@ -73,7 +75,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Only one main contact and one main address: marking a new one removes the mark from the previous one.",
         "Your favorites are your own. A note can be edited, pinned or deleted by its author, an administrator or a manager.",
       ],
-      motsCles: ["purchase history", "customer sales", "average invoice", "contact", "delivery address", "notes"],
+      motsCles: ["purchase history", "customer sales", "contact", "delivery address", "notes", "customer reference"],
     },
   },
   "/espace-client": {

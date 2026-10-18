@@ -4,6 +4,7 @@ namespace App\Services\Portail;
 
 use App\Models\Client;
 use App\Models\ClientAdresse;
+use App\Models\ClientProduit;
 use App\Models\ComClientEntete;
 use App\Models\ComClientLigne;
 use App\Models\Configuration;
@@ -46,12 +47,15 @@ class CommandesPortail
         $produits = $this->produitsProposes()
             ->when($categorie, fn (Builder $q) => $q->where('categorie', $categorie))
             ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $r) => $r->where('description', 'like', "%{$recherche}%")->orWhere('numero', 'like', "%{$recherche}%")
-                ->orWhereHas('traductions', fn (Builder $t) => $t->where('description', 'like', "%{$recherche}%"))))
+                ->orWhereHas('traductions', fn (Builder $t) => $t->where('description', 'like', "%{$recherche}%"))
+                // Sa propre référence du produit (phase 1.2c).
+                ->orWhereIn('id', ClientProduit::where('client_id', $client->id)->where('reference', 'like', "%{$recherche}%")->select('produit_id'))))
             ->with(['traductions', 'fabricant:id,nom'])
             ->orderBy('description')->orderBy('numero')
             ->paginate(24, ['id', 'numero', 'description', 'mesure', 'categorie', 'description_longue', 'fabricant_id', 'reference_fabricant', 'image_id'], 'page', $page);
         $prix = collect($this->calcul->calculer($client, $produits->getCollection()->map(fn (ProduitTenant $p) => ['produit_id' => $p->id, 'quantite' => 1])->all(), now()))
             ->keyBy('produit_id');
+        $references = ClientProduit::pourClient($client->id, $produits->getCollection()->pluck('id')->all());
 
         return [
             'data' => $produits->getCollection()->map(fn (ProduitTenant $p) => $p->only(['id', 'numero', 'mesure', 'categorie', 'reference_fabricant']) + [
@@ -61,6 +65,7 @@ class CommandesPortail
                 'image' => $p->image_id !== null,
                 'prix' => $prix[$p->id]['prix'] ?? null,
                 'prix_liste' => $prix[$p->id]['prix_liste'] ?? null,
+                'reference_client' => $references[$p->id]['reference'] ?? null,
             ])->values(),
             'current_page' => $produits->currentPage(),
             'last_page' => $produits->lastPage(),
@@ -80,8 +85,9 @@ class CommandesPortail
     {
         $proposes = $this->produitsProposes()->whereIn('id', array_column($lignes, 'produit_id'))->get(['id', 'numero', 'description', 'mesure'])->keyBy('id');
         $prix = collect($this->calcul->calculer($client, $lignes, now()))->keyBy('produit_id');
+        $references = ClientProduit::pourClient($client->id, array_column($lignes, 'produit_id'));
 
-        return array_map(function (array $ligne) use ($proposes, $prix) {
+        return array_map(function (array $ligne) use ($proposes, $prix, $references) {
             $produit = $proposes->get($ligne['produit_id']);
             $unitaire = $produit ? ($prix[$produit->id]['prix'] ?? null) : null;
 
@@ -91,6 +97,7 @@ class CommandesPortail
                 'numero' => $produit?->numero,
                 'description' => $produit?->description,
                 'mesure' => $produit?->mesure,
+                'reference_client' => $references[(int) $ligne['produit_id']]['reference'] ?? null,
                 'prix' => $unitaire,
                 'montant' => $unitaire !== null ? round($unitaire * $ligne['quantite'], 2) : null,
                 'indisponible' => ! $produit || $unitaire === null,
