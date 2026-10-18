@@ -41,7 +41,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, LifeBuoy, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, LifeBuoy, Lightbulb, Lock, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -176,6 +176,7 @@ const getNavCategories = (t: ReturnType<typeof useLanguage>['t']): NavCategory[]
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },
       { path: '/balises', label: t.tags.title, icon: Tag, module: 'configuration' },
       { path: '/roles', label: t.permissions.nav, icon: Shield, module: 'roles' },
+      { path: '/fiches-en-cours', label: t.locks.nav, icon: Lock, module: 'verrous' },
       { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
       { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },

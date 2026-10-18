@@ -117,6 +117,8 @@ class Droits
         // Lots et numéros de série : registre, péremptions, provenance.
         'lots' => 'lots',
         'numeros-serie' => 'lots',
+        // Fiches en cours de modification : qui modifie quoi.
+        'verrous' => 'verrous',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -331,6 +333,9 @@ class Droits
         // que la demande est celle du compte, ou qu'il voit toutes celles de l'entreprise).
         'POST api/support/{id}/messages' => ['support', 'creer'],
         'POST api/support/{id}/fermer' => ['support', 'creer'],
+        // Verrous : libérer la fiche d'un autre compte. Poser, renouveler et lever le sien : le contrôleur vérifie le
+        // droit de modifier la fiche (prendre la main : droit de libérer).
+        'DELETE api/verrous/{id}' => ['verrous', 'liberer'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

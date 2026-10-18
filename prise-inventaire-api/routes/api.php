@@ -147,6 +147,7 @@ use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TachePlanifieController;
 use App\Http\Controllers\TracabiliteController;
 use App\Http\Controllers\TransfertPlanifieController;
+use App\Http\Controllers\VerrouController;
 use App\Http\Middleware\AuthentifierPortail;
 use App\Support\Referentiels;
 use Illuminate\Support\Facades\Route;
@@ -272,8 +273,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::post('/produits/{produit}/liens', [ProduitLienController::class, 'store'])->whereNumber('produit');
     Route::put('/produits/{produit}/liens/{id}', [ProduitLienController::class, 'update'])->whereNumber('produit')->whereNumber('id');
     Route::delete('/produits/{produit}/liens/{id}', [ProduitLienController::class, 'destroy'])->whereNumber('produit')->whereNumber('id');
-    Route::put('/produits/{id}', [ProduitTenantController::class, 'update']);
-    Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy']);
+    Route::put('/produits/{id}', [ProduitTenantController::class, 'update'])->middleware('verrou:produit,id');
+    Route::delete('/produits/{id}', [ProduitTenantController::class, 'destroy'])->middleware('verrou:produit,id');
     // Étiquettes des produits : formats (rouleau ou planche) et impression en PDF.
     Route::get('/etiquettes/formats', [EtiquetteController::class, 'formats']);
     Route::post('/etiquettes/formats', [EtiquetteController::class, 'store']);
@@ -453,6 +454,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [FiltreMemoriseController::class, 'destroy'])->whereNumber('id');
     });
 
+    // Verrous des fiches en cours de modification : poser, renouveler et lever le sien (le contrôleur vérifie le droit
+    // de modifier la fiche ; prendre la main : droit de libérer) ; les routes de mise à jour et de suppression des fiches
+    // refusent un autre compte que celui qui la modifie (verrou:…). La liste et la libération suivent le module « verrous ».
+    Route::get('/verrous', [VerrouController::class, 'index']);
+    Route::post('/verrous', [VerrouController::class, 'poser'])->middleware('throttle:120,1');
+    Route::delete('/verrous', [VerrouController::class, 'lever']);
+    Route::delete('/verrous/{id}', [VerrouController::class, 'liberer'])->whereNumber('id');
+
     // Configuration à compléter : mise en route vérifiée dans les données ; écarter un réglage : administrateurs.
     Route::prefix('configuration-a-completer')->group(function () {
         Route::get('/', [ConfigurationACompleterController::class, 'index']);
@@ -570,8 +579,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/actifs', [FournisseurController::class, 'listActifs']);
         Route::post('/', [FournisseurController::class, 'store']);
         Route::get('/{fournisseur}', [FournisseurController::class, 'show']);
-        Route::put('/{fournisseur}', [FournisseurController::class, 'update']);
-        Route::delete('/{fournisseur}', [FournisseurController::class, 'destroy']);
+        Route::put('/{fournisseur}', [FournisseurController::class, 'update'])->middleware('verrou:fournisseur,fournisseur');
+        Route::delete('/{fournisseur}', [FournisseurController::class, 'destroy'])->middleware('verrou:fournisseur,fournisseur');
     });
 
     // Fiche fournisseur complète : synthèse des achats, historique, produits fournis, contacts, adresses,
@@ -604,11 +613,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/', [CommandeFournisseurController::class, 'store']);
         Route::get('/{commande}', [CommandeFournisseurController::class, 'show']);
         Route::get('/{id}/pdf', BonCommandePdfController::class)->whereNumber('id');
-        Route::put('/{commande}', [CommandeFournisseurController::class, 'update']);
+        Route::put('/{commande}', [CommandeFournisseurController::class, 'update'])->middleware('verrou:commande_fournisseur,commande');
         Route::post('/{commande}/valider', [CommandeFournisseurController::class, 'valider']);
         Route::post('/{commande}/annuler', [CommandeFournisseurController::class, 'annuler']);
         Route::post('/{commande}/cloturer', [CommandeFournisseurController::class, 'cloturer']);
-        Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy']);
+        Route::delete('/{commande}', [CommandeFournisseurController::class, 'destroy'])->middleware('verrou:commande_fournisseur,commande');
     });
 
     // ============================================
@@ -691,7 +700,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/', [DevisController::class, 'store']);
         Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
         Route::get('/{devis}', [DevisController::class, 'show']);
-        Route::put('/{devis}', [DevisController::class, 'update']);
+        Route::put('/{devis}', [DevisController::class, 'update'])->middleware('verrou:devis,devis');
         Route::post('/{devis}/envoyer', [DevisController::class, 'envoyer']);
         Route::post('/{devis}/accepter', [DevisController::class, 'accepter']);
         Route::post('/{devis}/refuser', [DevisController::class, 'refuser']);
@@ -701,7 +710,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/{devis}/copier', [DevisController::class, 'copier']);
         // Lien de réponse en ligne du devis (le partager revient à l'envoyer).
         Route::post('/{devis}/lien-reponse', [DevisController::class, 'lienReponse']);
-        Route::delete('/{devis}', [DevisController::class, 'destroy']);
+        Route::delete('/{devis}', [DevisController::class, 'destroy'])->middleware('verrou:devis,devis');
     });
 
     // Clients
@@ -712,8 +721,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/de-passage', [ClientController::class, 'dePassage']);
         Route::get('/{id}', [ClientController::class, 'show']);
         Route::post('/', [ClientController::class, 'store']);
-        Route::put('/{id}', [ClientController::class, 'update']);
-        Route::delete('/{id}', [ClientController::class, 'destroy']);
+        Route::put('/{id}', [ClientController::class, 'update'])->middleware('verrou:client,id');
+        Route::delete('/{id}', [ClientController::class, 'destroy'])->middleware('verrou:client,id');
         Route::get('/{id}/conditions-paiement', [ClientController::class, 'getConditionsPaiement']);
         Route::post('/{id}/conditions-paiement', [ClientController::class, 'setConditionsPaiement']);
     });
@@ -748,11 +757,11 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}', [CommandeClientController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
         Route::post('/', [CommandeClientController::class, 'store']);
-        Route::put('/{id}', [CommandeClientController::class, 'update']);
+        Route::put('/{id}', [CommandeClientController::class, 'update'])->middleware('verrou:commande_client,id');
         Route::post('/{id}/soumettre', [CommandeClientController::class, 'soumettre']);
         Route::post('/{id}/accepter', [CommandeClientController::class, 'accepter']);
         Route::post('/{id}/refuser', [CommandeClientController::class, 'refuser']);
-        Route::delete('/{id}', [CommandeClientController::class, 'destroy']);
+        Route::delete('/{id}', [CommandeClientController::class, 'destroy'])->middleware('verrou:commande_client,id');
     });
 
     // Factures

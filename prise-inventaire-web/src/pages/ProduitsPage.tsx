@@ -18,6 +18,8 @@ import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 
 interface UniteChoix {
   code: string;
@@ -84,6 +86,8 @@ export default function ProduitsPage() {
   const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Fiche verrouillée pendant sa modification : un autre compte voit qui la modifie.
+  const verrou = useVerrou('produit', showModal ? editingId : null);
   const [form, setForm] = useState<ProduitForm>(emptyForm);
   const [importing, setImporting] = useState(false);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
@@ -513,6 +517,7 @@ export default function ProduitsPage() {
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label="Fermer"><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
+              <BandeauVerrou verrou={verrou} />
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Numéro {!editingId && configNumero?.auto_increment ? '(auto-généré)' : '*'}
@@ -648,7 +653,8 @@ export default function ProduitsPage() {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)}
                   className="flex-1 px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">Annuler</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <button type="submit" disabled={verrou.bloque}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
                   {editingId ? 'Modifier' : 'Créer'}
                 </button>
               </div>
