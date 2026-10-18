@@ -57,8 +57,8 @@ La période va par défaut du premier jour du mois à aujourd'hui ; une période
 Le bouton « Envoyer par courriel » ouvre la fenêtre d'envoi des documents :
 
 - elle est pré-remplie avec le modèle « Rapport » de l'entreprise (Paramètres → Courriels), en français ou en
-  anglais. Ses variables : `{rapport}` (titre), `{periode}`, `{parametres}` (une ligne par paramètre) et
-  `{date_rapport}` ;
+  anglais. Ses variables : `{rapport}` (titre), `{periode}`, `{parametres}` (une ligne par paramètre),
+  `{date_rapport}` et `{analyse_ia}` (analyse de l'IA d'un envoi programmé, vide ailleurs) ;
 - l'adresse du compte est proposée ; copies et copies cachées sont possibles ;
 - on choisit le format joint : PDF, Excel ou CSV.
 
@@ -90,6 +90,15 @@ Un envoi programmé fait partir un rapport par courriel :
 
   Le reprendre à son nom suffit à le relancer.
 - **Visibilité** : on ne voit et ne règle que les envois des rapports que l'on peut ouvrir.
+- **Question à l'IA** (facultative ; rapports IA périodiques de fripv2). À chaque envoi :
+  - l'IA analyse le rapport joint pour y répondre, à partir de ses seules données ;
+  - son analyse entre dans le courriel, à la place de `{analyse_ia}`, ou à la fin quand le modèle de l'entreprise
+    n'a pas cette variable ;
+  - l'analyse est gardée avec les autres questions du compte : jetons, durée.
+
+  La question demande que l'IA soit disponible pour le compte : clé du serveur, module de l'entreprise, droit
+  « questionner ». Si l'IA est indisponible ou échoue au moment de l'envoi, le courriel part sans l'analyse, et
+  l'envoi programmé note « Envoyé sans l'analyse de l'IA : … ».
 
 La tâche planifiée « Envoi des rapports programmés » (chaque jour à 6 h 30 par défaut) fait partir les envois du jour.
 Après un arrêt du serveur, elle envoie aussi ceux qu'elle a manqués, une seule fois.
@@ -170,7 +179,9 @@ Code :
   - modèle `RapportProgramme` ; tâche `App\Taches\EnvoyerRapportsProgrammes` (`rapports_programmes`) ;
   - questions à l'IA : `App\Rapports\AssistantRapports` (consignes, outils `executer_rapport` et `repondre`, échanges),
     `App\Services\Ia\ClientClaude` (API Messages d'Anthropic), `RapportIaController`, modèle `QuestionIa`, `config/ia.php`,
-    module `ia` de `config/modules.php`, migration `2026_10_17_100083_questions_ia`.
+    module `ia` de `config/modules.php`, migration `2026_10_17_100083_questions_ia` ;
+  - rapports IA périodiques : `AssistantRapports::commenter` (un échange, sans outils), appelé par
+    `Programmation::envoyer` ; colonne `question_ia` (migration `2026_10_17_100084_rapports_programmes_question_ia`).
 - Droits :
   - `Droits::PARTICULIERES` : `rapports.voir`, `rapports.envoyer`, `rapports.programmer` ;
   - droit du module de chaque rapport dans `Catalogue::pour`.
@@ -183,5 +194,5 @@ Code :
   - `components/rapports` : `ChampParametre`, `CourrielRapport`, `FenetreProgramme`, `EnvoisProgrammes`, `QuestionsIa` ;
   - `ComposerCourriel` (source d'envoi autre qu'un document) ;
   - `services/bibliothequeRapports.ts`, `lib/programmesRapports.ts`, traductions `reportsLibrary`.
-- Tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`, `EnvoiRapportsTest.php`, `QuestionsIaTest.php` (API
-  d'Anthropic simulée).
+- Tests : `tests/Feature/Rapports/BibliothequeRapportsTest.php`, `EnvoiRapportsTest.php`, `QuestionsIaTest.php`,
+  `EnvoisProgrammesIaTest.php` (API d'Anthropic simulée).

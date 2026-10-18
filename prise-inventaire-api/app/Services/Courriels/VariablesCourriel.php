@@ -226,6 +226,9 @@ class VariablesCourriel
                 ? 'From: '.$this->date($jour->copy()->startOfMonth(), $langue)."\nTo: ".$this->date($jour, $langue)
                 : 'Du : '.$this->date($jour->copy()->startOfMonth(), $langue)."\nAu : ".$this->date($jour, $langue),
             'date_rapport' => $this->date($jour, $langue),
+            'analyse_ia' => $en
+                ? "**AI analysis**\n\nSales are up 12% on the previous month, driven by your top three customers."
+                : "**Analyse de l'IA**\n\nLes ventes progressent de 12 % sur le mois précédent, portées par vos trois premiers clients.",
         ];
 
         return array_intersect_key($valeurs, array_flip(Courriels::TYPES[$type] ?? []));

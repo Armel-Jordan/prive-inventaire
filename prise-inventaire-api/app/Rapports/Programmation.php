@@ -13,6 +13,7 @@ use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use DomainException;
+use RuntimeException;
 
 /**
  * Envois programmés des rapports (plan de parité fripv2, phase 5.2) : périodes relatives (veille, mois précédent…),
@@ -36,6 +37,7 @@ final class Programmation
         private readonly EnvoiCourriel $envois,
         private readonly Droits $droits,
         private readonly TenantContext $contexte,
+        private readonly AssistantRapports $assistant,
     ) {}
 
     /**
@@ -89,7 +91,8 @@ final class Programmation
     /**
      * Envoie le rapport programmé, sa période calculée au jour donné, avec le courriel du modèle « rapport » de
      * l'entreprise. Les droits sont ceux du compte qui l'a réglé, ou de celui qui l'envoie à la main ; une
-     * DomainException dit pourquoi l'envoi est refusé.
+     * DomainException dit pourquoi l'envoi est refusé. Avec une question à l'IA, son analyse du rapport entre dans le
+     * courriel ; sans elle (IA indisponible ou en échec), le courriel part quand même et le motif est noté.
      */
     public function envoyer(RapportProgramme $programme, CarbonInterface $jour, ?AdminUser $par = null): CourrielEnvoi
     {
@@ -97,7 +100,12 @@ final class Programmation
         $rapport = $this->rapportPermis($programme, $compte, $par === null);
         $rapport->langue = $programme->langue;
         $valeurs = $rapport->valeurs($this->saisies($rapport, $programme, $jour));
-        $courriel = $this->envois->preparerRapport($rapport, $valeurs, $programme->langue, null);
+        [$analyse, $avertissement] = $this->analyse($programme, $compte, $rapport, $valeurs);
+        $courriel = $this->envois->preparerRapport($rapport, $valeurs, $programme->langue, null, $analyse);
+        // Modèle de l'entreprise sans {analyse_ia} : l'analyse vient à la fin du courriel.
+        if ($analyse !== null && ! str_contains($courriel['contenu'], trim($analyse))) {
+            $courriel['contenu'] .= "\n\n".($programme->langue === 'en' ? '**AI analysis**' : "**Analyse de l'IA**")."\n\n".trim($analyse);
+        }
 
         $envoi = $this->envois->creerRapport($rapport, [
             'valeurs' => $valeurs,
@@ -111,9 +119,38 @@ final class Programmation
         ], $compte->id, $programme->id);
         EnvoyerCourriel::dispatch($envoi->id);
 
-        $programme->update(['dernier_envoi_le' => now(), 'dernier_envoi_id' => $envoi->id, 'derniere_erreur' => null]);
+        $programme->update(['dernier_envoi_le' => now(), 'dernier_envoi_id' => $envoi->id, 'derniere_erreur' => $avertissement]);
 
         return $envoi->refresh();
+    }
+
+    /**
+     * Analyse de l'IA pour un envoi qui porte une question, si l'IA est disponible pour l'entreprise et le compte ;
+     * sinon le motif, noté sur l'envoi programmé.
+     *
+     * @return array{?string, ?string} analyse, avertissement
+     */
+    private function analyse(RapportProgramme $programme, AdminUser $compte, Rapport $rapport, array $valeurs): array
+    {
+        if (blank($programme->question_ia)) {
+            return [null, null];
+        }
+        $entreprise = Tenant::find($this->contexte->getTenantId());
+        $raison = match (true) {
+            AssistantRapports::indisponibilite($entreprise) === 'cle' => "le service d'IA n'est pas configuré sur ce serveur",
+            AssistantRapports::indisponibilite($entreprise) === 'module' => "le module « Intelligence artificielle » n'est pas activé",
+            ! $this->droits->permet($compte, 'rapports', 'questionner') => "{$compte->nom} n'a pas le droit de poser des questions à l'IA",
+            default => null,
+        };
+        if ($raison === null) {
+            try {
+                return [$this->assistant->commenter($compte, $entreprise, $rapport, $valeurs, (string) $programme->question_ia, $programme->langue), null];
+            } catch (RuntimeException $erreur) {
+                $raison = $erreur->getMessage();
+            }
+        }
+
+        return [null, "Envoyé sans l'analyse de l'IA : ".rtrim($raison, '.').'.'];
     }
 
     /** Le rapport, si le compte peut encore l'ouvrir (et programmer des envois, pour un envoi planifié). */

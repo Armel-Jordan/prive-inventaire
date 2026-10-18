@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarClock, Pencil, Plus, Send, Trash2 } from 'lucide-react';
+import { CalendarClock, Pencil, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { formatDateDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
@@ -109,6 +109,11 @@ export default function EnvoisProgrammes({ liste, peutProgrammer, estAdmin, onNo
                   <td className="px-3 py-2">
                     <span className="font-medium text-gray-900 dark:text-white">{p.nom}</span>
                     {!p.actif && <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{ts.paused}</span>}
+                    {p.question_ia && (
+                      <span title={p.question_ia} className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                        <Sparkles size={12} aria-hidden="true" /> {ts.aiBadge}
+                      </span>
+                    )}
                     <span className="block text-xs text-gray-500 dark:text-gray-400">
                       {p.rapport}{p.periode ? ` · ${periodes[p.periode] ?? p.periode}` : ''} · {tr.formats[p.format]}
                     </span>

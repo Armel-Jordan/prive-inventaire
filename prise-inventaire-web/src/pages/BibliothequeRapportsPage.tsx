@@ -331,6 +331,7 @@ export default function BibliothequeRapportsPage() {
       {courriel && choisi && <CourrielRapport code={choisi.code} titre={choisi.titre} parametres={valeurs} onClose={() => setCourriel(false)} />}
       {fenetre && categories && (
         <FenetreProgramme programme={fenetre.programme} initial={fenetre.initial} categories={categories} periodes={programmes?.periodes ?? []} listes={listes}
+          iaDisponible={programmes?.ia_disponible ?? false}
           onClose={() => setFenetre(null)} onEnregistre={programmeEnregistre} />
       )}
     </div>

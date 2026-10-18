@@ -27,7 +27,7 @@ const valeursDe = (rapport: DefinitionRapport | null, donnees?: Record<string, s
  * Réglage d'un envoi programmé : le rapport et ses paramètres (sa période est relative : la veille, le mois
  * précédent…), la fréquence et le jour, le format et la langue, les destinataires.
  */
-export default function FenetreProgramme({ programme, initial, categories, periodes, listes, onClose, onEnregistre }: {
+export default function FenetreProgramme({ programme, initial, categories, periodes, listes, iaDisponible = false, onClose, onEnregistre }: {
   /** Envoi modifié ; null pour un nouvel envoi. */
   programme: ProgrammeRapport | null;
   /** Nouvel envoi : le rapport ouvert dans la bibliothèque et ses paramètres. */
@@ -35,6 +35,8 @@ export default function FenetreProgramme({ programme, initial, categories, perio
   categories: { code: string; rapports: DefinitionRapport[] }[];
   periodes: { code: string; libelle: string }[];
   listes: ListesParametres;
+  /** Une question à l'IA peut-elle accompagner l'envoi ? */
+  iaDisponible?: boolean;
   onClose: () => void;
   onEnregistre: (programme: ProgrammeRapport) => void;
 }) {
@@ -55,6 +57,7 @@ export default function FenetreProgramme({ programme, initial, categories, perio
   const [langue, setLangue] = useState<LangueCourriel>(programme?.langue ?? language);
   const [destinataires, setDestinataires] = useState((programme?.destinataires ?? []).join(', '));
   const [actif, setActif] = useState(programme?.actif ?? true);
+  const [questionIa, setQuestionIa] = useState(programme?.question_ia ?? '');
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
 
@@ -84,6 +87,7 @@ export default function FenetreProgramme({ programme, initial, categories, perio
     const saisi: ProgrammeSaisi = {
       code, nom: nom.trim(), parametres, periode: avecPeriode ? periode : null, format, langue,
       destinataires: adresses(destinataires), frequence, jour: frequence === 'quotidienne' ? null : jour, actif,
+      question_ia: questionIa.trim() || null,
     };
     try {
       onEnregistre(await enregistrerProgrammeRapport(programme?.id ?? null, saisi, language));
@@ -181,6 +185,15 @@ export default function FenetreProgramme({ programme, initial, categories, perio
             <input id="programme-destinataires" value={destinataires} onChange={e => setDestinataires(e.target.value)} required className={classeChamp} />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{ts.recipientsHelp}</p>
           </div>
+
+          {(iaDisponible || questionIa !== '') && (
+            <div>
+              <label htmlFor="programme-question-ia" className={classeLibelle}>{ts.aiQuestion}</label>
+              <textarea id="programme-question-ia" rows={2} value={questionIa} onChange={e => setQuestionIa(e.target.value)} maxLength={1000}
+                placeholder={ts.aiQuestionPlaceholder} className={classeChamp} />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{iaDisponible ? ts.aiQuestionHelp : ts.aiQuestionUnavailable}</p>
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input type="checkbox" checked={actif} onChange={e => setActif(e.target.checked)} className="rounded" />

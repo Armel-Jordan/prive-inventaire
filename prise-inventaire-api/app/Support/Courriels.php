@@ -35,7 +35,8 @@ final class Courriels
         'commande_fournisseur' => ['numero', 'date', 'date_livraison_prevue', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant_total'],
         'retour_fournisseur' => ['numero', 'date', 'type_retour', 'numero_rma', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant'],
         // Rapport de la bibliothèque joint (PDF, Excel ou CSV) : son titre, sa période, ses paramètres, sa date.
-        'rapport' => ['rapport', 'periode', 'parametres', 'date_rapport'],
+        // analyse_ia : commentaire de l'IA d'un envoi programmé qui porte une question (vide sinon).
+        'rapport' => ['rapport', 'periode', 'parametres', 'date_rapport', 'analyse_ia'],
         'general' => [],
     ];
 
@@ -98,7 +99,7 @@ final class Courriels
             'bon_livraison' => ['Bon de livraison {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint le bon de livraison {numero}.\n\nCordialement,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Bon de commande {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint notre bon de commande {numero} du {date}. Merci de nous en confirmer la réception et la date de livraison prévue.\n\nCordialement,\n{entreprise_nom}"],
             'retour_fournisseur' => ['Retour de marchandise {numero} — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint notre bon de retour {numero} du {date} ({type_retour}), d'une valeur de {montant}. Merci de nous en confirmer la prise en charge et, au besoin, de nous communiquer un numéro d'autorisation de retour.\n\nCordialement,\n{entreprise_nom}"],
-            'rapport' => ['Rapport « {rapport} » — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint le rapport « {rapport} » du {date_rapport}.\n\n{parametres}\n\nCordialement,\n{entreprise_nom}"],
+            'rapport' => ['Rapport « {rapport} » — {entreprise_nom}', "Bonjour,\n\nVeuillez trouver ci-joint le rapport « {rapport} » du {date_rapport}.\n\n{parametres}\n\n{analyse_ia}\n\nCordialement,\n{entreprise_nom}"],
             'general' => ['Message de {entreprise_nom}', "Bonjour,\n\n\n\nCordialement,\n{entreprise_nom}"],
         ],
         'en' => [
@@ -112,7 +113,7 @@ final class Courriels
             'bon_livraison' => ['Delivery note {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached delivery note {numero}.\n\nBest regards,\n{entreprise_nom}"],
             'commande_fournisseur' => ['Purchase order {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our purchase order {numero} of {date}. Kindly confirm receipt and the expected delivery date.\n\nBest regards,\n{entreprise_nom}"],
             'retour_fournisseur' => ['Goods return {numero} — {entreprise_nom}', "Hello,\n\nPlease find attached our return note {numero} of {date} ({type_retour}), valued at {montant}. Kindly confirm you will handle it and, if needed, send us a return authorization number.\n\nBest regards,\n{entreprise_nom}"],
-            'rapport' => ['Report "{rapport}" — {entreprise_nom}', "Hello,\n\nPlease find attached the report \"{rapport}\" of {date_rapport}.\n\n{parametres}\n\nBest regards,\n{entreprise_nom}"],
+            'rapport' => ['Report "{rapport}" — {entreprise_nom}', "Hello,\n\nPlease find attached the report \"{rapport}\" of {date_rapport}.\n\n{parametres}\n\n{analyse_ia}\n\nBest regards,\n{entreprise_nom}"],
             'general' => ['Message from {entreprise_nom}', "Hello,\n\n\n\nBest regards,\n{entreprise_nom}"],
         ],
     ];

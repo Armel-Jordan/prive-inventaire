@@ -20,7 +20,7 @@ class RapportProgramme extends Model
 
     protected $fillable = [
         'tenant_id', 'code', 'nom', 'parametres', 'periode', 'format', 'langue', 'destinataires', 'frequence', 'jour', 'actif',
-        'compte_id', 'prochain_envoi', 'dernier_envoi_le', 'dernier_envoi_id', 'derniere_erreur',
+        'compte_id', 'prochain_envoi', 'dernier_envoi_le', 'dernier_envoi_id', 'derniere_erreur', 'question_ia',
     ];
 
     protected function casts(): array
