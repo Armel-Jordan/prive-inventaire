@@ -32,6 +32,7 @@ class Droits
      * par rôle (utilisateurs, rôles, tâches planifiées), pièces jointes et envois rattachés à une fiche.
      */
     private const MODULES = [
+        'support' => 'support',
         'produits' => 'produits',
         'etiquettes' => 'etiquettes',
         'lots' => 'lots',
@@ -326,6 +327,10 @@ class Droits
         // Questions à l'IA sur les rapports (chaque compte ne voit que les siennes).
         'GET api/rapports/ia/questions' => ['rapports', 'questionner'],
         'POST api/rapports/ia/questions' => ['rapports', 'questionner'],
+        // Support : répondre à une demande ou la fermer demande le droit d'écrire à l'éditeur (le contrôleur vérifie
+        // que la demande est celle du compte, ou qu'il voit toutes celles de l'entreprise).
+        'POST api/support/{id}/messages' => ['support', 'creer'],
+        'POST api/support/{id}/fermer' => ['support', 'creer'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

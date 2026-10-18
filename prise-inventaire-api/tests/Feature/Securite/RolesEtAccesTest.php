@@ -126,7 +126,7 @@ class RolesEtAccesTest extends TestCase
             '2026_10_17_100051_creer_consignations', '2026_10_17_100052_creer_caisses', '2026_10_17_100053_creer_point_de_vente', '2026_10_17_100054_creer_cartes_cadeaux', '2026_10_17_100055_creer_suggestions_achat', '2026_10_17_100056_import_prix_fournisseurs', '2026_10_17_100058_receptions_fournisseur', '2026_10_17_100060_creer_factures_fournisseurs',
             '2026_10_17_100063_creer_encaissements', '2026_10_17_100064_creer_debourses', '2026_10_17_100065_creer_transactions_bancaires',
             '2026_10_17_100068_creer_budgets', '2026_10_17_100069_cheques_debourses', '2026_10_17_100070_creer_virements_fournisseurs',
-            '2026_10_17_100072_creer_formats_etiquettes', '2026_10_17_100078_suivi_lots_series', '2026_10_17_100081_rapports_courriel_programmes', '2026_10_17_100083_questions_ia',
+            '2026_10_17_100072_creer_formats_etiquettes', '2026_10_17_100078_suivi_lots_series', '2026_10_17_100081_rapports_courriel_programmes', '2026_10_17_100083_questions_ia', '2026_10_17_100085_creer_demandes_support',
         ] as $suivante) {
             (require database_path("migrations/{$suivante}.php"))->up();
         }

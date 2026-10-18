@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Building2, Users, AlertTriangle, CheckCircle, Plus, LogOut, Shield,
-  Search, RefreshCw, Clock, TrendingUp, ChevronRight, ToggleLeft, ToggleRight,
+  Search, RefreshCw, Clock, TrendingUp, ChevronRight, ToggleLeft, ToggleRight, LifeBuoy,
 } from 'lucide-react';
 import { apiFetch, type ApiOptions } from '@/services/http';
 import { NOM_APPLICATION } from '@/config/application';
@@ -182,6 +182,14 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/super-admin/support')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              title="Demandes de support et suggestions des entreprises"
+            >
+              <LifeBuoy size={16} />
+              Support
+            </button>
             <button
               onClick={loadData}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"

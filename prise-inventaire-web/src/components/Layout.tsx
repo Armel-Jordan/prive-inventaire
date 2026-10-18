@@ -41,7 +41,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useState } from 'react';
-import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
+import { ArchiveRestore, BadgePercent, Banknote, BellRing, Calculator, Gift, LibraryBig, LifeBuoy, Lightbulb, ShoppingBasket, BookOpen, BookText, CalendarRange, FileClock, FileSignature, FileSpreadsheet, Hourglass, PackageMinus, PackageOpen, PackageSearch, ReceiptText, FileInput, Repeat, Scale, ScrollText, Wallet, BanknoteArrowUp, Landmark, PiggyBank, Send, Tags } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import NotificationBell from './NotificationBell';
@@ -384,6 +384,17 @@ export default function Layout() {
           <ThemeToggle />
           <LanguageSelector />
           <NotificationBell />
+          {(peut('support', 'creer') || canView('support')) && (
+            // Support et suggestions : la nouvelle demande retient l'écran d'où elle part.
+            <Link
+              to={`/support?depuis=${encodeURIComponent(location.pathname)}`}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              title={t.support.link}
+              aria-label={t.support.link}
+            >
+              <LifeBuoy size={20} className="text-gray-600 dark:text-gray-300" />
+            </Link>
+          )}
           <Link
             to="/securite"
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"

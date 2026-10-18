@@ -89,6 +89,7 @@ import GestionPrixPage from '@/pages/GestionPrixPage';
 import NotificationsConfigPage from '@/pages/NotificationsConfigPage';
 import ConfigurationPage from '@/pages/ConfigurationPage';
 import CourrielsPage from '@/pages/CourrielsPage';
+import SupportPage from '@/pages/SupportPage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import ReferentielsPage from '@/pages/ReferentielsPage';
@@ -100,6 +101,7 @@ import SuperAdminLoginPage from '@/pages/SuperAdminLoginPage';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import SuperAdminTenantPage from '@/pages/SuperAdminTenantPage';
 import SuperAdminNewTenantPage from '@/pages/SuperAdminNewTenantPage';
+import SuperAdminSupportPage from '@/pages/SuperAdminSupportPage';
 import NotificationsPage from '@/pages/NotificationsPage';
 import PageIntrouvable from '@/pages/PageIntrouvable';
 
@@ -222,6 +224,7 @@ function AppRoutes() {
         <Route path="alertes-config" element={<NotificationsConfigPage />} />
         <Route path="configuration" element={<ConfigurationPage />} />
         <Route path="courriels" element={<CourrielsPage />} />
+        <Route path="support" element={<SupportPage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
@@ -234,6 +237,7 @@ function AppRoutes() {
       <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
       <Route path="/super-admin/tenants/new" element={<SuperAdminNewTenantPage />} />
       <Route path="/super-admin/tenants/:tenantId" element={<SuperAdminTenantPage />} />
+      <Route path="/super-admin/support" element={<SuperAdminSupportPage />} />
     </Routes>
   );
 }
