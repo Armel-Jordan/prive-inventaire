@@ -45,6 +45,8 @@ import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
+import ChoixRepresentant from '@/components/ChoixRepresentant';
+import { useRepresentants } from '@/hooks/useRepresentants';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 import ChampCarteCadeau from '@/components/cartesCadeaux/ChampCarteCadeau';
@@ -57,7 +59,7 @@ export default function FacturesPage() {
   const montantDoc = useMontantDocument();
   const montant = (v: number | string | null | undefined, deviseDoc?: string | null) => montantDoc(v, deviseDoc);
   const deviseEntreprise = useCodeDevise();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { toasts, toast, dismiss } = useToast();
   // Poste de caisse : le paiement entre dans la session ouverte de sa caisse (ouverture proposée si elle est fermée).
   const encaissement = useEncaissementCaisse();
@@ -70,6 +72,10 @@ export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
+  // Représentants commerciaux (phase 1.11a) : filtre de la liste, et celui de la facture (par défaut, celui du client).
+  const representants = useRepresentants();
+  const [filterRepresentant, setFilterRepresentant] = useState<number | null>(null);
+  const [representantId, setRepresentantId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, abonnements, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -155,7 +161,7 @@ export default function FacturesPage() {
   const loadFactures = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, page });
+      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, page });
       setFactures(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -163,7 +169,7 @@ export default function FacturesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, page]);
+  }, [filterStatut, recherche, filterRepresentant, page]);
 
   useEffect(() => {
     loadFactures();
@@ -213,9 +219,10 @@ export default function FacturesPage() {
     }
   };
 
-  // Client choisi : sa devise est proposée, avec son taux.
+  // Client choisi : sa devise est proposée, avec son taux ; son représentant aussi.
   const choisirClient = (id: string, liste: Client[] = clients) => {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setCreateForm(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -239,11 +246,13 @@ export default function FacturesPage() {
         ],
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
+        representant_id: representantId,
       });
       frais.reinitialiser();
       setShowCreateModal(false);
       setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
       setPassage(PASSAGE_VIDE);
+      setRepresentantId(null);
       setCreateLignes([]);
       loadFactures();
     } catch (error) {
@@ -371,6 +380,8 @@ export default function FacturesPage() {
             <option value="payee">Payée</option>
             <option value="creditee">Créditée</option>
           </select>
+          <ChoixRepresentant value={filterRepresentant} onChange={id => { setFilterRepresentant(id); setPage(1); }} representants={representants}
+            libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
         </div>
       </div>
 
@@ -526,6 +537,17 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Date échéance:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_echeance)}</p>
                 </div>
+                {selectedFacture.representant && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.salesReps.label} :</span>
+                    <p className="dark:text-white">
+                      {selectedFacture.representant.nom}
+                      {selectedFacture.taux_commission !== null && selectedFacture.taux_commission !== undefined && (
+                        <span className="ml-2 text-xs text-gray-500">{t.salesReps.commission.replace('{taux}', Number(selectedFacture.taux_commission).toLocaleString(language === 'en' ? 'en-US' : 'fr-FR'))}</span>
+                      )}
+                    </p>
+                  </div>
+                )}
                 {selectedFacture.condition_paiement && (
                   <div>
                     <span className="text-sm text-gray-500">Condition de paiement:</span>
@@ -720,6 +742,11 @@ export default function FacturesPage() {
                     onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   <BoutonRemarquesRapides onInserer={texte => setCreateForm(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
+                </div>
+                <div>
+                  <label htmlFor="facture-representant" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.salesReps.label}</label>
+                  <ChoixRepresentant id="facture-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
+                  <span className="text-xs text-gray-500">{t.salesReps.documentHint}</span>
                 </div>
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}

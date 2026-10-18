@@ -1,7 +1,7 @@
 # FICHE CLIENT — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — client de passage (FLOW-VENTES §2.6)
+> Dernière mise à jour : 2026-10-18 — représentant du client (FLOW-VENTES §2.7). 2026-10-17 : client de passage (FLOW-VENTES §2.6)
 
 ---
 
@@ -74,6 +74,8 @@ Onglet **Références produits** : le numéro d'article du client pour chacun de
   - supprimer une catégorie garde ses clients, qui restent sans catégorie ;
   - une règle de prix peut viser une catégorie (Tarifs & Prix → Règles) ; une catégorie utilisée par une règle ne se
     supprime pas.
+- **Représentant** (phase 1.11a) : choisi dans la modification du client, affiché sur sa fiche ; la liste se filtre par
+  représentant. Il est repris par les devis, commandes et factures du client (FLOW-VENTES §2.7).
 - **Favoris** : chaque utilisateur marque ses clients d'une étoile, dans la liste ou sur la fiche. **Mes favoris** filtre la liste. Les favoris d'un utilisateur ne sont pas ceux de ses collègues.
 
 ---

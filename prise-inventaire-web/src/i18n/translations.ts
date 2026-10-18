@@ -3377,6 +3377,16 @@ export const translations = {
       normal: 'Normal',
     },
     // Prix et remises
+    // Représentants commerciaux sur les clients et les documents de vente (phase 1.11a).
+    salesReps: {
+      label: 'Représentant',
+      none: 'Aucun représentant',
+      all: 'Tous les représentants',
+      inactive: 'inactif',
+      clientHint: 'Repris par ses devis, commandes et factures.',
+      documentHint: 'Celui du client par défaut.',
+      commission: 'Commission {taux} %',
+    },
     pricing: {
       title: 'Prix et remises',
       subtitle: 'Le prix d\'un client est le plus bas entre le prix de sa liste, sa remise globale et les règles qui s\'appliquent.',
@@ -8060,6 +8070,16 @@ export const translations = {
       normal: 'Normal',
     },
     // Prices and discounts
+    // Sales reps on customers and sales documents (phase 1.11a).
+    salesReps: {
+      label: 'Sales rep',
+      none: 'No sales rep',
+      all: 'All sales reps',
+      inactive: 'inactive',
+      clientHint: 'Carried over to their quotes, orders and invoices.',
+      documentHint: "The customer's by default.",
+      commission: 'Commission {taux}%',
+    },
     pricing: {
       title: 'Prices and discounts',
       subtitle: 'A customer\'s price is the lowest of their price list, their global discount and the rules that apply.',

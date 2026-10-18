@@ -1,7 +1,7 @@
 # VENTES — Flow complet & détail de chaque étape
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — consignation chez le client (§5.18) ; facturation à l'usage (§5.16) ; contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
+> Dernière mise à jour : 2026-10-18 — représentants commerciaux et commissions (§2.7). 2026-10-17 : consignation chez le client (§5.18) ; facturation à l'usage (§5.16) ; contrats de location (§5.17) ; abonnements clients et facturation récurrente (§5.16)
 
 ---
 
@@ -249,6 +249,41 @@ Plan de parité fripv2, phase 1.1 : le « client comptant » de fripv2. On vend 
 Code :
 - API : service `App\Services\ClientsDePassage`, migration `2026_10_16_100039_client_de_passage` (colonne `clients.de_passage`, coordonnées sur `devis`, `com_client_entete` et `factures`) ;
 - web : composants `ClientDePassage` (bouton, champs, détail, pastille) et `lib/clientDePassage`.
+
+### 2.7 Représentants commerciaux et commissions
+
+Plan de parité fripv2, phase 1.11a. Les représentants (Paramètres → Référentiels → Représentants : nom, taux de
+commission, territoire) se rattachent aux clients et aux documents de vente.
+
+**Sur le client :** champ « Représentant » de sa fiche (`clients.representant_id`). La liste des clients se filtre par
+représentant, et sa fiche l'affiche.
+
+**Sur les devis, commandes et factures :**
+- à la création, le représentant du client est proposé (écran) et retenu par l'API si la demande n'en donne pas ; on peut
+  en choisir un autre, ou aucun ;
+- il suit le document d'origine : devis → commande (conversion) → facture, devis facturé directement, copie d'un devis,
+  facture du reste d'un bon de livraison. Une commande passée dans l'espace client prend celui du client ;
+- les factures créées par l'application (reliquats, abonnements, loyers, consignation, comptoir) prennent celui du client ;
+- un brouillon de devis ou de commande se modifie : le représentant se change ou se retire ;
+- les listes se filtrent par représentant ; le détail et le PDF l'affichent (« Représentant » parmi les informations).
+
+**Commission :** la facture fige le taux de commission du représentant à sa création (`factures.taux_commission`) ; un
+changement de taux ne touche pas les factures déjà faites. La facture du reste d'une livraison partielle garde le taux de
+sa facture d'origine.
+
+**Rapport « Ventes par représentant »** (Bibliothèque de rapports, ventes ; droit de voir les factures) : sur la période,
+par représentant, le nombre de factures émises, leurs ventes hors taxes, les notes de crédit émises sur ces factures,
+les ventes nettes et la commission (ventes × taux de chaque facture, moins les notes de crédit au taux de leur facture).
+Les ventes sans représentant forment une ligne à part ; filtre facultatif sur un représentant.
+
+**Référentiel :** un représentant rattaché à un client ou à un document de vente ne se supprime pas (on le désactive) :
+il garde l'attribution des ventes et des commissions. Un représentant désactivé n'est plus proposé, mais reste affiché
+sur les fiches et les documents qui l'ont.
+
+Code :
+- API : service `App\Services\EntetesVente` (création, modification, copie, taux de commission), rapport
+  `App\Rapports\VentesParRepresentant`, migration `2026_10_18_100089_representants_ventes` ;
+- web : `hooks/useRepresentants`, composant `ChoixRepresentant`.
 
 ---
 

@@ -12,6 +12,7 @@ use App\Models\ProduitLocalisation;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
+use App\Services\EntetesVente;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\TauxTaxe;
@@ -27,13 +28,16 @@ class CommandeClientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComClientEntete::with(['client', 'lignes'])->where('tenant_id', $tenantId);
+        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
         }
         if ($request->has('client_id')) {
             $query->where('client_id', $request->client_id);
+        }
+        if ($request->filled('representant_id')) {
+            $query->where('representant_id', $request->integer('representant_id'));
         }
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
@@ -55,7 +59,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture'])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom'])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
@@ -83,10 +87,13 @@ class CommandeClientController extends Controller
             'lignes.*.unite' => 'nullable|string|max:20',
             ...DevisesVente::regles(),
             ...ClientsDePassage::regles(),
+            ...EntetesVente::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
-        // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise.
-        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
+        // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
+        $client = Client::find($validated['client_id']);
+        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client)
+            + app(EntetesVente::class)->pourCreation($validated, $client);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
@@ -156,6 +163,7 @@ class CommandeClientController extends Controller
             'lignes.*.remise_ligne' => 'nullable|numeric|min:0|max:100',
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
+            ...EntetesVente::regles($commande),
         ]);
         if (isset($validated['lignes'])) {
             $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
@@ -163,7 +171,8 @@ class CommandeClientController extends Controller
 
         DB::transaction(function () use ($commande, $validated) {
             // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
-            $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id)));
+            $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id))
+                + app(EntetesVente::class)->pourModification($validated));
             // Client et date se modifient aussi ; une note vidée est effacée (elle était conservée).
             $commande->update([
                 'client_id' => $validated['client_id'] ?? $commande->client_id,

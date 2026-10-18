@@ -34,6 +34,8 @@ class Devis extends Model
         'envoye_le', 'reponse_le', 'reponse_en_ligne', 'reponse_nom', 'reponse_commentaire',
         // Relances envoyées et date de la dernière (voir App\Services\RelancesDevis).
         'relances', 'derniere_relance_le',
+        // Représentant commercial (voir App\Services\EntetesVente).
+        'representant_id',
     ];
 
     /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
@@ -64,6 +66,12 @@ class Devis extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Représentant commercial (même retiré du référentiel depuis). */
+    public function representant(): BelongsTo
+    {
+        return $this->belongsTo(Representant::class)->withTrashed();
     }
 
     public function lignes(): HasMany

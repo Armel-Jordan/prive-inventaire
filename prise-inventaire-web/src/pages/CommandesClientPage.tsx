@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/i18n/useLanguage';
 import { useVerrou } from '@/hooks/useVerrou';
 import BandeauVerrou from '@/components/BandeauVerrou';
+import ChoixRepresentant from '@/components/ChoixRepresentant';
+import { useRepresentants } from '@/hooks/useRepresentants';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -66,6 +68,10 @@ export default function CommandesClientPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
+  // Représentants commerciaux (phase 1.11a) : filtre de la liste, et celui de la commande (par défaut, celui du client).
+  const representants = useRepresentants();
+  const [filterRepresentant, setFilterRepresentant] = useState<number | null>(null);
+  const [representantId, setRepresentantId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, reliquats, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -131,7 +137,7 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -144,7 +150,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, page]);
+  }, [filterStatut, recherche, filterRepresentant, page]);
 
   useEffect(() => {
     loadData();
@@ -171,6 +177,7 @@ export default function CommandesClientPage() {
       ],
       // Retenues par l'API pour le client de passage seulement.
       ...passage,
+      representant_id: representantId,
     };
     try {
       if (editingId) {
@@ -200,6 +207,7 @@ export default function CommandesClientPage() {
       taux: String(cmd.taux_change ?? 1),
     });
     setPassage(saisiePassage(cmd));
+    setRepresentantId(cmd.representant_id ?? null);
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -319,12 +327,14 @@ export default function CommandesClientPage() {
       taux: '1',
     });
     setPassage(PASSAGE_VIDE);
+    setRepresentantId(null);
     setLignes([]);
   };
 
-  // Client choisi : sa devise est proposée, avec son taux.
+  // Client choisi : sa devise est proposée, avec son taux ; son représentant aussi.
   const choisirClient = (id: string, liste: Client[] = clients) => {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -394,6 +404,8 @@ export default function CommandesClientPage() {
             <option value="refusee">Refusée</option>
             <option value="facturee">Facturée</option>
           </select>
+          <ChoixRepresentant value={filterRepresentant} onChange={id => { setFilterRepresentant(id); setPage(1); }} representants={representants}
+            libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
         </div>
       </div>
 
@@ -611,6 +623,12 @@ export default function CommandesClientPage() {
               </div>
 
               <div>
+                <label htmlFor="commande-representant" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.salesReps.label}</label>
+                <ChoixRepresentant id="commande-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
+                <p className="text-xs text-gray-500 mt-1">{t.salesReps.documentHint}</p>
+              </div>
+
+              <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium dark:text-gray-300">Lignes de commande</label>
                   <button type="button" onClick={addLigne} className="text-sm text-purple-600 hover:underline">
@@ -712,6 +730,12 @@ export default function CommandesClientPage() {
                   <span className="text-sm text-gray-500">Date livraison souhaitée:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_livraison_souhaitee)}</p>
                 </div>
+                {selectedCommande.representant && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.salesReps.label} :</span>
+                    <p className="dark:text-white">{selectedCommande.representant.nom}</p>
+                  </div>
+                )}
               </div>
               <div className="border-t pt-3 dark:border-gray-700">
                 <div className="flex justify-between">

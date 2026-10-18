@@ -22,11 +22,14 @@ class Facture extends Model
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
         // Contrat de location facturé (prix de contrat ou loyer).
         'contrat_location_id',
+        // Représentant commercial et son taux de commission, figé à la création (voir App\Services\EntetesVente).
+        'representant_id', 'taux_commission',
     ];
 
     protected $casts = [
         'date_facture' => 'date',
         'date_echeance' => 'date',
+        'taux_commission' => 'decimal:2',
         'montant_ht' => 'decimal:2',
         'montant_tva' => 'decimal:2',
         'montant_ttc' => 'decimal:2',
@@ -53,6 +56,12 @@ class Facture extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Représentant commercial (même retiré du référentiel depuis). */
+    public function representant(): BelongsTo
+    {
+        return $this->belongsTo(Representant::class)->withTrashed();
     }
 
     public function factureMere(): BelongsTo

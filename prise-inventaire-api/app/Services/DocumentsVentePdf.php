@@ -9,6 +9,7 @@ use App\Models\ComClientEntete;
 use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Models\Representant;
 use App\Support\EntreprisePdf;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DocumentPdf;
@@ -182,6 +183,10 @@ class DocumentsVentePdf
     private function document(string $titre, Model $document, array $infos, array $contenu): array
     {
         $entete = EntreprisePdf::entete();
+        // Représentant commercial du devis, de la commande ou de la facture.
+        if ($document->getAttribute('representant_id')) {
+            $infos['Représentant'] = Representant::withTrashed()->whereKey($document->getAttribute('representant_id'))->value('nom');
+        }
         // Document en devise étrangère : ses montants dans sa devise, avec son taux parmi les informations.
         if (! empty($document->devise)) {
             $entete['devise'] = app(DevisesVente::class)->symbole($document->devise);

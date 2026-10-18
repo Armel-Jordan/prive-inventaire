@@ -13,8 +13,8 @@ use Illuminate\Validation\Rule;
  */
 abstract class Rapport
 {
-    /** Types de paramètres : date, entier, choix (options), client, fournisseur, categorie (de produits). */
-    public const TYPES_PARAMETRES = ['date', 'entier', 'choix', 'client', 'fournisseur', 'categorie'];
+    /** Types de paramètres : date, entier, choix (options), client, fournisseur, categorie (de produits), representant. */
+    public const TYPES_PARAMETRES = ['date', 'entier', 'choix', 'client', 'fournisseur', 'categorie', 'representant'];
 
     /** Types de colonnes : texte, date, entier, quantite, montant, pourcentage. */
     public const TYPES_COLONNES = ['texte', 'date', 'entier', 'quantite', 'montant', 'pourcentage'];
@@ -77,6 +77,7 @@ abstract class Rapport
                 'client' => ['nullable', 'integer', TenantRule::exists('clients')],
                 'fournisseur' => ['nullable', 'integer', TenantRule::exists('fournisseurs')],
                 'categorie' => ['nullable', 'string', 'max:100'],
+                'representant' => ['nullable', 'integer', TenantRule::exists('representants')],
             };
         }
 

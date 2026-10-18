@@ -9,6 +9,7 @@ use App\Models\Devis;
 use App\Models\Facture;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
+use App\Services\EntetesVente;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,9 @@ class ClientController extends Controller
         $utilisateur = $request->user()->id;
         $query->when($request->filled('categorie_id'), fn ($q) => $q->where('categorie_id', $request->integer('categorie_id')))
             ->when($request->boolean('favoris'), fn ($q) => $q->whereHas('favoris', fn ($f) => $f->where('user_id', $utilisateur)))
-            ->with('categorie:id,nom')
+            // Clients d'un représentant (phase 1.11a).
+            ->when($request->filled('representant_id'), fn ($q) => $q->where('representant_id', $request->integer('representant_id')))
+            ->with(['categorie:id,nom', 'representant:id,nom'])
             ->withExists(['favoris as favori' => fn ($f) => $f->where('user_id', $utilisateur)]);
 
         $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
@@ -90,6 +93,8 @@ class ClientController extends Controller
             // Route de livraison et rang de passage (ordre des arrêts des tournées).
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            // Représentant commercial : repris par ses devis, commandes et factures.
+            ...EntetesVente::regles(),
         ]);
         $validated['devise'] = $this->devise($validated['devise'] ?? null);
 
@@ -131,6 +136,7 @@ class ClientController extends Controller
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'actif' => 'sometimes|boolean',
+            ...EntetesVente::regles($client),
         ]);
         if (array_key_exists('devise', $validated)) {
             $validated['devise'] = $this->devise($validated['devise']);

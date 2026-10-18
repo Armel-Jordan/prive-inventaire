@@ -4,6 +4,7 @@ namespace App\Rapports;
 
 use App\Models\Client;
 use App\Models\Fournisseur;
+use App\Models\Representant;
 use App\Support\ClasseurXlsx;
 use App\Support\EntreprisePdf;
 use App\Support\FichierCsv;
@@ -94,6 +95,7 @@ final class Production
                 'choix' => $rapport->texte($parametre['options'][$valeur] ?? ['fr' => (string) $valeur]),
                 'client' => Client::withTrashed()->find($valeur)?->raison_sociale ?? (string) $valeur,
                 'fournisseur' => Fournisseur::withTrashed()->find($valeur)?->raison_sociale ?? (string) $valeur,
+                'representant' => Representant::withTrashed()->find($valeur)?->nom ?? (string) $valeur,
                 default => (string) $valeur,
             };
         }

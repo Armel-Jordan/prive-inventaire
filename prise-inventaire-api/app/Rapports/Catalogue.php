@@ -15,8 +15,8 @@ final class Catalogue
 {
     /** @var list<class-string<Rapport>> */
     public const RAPPORTS = [
-        VentesParPeriode::class, VentesParClient::class, VentesParProduit::class, VentesParCategorie::class, DevisParStatut::class,
-        CommandesClientEnCours::class, ClientsInactifs::class,
+        VentesParPeriode::class, VentesParClient::class, VentesParProduit::class, VentesParCategorie::class, VentesParRepresentant::class,
+        DevisParStatut::class, CommandesClientEnCours::class, ClientsInactifs::class,
         AchatsParFournisseur::class, CommandesFournisseurEnCours::class,
         StockProduits::class, ProduitsDormants::class,
         EncaissementsParMode::class,

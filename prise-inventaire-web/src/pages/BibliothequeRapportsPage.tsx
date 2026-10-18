@@ -12,6 +12,7 @@ import FiltresMemorises from '@/components/FiltresMemorises';
 import QuestionsIa from '@/components/rapports/QuestionsIa';
 import EnvoisProgrammes from '@/components/rapports/EnvoisProgrammes';
 import FenetreProgramme from '@/components/rapports/FenetreProgramme';
+import { useRepresentants } from '@/hooks/useRepresentants';
 import {
   executerRapport, getCatalogueRapports, getProgrammesRapports, telechargerRapport,
   type CatalogueRapports, type DefinitionRapport, type FormatRapport, type ListeProgrammes, type ProgrammeRapport, type ResultatRapport, type TypeColonne,
@@ -95,7 +96,11 @@ export default function BibliothequeRapportsPage() {
     });
     return () => { actif = false; };
   }, [besoinClients, besoinFournisseurs]);
-  const listes = useMemo<ListesParametres>(() => ({ ...tiers, categories: categoriesProduits }), [tiers, categoriesProduits]);
+  // Représentants (rapport des ventes par représentant), désactivés compris : leurs ventes passées comptent.
+  const representants = useRepresentants();
+  const listes = useMemo<ListesParametres>(() => ({
+    ...tiers, categories: categoriesProduits, representants: representants.map(r => ({ id: r.id, nom: r.nom })),
+  }), [tiers, categoriesProduits, representants]);
 
   function choisir(rapport: DefinitionRapport) {
     setChoisi(rapport);

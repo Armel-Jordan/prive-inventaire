@@ -7,7 +7,7 @@ import type { CourrielSaisi } from '@/components/ComposerCourriel';
  * courriel et envois programmés.
  */
 
-export type TypeParametre = 'date' | 'entier' | 'choix' | 'client' | 'fournisseur' | 'categorie';
+export type TypeParametre = 'date' | 'entier' | 'choix' | 'client' | 'fournisseur' | 'categorie' | 'representant';
 export type TypeColonne = 'texte' | 'date' | 'entier' | 'quantite' | 'montant' | 'pourcentage';
 export type FormatRapport = 'csv' | 'xlsx' | 'pdf';
 

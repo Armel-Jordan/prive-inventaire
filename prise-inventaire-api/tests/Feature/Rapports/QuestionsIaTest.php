@@ -121,7 +121,7 @@ class QuestionsIaTest extends TestCase
         /** @var Request $premier */
         $premier = $envois[0][0];
         $this->assertSame(['cle-de-test', '2023-06-01', 'claude-opus-5-5'], [$premier->header('x-api-key')[0], $premier->header('anthropic-version')[0], $premier['model']]);
-        $this->assertCount(12, $premier['tools'][0]['input_schema']['properties']['code']['enum']);
+        $this->assertCount(13, $premier['tools'][0]['input_schema']['properties']['code']['enum']);
         $this->assertStringContainsString("Aujourd'hui : 2026-10-17", $premier['system'][0]['text']);
         $this->assertStringContainsString('« Entreprise Test »', $premier['system'][0]['text']);
         $this->assertSame([['role' => 'user', 'content' => 'Qui est mon meilleur client depuis septembre ?']], $premier['messages']);

@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-18',
+    fr: 'Représentants commerciaux : sur la fiche client, repris par ses devis, commandes et factures ; commission figée sur chaque facture et rapport des ventes par représentant.',
+    en: 'Sales reps: on the customer record, carried over to their quotes, orders and invoices; commission frozen on each invoice and a sales-by-rep report.',
+    lien: '/bibliotheque-rapports',
+  },
+  {
+    date: '2026-10-18',
     fr: "Révisions de prix : de nouveaux prix préparés en lot (pourcentage ou montant, retouches), appliqués tout de suite ou à leur date d'entrée en vigueur.",
     en: 'Price revisions: new prices prepared in bulk (percentage or amount, manual edits), applied now or on their effective date.',
     lien: '/gestion-prix?onglet=revisions',
