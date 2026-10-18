@@ -323,6 +323,9 @@ class Droits
         'PUT api/rapports/programmes/{id}' => ['rapports', 'programmer'],
         'DELETE api/rapports/programmes/{id}' => ['rapports', 'programmer'],
         'POST api/rapports/programmes/{id}/envoyer' => ['rapports', 'programmer'],
+        // Questions à l'IA sur les rapports (chaque compte ne voit que les siennes).
+        'GET api/rapports/ia/questions' => ['rapports', 'questionner'],
+        'POST api/rapports/ia/questions' => ['rapports', 'questionner'],
     ];
 
     private const VERBES = ['voir' => 'consulter', 'creer' => 'créer', 'modifier' => 'modifier', 'supprimer' => 'supprimer'];

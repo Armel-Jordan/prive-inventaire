@@ -26,6 +26,7 @@ const OPTIONAL_MODULES: { key: string; label: string; desc: string }[] = [
   { key: 'achats', label: 'Achats', desc: 'Fournisseurs, commandes, réceptions' },
   { key: 'ventes', label: 'Ventes', desc: 'Clients, devis, factures, livraisons' },
   { key: 'finance', label: 'Finance', desc: 'Comptabilité, prévisions, prix' },
+  { key: 'ia', label: 'Intelligence artificielle', desc: 'Questions en langage naturel sur les rapports (Anthropic, données transmises)' },
 ];
 
 interface Admin {

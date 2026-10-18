@@ -33,6 +33,7 @@ const OPTIONAL_MODULE_LABELS: Record<string, string> = {
   achats: 'Achats',
   ventes: 'Ventes',
   finance: 'Finance',
+  ia: 'IA',
 };
 
 function ModuleChips({ modules }: { modules?: string[] }) {

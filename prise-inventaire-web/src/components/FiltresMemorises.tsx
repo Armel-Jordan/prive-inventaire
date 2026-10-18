@@ -12,13 +12,15 @@ import {
  * filtres actuels sous un nom, choisir celui appliqué à l'ouverture de l'écran (étoile), supprimer. Chaque compte a les
  * siens.
  */
-export default function FiltresMemorises({ ecran, valeurs, onAppliquer }: {
+export default function FiltresMemorises({ ecran, valeurs, onAppliquer, sansDefaut = false }: {
   /** Écran des filtres : « scans », « clients », « rapport:ventes-par-periode »… */
   ecran: string;
   /** Filtres actuels de l'écran. */
   valeurs: ValeursFiltres;
   /** Applique des filtres enregistrés (une clé absente ou vide remet le filtre à vide). */
   onAppliquer: (valeurs: ValeursFiltres) => void;
+  /** L'écran s'ouvre avec des filtres déjà choisis (rapport ouvert depuis une réponse de l'IA…) : pas de filtre par défaut. */
+  sansDefaut?: boolean;
 }) {
   const { t } = useLanguage();
   const tf = t.savedFilters;
@@ -37,6 +39,7 @@ export default function FiltresMemorises({ ecran, valeurs, onAppliquer }: {
   const id = `filtres-${ecran.replace(/[^a-z0-9_-]/gi, '-')}`;
 
   const appliquerDefaut = useEffectEvent((filtre: FiltreMemorise) => {
+    if (sansDefaut) return;
     onAppliquer(filtre.valeurs);
     setAnnonce(tf.appliedDefault.replace('{nom}', filtre.nom));
   });

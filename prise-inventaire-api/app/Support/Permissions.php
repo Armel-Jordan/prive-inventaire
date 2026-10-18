@@ -63,6 +63,9 @@ class Permissions
             'programmer' => ['base' => 'modifier', 'fr' => "Programmer l'envoi des rapports", 'en' => 'Schedule reports',
                 'aide_fr' => "Créer, modifier et supprimer les envois programmés (chaque jour, semaine ou mois). Chaque envoi suit les droits du dernier compte à l'avoir réglé.",
                 'aide_en' => 'Create, change and delete scheduled sends (daily, weekly or monthly). Each send follows the rights of the last account that set it up.'],
+            'questionner' => ['base' => 'voir', 'fr' => "Poser des questions à l'IA sur les rapports", 'en' => 'Ask the AI about reports',
+                'aide_fr' => "Poser une question en langage naturel : l'IA y répond en exécutant les rapports que le compte peut ouvrir. Demande le module « Intelligence artificielle » de l'entreprise.",
+                'aide_en' => "Ask a question in plain language: the AI answers it by running the reports the account can open. Needs the company's Artificial intelligence module."],
         ]],
         'inventaire_tournant' => ['onglet' => 'inventaire', 'fr' => 'Inventaire tournant', 'en' => 'Cycle counting'],
 
