@@ -12,6 +12,8 @@ import { getFournisseurs, createFournisseur, updateFournisseur, deleteFournisseu
 import type { Fournisseur } from '@/services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -62,6 +64,8 @@ export default function FournisseursPage() {
   const codeDevise = useCodeDevise();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Fiche verrouillée pendant sa modification : un autre compte voit qui la modifie.
+  const verrou = useVerrou('fournisseur', showModal ? editingId : null);
   const [form, setForm] = useState<FournisseurForm>(emptyForm);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
 
@@ -269,6 +273,7 @@ export default function FournisseursPage() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              <BandeauVerrou verrou={verrou} />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -402,7 +407,8 @@ export default function FournisseursPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={verrou.bloque}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {editingId ? 'Modifier' : 'Créer'}
                 </button>

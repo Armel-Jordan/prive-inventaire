@@ -21,6 +21,8 @@ import { signaler } from '@/lib/erreurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 import { getFrais, type Frais } from '@/services/frais';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -41,6 +43,8 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  // Fiche verrouillée pendant sa modification : un autre compte voit qui la modifie.
+  const verrou = useVerrou('client', showModal && editingClient ? editingClient.id : null);
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
   const [filtres, setFiltres] = useState<FiltresListeClients>({});
   const [formData, setFormData] = useState({
@@ -342,6 +346,7 @@ export default function ClientsPage() {
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               {editingClient ? 'Modifier le client' : 'Nouveau client'}
             </h2>
+            <BandeauVerrou verrou={verrou} />
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -533,7 +538,8 @@ export default function ClientsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  disabled={verrou.bloque}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {editingClient ? 'Modifier' : 'Créer'}
                 </button>

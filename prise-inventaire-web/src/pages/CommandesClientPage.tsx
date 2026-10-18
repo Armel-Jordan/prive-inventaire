@@ -9,6 +9,8 @@ import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
 import Toasts from '@/components/Toasts';
 import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -72,6 +74,8 @@ export default function CommandesClientPage() {
   const [showRefusModal, setShowRefusModal] = useState(false);
   const [motifRefus, setMotifRefus] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Commande verrouillée pendant sa modification : un autre compte voit qui la modifie.
+  const verrou = useVerrou('commande_client', showModal ? editingId : null);
 
   const [formData, setFormData] = useState({
     client_id: '',
@@ -512,6 +516,7 @@ export default function CommandesClientPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 dark:text-white">{editingId ? 'Modifier la commande' : 'Nouvelle commande'}</h2>
+            <BandeauVerrou verrou={verrou} />
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -643,7 +648,8 @@ export default function CommandesClientPage() {
                 >
                   Annuler
                 </button>
-                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                <button type="submit" disabled={verrou.bloque}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50">
                   {editingId ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>

@@ -29,6 +29,8 @@ import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
 import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
 import { useLanguage } from '@/i18n/useLanguage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 
 export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
@@ -50,6 +52,8 @@ export default function DevisPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDevis, setSelectedDevis] = useState<DevisRecord | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Devis verrouillé pendant sa modification : un autre compte voit qui le modifie.
+  const verrou = useVerrou('devis', showModal ? editingId : null);
   const [configNumero, setConfigNumero] = useState<{ auto_increment: boolean; prefixe: string; separateur?: string; prochain_numero: number; longueur: number } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -439,6 +443,7 @@ export default function DevisPage() {
               <h2 className="text-xl font-bold">{editingId ? 'Modifier le devis' : 'Nouveau devis'}</h2>
               <button onClick={() => { setShowModal(false); resetForm(); }}><X size={20} /></button>
             </div>
+            <BandeauVerrou verrou={verrou} />
             {configNumero?.auto_increment && !editingId && (
               <p className="text-sm text-gray-500 mb-4">
                 Numéro : {configNumero.prefixe}{configNumero.prefixe ? configNumero.separateur ?? '' : ''}{String(configNumero.prochain_numero).padStart(configNumero.longueur, '0')} (auto-généré)
@@ -505,7 +510,8 @@ export default function DevisPage() {
 
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Annuler</button>
-                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">{editingId ? 'Modifier' : 'Créer'}</button>
+                <button type="submit" disabled={verrou.bloque}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50">{editingId ? 'Modifier' : 'Créer'}</button>
               </div>
             </form>
           </div>

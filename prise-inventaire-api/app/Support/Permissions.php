@@ -307,6 +307,12 @@ class Permissions
         'referentiels' => ['onglet' => 'parametres', 'fr' => 'Référentiels', 'en' => 'Reference lists'],
         'alertes_config' => ['onglet' => 'parametres', 'fr' => 'Réglage des alertes', 'en' => 'Alert settings', 'crud' => ['voir', 'modifier']],
         'configuration' => ['onglet' => 'parametres', 'fr' => 'Configuration', 'en' => 'Configuration'],
+        // Fiches en cours de modification (verrous) : voir qui modifie quoi ; prendre la main sur la fiche d'un autre compte.
+        'verrous' => ['onglet' => 'parametres', 'fr' => 'Fiches en cours de modification', 'en' => 'Records being edited', 'crud' => ['voir'], 'actions' => [
+            'liberer' => ['base' => 'modifier', 'fr' => 'Prendre la main sur une fiche en cours de modification', 'en' => 'Take over a record being edited',
+                'aide_fr' => "Libérer une fiche qu'un autre compte est en train de modifier, ou la reprendre pour la modifier soi-même : ses changements non enregistrés seront refusés.",
+                'aide_en' => 'Release a record another account is editing, or take it over to edit it yourself: their unsaved changes will be refused.'],
+        ]],
     ];
 
     private const LIBELLES_CRUD = [

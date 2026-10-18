@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
             // Droits par module du rôle sur les écritures de l'API (App\Support\Droits).
             'droits' => \App\Http\Middleware\VerifierDroits::class,
+            // Fiche en cours de modification par un autre compte : enregistrement refusé (App\Services\Verrous).
+            'verrou' => \App\Http\Middleware\RespecterVerrou::class,
         ]);
 
         // Les routes tenant utilisent le route-model binding ({devis}, {commande}…).
