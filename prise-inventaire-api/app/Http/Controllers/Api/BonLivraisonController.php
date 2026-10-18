@@ -30,6 +30,13 @@ class BonLivraisonController extends Controller
         if ($request->has('mode_livraison')) {
             $query->where('mode_livraison', $request->mode_livraison);
         }
+        // Numéro du bon ou de sa facture, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
+        if ($request->filled('recherche')) {
+            $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)
+                ->orWhereHas('facture', fn ($f) => $f->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)
+                    ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif))));
+        }
         // Bons pas encore placés dans une tournée (liste « Ajouter » d'une tournée).
         if ($request->boolean('sans_tournee')) {
             $query->whereDoesntHave('tourneeBon');

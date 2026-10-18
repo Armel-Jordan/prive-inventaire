@@ -32,7 +32,19 @@ Un champ de recherche en tête de chaque écran (raccourci **Ctrl+K**, ou **Cmd+
 - **Clavier** : ↑ et ↓ pour se déplacer, Entrée pour ouvrir, Échap pour fermer.
 - Un résultat ouvre un **aperçu** : statut, dates, montants dans la devise de l'entreprise, coordonnées. **Ouvrir la page** mène à la fiche du client ou du fournisseur (`/clients/{id}`, `/fournisseurs/{id}`), et pour les autres types à la page du type, avec `?recherche=` dans l'adresse.
 
-Lecture seule : rien n'est modifié. Les pages existantes ne lisent pas encore le paramètre `?recherche=` : elles s'ouvrent sur leur liste complète.
+Lecture seule : rien n'est modifié.
+
+**La page ouverte reprend la recherche.** Le texte de `?recherche=` pré-remplit le champ de recherche de la liste, et la
+liste s'ouvre déjà filtrée :
+- produits, secteurs, employés : par numéro ou nom ;
+- devis, commandes clients, factures : par numéro, client ou nom noté pour un client de passage ;
+- bons de livraison : par numéro, numéro de facture ou client ;
+- commandes fournisseurs : par numéro ou fournisseur ;
+- notes de crédit, retours clients, demandes d'acompte, retours fournisseurs.
+
+Le même paramètre sert aux liens des autres écrans : reliquats, abonnements, contrats de location, consignations,
+fiches en cours de modification. Un nouveau lien vers la page déjà ouverte reprend le texte de l'adresse ; ensuite, la
+saisie de l'utilisateur prime.
 
 ---
 

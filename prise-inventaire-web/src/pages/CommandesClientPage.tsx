@@ -1,8 +1,9 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useState, useEffect, useCallback } from 'react';
+import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet, Hourglass } from 'lucide-react';
+import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet, Hourglass, Search } from 'lucide-react';
 import ReliquatsDepuisCommande from '@/components/reliquats/ReliquatsDepuisCommande';
 import type { ManqueCommande } from '@/services/disponibilites';
 import FormulaireAcompte from '@/components/acomptes/FormulaireAcompte';
@@ -64,6 +65,9 @@ export default function CommandesClientPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
+  // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, reliquats, autres écrans).
+  const [search, setSearch] = useRechercheAdresse();
+  const [recherche, setRecherche] = useState(() => search.trim());
   const [showModal, setShowModal] = useState(false);
   // Commande acceptée dont des produits manquent : reliquats à noter.
   const [reliquatsDe, setReliquatsDe] = useState<number | null>(null);
@@ -110,11 +114,17 @@ export default function CommandesClientPage() {
     appliquer: prix => setLignes(ls => appliquerPrix(ls, prix, 'prix_unitaire_ht', p => dansLaDevise(p, formData.devise, Number(formData.taux)), t.pricing.simulator.origins)),
   });
 
+  // La recherche part 300 ms après la dernière frappe, et non à chaque caractère.
+  useEffect(() => {
+    const minuterie = setTimeout(() => { setRecherche(search.trim()); setPage(1); }, 300);
+    return () => clearTimeout(minuterie);
+  }, [search]);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -127,7 +137,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, page]);
+  }, [filterStatut, recherche, page]);
 
   useEffect(() => {
     loadData();
@@ -352,7 +362,18 @@ export default function CommandesClientPage() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Rechercher par numéro ou client..."
+              aria-label="Rechercher une commande"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            />
+          </div>
           <select
             value={filterStatut}
             onChange={(e) => { setFilterStatut(e.target.value); setPage(1); }}

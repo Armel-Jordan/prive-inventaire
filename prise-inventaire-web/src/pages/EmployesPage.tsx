@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
+import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Shield, ShieldOff, Filter, RotateCcw, KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -61,7 +62,8 @@ interface ConfigNumero {
 export default function EmployesPage() {
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // Pré-remplie par « ?recherche= » (recherche globale, autres écrans).
+  const [search, setSearch] = useRechercheAdresse();
   const [filterRole, setFilterRole] = useState('');
   // Employés désactivés masqués par défaut ; un filtre les retrouve pour les réactiver.
   const [filterStatut, setFilterStatut] = useState<'actifs' | 'inactifs' | 'tous'>('actifs');

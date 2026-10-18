@@ -1,5 +1,6 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import { useEffect, useState, useRef } from 'react';
+import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link } from 'react-router-dom';
 import { Search, Plus, X, Edit2, Trash2, Download, Upload, Filter, RotateCcw, ShoppingCart, Barcode, Tags, Boxes, Link2 } from 'lucide-react';
@@ -78,7 +79,8 @@ export default function ProduitsPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  // Pré-remplie par « ?recherche= » (recherche globale, autres écrans).
+  const [search, setSearch] = useRechercheAdresse();
   const [filterType, setFilterType] = useState('');
   const [filterSecteur, setFilterSecteur] = useState('');
   const [filterFabricant, setFilterFabricant] = useState('');
