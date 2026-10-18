@@ -213,12 +213,23 @@ export interface OptionsAppel {
 
 const attendre = (essai: number) => new Promise(resolve => setTimeout(resolve, Math.min(1000 * 2 ** (essai - 1), 4000)));
 
+/** Langue des messages de l'API : celle choisie dans l'espace client (clé du LanguageProvider), sinon celle du navigateur. */
+function langueEcran(): string {
+  try {
+    const choisie = localStorage.getItem('espace_client_langue');
+    if (choisie === 'fr' || choisie === 'en') return choisie;
+  } catch {
+    // Stockage indisponible (navigation privée) : langue du navigateur.
+  }
+  return navigator.language.toLowerCase().startsWith('en') ? 'en' : 'fr';
+}
+
 /**
  * Requête vers l'API. Lève ApiError (réponse non 2xx, avec son corps) ou NetworkError (pas de réponse). Les
  * lectures sont retentées sur coupure réseau ou erreur serveur ; jamais une commande (pas de doublon).
  */
 export async function appelPortail<T>(chemin: string, { methode = 'GET', corps, jeton, fichier = false, accepte = 'application/pdf' }: OptionsAppel = {}): Promise<T> {
-  const entetes: Record<string, string> = { Accept: fichier ? accepte : 'application/json' };
+  const entetes: Record<string, string> = { Accept: fichier ? accepte : 'application/json', 'Accept-Language': langueEcran() };
   if (corps !== undefined) entetes['Content-Type'] = 'application/json';
   if (jeton) entetes.Authorization = `Bearer ${jeton}`;
   const tentatives = methode === 'GET' ? 3 : 1;

@@ -22,6 +22,8 @@ export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    // Langue des messages de l'API : celle choisie à l'écran, et non celle du navigateur.
+    'Accept-Language': localStorage.getItem('prise_language') === 'en' ? 'en' : 'fr',
   };
 
   const stored = localStorage.getItem(STORAGE_KEY);
