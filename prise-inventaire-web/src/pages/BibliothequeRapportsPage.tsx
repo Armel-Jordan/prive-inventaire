@@ -5,8 +5,10 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { formatDateDocument } from '@/lib/documents';
 import { messageErreur } from '@/lib/erreurs';
 import { getClientsActifs, getFournisseursActifs } from '@/services/api';
+import { texteFiltre } from '@/services/filtresMemorises';
 import ChampParametre, { type ListesParametres } from '@/components/rapports/ChampParametre';
 import CourrielRapport from '@/components/rapports/CourrielRapport';
+import FiltresMemorises from '@/components/FiltresMemorises';
 import EnvoisProgrammes from '@/components/rapports/EnvoisProgrammes';
 import FenetreProgramme from '@/components/rapports/FenetreProgramme';
 import {
@@ -212,9 +214,16 @@ export default function BibliothequeRapportsPage() {
               ) : (
                 <>
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{choisi.titre}</h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{choisi.description}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{choisi.titre}</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{choisi.description}</p>
+                      </div>
+                      {choisi.parametres.length > 0 && (
+                        // Filtres mémorisés du rapport : ses paramètres ; une valeur absente reprend sa valeur par défaut.
+                        <FiltresMemorises key={choisi.code} ecran={`rapport:${choisi.code}`} valeurs={valeurs}
+                          onAppliquer={v => setValeurs({ ...valeursParDefaut(choisi), ...Object.fromEntries(Object.entries(v).map(([cle, x]) => [cle, texteFiltre(x)])) })} />
+                      )}
                     </div>
                     {choisi.parametres.length > 0 && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

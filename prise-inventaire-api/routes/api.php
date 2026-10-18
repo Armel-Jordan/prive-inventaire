@@ -108,6 +108,7 @@ use App\Http\Controllers\Comptabilite\RecurrenceComptableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeTenantController;
 use App\Http\Controllers\EtiquetteController;
+use App\Http\Controllers\FiltreMemoriseController;
 use App\Http\Controllers\Inventaire\LotController;
 use App\Http\Controllers\Inventaire\NumeroSerieController;
 use App\Http\Controllers\Inventaire\PriseInventaireController;
@@ -425,6 +426,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
         Route::post('/cleanup', [NotificationController::class, 'cleanup']);
+    });
+
+    // Filtres mémorisés : ceux du compte connecté, par écran (données personnelles, sans droit de module).
+    Route::prefix('filtres-memorises')->group(function () {
+        Route::get('/', [FiltreMemoriseController::class, 'index']);
+        Route::post('/', [FiltreMemoriseController::class, 'store']);
+        Route::put('/{id}', [FiltreMemoriseController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [FiltreMemoriseController::class, 'destroy'])->whereNumber('id');
     });
 
     // Configuration à compléter : mise en route vérifiée dans les données ; écarter un réglage : administrateurs.

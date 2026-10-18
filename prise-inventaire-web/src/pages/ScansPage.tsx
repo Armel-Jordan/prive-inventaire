@@ -8,6 +8,8 @@ import type { InventaireScan, Secteur, Employe, Produit } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { signaler } from '@/lib/erreurs';
 import Pagination from '@/components/Pagination';
+import FiltresMemorises from '@/components/FiltresMemorises';
+import { texteFiltre, type ValeursFiltres } from '@/services/filtresMemorises';
 import { bornesPeriode, fuseauNavigateur } from '@/lib/periodes';
 
 interface ScanForm {
@@ -104,6 +106,20 @@ export default function ScansPage() {
   const filteredScans = scans;
 
   const hasActiveFilters = filterSecteur || filterEntrepot || filterEmploye || filterProduit || filterDateDebut || filterDateFin;
+  // Filtres mémorisés de l'historique des scans.
+  const valeursFiltres: ValeursFiltres = {
+    secteur: filterSecteur, entrepot: filterEntrepot, employe: filterEmploye, produit: filterProduit, du: filterDateDebut, au: filterDateFin,
+  };
+  const appliquerFiltres = (v: ValeursFiltres) => {
+    setFilterSecteur(texteFiltre(v.secteur));
+    setFilterEntrepot(texteFiltre(v.entrepot));
+    setFilterEmploye(texteFiltre(v.employe));
+    setFilterProduit(texteFiltre(v.produit));
+    setFilterDateDebut(texteFiltre(v.du));
+    setFilterDateFin(texteFiltre(v.au));
+    setPage(1);
+    if (Object.values(v).some(valeur => texteFiltre(valeur) !== '')) setShowFilters(true);
+  };
 
   function resetFilters() {
     setFilterSecteur('');
@@ -247,12 +263,15 @@ export default function ScansPage() {
               </span>
             )}
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            {showFilters ? 'Masquer' : 'Afficher'} les filtres
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <FiltresMemorises ecran="scans" valeurs={valeursFiltres} onAppliquer={appliquerFiltres} />
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              {showFilters ? 'Masquer' : 'Afficher'} les filtres
+            </button>
+          </div>
         </div>
 
         {showFilters && (

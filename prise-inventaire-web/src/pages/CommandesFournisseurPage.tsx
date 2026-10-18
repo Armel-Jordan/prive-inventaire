@@ -9,6 +9,8 @@ import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
 import Pagination from '@/components/Pagination';
+import FiltresMemorises from '@/components/FiltresMemorises';
+import { texteFiltre } from '@/services/filtresMemorises';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
 import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
@@ -321,6 +323,9 @@ export default function CommandesFournisseurPage() {
             <option value="complete">Complète</option>
             <option value="annulee">Annulée</option>
           </select>
+          {/* Filtres mémorisés : recherche et statut. */}
+          <FiltresMemorises ecran="commandes-fournisseur" valeurs={{ recherche: search, statut: statutFilter }}
+            onAppliquer={v => { setSearch(texteFiltre(v.recherche)); setStatutFilter(texteFiltre(v.statut)); setPage(1); }} />
         </div>
       </div>
 
