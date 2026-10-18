@@ -292,7 +292,11 @@ class Permissions
                 'aide_en' => 'Enter, spread and copy budget amounts, and choose the budgeted accounts.'],
         ]],
         'previsions_stock' => ['onglet' => 'finance', 'fr' => 'Prévisions de stock', 'en' => 'Stock forecasts', 'crud' => ['voir']],
-        'gestion_prix' => ['onglet' => 'finance', 'fr' => 'Tarifs et prix', 'en' => 'Prices'],
+        'gestion_prix' => ['onglet' => 'finance', 'fr' => 'Tarifs et prix', 'en' => 'Prices', 'actions' => [
+            'reviser' => ['base' => 'modifier', 'fr' => 'Planifier une révision de prix', 'en' => 'Schedule a price revision',
+                'aide_fr' => "Préparer de nouveaux prix en lot (pourcentage ou montant, retouches), les planifier à une date d'entrée en vigueur, les appliquer tout de suite ou annuler une révision.",
+                'aide_en' => 'Prepare new prices in bulk (percentage or amount, manual edits), schedule them for an effective date, apply them now or cancel a revision.'],
+        ]],
 
         'produits' => ['onglet' => 'parametres', 'fr' => 'Produits', 'en' => 'Products'],
         'etiquettes' => ['onglet' => 'parametres', 'fr' => 'Étiquettes', 'en' => 'Labels', 'crud' => ['voir'], 'actions' => [

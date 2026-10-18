@@ -486,6 +486,7 @@ export const AIDES_FINANCE: AidesEcrans = {
         "Onglet « Grille de prix » : modifiez le prix de base et les prix par liste directement dans le tableau, puis cliquez sur « Enregistrer ».",
         "Onglet « Listes de prix » : cliquez sur « Nouvelle liste », donnez un nom et un ajustement en % sur le prix de base ; dépliez une liste pour rattacher des clients.",
         "Onglet « Règles de prix » : cliquez sur « Nouvelle règle », puis choisissez la portée (client, catégorie de clients, liste, produit, catégorie de produits), les conditions et l'effet.",
+        "Onglet « Révisions » : cliquez sur « Nouvelle révision », choisissez la catégorie, les prix visés (prix de base, une liste, ou tous), le type (pourcentage ou montant) et la valeur, puis « Appliquer l'ajustement ». Retouchez la colonne « Nouveau prix » au besoin, nommez la révision, puis « Appliquer maintenant », ou choisissez la date d'entrée en vigueur et « Planifier ».",
         "Onglet « Simulateur » : choisissez un client, un produit, une quantité et une date, puis cliquez sur « Calculer » pour voir le prix retenu.",
       ],
       astuces: [
@@ -493,8 +494,11 @@ export const AIDES_FINANCE: AidesEcrans = {
         "Dans la grille, un champ de liste vide suit la formule de la liste (valeur grisée) ; une valeur saisie la remplace, et la vider rend le produit à la formule.",
         "Un client est rattaché à une seule liste ; sans liste, ou si elle est inactive, il paie le prix de base.",
         "Les devis, commandes et factures proposent ce prix sur chaque ligne ; il reste modifiable.",
+        "Une révision ne change aucun prix tant qu'elle n'est pas appliquée. Planifiée, elle s'applique le jour venu par la tâche « Application des révisions de prix » (activée à la première planification), une seule fois ; chaque application est notifiée et la révision garde les prix remplacés.",
+        "Un ajustement arrondit aux décimales de la liste (2 pour le prix de base) et ne descend jamais sous zéro ; un nouvel ajustement remplace les retouches des prix qu'il touche. « Exporter (CSV) » sort la grille de la révision.",
+        "Réviser les prix demande la permission « Planifier une révision de prix » (Tarifs et prix) ; sans elle, les révisions se consultent seulement.",
       ],
-      motsCles: ["liste de prix", "tarifs", "remises", "prix de vente", "promotions", "prix client"],
+      motsCles: ["liste de prix", "tarifs", "remises", "prix de vente", "promotions", "prix client", "révision de prix", "hausse de prix", "nouveaux tarifs"],
     },
     en: {
       resume: "Selling prices: base price, price lists (wholesale, retail…), price rules (negotiated prices, quantity tiers, promotions) and a simulator of a customer's price.",
@@ -502,6 +506,7 @@ export const AIDES_FINANCE: AidesEcrans = {
         "“Price grid” tab: change the base price and the list prices directly in the table, then click “Save”.",
         "“Price lists” tab: click “New list”, give it a name and an adjustment in % on the base price; expand a list to attach customers.",
         "“Price rules” tab: click “New rule”, then choose the scope (customer, customer category, list, product, product category), the conditions and the effect.",
+        "“Revisions” tab: click “New revision”, choose the category, the prices to adjust (base price, one list, or all), the type (percentage or amount) and the value, then “Apply the adjustment”. Edit the “New price” column as needed, name the revision, then “Apply now”, or choose the effective date and “Schedule”.",
         "“Simulator” tab: choose a customer, a product, a quantity and a date, then click “Compute” to see the selected price.",
       ],
       astuces: [
@@ -509,8 +514,11 @@ export const AIDES_FINANCE: AidesEcrans = {
         "In the grid, an empty list field follows the list formula (greyed value); a typed value replaces it, and clearing it returns the product to the formula.",
         "A customer is attached to one list at most; with no list, or an inactive one, they pay the base price.",
         "Quotes, orders and invoices propose this price on each line; it can still be changed.",
+        "A revision changes no price until it is applied. Once scheduled, the “Apply price revisions” task applies it on the day (turned on by the first schedule), only once; each application is notified and the revision keeps the replaced prices.",
+        "An adjustment rounds to the list decimals (2 for the base price) and never goes below zero; a new adjustment replaces the manual edits of the prices it touches. “Export (CSV)” downloads the revision grid.",
+        "Revising prices needs the “Schedule a price revision” permission (Prices); without it, revisions can only be viewed.",
       ],
-      motsCles: ["price list", "pricing", "discounts", "selling price", "promotions", "customer price"],
+      motsCles: ["price list", "pricing", "discounts", "selling price", "promotions", "customer price", "price revision", "price increase", "new prices"],
     },
   },
 

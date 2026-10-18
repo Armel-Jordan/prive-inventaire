@@ -78,6 +78,7 @@ class Droits
         'listes-prix' => 'gestion_prix',
         'grille-prix' => 'gestion_prix',
         'regles-prix' => 'gestion_prix',
+        'revisions-prix' => 'gestion_prix',
         'portail-clients' => 'espace_client',
         'parametres' => 'configuration',
         'taxes' => 'configuration',
@@ -93,6 +94,8 @@ class Droits
     /** Écritures de tout un préfixe rattachées à une action nommée. */
     private const ECRITURES_ACTION = [
         'categories-clients' => ['clients', 'categories'],
+        // Révisions de prix : préparer (l'aperçu aussi), planifier, appliquer, annuler, supprimer.
+        'revisions-prix' => ['gestion_prix', 'reviser'],
     ];
 
     /** Lectures contrôlées (données sensibles) : préfixe => module ; il faut le droit de le consulter. */
@@ -119,6 +122,8 @@ class Droits
         'numeros-serie' => 'lots',
         // Fiches en cours de modification : qui modifie quoi.
         'verrous' => 'verrous',
+        // Révisions de prix : les prix à venir.
+        'revisions-prix' => 'gestion_prix',
     ];
 
     /** États comptables : il faut le droit de voir les états. */

@@ -9,6 +9,18 @@ export interface Nouveaute {
 
 export const NOUVEAUTES: Nouveaute[] = [
   {
+    date: '2026-10-18',
+    fr: "Révisions de prix : de nouveaux prix préparés en lot (pourcentage ou montant, retouches), appliqués tout de suite ou à leur date d'entrée en vigueur.",
+    en: 'Price revisions: new prices prepared in bulk (percentage or amount, manual edits), applied now or on their effective date.',
+    lien: '/gestion-prix?onglet=revisions',
+  },
+  {
+    date: '2026-10-18',
+    fr: 'Règles de prix par catégorie de clients, et références des produits chez chaque client, reprises sur ses documents et dans son espace client.',
+    en: "Price rules by customer category, and each customer's own product references, shown on their documents and in their customer area.",
+    lien: '/gestion-prix',
+  },
+  {
     date: '2026-10-17',
     fr: "Aide contextuelle : bouton « ? » et touche F1 sur chaque écran, carte des écrans, recherche d'un écran dans la recherche globale.",
     en: 'Contextual help: “?” button and F1 key on every screen, screen map, screens in the global search.',

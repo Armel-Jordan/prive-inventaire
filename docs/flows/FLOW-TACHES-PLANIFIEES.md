@@ -1,7 +1,7 @@
 # TÂCHES PLANIFIÉES — Flow complet
 
 > **Document évolutif.** Mis à jour à chaque modification du code.
-> Dernière mise à jour : 2026-10-17 — loyers et renouvellement des contrats de location (`facturation_locations`, `renouvellement_contrats`) ; facturation des abonnements (`facturation_abonnements`) ; relances des devis (`relances_devis`). 2026-10-16 : alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
+> Dernière mise à jour : 2026-10-18 — application des révisions de prix (`revisions_prix`) ; tableau complété (péremptions, écritures récurrentes, comptabilisation, rapports programmés). 2026-10-17 : loyers et renouvellement des contrats de location (`facturation_locations`, `renouvellement_contrats`) ; facturation des abonnements (`facturation_abonnements`) ; relances des devis (`relances_devis`). 2026-10-16 : alertes réglables (factures, commandes, livraisons, contrôles techniques) et écran **Réglage des alertes**
 >
 > Historique : 2026-10-15 — création (plan de parité fripv2, phase 0.10)
 
@@ -26,6 +26,11 @@ Des traitements automatiques prédéfinis par l'application. Chaque entreprise l
 | `commandes_fournisseur_en_retard` | Chaque jour à 07:00 | Notifie les commandes fournisseur envoyées ou partiellement reçues dont la livraison prévue est dépassée de plus de **N jours** (0 : dès le lendemain) |
 | `livraisons_en_retard` | Chaque jour à 07:00 | Notifie les bons de livraison pas encore livrés (créés, en préparation, prêts, en livraison) plus de **N jours** (3) après leur création |
 | `controles_techniques` | Chaque jour à 07:00 | Prévient **N jours** (30) avant l'expiration du contrôle technique d'un camion actif, et une fois la date dépassée |
+| `peremptions` | Chaque jour à 07:00 | Prévient des lots dont il reste une quantité et qui périment dans les **N jours** (30), ou sont périmés ; le même délai règle les lots « à surveiller » du registre des lots |
+| `ecritures_recurrentes` | Chaque jour à 05:30 | Crée les écritures récurrentes dont la date est arrivée (FLOW-COMPTABILITE) |
+| `comptabilisation` | Chaque jour à 23:30 | Passe au journal les ventes, les achats et les paiements depuis la date de début réglée (FLOW-COMPTABILITE) |
+| `rapports_programmes` | Chaque jour à 06:30 | Envoie les rapports programmés du jour (FLOW-RAPPORTS) ; activée au premier envoi programmé si personne ne l'a réglée |
+| `revisions_prix` | Chaque jour à 00:05 | Applique les révisions de prix planifiées dont la date d'entrée en vigueur est atteinte, une seule fois, et notifie chacune (FLOW-PRIX §5) ; activée à la première révision planifiée si personne ne l'a réglée |
 
 Ajouter une tâche : une classe dans `app/Taches` (interface `App\Taches\Tache`) et une ligne dans `App\Support\TachesPlanifiees::TACHES` ; ses paramètres réglables dans `PARAMETRES`, le module qu'elle suppose dans `MODULES`.
 

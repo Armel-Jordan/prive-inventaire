@@ -1992,6 +1992,119 @@ export async function calculerPrix(donnees: { client_id?: number; date?: string;
   return fetchApi('/prix/calculer', { method: 'POST', body: JSON.stringify(donnees) });
 }
 
+// === RÉVISIONS DE PRIX (phase 1.2d) ===
+export type StatutRevisionPrix = 'brouillon' | 'planifiee' | 'appliquee' | 'annulee';
+/** Prix visés par un ajustement : le prix de base, les prix saisis d'une liste, ou les deux sur toutes les listes actives. */
+export type CibleRevisionPrix = 'base' | 'liste' | 'toutes';
+export type TypeAjustementPrix = 'pourcentage' | 'montant';
+
+export interface RevisionPrix {
+  id: number;
+  nom: string;
+  notes: string | null;
+  date_effet: string | null;
+  statut: StatutRevisionPrix;
+  categorie: string | null;
+  cible: CibleRevisionPrix | null;
+  liste_prix_id: number | null;
+  liste: string | null;
+  type_ajustement: TypeAjustementPrix | null;
+  valeur_ajustement: number | null;
+  lignes_count: number;
+  cree_par: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  planifiee_le: string | null;
+  appliquee_le: string | null;
+  /** Vide pour une révision appliquée : par la tâche planifiée. */
+  appliquee_par: string | null;
+  annulee_le: string | null;
+  annulee_par: string | null;
+}
+
+/** Nouveau prix d'une révision : le prix de base (liste vide) ou le prix saisi d'un produit dans une liste. */
+export interface LigneRevisionPrix {
+  id: number | null;
+  produit_id: number;
+  numero: string | null;
+  description: string | null;
+  categorie: string | null;
+  produit_actif: boolean;
+  liste_prix_id: number | null;
+  liste: string | null;
+  /** Prix en place ; pour une révision appliquée, le prix qu'elle a remplacé. */
+  prix_actuel: number | null;
+  nouveau_prix: number;
+  /** Pour un prix de base : listes actives dont le prix du produit suit la formule (il change avec le prix de base). */
+  formules: number[];
+}
+
+export interface RevisionPrixDetail extends RevisionPrix {
+  lignes: LigneRevisionPrix[];
+}
+
+export interface ListeRevisionsPrix {
+  data: RevisionPrix[];
+  /** Tâche planifiée qui applique les révisions à leur date. */
+  tache: { active: boolean; prochaine_execution: string | null };
+  listes: Pick<ListePrix, 'id' | 'nom' | 'ajustement_pourcentage' | 'precision'>[];
+  categories: string[];
+}
+
+export interface ReglageAjustementPrix {
+  categorie?: string | null;
+  cible: CibleRevisionPrix;
+  liste_prix_id?: number | null;
+  type: TypeAjustementPrix;
+  valeur: number;
+  inclure_inactifs?: boolean;
+}
+
+export interface SaisieRevisionPrix {
+  nom: string;
+  notes: string | null;
+  date_effet: string | null;
+  categorie: string | null;
+  cible: CibleRevisionPrix | null;
+  liste_prix_id: number | null;
+  type_ajustement: TypeAjustementPrix | null;
+  valeur_ajustement: number | null;
+  lignes: { produit_id: number; liste_prix_id: number | null; nouveau_prix: number }[];
+}
+
+export async function getRevisionsPrix(): Promise<ListeRevisionsPrix> {
+  return fetchApi('/revisions-prix');
+}
+
+export async function getRevisionPrix(id: number): Promise<RevisionPrixDetail> {
+  return fetchApi(`/revisions-prix/${id}`);
+}
+
+/** Nouveaux prix d'un ajustement à partir des prix en place : rien n'est enregistré. */
+export async function apercuRevisionPrix(reglage: ReglageAjustementPrix): Promise<{ lignes: LigneRevisionPrix[]; total: number }> {
+  return fetchApi('/revisions-prix/apercu', { method: 'POST', body: JSON.stringify(reglage) });
+}
+
+export async function enregistrerRevisionPrix(donnees: SaisieRevisionPrix, id?: number): Promise<RevisionPrixDetail> {
+  return fetchApi(id ? `/revisions-prix/${id}` : '/revisions-prix', { method: id ? 'PUT' : 'POST', body: JSON.stringify(donnees) });
+}
+
+export async function planifierRevisionPrix(id: number, dateEffet: string): Promise<RevisionPrixDetail> {
+  return fetchApi(`/revisions-prix/${id}/planifier`, { method: 'POST', body: JSON.stringify({ date_effet: dateEffet }) });
+}
+
+export async function appliquerRevisionPrix(id: number): Promise<RevisionPrixDetail & { message: string }> {
+  return fetchApi(`/revisions-prix/${id}/appliquer`, { method: 'POST' });
+}
+
+export async function annulerRevisionPrix(id: number): Promise<RevisionPrixDetail> {
+  return fetchApi(`/revisions-prix/${id}/annuler`, { method: 'POST' });
+}
+
+export async function supprimerRevisionPrix(id: number): Promise<void> {
+  await fetchApi(`/revisions-prix/${id}`, { method: 'DELETE' });
+}
+
 // === CONFIGURATIONS ===
 export interface ConfigurationFormat {
   id?: number;
