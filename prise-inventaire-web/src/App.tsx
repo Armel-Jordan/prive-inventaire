@@ -91,6 +91,7 @@ import ConfigurationPage from '@/pages/ConfigurationPage';
 import CourrielsPage from '@/pages/CourrielsPage';
 import SupportPage from '@/pages/SupportPage';
 import FichesEnCoursPage from '@/pages/FichesEnCoursPage';
+import AidePage from '@/pages/AidePage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import ReferentielsPage from '@/pages/ReferentielsPage';
@@ -227,6 +228,7 @@ function AppRoutes() {
         <Route path="courriels" element={<CourrielsPage />} />
         <Route path="support" element={<SupportPage />} />
         <Route path="fiches-en-cours" element={<FichesEnCoursPage />} />
+        <Route path="aide" element={<AidePage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

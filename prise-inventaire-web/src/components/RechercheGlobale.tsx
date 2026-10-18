@@ -5,19 +5,32 @@ import { getParametres } from '@/services/api';
 import { MODULE_DU_TYPE, TYPES_RECHERCHE, rechercherGlobal, type GroupeRecherche, type ResultatRecherche } from '@/services/recherche';
 import { useLanguage } from '@/i18n/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useEcransGeneraux, useMenu } from '@/hooks/useMenu';
+import { aidePour, chargerAides, pertinence, type AidesEcrans } from '@/aide';
 
 const CHAMPS_DATE = new Set(['date', 'validite', 'echeance']);
 const CHAMPS_MONTANT = new Set(['prix', 'montant', 'reste', 'encours']);
+/** Écrans proposés au plus. */
+const ECRANS_MAX = 6;
+
+interface Ecran {
+  chemin: string;
+  titre: string;
+  categorie: string;
+}
 
 /**
- * Recherche globale de l'en-tête (Ctrl+K) : produits, clients, fournisseurs, documents, secteurs et
- * employés que l'utilisateur peut consulter. Un résultat ouvre un aperçu, avec un lien vers sa page.
+ * Recherche globale de l'en-tête (Ctrl+K) : les écrans ouverts au compte (par leur nom, leur aide ou ce qu'on veut y
+ * faire), puis les produits, clients, fournisseurs, documents, secteurs et employés qu'il peut consulter. Un écran
+ * s'ouvre directement ; une fiche ou un document ouvre un aperçu, avec un lien vers sa page.
  */
 export default function RechercheGlobale() {
   const { t, language } = useLanguage();
   const tr = t.globalSearch;
   const navigate = useNavigate();
   const { canView } = usePermissions();
+  const menu = useMenu();
+  const generaux = useEcransGeneraux();
   const id = useId();
   const champ = useRef<HTMLInputElement>(null);
   const conteneur = useRef<HTMLDivElement>(null);
@@ -28,10 +41,25 @@ export default function RechercheGlobale() {
   const [actif, setActif] = useState(0);
   const [apercu, setApercu] = useState<ResultatRecherche | null>(null);
   const [devise, setDevise] = useState('');
+  const [aides, setAides] = useState<AidesEcrans | null>(null);
 
   const types = TYPES_RECHERCHE.filter(type => canView(MODULE_DU_TYPE[type]));
   const cleTypes = types.join(',');
   const resultats = (groupes ?? []).flatMap(g => g.resultats);
+  const q = texte.trim();
+
+  // Écrans du menu (et l'aide) qui répondent à la recherche, d'après leur titre, leur résumé et leurs mots-clés : ceux
+  // dont le titre répond d'abord, puis dans l'ordre du menu.
+  const ecrans: Ecran[] = q.length < 2 ? [] : [
+    ...[generaux, ...menu].flatMap(categorie => categorie.items.map(item => ({ chemin: item.path, titre: item.label, categorie: categorie.label }))),
+    { chemin: '/aide', titre: t.help.map, categorie: t.help.title },
+  ]
+    .map(ecran => ({ ecran, score: pertinence(q, ecran.titre, aides ? aidePour(aides, ecran.chemin, language) : null) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, ECRANS_MAX)
+    .map(({ ecran }) => ecran);
+  const nombre = ecrans.length + resultats.length;
 
   // Raccourci clavier Ctrl+K (Cmd+K sur Mac).
   useEffect(() => {
@@ -54,7 +82,6 @@ export default function RechercheGlobale() {
 
   // Recherche après une courte pause de saisie ; seule la dernière réponse compte.
   useEffect(() => {
-    const q = texte.trim();
     if (q.length < 2 || !cleTypes) return;
     const numero = ++derniere.current;
     const minuterie = setTimeout(() => {
@@ -63,20 +90,27 @@ export default function RechercheGlobale() {
         .catch(() => { if (numero === derniere.current) setGroupes([]); });
     }, 250);
     return () => clearTimeout(minuterie);
-  }, [texte, cleTypes]);
+  }, [q, cleTypes]);
 
-  // Symbole de devise des montants de l'aperçu, chargé à la première ouverture de la recherche.
+  // Symbole de devise des montants de l'aperçu et aide des écrans, chargés à la première ouverture de la recherche.
   const deviseDemandee = useRef(false);
+  const aidesDemandees = useRef(false);
   function ouvrir() {
     setOuvert(true);
     if (!deviseDemandee.current) {
       deviseDemandee.current = true;
       getParametres().then(p => setDevise(p.devise_symbole || '')).catch(() => { deviseDemandee.current = false; });
     }
+    if (!aidesDemandees.current) {
+      aidesDemandees.current = true;
+      // Sans l'aide, les écrans se trouvent encore par leur nom.
+      chargerAides().then(setAides, () => { aidesDemandees.current = false; });
+    }
   }
 
   function saisir(valeur: string) {
     setTexte(valeur);
+    setActif(0);
     ouvrir();
     if (valeur.trim().length < 2) setGroupes(null);
   }
@@ -86,22 +120,36 @@ export default function RechercheGlobale() {
     setOuvert(false);
   }
 
+  function ouvrirEcran(ecran: Ecran) {
+    navigate(ecran.chemin);
+    setOuvert(false);
+    setTexte('');
+    setGroupes(null);
+    champ.current?.blur();
+  }
+
+  /** Choix n° i de la liste : les écrans d'abord, puis les fiches et documents. */
+  function choisir(index: number) {
+    if (index < ecrans.length) ouvrirEcran(ecrans[index]);
+    else if (resultats[index - ecrans.length]) ouvrirApercu(resultats[index - ecrans.length]);
+  }
+
   function clavier(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       // Sans preventDefault, Chrome vide le champ de recherche, ce qui rouvrirait la liste.
       e.preventDefault();
       setOuvert(false);
       champ.current?.blur();
-    } else if (e.key === 'ArrowDown' && resultats.length) {
+    } else if (e.key === 'ArrowDown' && nombre) {
       e.preventDefault();
       setOuvert(true);
-      setActif(i => (i + 1) % resultats.length);
-    } else if (e.key === 'ArrowUp' && resultats.length) {
+      setActif(i => (i + 1) % nombre);
+    } else if (e.key === 'ArrowUp' && nombre) {
       e.preventDefault();
-      setActif(i => (i - 1 + resultats.length) % resultats.length);
-    } else if (e.key === 'Enter' && resultats[actif]) {
+      setActif(i => (i - 1 + nombre) % nombre);
+    } else if (e.key === 'Enter' && actif < nombre) {
       e.preventDefault();
-      ouvrirApercu(resultats[actif]);
+      choisir(actif);
     }
   }
 
@@ -118,8 +166,8 @@ export default function RechercheGlobale() {
     return String(v);
   }
 
-  const q = texte.trim();
-  const indexDe = new Map(resultats.map((r, i) => [`${r.type}-${r.id}`, i]));
+  const indexDe = new Map(resultats.map((r, i) => [`${r.type}-${r.id}`, ecrans.length + i]));
+  const classeOption = (index: number) => `px-4 py-2 cursor-pointer ${index === actif ? 'bg-purple-50 dark:bg-purple-900/30' : ''}`;
 
   return (
     <div ref={conteneur} className="relative mr-auto w-full min-w-0 max-w-md">
@@ -133,7 +181,7 @@ export default function RechercheGlobale() {
         aria-expanded={ouvert}
         aria-controls={`${id}-liste`}
         aria-autocomplete="list"
-        aria-activedescendant={ouvert && resultats[actif] ? `${id}-option-${actif}` : undefined}
+        aria-activedescendant={ouvert && actif < nombre ? `${id}-option-${actif}` : undefined}
         value={texte}
         onChange={e => saisir(e.target.value)}
         onFocus={ouvrir}
@@ -148,27 +196,44 @@ export default function RechercheGlobale() {
           className="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:w-[min(32rem,90vw)] z-40 max-h-[70vh] overflow-y-auto rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl">
           {q.length < 2 ? (
             <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{tr.hint}</p>
-          ) : groupes && groupes.length === 0 ? (
+          ) : groupes && groupes.length === 0 && ecrans.length === 0 ? (
             <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{tr.noResults.replace('{q}', q)}</p>
-          ) : groupes?.map(g => (
-            <div key={g.type} role="group" aria-label={tr.types[g.type]} className="py-1 border-b last:border-b-0 dark:border-gray-700">
-              <p className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wide text-gray-400">
-                {tr.types[g.type]}
-                {g.total > g.resultats.length && <span className="ml-2 normal-case tracking-normal">{tr.more.replace('{n}', String(g.total - g.resultats.length))}</span>}
-              </p>
-              {g.resultats.map(r => {
-                const index = indexDe.get(`${r.type}-${r.id}`) ?? 0;
-                return (
-                  <div key={`${r.type}-${r.id}`} id={`${id}-option-${index}`} role="option" aria-selected={index === actif}
-                    onMouseMove={() => { if (index !== actif) setActif(index); }} onMouseDown={e => e.preventDefault()} onClick={() => ouvrirApercu(r)}
-                    className={`px-4 py-2 cursor-pointer ${index === actif ? 'bg-purple-50 dark:bg-purple-900/30' : ''}`}>
-                    <p className="text-sm text-gray-900 dark:text-white truncate">{r.titre}</p>
-                    {r.sous_titre && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.sous_titre}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+          ) : (
+            <>
+              {ecrans.length > 0 && (
+                <div role="group" aria-label={t.help.screens} className="py-1 border-b last:border-b-0 dark:border-gray-700">
+                  <p className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wide text-gray-400">{t.help.screens}</p>
+                  {ecrans.map((ecran, index) => (
+                    <div key={ecran.chemin} id={`${id}-option-${index}`} role="option" aria-selected={index === actif}
+                      onMouseMove={() => { if (index !== actif) setActif(index); }} onMouseDown={e => e.preventDefault()} onClick={() => ouvrirEcran(ecran)}
+                      className={classeOption(index)}>
+                      <p className="text-sm text-gray-900 dark:text-white truncate">{ecran.titre}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{ecran.categorie}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {groupes?.map(g => (
+                <div key={g.type} role="group" aria-label={tr.types[g.type]} className="py-1 border-b last:border-b-0 dark:border-gray-700">
+                  <p className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wide text-gray-400">
+                    {tr.types[g.type]}
+                    {g.total > g.resultats.length && <span className="ml-2 normal-case tracking-normal">{tr.more.replace('{n}', String(g.total - g.resultats.length))}</span>}
+                  </p>
+                  {g.resultats.map(r => {
+                    const index = indexDe.get(`${r.type}-${r.id}`) ?? 0;
+                    return (
+                      <div key={`${r.type}-${r.id}`} id={`${id}-option-${index}`} role="option" aria-selected={index === actif}
+                        onMouseMove={() => { if (index !== actif) setActif(index); }} onMouseDown={e => e.preventDefault()} onClick={() => ouvrirApercu(r)}
+                        className={classeOption(index)}>
+                        <p className="text-sm text-gray-900 dark:text-white truncate">{r.titre}</p>
+                        {r.sous_titre && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.sous_titre}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 

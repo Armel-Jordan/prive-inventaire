@@ -2,12 +2,20 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import { execSync } from 'node:child_process'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // Nom affiché de l'application (provisoire) : VITE_APP_NAME au build, sinon cette valeur par défaut.
   // Il est injecté dans le code (import.meta.env.VITE_APP_NAME) et dans le <title> de index.html.
   const nomApplication = loadEnv(mode, process.cwd(), 'VITE_').VITE_APP_NAME?.trim() || 'Prise Inventaire'
+  // Version affichée dans l'aide (« À propos ») : le commit construit, vide hors d'un dépôt git.
+  let versionApplication = ''
+  try {
+    versionApplication = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    // Construction sans git : pas de numéro de version.
+  }
 
   return {
     plugins: [
@@ -17,6 +25,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       'import.meta.env.VITE_APP_NAME': JSON.stringify(nomApplication),
+      'import.meta.env.VITE_VERSION_APPLICATION': JSON.stringify(versionApplication),
+      'import.meta.env.VITE_DATE_CONSTRUCTION': JSON.stringify(new Date().toISOString()),
     },
     resolve: {
       alias: {
