@@ -1,6 +1,7 @@
 # Flow — Langues (français, anglais)
 
-> Plan de parité fripv2, phase 6.8 (« Traduction complète ») : première partie, les messages de l'API.
+> Plan de parité fripv2, phase 6.8 (« Traduction complète ») : les messages de l'API (6.8a, cadre ; 6.8b, messages de
+> l'application).
 
 ## Écrans
 
@@ -24,8 +25,17 @@ Les messages de l'API (erreurs de validation…) suivent la langue de l'écran :
   - `lang/fr.json`, pour le résumé « (et 1 autre erreur) ».
 
   L'anglais vient du cadre.
-- **Messages propres à un écran**, écrits dans les contrôleurs (« Indiquez au moins un destinataire. »…) : ils sont en
-  français pour l'instant. Leur traduction anglaise est la suite de la phase 6.8.
+- **Messages de l'application** (contrôleurs, services, droits, verrous : « Indiquez au moins un destinataire. »…) :
+  - le texte français est la source, passé à `__()` ; l'anglais est dans `lang/en.json` (935 messages) ;
+  - les données variables sont des paramètres nommés : `__('Permission inconnue : :code.', ['code' => $code])` ;
+  - le refus d'un droit nomme le module et l'action dans la langue de l'écran (libellés de `App\Support\Permissions`) ;
+  - restent en français, parce que ce sont des données et non des messages : les textes enregistrés (notifications,
+    remarques, libellés d'écritures et de mouvements), les courriels, les PDF et les fichiers CSV.
+- **Hors requête** (tâches planifiées, files d'attente, commandes) : le français, langue de l'application
+  (`DefinirLangue::PAR_DEFAUT`), quel que soit `APP_LOCALE`.
+- **Ajouter un message** : l'écrire en français dans `__()`, et sa traduction dans `lang/en.json`. Le test
+  `tests/Unit/TraductionsAnglaisesTest` échoue si un message n'a pas de traduction, ou si ses paramètres diffèrent.
+  Les tests parlent français par défaut (en-tête `Accept-Language: fr` de `tests/TestCase`).
 
 Exemple, un champ obligatoire manquant :
 
@@ -33,6 +43,13 @@ Exemple, un champ obligatoire manquant :
 |---|---|
 | `Accept-Language: fr` (ou absent, ou langue non prise en charge) | Le champ nom est obligatoire. |
 | `Accept-Language: en` | The nom field is required. |
+
+Un message de l'application, une fiche en cours de modification :
+
+| En-tête | Message |
+|---|---|
+| `Accept-Language: fr` | Cette fiche est en cours de modification par Paul Vendeur : réessayez quand la modification sera terminée. |
+| `Accept-Language: en` | This record is being edited by Paul Vendeur: try again once the editing is finished. |
 
 ## Données traduisibles
 

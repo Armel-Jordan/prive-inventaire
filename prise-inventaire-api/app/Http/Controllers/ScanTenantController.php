@@ -128,7 +128,7 @@ class ScanTenantController extends Controller
             ->map(fn ($lignes) => $lignes->sum('total'));
         $compter = fn (string $colonne) => (clone $base)->selectRaw("{$colonne} as nom, COUNT(*) as total")
             ->groupBy($colonne)->orderByDesc('total')->get()
-            ->map(fn ($ligne) => ['nom' => $ligne->nom ?: 'Non défini', 'total' => (int) $ligne->total]);
+            ->map(fn ($ligne) => ['nom' => $ligne->nom ?: __('Non défini'), 'total' => (int) $ligne->total]);
 
         $total = $parJour->sum();
 
@@ -229,7 +229,7 @@ class ScanTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Scan enregistré avec succès',
+            'message' => __('Scan enregistré avec succès'),
             'scan' => $scan,
         ], 201);
     }
@@ -247,7 +247,7 @@ class ScanTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Scan modifié avec succès',
+            'message' => __('Scan modifié avec succès'),
             'scan' => $scan,
         ]);
     }
@@ -260,7 +260,7 @@ class ScanTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Scan supprimé avec succès',
+            'message' => __('Scan supprimé avec succès'),
         ]);
     }
 

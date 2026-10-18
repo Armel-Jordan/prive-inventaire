@@ -58,7 +58,7 @@ class PortailClientController extends Controller
             'url_espace_client' => AccesPortail::normaliserAdresse($donnees['origine'] ?? null) ?? $parametres->url_espace_client,
         ])->save();
 
-        return response()->json(['message' => $parametres->actif ? 'Portail ouvert.' : 'Portail fermé.']);
+        return response()->json(['message' => $parametres->actif ? __('Portail ouvert.') : __('Portail fermé.')]);
     }
 
     /** Nouvel accès : le contact reçoit un lien pour choisir son mot de passe (le lien est aussi renvoyé ici). */
@@ -72,7 +72,7 @@ class PortailClientController extends Controller
             'telephone' => ['nullable', 'string', 'max:50'],
             'origine' => ['nullable', 'string', 'max:255'],
             'langue' => ['nullable', Rule::in(['fr', 'en'])],
-        ], ['email.unique' => 'Cette adresse a déjà un accès au portail.']);
+        ], ['email.unique' => __('Cette adresse a déjà un accès au portail.')]);
         $compte = PortailCompte::create([
             'client_id' => $donnees['client_id'],
             'nom' => trim($donnees['nom']),
@@ -94,7 +94,7 @@ class PortailClientController extends Controller
             'email' => ['required', 'email', 'max:255', TenantRule::unique('portail_comptes', 'email', $compte->id)],
             'telephone' => ['nullable', 'string', 'max:50'],
             'actif' => ['required', 'boolean'],
-        ], ['email.unique' => 'Cette adresse a déjà un accès au portail.']);
+        ], ['email.unique' => __('Cette adresse a déjà un accès au portail.')]);
         $compte->update(['nom' => trim($donnees['nom'])] + $donnees);
         // Accès suspendu : ses sessions sont fermées.
         if (! $compte->actif) {
@@ -116,7 +116,7 @@ class PortailClientController extends Controller
     {
         PortailCompte::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Accès supprimé.']);
+        return response()->json(['message' => __('Accès supprimé.')]);
     }
 
     private function inviter(Request $request, PortailCompte $compte, array $donnees): array
@@ -131,8 +131,8 @@ class PortailClientController extends Controller
             'lien' => $lien,
             'courriel_envoye' => $envoye,
             'message' => $envoye
-                ? "Lien envoyé à {$compte->email}."
-                : 'Le courriel n\'a pas pu partir : transmettez ce lien au client.',
+                ? __('Lien envoyé à :email.', ['email' => $compte->email])
+                : __("Le courriel n'a pas pu partir : transmettez ce lien au client."),
         ];
     }
 

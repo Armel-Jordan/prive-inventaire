@@ -57,7 +57,7 @@ class FournisseurController extends Controller
                 $validated['code'] = $config->genererNumero();
                 $config->incrementer();
             } else {
-                return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+                return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
             }
         }
 
@@ -100,13 +100,13 @@ class FournisseurController extends Controller
     {
         if ($fournisseur->commandes()->exists()) {
             return response()->json([
-                'message' => 'Impossible de supprimer ce fournisseur car il a des commandes associées.',
+                'message' => __('Impossible de supprimer ce fournisseur car il a des commandes associées.'),
             ], 422);
         }
 
         $fournisseur->delete();
 
-        return response()->json(['message' => 'Fournisseur supprimé avec succès.']);
+        return response()->json(['message' => __('Fournisseur supprimé avec succès.')]);
     }
 
     public function listActifs(): JsonResponse

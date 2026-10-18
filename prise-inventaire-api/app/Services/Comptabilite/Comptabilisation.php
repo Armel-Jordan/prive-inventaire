@@ -185,12 +185,12 @@ class Comptabilisation
     {
         $parametres = $this->parametres();
         if (! $parametres->date_debut) {
-            throw new DomainException("Réglez d'abord la date à partir de laquelle les documents se comptabilisent.");
+            throw new DomainException(__("Réglez d'abord la date à partir de laquelle les documents se comptabilisent."));
         }
         // Une comptabilisation à la fois par entreprise : deux lancements simultanés ne doublent aucune écriture.
         $verrou = Cache::lock('comptabilisation:'.$parametres->tenant_id, 300);
         if (! $verrou->get()) {
-            throw new DomainException('Une comptabilisation est déjà en cours : réessayez dans un instant.');
+            throw new DomainException(__('Une comptabilisation est déjà en cours : réessayez dans un instant.'));
         }
 
         try {
@@ -248,16 +248,16 @@ class Comptabilisation
     {
         $parametres = $this->parametres();
         if (! $parametres->date_debut) {
-            throw new DomainException("Réglez d'abord la date à partir de laquelle les documents se comptabilisent.");
+            throw new DomainException(__("Réglez d'abord la date à partir de laquelle les documents se comptabilisent."));
         }
         $document = $this->aComptabiliser($type, Carbon::parse($parametres->date_debut), Carbon::parse('2999-12-31'))->whereKey($id)->first();
         if (! $document) {
-            throw new DomainException('Ce document est déjà au journal, ou antérieur à la date de début de la comptabilisation automatique.');
+            throw new DomainException(__('Ce document est déjà au journal, ou antérieur à la date de début de la comptabilisation automatique.'));
         }
         // La même exclusion que la comptabilisation : jamais deux écritures pour un document.
         $verrou = Cache::lock('comptabilisation:'.$parametres->tenant_id, 300);
         if (! $verrou->get()) {
-            throw new DomainException('Une comptabilisation est en cours : réessayez dans un instant.');
+            throw new DomainException(__('Une comptabilisation est en cours : réessayez dans un instant.'));
         }
         try {
             return DB::transaction(function () use ($type, $document, $parametres, $auteur, $id) {
@@ -534,7 +534,7 @@ class Comptabilisation
         $taux = (float) $transaction->taux_change;
         if ($transaction->type === TransactionBancaire::VIREMENT) {
             if (! $transaction->compteBancaire?->compte_comptable_id || ! $transaction->destination?->compte_comptable_id) {
-                throw new DomainException('Reliez les deux comptes bancaires du virement à leur compte comptable (Finance → Banque).');
+                throw new DomainException(__('Reliez les deux comptes bancaires du virement à leur compte comptable (Finance → Banque).'));
             }
             $montant = $this->montant($transaction->montant, $taux);
             $lignes = [
@@ -662,12 +662,13 @@ class Comptabilisation
 
     private function compte(ParametreComptable $p, string $champ): int
     {
-        return $p->{$champ} ?: throw new DomainException('Compte « '.self::LIBELLES[$champ].' » non réglé (Finance → Comptabilisation automatique).');
+        // Le nom du réglage se traduit aussi (clé de lang/en.json).
+        return $p->{$champ} ?: throw new DomainException(__('Compte « :compte » non réglé (Finance → Comptabilisation automatique).', ['compte' => __(self::LIBELLES[$champ])]));
     }
 
     private function journal(ParametreComptable $p, string $champ): int
     {
-        return $p->{$champ} ?: throw new DomainException('« '.self::LIBELLES[$champ].' » non réglé (Finance → Comptabilisation automatique).');
+        return $p->{$champ} ?: throw new DomainException(__('« :reglage » non réglé (Finance → Comptabilisation automatique).', ['reglage' => __(self::LIBELLES[$champ])]));
     }
 
     /** Montant dans la devise de l'entreprise, au taux du document. */
@@ -697,14 +698,14 @@ class Comptabilisation
     {
         return match ($type) {
             'facture', 'avoir', 'facture_fournisseur' => (string) $document->numero,
-            'paiement_client' => 'Paiement de '.$document->facture?->numero,
-            'encaissement' => 'Encaissement '.$document->numero,
-            'acompte' => trim('Acompte '.($document->numero ?? '#'.$document->id)),
-            'remboursement_acompte' => 'Remboursement d\'acompte #'.$document->id,
-            'remboursement_avoir' => 'Remboursement de '.$document->avoir?->numero,
-            'paiement_fournisseur' => 'Paiement de '.$document->facture?->numero,
-            'debourse' => 'Déboursé '.$document->numero,
-            'transaction_bancaire' => 'Transaction bancaire '.$document->numero,
+            'paiement_client' => __('Paiement de :numero', ['numero' => $document->facture?->numero]),
+            'encaissement' => __('Encaissement :numero', ['numero' => $document->numero]),
+            'acompte' => trim(__('Acompte :numero', ['numero' => $document->numero ?? '#'.$document->id])),
+            'remboursement_acompte' => __("Remboursement d'acompte #:id", ['id' => $document->id]),
+            'remboursement_avoir' => __('Remboursement de :numero', ['numero' => $document->avoir?->numero]),
+            'paiement_fournisseur' => __('Paiement de :numero', ['numero' => $document->facture?->numero]),
+            'debourse' => __('Déboursé :numero', ['numero' => $document->numero]),
+            'transaction_bancaire' => __('Transaction bancaire :numero', ['numero' => $document->numero]),
         };
     }
 

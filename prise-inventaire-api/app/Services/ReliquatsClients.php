@@ -68,7 +68,7 @@ class ReliquatsClients
     public function depuisCommande(ComClientEntete $commande, array $lignes, ?int $auteur = null): Collection
     {
         if (! in_array($commande->statut, self::COMMANDES_SOURCES, true)) {
-            throw new DomainException('Seule une commande acceptée peut laisser un reliquat.');
+            throw new DomainException(__('Seule une commande acceptée peut laisser un reliquat.'));
         }
         $lignesCommande = $commande->lignes()->get()->keyBy('id');
         $dejaEnReliquat = ReliquatClient::where('commande_client_id', $commande->id)->where('statut', '!=', ReliquatClient::ANNULE)
@@ -77,11 +77,11 @@ class ReliquatsClients
         foreach (array_values($lignes) as $index => $saisie) {
             $ligne = $lignesCommande[(int) $saisie['ligne_id']] ?? null;
             if (! $ligne) {
-                throw ValidationException::withMessages(["lignes.{$index}.ligne_id" => "Cette ligne n'appartient pas à la commande {$commande->numero}."]);
+                throw ValidationException::withMessages(["lignes.{$index}.ligne_id" => __("Cette ligne n'appartient pas à la commande :numero.", ['numero' => $commande->numero])]);
             }
             $reste = (int) $ligne->quantite - (int) ($dejaEnReliquat[$ligne->id] ?? 0);
             if ((int) $saisie['quantite'] > $reste) {
-                throw ValidationException::withMessages(["lignes.{$index}.quantite" => 'Au plus '.max(0, $reste).' (quantité commandée, reliquats déjà notés déduits).']);
+                throw ValidationException::withMessages(["lignes.{$index}.quantite" => __('Au plus :quantite (quantité commandée, reliquats déjà notés déduits).', ['quantite' => max(0, $reste)])]);
             }
             $saisies[] = [$ligne, (int) $saisie['quantite']];
         }
@@ -108,7 +108,7 @@ class ReliquatsClients
     /** Modification d'un reliquat inscrit (pas encore commandé au fournisseur). */
     public function modifier(ReliquatClient $reliquat, array $donnees): ReliquatClient
     {
-        $this->verifierInscrit($reliquat, 'Seul un reliquat pas encore commandé au fournisseur se modifie.');
+        $this->verifierInscrit($reliquat, __('Seul un reliquat pas encore commandé au fournisseur se modifie.'));
         $reliquat->update(array_intersect_key($donnees, array_flip(['quantite', 'prix_unitaire_ht', 'remise_ligne', 'date_requise', 'notes'])));
 
         return $reliquat;
@@ -116,7 +116,7 @@ class ReliquatsClients
 
     public function annuler(ReliquatClient $reliquat): ReliquatClient
     {
-        $this->verifierInscrit($reliquat, 'Seul un reliquat pas encore commandé au fournisseur s\'annule.');
+        $this->verifierInscrit($reliquat, __("Seul un reliquat pas encore commandé au fournisseur s'annule."));
         $reliquat->update(['statut' => ReliquatClient::ANNULE]);
 
         return $reliquat;
@@ -124,7 +124,7 @@ class ReliquatsClients
 
     public function supprimer(ReliquatClient $reliquat): void
     {
-        $this->verifierInscrit($reliquat, 'Seul un reliquat pas encore commandé au fournisseur se supprime.');
+        $this->verifierInscrit($reliquat, __('Seul un reliquat pas encore commandé au fournisseur se supprime.'));
         $reliquat->delete();
     }
 
@@ -139,21 +139,21 @@ class ReliquatsClients
     {
         $config = Configuration::pourEntite('commande_fournisseur', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des commandes fournisseur (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des commandes fournisseur (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($ids, $fournisseurId, $tenantId, $auteur) {
             $reliquats = ReliquatClient::with(['produit', 'client:id,raison_sociale'])->whereIn('id', $ids)->lockForUpdate()->orderBy('id')->get();
             if ($reliquats->count() !== count(array_unique($ids))) {
-                throw ValidationException::withMessages(['ids' => 'Un des reliquats choisis est introuvable.']);
+                throw ValidationException::withMessages(['ids' => __('Un des reliquats choisis est introuvable.')]);
             }
             foreach ($reliquats as $reliquat) {
-                $this->verifierInscrit($reliquat, "Le reliquat de {$reliquat->produit?->description} est déjà commandé, reçu, facturé ou annulé.");
+                $this->verifierInscrit($reliquat, __('Le reliquat de :produit est déjà commandé, reçu, facturé ou annulé.', ['produit' => $reliquat->produit?->description]));
             }
             $parFournisseur = $reliquats->groupBy(function (ReliquatClient $r) use ($fournisseurId) {
                 $fournisseur = $fournisseurId ?? $this->fournisseurPrincipal($r->produit_id);
                 if (! $fournisseur) {
-                    throw ValidationException::withMessages(['fournisseur_id' => "Choisissez le fournisseur : {$r->produit?->description} n'a pas de fournisseur principal."]);
+                    throw ValidationException::withMessages(['fournisseur_id' => __("Choisissez le fournisseur : :produit n'a pas de fournisseur principal.", ['produit' => $r->produit?->description])]);
                 }
 
                 return $fournisseur;
@@ -308,7 +308,9 @@ class ReliquatsClients
         if ($exces > 0) {
             $facture = $reliquats->firstWhere('statut', ReliquatClient::FACTURE);
             $produit = $facture?->produit?->numero ?? $ligne->produit?->numero;
-            throw new DomainException("La marchandise {$produit} de cette réception est déjà facturée au client (reliquat {$facture?->client?->raison_sociale}) : la réception ne peut plus être annulée.");
+            throw new DomainException(__('La marchandise :produit de cette réception est déjà facturée au client (reliquat :client) : la réception ne peut plus être annulée.', [
+                'produit' => $produit, 'client' => $facture?->client?->raison_sociale,
+            ]));
         }
     }
 
@@ -323,16 +325,16 @@ class ReliquatsClients
     {
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des factures (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des factures (Configuration → Numérotation).'));
         }
 
         return DB::transaction(function () use ($ids, $date, $tenantId) {
             $reliquats = ReliquatClient::whereIn('id', $ids)->lockForUpdate()->orderBy('id')->get();
             if ($reliquats->count() !== count(array_unique($ids))) {
-                throw ValidationException::withMessages(['ids' => 'Un des reliquats choisis est introuvable.']);
+                throw ValidationException::withMessages(['ids' => __('Un des reliquats choisis est introuvable.')]);
             }
             if ($reliquats->contains(fn (ReliquatClient $r) => $r->statut !== ReliquatClient::RECU)) {
-                throw new DomainException('Seuls les reliquats reçus se facturent : attendez la fin de la réception, ou clôturez la commande fournisseur.');
+                throw new DomainException(__('Seuls les reliquats reçus se facturent : attendez la fin de la réception, ou clôturez la commande fournisseur.'));
             }
 
             return $reliquats->groupBy(fn (ReliquatClient $r) => $r->client_id.'|'.($r->devise ?? ''))->map(function (Collection $groupe) use ($date, $tenantId) {

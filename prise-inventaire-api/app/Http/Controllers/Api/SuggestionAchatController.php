@@ -70,7 +70,7 @@ class SuggestionAchatController extends Controller
             $donnees['fournisseur_id'] ?? null, $donnees['produit_id'] ?? null,
         );
 
-        return response()->json(['message' => "{$nombre} suggestion(s) proposée(s).", 'nombre' => $nombre]);
+        return response()->json(['message' => __(':nombre suggestion(s) proposée(s).', ['nombre' => $nombre]), 'nombre' => $nombre]);
     }
 
     /** Besoin signalé depuis un produit (suggestion manuelle, en attente). */
@@ -98,7 +98,7 @@ class SuggestionAchatController extends Controller
             'remarque' => 'sometimes|nullable|string|max:255',
         ]);
         if ($suggestion->statut === SuggestionAchat::COMMANDEE) {
-            return response()->json(['message' => 'Cette suggestion est déjà commandée.'], 422);
+            return response()->json(['message' => __('Cette suggestion est déjà commandée.')], 422);
         }
         $suggestion->update($donnees);
 
@@ -118,11 +118,11 @@ class SuggestionAchatController extends Controller
     {
         $suggestion = SuggestionAchat::findOrFail($id);
         if ($suggestion->statut === SuggestionAchat::COMMANDEE) {
-            return response()->json(['message' => 'Cette suggestion est déjà commandée.'], 422);
+            return response()->json(['message' => __('Cette suggestion est déjà commandée.')], 422);
         }
         $suggestion->delete();
 
-        return response()->json(['message' => 'Suggestion retirée.']);
+        return response()->json(['message' => __('Suggestion retirée.')]);
     }
 
     /** Commandes fournisseur des suggestions acceptées : il faut aussi le droit de créer des commandes fournisseur. */
@@ -139,7 +139,9 @@ class SuggestionAchatController extends Controller
         }
 
         return response()->json([
-            'message' => $commandes->count().' commande(s) fournisseur en préparation : '.$commandes->pluck('numero')->implode(', ').'.',
+            'message' => __(':nombre commande(s) fournisseur en préparation : :numeros.', [
+                'nombre' => $commandes->count(), 'numeros' => $commandes->pluck('numero')->implode(', '),
+            ]),
             'commandes' => $commandes->map(fn ($c) => $c->only(['id', 'numero', 'fournisseur_id', 'montant_total']))->values(),
         ], 201);
     }

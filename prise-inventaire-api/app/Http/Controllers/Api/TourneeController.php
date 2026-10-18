@@ -76,7 +76,7 @@ class TourneeController extends Controller
     {
         $tournee = Tournee::findOrFail($id);
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => "Impossible de modifier l'ordre"], 422);
+            return response()->json(['message' => __("Impossible de modifier l'ordre")], 422);
         }
         $sequences->ordonner($tournee);
 
@@ -88,14 +88,14 @@ class TourneeController extends Controller
     {
         $tournee = Tournee::findOrFail($id);
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => "Impossible d'ajouter des bons à cette tournée"], 422);
+            return response()->json(['message' => __("Impossible d'ajouter des bons à cette tournée")], 422);
         }
         if (! $tournee->itineraire_id) {
-            return response()->json(['message' => 'Cette tournée ne suit pas de route.'], 422);
+            return response()->json(['message' => __('Cette tournée ne suit pas de route.')], 422);
         }
         $ajoutes = $sequences->ajouterLaRoute($tournee);
 
-        return response()->json(['message' => "{$ajoutes} bon(s) ajouté(s).", 'ajoutes' => $ajoutes] + $this->detail($tournee)->toArray());
+        return response()->json(['message' => __(':nombre bon(s) ajouté(s).', ['nombre' => $ajoutes]), 'ajoutes' => $ajoutes] + $this->detail($tournee)->toArray());
     }
 
     /** Feuille de route du livreur (PDF) : les arrêts dans l'ordre de passage. */
@@ -112,7 +112,7 @@ class TourneeController extends Controller
         $tournee = Tournee::with('camion')->findOrFail($id);
         $lignes = $documents->lignes($tournee);
         if ($lignes->isEmpty()) {
-            return response()->json(['message' => 'Aucune matière dangereuse à transporter dans cette tournée.'], 422);
+            return response()->json(['message' => __('Aucune matière dangereuse à transporter dans cette tournée.')], 422);
         }
 
         return $documents->pdf($tournee, $lignes)->stream("matieres-dangereuses-{$tournee->numero}.pdf");
@@ -134,7 +134,7 @@ class TourneeController extends Controller
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('tournee', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $tournee = DB::transaction(fn () => Tournee::create([
             'tenant_id' => $tenantId,
@@ -156,7 +156,7 @@ class TourneeController extends Controller
         $tournee = Tournee::findOrFail($id);
 
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => 'Impossible d\'ajouter des bons à cette tournée'], 422);
+            return response()->json(['message' => __("Impossible d'ajouter des bons à cette tournée")], 422);
         }
 
         $validated = $request->validate([
@@ -166,11 +166,11 @@ class TourneeController extends Controller
         $bon = BonLivraison::findOrFail($validated['bon_livraison_id']);
 
         if ($bon->statut !== 'pret') {
-            return response()->json(['message' => 'Le bon doit être prêt pour être ajouté à une tournée'], 422);
+            return response()->json(['message' => __('Le bon doit être prêt pour être ajouté à une tournée')], 422);
         }
 
         if ($bon->tourneeBon) {
-            return response()->json(['message' => 'Ce bon est déjà assigné à une tournée'], 422);
+            return response()->json(['message' => __('Ce bon est déjà assigné à une tournée')], 422);
         }
 
         $ordre = $tournee->tourneeBons()->max('ordre_livraison') + 1;
@@ -189,7 +189,7 @@ class TourneeController extends Controller
         $tournee = Tournee::findOrFail($id);
 
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => 'Impossible de modifier cette tournée'], 422);
+            return response()->json(['message' => __('Impossible de modifier cette tournée')], 422);
         }
 
         // Le bon sort du camion : ses colis ne sont plus chargés.
@@ -205,7 +205,7 @@ class TourneeController extends Controller
         $tournee = Tournee::findOrFail($id);
 
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => 'Impossible de modifier l\'ordre'], 422);
+            return response()->json(['message' => __("Impossible de modifier l'ordre")], 422);
         }
 
         $validated = $request->validate([
@@ -230,11 +230,11 @@ class TourneeController extends Controller
         $tournee = Tournee::with('tourneeBons.bonLivraison.lignes')->findOrFail($id);
 
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => 'Cette tournée ne peut pas être démarrée'], 422);
+            return response()->json(['message' => __('Cette tournée ne peut pas être démarrée')], 422);
         }
 
         if ($tournee->tourneeBons->isEmpty()) {
-            return response()->json(['message' => 'La tournée doit contenir au moins un bon'], 422);
+            return response()->json(['message' => __('La tournée doit contenir au moins un bon')], 422);
         }
 
         DB::transaction(function () use ($tournee, $request) {
@@ -275,14 +275,14 @@ class TourneeController extends Controller
         $tournee = Tournee::findOrFail($id);
 
         if ($tournee->statut !== 'planifiee') {
-            return response()->json(['message' => 'Seules les tournées planifiées peuvent être supprimées'], 422);
+            return response()->json(['message' => __('Seules les tournées planifiées peuvent être supprimées')], 422);
         }
 
         $chargements->decharger($tournee->tourneeBons()->pluck('bon_livraison_id')->all());
         $tournee->tourneeBons()->delete();
         $tournee->delete();
 
-        return response()->json(['message' => 'Tournée supprimée.']);
+        return response()->json(['message' => __('Tournée supprimée.')]);
     }
 
     public function terminer(Request $request, int $id): JsonResponse
@@ -290,7 +290,7 @@ class TourneeController extends Controller
         $tournee = Tournee::findOrFail($id);
 
         if ($tournee->statut !== 'en_cours') {
-            return response()->json(['message' => 'Cette tournée ne peut pas être terminée'], 422);
+            return response()->json(['message' => __('Cette tournée ne peut pas être terminée')], 422);
         }
 
         $tournee->statut = 'terminee';

@@ -20,7 +20,7 @@ class RechercheController extends Controller
 
         $texte = trim($donnees['q']);
         if (mb_strlen($texte) < 2) {
-            return response()->json(['message' => 'Saisissez au moins 2 caractères.', 'errors' => ['q' => ['Saisissez au moins 2 caractères.']]], 422);
+            return response()->json(['message' => __('Saisissez au moins 2 caractères.'), 'errors' => ['q' => [__('Saisissez au moins 2 caractères.')]]], 422);
         }
         $types = isset($donnees['types'])
             ? array_values(array_intersect(RechercheGlobale::TYPES, array_map('trim', explode(',', $donnees['types']))))

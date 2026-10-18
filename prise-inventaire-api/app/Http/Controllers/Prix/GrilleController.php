@@ -92,6 +92,6 @@ class GrilleController extends Controller
             }
         });
 
-        return response()->json(['message' => 'Prix enregistrés.', 'modifications' => count($donnees['modifications'])]);
+        return response()->json(['message' => __('Prix enregistrés.'), 'modifications' => count($donnees['modifications'])]);
     }
 }

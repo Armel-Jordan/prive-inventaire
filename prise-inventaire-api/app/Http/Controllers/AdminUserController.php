@@ -40,7 +40,7 @@ class AdminUserController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Utilisateur créé avec succès',
+            'message' => __('Utilisateur créé avec succès'),
             'user' => $newUser,
         ], 201);
     }
@@ -62,7 +62,7 @@ class AdminUserController extends Controller
         $retrograde = isset($validated['role']) && $validated['role'] !== 'admin';
         $desactive = array_key_exists('actif', $validated) && ! $validated['actif'];
         if (($retrograde || $desactive) && $userToUpdate->estDernierAdministrateur()) {
-            return response()->json(['message' => "L'entreprise doit garder au moins un administrateur actif."], 422);
+            return response()->json(['message' => __("L'entreprise doit garder au moins un administrateur actif.")], 422);
         }
 
         if (isset($validated['password'])) {
@@ -72,7 +72,7 @@ class AdminUserController extends Controller
         $userToUpdate->update($validated);
 
         return response()->json([
-            'message' => 'Utilisateur mis à jour',
+            'message' => __('Utilisateur mis à jour'),
             'user' => $userToUpdate,
         ]);
     }
@@ -82,7 +82,7 @@ class AdminUserController extends Controller
         $currentUser = $request->user();
 
         if ($currentUser->id == $id) {
-            return response()->json(['message' => 'Vous ne pouvez pas supprimer votre propre compte'], 403);
+            return response()->json(['message' => __('Vous ne pouvez pas supprimer votre propre compte')], 403);
         }
 
         $userToDelete = AdminUser::where('tenant_id', $currentUser->tenant_id)
@@ -90,6 +90,6 @@ class AdminUserController extends Controller
 
         $userToDelete->delete();
 
-        return response()->json(['message' => 'Utilisateur supprimé']);
+        return response()->json(['message' => __('Utilisateur supprimé')]);
     }
 }

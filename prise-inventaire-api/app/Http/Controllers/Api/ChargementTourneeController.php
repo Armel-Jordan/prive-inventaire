@@ -37,7 +37,7 @@ class ChargementTourneeController extends Controller
         [$colis, $deja] = $this->chargements->scanner($tournee, $numero, $request->user()?->id);
 
         return response()->json([
-            'message' => $deja ? "Colis {$colis->numero} déjà chargé." : "Colis {$colis->numero} chargé.",
+            'message' => $deja ? __('Colis :numero déjà chargé.', ['numero' => $colis->numero]) : __('Colis :numero chargé.', ['numero' => $colis->numero]),
             'colis_id' => $colis->id,
             'deja' => $deja,
         ] + $this->chargements->etat($tournee->fresh()));

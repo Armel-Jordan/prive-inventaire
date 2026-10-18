@@ -109,7 +109,7 @@ class CourrielEnvoiController extends Controller
     {
         $envoi = CourrielEnvoi::findOrFail($id);
         if ($envoi->statut !== CourrielEnvoi::ECHEC) {
-            return response()->json(['message' => 'Seul un courriel en échec peut être renvoyé.'], 422);
+            return response()->json(['message' => __('Seul un courriel en échec peut être renvoyé.')], 422);
         }
         $this->verifierModule($request, $envoi->type);
 
@@ -129,6 +129,6 @@ class CourrielEnvoiController extends Controller
         $module = Courriels::MODULES[$type] ?? null;
         $tenant = $request->attributes->get('tenant');
 
-        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, "Le module « {$module} » n'est pas activé pour cette entreprise.");
+        abort_if($module && $tenant && ! $tenant->hasModule($module), 403, __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => $module]));
     }
 }

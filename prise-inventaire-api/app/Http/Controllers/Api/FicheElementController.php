@@ -87,7 +87,7 @@ abstract class FicheElementController extends Controller
     {
         $this->element($parent, $id)->delete();
 
-        return response()->json(['message' => 'Supprimé.']);
+        return response()->json(['message' => __('Supprimé.')]);
     }
 
     /** Fiche parente dans l'entreprise courante (404 sinon). */

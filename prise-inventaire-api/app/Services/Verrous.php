@@ -158,13 +158,14 @@ class Verrous
     /** Message d'une fiche qu'un verrou empêche de modifier (celui d'un autre compte, ou le sien perdu). */
     public static function message(Verrou $verrou): string
     {
-        $nom = $verrou->compte?->nom ?? 'un autre compte';
+        $nom = $verrou->compte?->nom ?? __('un autre compte');
 
         return match (true) {
-            $verrou->actif() => "Cette fiche est en cours de modification par {$nom} : réessayez quand la modification sera terminée.",
-            $verrou->libere_le !== null => 'Votre modification a été interrompue : '.($verrou->liberePar?->nom ?? 'un responsable')
-                .' a libéré la fiche. Rouvrez-la pour repartir de sa version enregistrée.',
-            default => "Votre modification a été interrompue : {$nom} a modifié la fiche entre-temps. Rouvrez-la pour repartir de sa version enregistrée.",
+            $verrou->actif() => __('Cette fiche est en cours de modification par :nom : réessayez quand la modification sera terminée.', ['nom' => $nom]),
+            $verrou->libere_le !== null => __('Votre modification a été interrompue : :nom a libéré la fiche. Rouvrez-la pour repartir de sa version enregistrée.', [
+                'nom' => $verrou->liberePar?->nom ?? __('un responsable'),
+            ]),
+            default => __('Votre modification a été interrompue : :nom a modifié la fiche entre-temps. Rouvrez-la pour repartir de sa version enregistrée.', ['nom' => $nom]),
         };
     }
 

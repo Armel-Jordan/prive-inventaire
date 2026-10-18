@@ -57,7 +57,7 @@ class TenantParametresController extends Controller
         );
 
         return response()->json([
-            'message' => 'Paramètres mis à jour avec succès.',
+            'message' => __('Paramètres mis à jour avec succès.'),
             'parametres' => $parametres,
         ]);
     }

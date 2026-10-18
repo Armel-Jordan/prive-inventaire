@@ -58,7 +58,7 @@ class FacturesFournisseurs
         $commandes = $receptions->flatMap(fn (Reception $r) => $r->lignes->map(fn ($l) => $l->ligneCommande?->commande))->filter();
         $devises = $commandes->map(fn ($c) => $this->devise($c->devise))->unique()->values();
         if ($devises->count() > 1) {
-            throw ValidationException::withMessages(['receptions' => 'Les réceptions choisies sont dans des devises différentes : facturez-les séparément.']);
+            throw ValidationException::withMessages(['receptions' => __('Les réceptions choisies sont dans des devises différentes : facturez-les séparément.')]);
         }
 
         return [
@@ -79,10 +79,10 @@ class FacturesFournisseurs
     public function enregistrer(array $donnees, ?FactureFournisseur $facture, int $tenantId, ?AdminUser $auteur): FactureFournisseur
     {
         if ($facture?->statut === FactureFournisseur::ANNULEE) {
-            throw new DomainException('Une facture annulée ne se modifie plus.');
+            throw new DomainException(__('Une facture annulée ne se modifie plus.'));
         }
         if ($facture && (float) $facture->montant_paye > 0) {
-            throw new DomainException('Cette facture a déjà reçu un paiement : elle ne se modifie plus.');
+            throw new DomainException(__('Cette facture a déjà reçu un paiement : elle ne se modifie plus.'));
         }
 
         return DB::transaction(function () use ($donnees, $facture, $tenantId, $auteur) {
@@ -92,13 +92,16 @@ class FacturesFournisseurs
                 $doublon = FactureFournisseur::query()->where('fournisseur_id', $fournisseur->id)->where('numero_fournisseur', $numeroFournisseur)
                     ->where('statut', FactureFournisseur::ENREGISTREE)->when($facture, fn ($q) => $q->whereKeyNot($facture->id))->first();
                 if ($doublon) {
-                    throw ValidationException::withMessages(['numero_fournisseur' => "La facture {$numeroFournisseur} de ce fournisseur est déjà enregistrée ({$doublon->numero})."]);
+                    throw ValidationException::withMessages(['numero_fournisseur' => __('La facture :numero de ce fournisseur est déjà enregistrée (:existante).', [
+                        'numero' => $numeroFournisseur,
+                        'existante' => $doublon->numero,
+                    ])]);
                 }
             }
             $devise = $this->devise($donnees['devise'] ?? null);
             $taux = $devise ? (float) ($donnees['taux_change'] ?? 0) : 1.0;
             if ($devise && $taux <= 0) {
-                throw ValidationException::withMessages(['taux_change' => "Indiquez le taux de change {$devise} → {$this->reference()}."]);
+                throw ValidationException::withMessages(['taux_change' => __('Indiquez le taux de change :devise → :reference.', ['devise' => $devise, 'reference' => $this->reference()])]);
             }
 
             // Réceptions facturées : du fournisseur, enregistrées, pas déjà facturées ailleurs ; leurs lignes seules.
@@ -106,7 +109,7 @@ class FacturesFournisseurs
             $lignesRecues = $receptions->flatMap(fn (Reception $r) => $r->lignes->where('annulee', false)->pluck('id'))->all();
             foreach (array_values($donnees['lignes']) as $index => $ligne) {
                 if (! empty($ligne['reception_ligne_id']) && ! in_array((int) $ligne['reception_ligne_id'], $lignesRecues, true)) {
-                    throw ValidationException::withMessages(["lignes.{$index}.reception_ligne_id" => "Cette ligne de réception n'appartient pas aux réceptions facturées."]);
+                    throw ValidationException::withMessages(["lignes.{$index}.reception_ligne_id" => __("Cette ligne de réception n'appartient pas aux réceptions facturées.")]);
                 }
             }
 
@@ -182,7 +185,7 @@ class FacturesFournisseurs
     public function alignerCouts(FactureFournisseur $facture): int
     {
         if ($facture->statut === FactureFournisseur::ANNULEE) {
-            throw new DomainException('Une facture annulée ne se rapproche plus.');
+            throw new DomainException(__('Une facture annulée ne se rapproche plus.'));
         }
 
         return DB::transaction(function () use ($facture) {
@@ -216,15 +219,15 @@ class FacturesFournisseurs
         return DB::transaction(function () use ($facture, $donnees, $auteur) {
             $facture = FactureFournisseur::query()->lockForUpdate()->findOrFail($facture->id);
             if ($facture->statut === FactureFournisseur::ANNULEE) {
-                throw new DomainException('Une facture annulée ne se paie pas.');
+                throw new DomainException(__('Une facture annulée ne se paie pas.'));
             }
             $reste = $facture->reste_a_payer;
             if ($reste <= 0) {
-                throw new DomainException('Cette facture est déjà payée.');
+                throw new DomainException(__('Cette facture est déjà payée.'));
             }
             $montant = round((float) $donnees['montant'], 2);
             if ($montant > $reste + 0.005) {
-                throw ValidationException::withMessages(['montant' => 'Le paiement dépasse le reste à payer ('.number_format($reste, 2, ',', ' ').').']);
+                throw ValidationException::withMessages(['montant' => __('Le paiement dépasse le reste à payer (:reste).', ['reste' => number_format($reste, 2, ',', ' ')])]);
             }
             FactureFournisseurPaiement::create([
                 'tenant_id' => $facture->tenant_id,
@@ -252,9 +255,9 @@ class FacturesFournisseurs
             $facture = FactureFournisseur::query()->lockForUpdate()->findOrFail($facture->id);
             $paiement = $facture->paiements()->with('debourse:id,numero')->whereKey($paiementId)->firstOrFail();
             if ($paiement->debourse) {
-                throw new DomainException("Ce paiement fait partie du déboursé {$paiement->debourse->numero} : annulez le déboursé.");
+                throw new DomainException(__('Ce paiement fait partie du déboursé :numero : annulez le déboursé.', ['numero' => $paiement->debourse->numero]));
             }
-            app(Rapprochements::class)->verifierDocument('paiement_fournisseur', $paiement->id, 'Ce paiement');
+            app(Rapprochements::class)->verifierDocument('paiement_fournisseur', $paiement->id, __('Ce paiement'));
             $paiement->delete();
             $facture->update(['montant_paye' => max(0, round((float) $facture->montant_paye - (float) $paiement->montant - (float) $paiement->escompte, 2))]);
 
@@ -268,10 +271,10 @@ class FacturesFournisseurs
         return DB::transaction(function () use ($facture, $motif, $auteur) {
             $facture = FactureFournisseur::query()->lockForUpdate()->findOrFail($facture->id);
             if ($facture->statut === FactureFournisseur::ANNULEE) {
-                throw new DomainException('Cette facture est déjà annulée.');
+                throw new DomainException(__('Cette facture est déjà annulée.'));
             }
             if ((float) $facture->montant_paye > 0) {
-                throw new DomainException("Cette facture a reçu des paiements : annulez-les d'abord.");
+                throw new DomainException(__("Cette facture a reçu des paiements : annulez-les d'abord."));
             }
             $facture->update([
                 'statut' => FactureFournisseur::ANNULEE, 'annulee_le' => now(), 'annulee_par' => $auteur?->id,
@@ -367,20 +370,20 @@ class FacturesFournisseurs
         $receptions = Reception::query()->whereIn('id', $ids)->lockForUpdate()
             ->with(['lignes.ligneCommande.commande', 'lignes.ligneCommande.produit' => fn ($q) => $q->withTrashed()])->get();
         if ($receptions->count() !== count($ids)) {
-            throw ValidationException::withMessages(['receptions' => 'Réception introuvable.']);
+            throw ValidationException::withMessages(['receptions' => __('Réception introuvable.')]);
         }
         foreach ($receptions as $reception) {
             if ($reception->statut !== Reception::ENREGISTREE) {
-                throw ValidationException::withMessages(['receptions' => "La réception {$reception->numero} est annulée."]);
+                throw ValidationException::withMessages(['receptions' => __('La réception :numero est annulée.', ['numero' => $reception->numero])]);
             }
             if ($reception->facture_fournisseur_id && (int) $reception->facture_fournisseur_id !== (int) $facture?->id) {
                 $numero = FactureFournisseur::query()->whereKey($reception->facture_fournisseur_id)->value('numero');
-                throw ValidationException::withMessages(['receptions' => "La réception {$reception->numero} est déjà facturée ({$numero})."]);
+                throw ValidationException::withMessages(['receptions' => __('La réception :numero est déjà facturée (:facture).', ['numero' => $reception->numero, 'facture' => $numero])]);
             }
         }
         $fournisseurs = $receptions->pluck('fournisseur_id')->map(fn ($id) => (int) $id)->unique();
         if ($fournisseurs->count() > 1 || ($fournisseurId && $fournisseurs->first() !== $fournisseurId)) {
-            throw ValidationException::withMessages(['receptions' => 'Les réceptions facturées sont celles du fournisseur de la facture.']);
+            throw ValidationException::withMessages(['receptions' => __('Les réceptions facturées sont celles du fournisseur de la facture.')]);
         }
 
         return $receptions;
@@ -390,7 +393,7 @@ class FacturesFournisseurs
     {
         $config = Configuration::pourEntite('facture_fournisseur', $tenantId);
         if (! $config?->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des factures fournisseurs (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des factures fournisseurs (Configuration → Numérotation).'));
         }
 
         return Configuration::consommerNumero('facture_fournisseur', $tenantId);

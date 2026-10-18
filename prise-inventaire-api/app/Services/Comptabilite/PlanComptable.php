@@ -34,30 +34,30 @@ class PlanComptable
             // Ni lui-même ni l'un de ses sous-comptes : la hiérarchie bouclerait.
             for ($ancetre = $parent; $ancetre; $ancetre = $ancetre->parent) {
                 if ($ancetre->id === $compte->id) {
-                    return ['parent_id' => 'Un compte ne peut pas être rattaché à lui-même ni à l\'un de ses sous-comptes.'];
+                    return ['parent_id' => __("Un compte ne peut pas être rattaché à lui-même ni à l'un de ses sous-comptes.")];
                 }
             }
         }
         if ($parent && $actif && ! $parent->actif) {
-            return ['parent_id' => 'Un compte actif ne peut pas dépendre d\'un compte inactif.'];
+            return ['parent_id' => __("Un compte actif ne peut pas dépendre d'un compte inactif.")];
         }
         if ($compte && ! $actif && $compte->enfants()->where('actif', true)->exists()) {
-            return ['actif' => 'Ce compte a des sous-comptes actifs : désactivez-les d\'abord.'];
+            return ['actif' => __("Ce compte a des sous-comptes actifs : désactivez-les d'abord.")];
         }
         if ($compte && ($donnees['type'] ?? null) === CompteComptable::EN_TETE && $compte->type !== CompteComptable::EN_TETE && $this->aDesEcritures($compte)) {
-            return ['type' => 'Ce compte a des écritures : il ne peut pas devenir un en-tête.'];
+            return ['type' => __('Ce compte a des écritures : il ne peut pas devenir un en-tête.')];
         }
         if ($compte && ($donnees['type'] ?? null) === CompteComptable::EN_TETE && $compte->type !== CompteComptable::EN_TETE && $this->aUnBudget($compte)) {
-            return ['type' => 'Ce compte a un budget : il ne peut pas devenir un en-tête.'];
+            return ['type' => __('Ce compte a un budget : il ne peut pas devenir un en-tête.')];
         }
         if (($donnees['type'] ?? null) === CompteComptable::RESULTAT) {
             if ($donnees['nature'] !== 'capitaux_propres') {
-                return ['nature' => 'Le compte qui reçoit le résultat de l\'exercice doit être un compte de capitaux propres.'];
+                return ['nature' => __("Le compte qui reçoit le résultat de l'exercice doit être un compte de capitaux propres.")];
             }
             $autre = CompteComptable::where('type', CompteComptable::RESULTAT)
                 ->when($compte, fn ($q) => $q->where('id', '!=', $compte->id))->first();
             if ($autre) {
-                return ['type' => "Le compte {$autre->numero} reçoit déjà le résultat de l'exercice : un seul compte par entreprise."];
+                return ['type' => __("Le compte :numero reçoit déjà le résultat de l'exercice : un seul compte par entreprise.", ['numero' => $autre->numero])];
             }
         }
 
@@ -68,13 +68,13 @@ class PlanComptable
     public function refusSuppression(CompteComptable $compte): ?string
     {
         if ($compte->enfants()->exists()) {
-            return 'Ce compte a des sous-comptes : supprimez-les ou rattachez-les à un autre compte d\'abord.';
+            return __("Ce compte a des sous-comptes : supprimez-les ou rattachez-les à un autre compte d'abord.");
         }
         if ($this->aDesEcritures($compte)) {
-            return 'Ce compte a des écritures : désactivez-le plutôt.';
+            return __('Ce compte a des écritures : désactivez-le plutôt.');
         }
         if ($this->aUnBudget($compte)) {
-            return 'Ce compte a un budget : retirez ses montants, ou désactivez-le plutôt.';
+            return __('Ce compte a un budget : retirez ses montants, ou désactivez-le plutôt.');
         }
 
         return null;
@@ -136,7 +136,7 @@ class PlanComptable
         $contenu = preg_replace('/^\xEF\xBB\xBF/', '', $contenu);
         $lignes = preg_split('/\r\n|\r|\n/', trim($contenu));
         if (! $lignes || trim($lignes[0]) === '') {
-            return ['crees' => 0, 'ignores' => 0, 'erreurs' => ['Le fichier est vide.']];
+            return ['crees' => 0, 'ignores' => 0, 'erreurs' => [__('Le fichier est vide.')]];
         }
         $separateur = collect([';', "\t", ','])->sortByDesc(fn ($s) => substr_count($lignes[0], $s))->first();
         $alias = ['compte' => 'numero', 'no' => 'numero', 'numero_de_compte' => 'numero', 'nom' => 'libelle', 'description' => 'libelle',
@@ -144,10 +144,10 @@ class PlanComptable
         $entetes = array_map(fn ($e) => $alias[$this->normaliser($e)] ?? $this->normaliser($e), str_getcsv($lignes[0], $separateur));
         $manquantes = array_diff(['numero', 'libelle', 'nature'], $entetes);
         if ($manquantes) {
-            return ['crees' => 0, 'ignores' => 0, 'erreurs' => ['Colonnes obligatoires absentes : '.implode(', ', $manquantes).'. Colonnes attendues : '.implode(';', self::COLONNES).'.']];
+            return ['crees' => 0, 'ignores' => 0, 'erreurs' => [__('Colonnes obligatoires absentes : :manquantes. Colonnes attendues : :attendues.', ['manquantes' => implode(', ', $manquantes), 'attendues' => implode(';', self::COLONNES)])]];
         }
         if (count($lignes) - 1 > self::MAX_LIGNES) {
-            return ['crees' => 0, 'ignores' => 0, 'erreurs' => ['Le fichier dépasse '.self::MAX_LIGNES.' comptes.']];
+            return ['crees' => 0, 'ignores' => 0, 'erreurs' => [__('Le fichier dépasse :max comptes.', ['max' => self::MAX_LIGNES])]];
         }
 
         // Clés en texte : PHP range les numéros purement numériques (401) sous des clés entières.
@@ -174,16 +174,16 @@ class PlanComptable
             $libelle = trim((string) ($ligne['libelle'] ?? ''));
 
             $erreur = match (true) {
-                $numero === '' => 'numéro absent',
-                strlen($numero) > 20 || ! preg_match('/^[0-9A-Za-z][0-9A-Za-z.\-]*$/', $numero) => "numéro « {$numero} » invalide (20 caractères au plus : chiffres, lettres, point, tiret)",
-                isset($comptes[$numero]) => "le compte {$numero} figure deux fois dans le fichier",
-                $libelle === '' || mb_strlen($libelle) > 150 => 'libellé absent ou de plus de 150 caractères',
-                $nature === null => 'nature « '.trim((string) $ligne['nature']).' » inconnue ('.implode(', ', CompteComptable::NATURES).')',
-                $type === null => 'type « '.trim((string) $ligne['type']).' » inconnu ('.implode(', ', CompteComptable::TYPES).')',
+                $numero === '' => __('numéro absent'),
+                strlen($numero) > 20 || ! preg_match('/^[0-9A-Za-z][0-9A-Za-z.\-]*$/', $numero) => __('numéro « :numero » invalide (20 caractères au plus : chiffres, lettres, point, tiret)', ['numero' => $numero]),
+                isset($comptes[$numero]) => __('le compte :numero figure deux fois dans le fichier', ['numero' => $numero]),
+                $libelle === '' || mb_strlen($libelle) > 150 => __('libellé absent ou de plus de 150 caractères'),
+                $nature === null => __('nature « :valeur » inconnue (:valeurs)', ['valeur' => trim((string) $ligne['nature']), 'valeurs' => implode(', ', CompteComptable::NATURES)]),
+                $type === null => __('type « :valeur » inconnu (:valeurs)', ['valeur' => trim((string) $ligne['type']), 'valeurs' => implode(', ', CompteComptable::TYPES)]),
                 default => null,
             };
             if ($erreur) {
-                $erreurs[] = "Ligne {$rang} : {$erreur}.";
+                $erreurs[] = __('Ligne :rang : :erreur.', ['rang' => $rang, 'erreur' => $erreur]);
 
                 continue;
             }
@@ -199,18 +199,18 @@ class PlanComptable
             if ($compte['parent'] === '') {
                 $compte['parent'] = PlansComptables::parentDe((string) $numero, $numeros);
             } elseif ($compte['parent'] === (string) $numero || ! in_array($compte['parent'], $numeros, true)) {
-                $erreurs[] = "Ligne {$compte['rang']} : compte parent « {$compte['parent']} » introuvable.";
+                $erreurs[] = __('Ligne :rang : compte parent « :parent » introuvable.', ['rang' => $compte['rang'], 'parent' => $compte['parent']]);
             }
         }
         unset($compte);
 
         $resultats = array_keys(array_filter($comptes, fn ($c) => $c['type'] === CompteComptable::RESULTAT));
         if (count($resultats) + ($resultatExistant ? 1 : 0) > 1) {
-            $erreurs[] = 'Un seul compte peut recevoir le résultat de l\'exercice (type resultat) : '.implode(', ', array_filter([$resultatExistant, ...$resultats])).'.';
+            $erreurs[] = __("Un seul compte peut recevoir le résultat de l'exercice (type resultat) : :comptes.", ['comptes' => implode(', ', array_filter([$resultatExistant, ...$resultats]))]);
         }
         foreach ($comptes as $numero => $compte) {
             if ($compte['type'] === CompteComptable::RESULTAT && $compte['nature'] !== 'capitaux_propres') {
-                $erreurs[] = "Ligne {$compte['rang']} : le compte de résultat {$numero} doit être de nature capitaux_propres.";
+                $erreurs[] = __('Ligne :rang : le compte de résultat :numero doit être de nature capitaux_propres.', ['rang' => $compte['rang'], 'numero' => $numero]);
             }
         }
         if ($erreurs) {

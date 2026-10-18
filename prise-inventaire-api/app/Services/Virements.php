@@ -92,33 +92,34 @@ class Virements
     {
         $debourses = Debourse::query()->whereIn('id', $ids)->with(['fournisseur', 'lignes.facture', 'virementLot'])->orderBy('date_debourse')->orderBy('id')->get();
         if ($debourses->count() !== count(array_unique($ids))) {
-            throw ValidationException::withMessages(['debourses' => 'Déboursé introuvable.']);
+            throw ValidationException::withMessages(['debourses' => __('Déboursé introuvable.')]);
         }
         $comptes = $this->comptesFournisseurs($debourses->pluck('fournisseur_id')->unique()->all());
         $problemes = [];
         if ($format === 'sepa' && ! $this->ibanValide($compte->iban)) {
-            $problemes[] = "L'IBAN du compte « {$compte->nom} » manque ou n'est pas valide (Paramètres → Référentiels → Comptes bancaires).";
+            $problemes[] = __("L'IBAN du compte « :compte » manque ou n'est pas valide (Paramètres → Référentiels → Comptes bancaires).", ['compte' => $compte->nom]);
         }
         foreach ($debourses as $debourse) {
-            $fournisseur = (string) $debourse->fournisseur?->raison_sociale;
             $beneficiaire = $comptes[$debourse->fournisseur_id] ?? null;
+            // Une phrase entière par problème (« Déboursé … : raison. »), pour la traduire d'un bloc.
+            $valeurs = ['numero' => $debourse->numero, 'fournisseur' => (string) $debourse->fournisseur?->raison_sociale, 'lot' => $debourse->virementLot?->numero];
             $refus = match (true) {
-                $debourse->statut !== Debourse::VALIDE => 'il est annulé',
-                $debourse->mode !== 'virement' => "il n'est pas payé par virement",
-                (float) $debourse->montant <= 0 => "il n'a pas de montant à verser",
-                $debourse->virement_statut === VirementLot::EMIS => "il est déjà dans le lot n° {$debourse->virementLot?->numero}",
-                (int) $debourse->compte_bancaire_id !== (int) $compte->id => "il part d'un autre compte bancaire",
-                ! $beneficiaire => "{$fournisseur} n'a pas de compte bancaire actif (fiche du fournisseur, Coordonnées bancaires)",
-                $format === 'sepa' && ! $this->ibanValide($beneficiaire->iban) => "l'IBAN de {$fournisseur} manque ou n'est pas valide",
-                $format === 'csv' && ! $beneficiaire->iban && ! $beneficiaire->numero_compte => "le compte de {$fournisseur} n'a ni IBAN ni numéro",
+                $debourse->statut !== Debourse::VALIDE => __('Déboursé :numero : il est annulé.', $valeurs),
+                $debourse->mode !== 'virement' => __("Déboursé :numero : il n'est pas payé par virement.", $valeurs),
+                (float) $debourse->montant <= 0 => __("Déboursé :numero : il n'a pas de montant à verser.", $valeurs),
+                $debourse->virement_statut === VirementLot::EMIS => __('Déboursé :numero : il est déjà dans le lot n° :lot.', $valeurs),
+                (int) $debourse->compte_bancaire_id !== (int) $compte->id => __("Déboursé :numero : il part d'un autre compte bancaire.", $valeurs),
+                ! $beneficiaire => __("Déboursé :numero : :fournisseur n'a pas de compte bancaire actif (fiche du fournisseur, Coordonnées bancaires).", $valeurs),
+                $format === 'sepa' && ! $this->ibanValide($beneficiaire->iban) => __("Déboursé :numero : l'IBAN de :fournisseur manque ou n'est pas valide.", $valeurs),
+                $format === 'csv' && ! $beneficiaire->iban && ! $beneficiaire->numero_compte => __("Déboursé :numero : le compte de :fournisseur n'a ni IBAN ni numéro.", $valeurs),
                 default => null,
             };
             if ($refus) {
-                $problemes[] = "Déboursé {$debourse->numero} : {$refus}.";
+                $problemes[] = $refus;
             }
         }
         if ($debourses->map(fn (Debourse $d) => strtoupper($d->devise ?: $this->devises->reference()))->unique()->count() > 1) {
-            $problemes[] = 'Un fichier de virement ne porte qu’une devise : choisissez des déboursés de la même devise.';
+            $problemes[] = __('Un fichier de virement ne porte qu’une devise : choisissez des déboursés de la même devise.');
         }
         if ($problemes !== []) {
             throw ValidationException::withMessages(['debourses' => $problemes]);
@@ -128,7 +129,7 @@ class Virements
             $compte = CompteBancaire::query()->lockForUpdate()->findOrFail($compte->id);
             $numero ??= (int) $compte->prochain_lot;
             if (VirementLot::query()->where('compte_bancaire_id', $compte->id)->where('numero', $numero)->exists()) {
-                throw ValidationException::withMessages(['numero' => "Le lot n° {$numero} de ce compte existe déjà."]);
+                throw ValidationException::withMessages(['numero' => __('Le lot n° :numero de ce compte existe déjà.', ['numero' => $numero])]);
             }
             $emetteur = trim((string) ($emetteur ?? $compte->virement_emetteur)) ?: null;
             $devise = $debourses->first()->devise ?: null;
@@ -156,7 +157,7 @@ class Virements
     public function refuser(VirementLot $lot, ?string $motif, ?int $auteur): VirementLot
     {
         if ($lot->statut === VirementLot::REFUSE) {
-            throw new DomainException("Le lot n° {$lot->numero} est déjà marqué refusé.");
+            throw new DomainException(__('Le lot n° :numero est déjà marqué refusé.', ['numero' => $lot->numero]));
         }
         DB::transaction(function () use ($lot, $motif, $auteur) {
             $lot->update(['statut' => VirementLot::REFUSE, 'motif_refus' => trim((string) $motif) ?: null, 'refuse_le' => now(), 'refuse_par' => $auteur]);
@@ -187,21 +188,23 @@ class Virements
     {
         $alertes = [];
         if (! $debourse->compte_bancaire_id) {
-            $alertes[] = "Le déboursé n'a pas de compte bancaire de l'entreprise.";
+            $alertes[] = __("Le déboursé n'a pas de compte bancaire de l'entreprise.");
         }
         if (! $beneficiaire) {
-            $alertes[] = "Le fournisseur n'a pas de compte bancaire actif.";
+            $alertes[] = __("Le fournisseur n'a pas de compte bancaire actif.");
         } else {
             if ($beneficiaire->iban && ! $this->ibanValide($beneficiaire->iban)) {
-                $alertes[] = "L'IBAN du fournisseur n'est pas valide.";
+                $alertes[] = __("L'IBAN du fournisseur n'est pas valide.");
             }
             if (! $beneficiaire->iban && ! $beneficiaire->numero_compte) {
-                $alertes[] = "Le compte du fournisseur n'a ni IBAN ni numéro.";
+                $alertes[] = __("Le compte du fournisseur n'a ni IBAN ni numéro.");
             }
             if ($beneficiaire->updated_at && $beneficiaire->updated_at->gt(now()->subDays(self::JOURS_ALERTE))) {
                 $auteur = $beneficiaire->auteurModification?->nom;
-                $alertes[] = 'Coordonnées bancaires modifiées le '.$beneficiaire->updated_at->format('d/m/Y').($auteur ? " par {$auteur}" : '')
-                    .' : vérifiez-les auprès du fournisseur avant de payer.';
+                $date = $beneficiaire->updated_at->format('d/m/Y');
+                $alertes[] = $auteur
+                    ? __('Coordonnées bancaires modifiées le :date par :auteur : vérifiez-les auprès du fournisseur avant de payer.', ['date' => $date, 'auteur' => $auteur])
+                    : __('Coordonnées bancaires modifiées le :date : vérifiez-les auprès du fournisseur avant de payer.', ['date' => $date]);
             }
         }
 

@@ -74,7 +74,7 @@ class ReferentielController extends Controller
 
         $fiche->delete();
 
-        return response()->json(['message' => 'Élément supprimé.']);
+        return response()->json(['message' => __('Élément supprimé.')]);
     }
 
     public function historiqueDevise(int $id): JsonResponse

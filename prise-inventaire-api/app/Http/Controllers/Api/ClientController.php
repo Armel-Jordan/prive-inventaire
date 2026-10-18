@@ -99,7 +99,7 @@ class ClientController extends Controller
             $validated['code'] = $config->genererNumero();
             $config->incrementer();
         } else {
-            return response()->json(['success' => false, 'message' => 'Numéro requis'], 422);
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $validated['actif'] = true;
         $validated['tenant_id'] = $tenantId;
@@ -158,12 +158,12 @@ class ClientController extends Controller
         if ($client->commandes()->exists()
             || Facture::where('client_id', $client->id)->exists()
             || Devis::where('client_id', $client->id)->exists()) {
-            return response()->json(['message' => 'Impossible de supprimer un client qui a des commandes, factures ou devis : rendez-le plutôt inactif.'], 422);
+            return response()->json(['message' => __('Impossible de supprimer un client qui a des commandes, factures ou devis : rendez-le plutôt inactif.')], 422);
         }
 
         $client->delete();
 
-        return response()->json(['message' => 'Client supprimé']);
+        return response()->json(['message' => __('Client supprimé')]);
     }
 
     public function getConditionsPaiement(int $id): JsonResponse
@@ -186,7 +186,7 @@ class ClientController extends Controller
 
         $totalPourcentage = collect($validated['conditions'])->sum('pourcentage');
         if (abs($totalPourcentage - 100) > 0.01) {
-            return response()->json(['message' => 'Le total des pourcentages doit être égal à 100%'], 422);
+            return response()->json(['message' => __('Le total des pourcentages doit être égal à 100%')], 422);
         }
 
         DB::transaction(function () use ($client, $validated) {

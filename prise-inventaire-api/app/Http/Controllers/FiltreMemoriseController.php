@@ -44,7 +44,7 @@ class FiltreMemoriseController extends Controller
         $this->verifierValeurs($donnees['valeurs']);
         $existant = $this->filtres($request, $donnees['ecran'])->where('nom', $donnees['nom'])->first();
         if (! $existant && $this->filtres($request, $donnees['ecran'])->count() >= self::MAXIMUM) {
-            throw ValidationException::withMessages(['nom' => [self::MAXIMUM.' filtres au plus par écran : supprimez-en un pour enregistrer celui-ci.']]);
+            throw ValidationException::withMessages(['nom' => [__(':maximum filtres au plus par écran : supprimez-en un pour enregistrer celui-ci.', ['maximum' => self::MAXIMUM])]]);
         }
 
         $filtre = DB::transaction(function () use ($request, $donnees, $existant) {
@@ -76,7 +76,7 @@ class FiltreMemoriseController extends Controller
             'nom' => ['sometimes', 'required', 'string', 'max:100',
                 Rule::unique('filtres_memorises', 'nom')->where('admin_user_id', $request->user()->id)->where('ecran', $filtre->ecran)->ignore($filtre->id)],
             'par_defaut' => ['sometimes', 'boolean'],
-        ], ['nom.unique' => 'Vous avez déjà un filtre de ce nom pour cet écran.']);
+        ], ['nom.unique' => __('Vous avez déjà un filtre de ce nom pour cet écran.')]);
 
         DB::transaction(function () use ($request, $filtre, $donnees) {
             if ($donnees['par_defaut'] ?? false) {
@@ -115,7 +115,7 @@ class FiltreMemoriseController extends Controller
             $admise = is_string($cle) && strlen($cle) <= 60
                 && ($simple($valeur) || (is_array($valeur) && array_is_list($valeur) && count($valeur) <= 50 && collect($valeur)->every($simple)));
             if (! $admise) {
-                throw ValidationException::withMessages(['valeurs' => ["Valeur de filtre non prise en charge : « {$cle} »."]]);
+                throw ValidationException::withMessages(['valeurs' => [__('Valeur de filtre non prise en charge : « :cle ».', ['cle' => $cle])]]);
             }
         }
     }

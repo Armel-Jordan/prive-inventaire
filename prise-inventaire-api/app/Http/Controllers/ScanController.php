@@ -22,7 +22,7 @@ class ScanController extends Controller
             if (! $produit) {
                 return response()->json([
                     'valide' => false,
-                    'message' => 'Numéro introuvable',
+                    'message' => __('Numéro introuvable'),
                 ], 404);
             }
 
@@ -38,7 +38,7 @@ class ScanController extends Controller
 
             return response()->json([
                 'valide' => false,
-                'message' => 'Erreur serveur: '.$e->getMessage(),
+                'message' => __('Erreur serveur: :erreur', ['erreur' => $e->getMessage()]),
             ], 500);
         }
     }
@@ -58,7 +58,7 @@ class ScanController extends Controller
         if (! $produit) {
             return response()->json([
                 'success' => false,
-                'message' => 'Numéro de produit introuvable',
+                'message' => __('Numéro de produit introuvable'),
             ], 404);
         }
 
@@ -80,7 +80,7 @@ class ScanController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Saisie enregistrée',
+                'message' => __('Saisie enregistrée'),
                 'scan' => $scan,
             ]);
         } catch (\Exception $e) {
@@ -88,7 +88,7 @@ class ScanController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'enregistrement: '.$e->getMessage(),
+                'message' => __("Erreur lors de l'enregistrement: :erreur", ['erreur' => $e->getMessage()]),
             ], 500);
         }
     }
@@ -124,13 +124,13 @@ class ScanController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Scan modifié avec succès',
+                'message' => __('Scan modifié avec succès'),
                 'scan' => $scan,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la modification: '.$e->getMessage(),
+                'message' => __('Erreur lors de la modification: :erreur', ['erreur' => $e->getMessage()]),
             ], 500);
         }
     }
@@ -143,12 +143,12 @@ class ScanController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Scan supprimé avec succès',
+                'message' => __('Scan supprimé avec succès'),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la suppression: '.$e->getMessage(),
+                'message' => __('Erreur lors de la suppression: :erreur', ['erreur' => $e->getMessage()]),
             ], 500);
         }
     }

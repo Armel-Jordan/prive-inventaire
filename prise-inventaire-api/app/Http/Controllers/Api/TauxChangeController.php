@@ -25,7 +25,7 @@ class TauxChangeController extends Controller
         $to = strtoupper((string) $request->get('to', 'EUR'));
 
         if (! preg_match('/^[A-Z]{3}$/', $from) || ! preg_match('/^[A-Z]{3}$/', $to)) {
-            return response()->json(['message' => 'Code de devise invalide : trois lettres attendues (ex. USD).'], 422);
+            return response()->json(['message' => __('Code de devise invalide : trois lettres attendues (ex. USD).')], 422);
         }
 
         if ($from === $to) {
@@ -50,7 +50,9 @@ class TauxChangeController extends Controller
 
         if (! $data) {
             return response()->json([
-                'message' => "Taux de change {$from} → {$to} introuvable : saisissez-le, ou renseignez la devise dans le référentiel des devises.",
+                'message' => __('Taux de change :from → :to introuvable : saisissez-le, ou renseignez la devise dans le référentiel des devises.', [
+                    'from' => $from, 'to' => $to,
+                ]),
             ], 404);
         }
 

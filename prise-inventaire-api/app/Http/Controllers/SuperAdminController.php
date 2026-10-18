@@ -26,7 +26,7 @@ class SuperAdminController extends Controller
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Identifiants invalides ou accès non autorisé',
+                'message' => __('Identifiants invalides ou accès non autorisé'),
             ], 401);
         }
 
@@ -37,7 +37,7 @@ class SuperAdminController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Connexion Super Admin réussie',
+            'message' => __('Connexion Super Admin réussie'),
             'user' => [
                 'id' => $user->id,
                 'nom' => $user->nom,
@@ -83,7 +83,7 @@ class SuperAdminController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Tenant créé avec succès',
+            'message' => __('Tenant créé avec succès'),
             'tenant' => $tenant,
         ], 201);
     }
@@ -108,7 +108,7 @@ class SuperAdminController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Abonnement renouvelé avec succès',
+            'message' => __('Abonnement renouvelé avec succès'),
             'tenant' => $tenant,
         ]);
     }
@@ -132,7 +132,7 @@ class SuperAdminController extends Controller
         $tenant->update($validated);
 
         return response()->json([
-            'message' => 'Tenant mis à jour',
+            'message' => __('Tenant mis à jour'),
             'tenant' => $tenant,
         ]);
     }
@@ -165,7 +165,7 @@ class SuperAdminController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Modules mis à jour',
+            'message' => __('Modules mis à jour'),
             'tenant' => $tenant->fresh(),
         ]);
     }
@@ -175,7 +175,7 @@ class SuperAdminController extends Controller
         $tenant = Tenant::findOrFail($id);
         $tenant->delete();
 
-        return response()->json(['message' => 'Tenant supprimé']);
+        return response()->json(['message' => __('Tenant supprimé')]);
     }
 
     public function getTenantAdmins($tenantId): JsonResponse
@@ -213,7 +213,7 @@ class SuperAdminController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Admin créé avec succès',
+            'message' => __('Admin créé avec succès'),
             'admin' => $admin,
         ], 201);
     }
@@ -237,7 +237,7 @@ class SuperAdminController extends Controller
         $admin->update($validated);
 
         return response()->json([
-            'message' => 'Admin mis à jour',
+            'message' => __('Admin mis à jour'),
             'admin' => $admin,
         ]);
     }
@@ -247,7 +247,7 @@ class SuperAdminController extends Controller
         $admin = AdminUser::where('tenant_id', $tenantId)->findOrFail($adminId);
         $admin->delete();
 
-        return response()->json(['message' => 'Admin supprimé']);
+        return response()->json(['message' => __('Admin supprimé')]);
     }
 
     public function getStats(): JsonResponse

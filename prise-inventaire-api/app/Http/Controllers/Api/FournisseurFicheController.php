@@ -214,7 +214,7 @@ class FournisseurFicheController extends Controller
             ...$this->reglesProduit(),
         ]);
         if ($fournisseur->produits()->whereKey($donnees['produit_id'])->exists()) {
-            throw ValidationException::withMessages(['produit_id' => 'Ce produit est déjà au catalogue de ce fournisseur.']);
+            throw ValidationException::withMessages(['produit_id' => __('Ce produit est déjà au catalogue de ce fournisseur.')]);
         }
 
         DB::transaction(function () use ($fournisseur, $donnees) {
@@ -222,13 +222,13 @@ class FournisseurFicheController extends Controller
             $this->garderUnSeulFournisseurPrincipal($fournisseur, (int) $donnees['produit_id'], $donnees);
         });
 
-        return response()->json(['message' => 'Produit ajouté au catalogue.'], 201);
+        return response()->json(['message' => __('Produit ajouté au catalogue.')], 201);
     }
 
     public function modifierProduit(Request $request, int $id, int $produit): JsonResponse
     {
         $fournisseur = Fournisseur::findOrFail($id);
-        abort_unless($fournisseur->produits()->whereKey($produit)->exists(), 404, 'Produit absent du catalogue de ce fournisseur.');
+        abort_unless($fournisseur->produits()->whereKey($produit)->exists(), 404, __('Produit absent du catalogue de ce fournisseur.'));
         $donnees = $request->validate($this->reglesProduit());
 
         DB::transaction(function () use ($fournisseur, $produit, $donnees) {
@@ -236,15 +236,15 @@ class FournisseurFicheController extends Controller
             $this->garderUnSeulFournisseurPrincipal($fournisseur, $produit, $donnees);
         });
 
-        return response()->json(['message' => 'Catalogue mis à jour.']);
+        return response()->json(['message' => __('Catalogue mis à jour.')]);
     }
 
     public function retirerProduit(int $id, int $produit): JsonResponse
     {
         $fournisseur = Fournisseur::findOrFail($id);
-        abort_unless($fournisseur->produits()->detach($produit) > 0, 404, 'Produit absent du catalogue de ce fournisseur.');
+        abort_unless($fournisseur->produits()->detach($produit) > 0, 404, __('Produit absent du catalogue de ce fournisseur.'));
 
-        return response()->json(['message' => 'Produit retiré du catalogue.']);
+        return response()->json(['message' => __('Produit retiré du catalogue.')]);
     }
 
     private function reglesProduit(): array

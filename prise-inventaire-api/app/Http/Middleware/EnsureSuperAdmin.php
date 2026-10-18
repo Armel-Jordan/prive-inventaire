@@ -19,7 +19,7 @@ class EnsureSuperAdmin
     {
         if (! $request->user() instanceof SuperAdmin) {
             return response()->json([
-                'message' => 'Accès réservé au super-administrateur.',
+                'message' => __('Accès réservé au super-administrateur.'),
                 'status' => 403,
             ], 403);
         }

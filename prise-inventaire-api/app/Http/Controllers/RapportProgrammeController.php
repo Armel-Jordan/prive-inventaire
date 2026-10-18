@@ -108,7 +108,7 @@ class RapportProgrammeController extends Controller
     {
         $rapports = $this->rapports($request);
         $request->validate(['code' => ['required', 'string', Rule::in($rapports->keys()->all())]],
-            ['code.in' => 'Ce rapport est introuvable, ou réservé à un autre droit.']);
+            ['code.in' => __('Ce rapport est introuvable, ou réservé à un autre droit.')]);
         $rapport = $rapports[$request->input('code')];
         $definitions = $rapport->parametres();
         $avecPeriode = isset($definitions['du'], $definitions['au']);
@@ -131,13 +131,13 @@ class RapportProgrammeController extends Controller
             // Question à l'IA : son analyse du rapport entre dans chaque courriel.
             'question_ia' => ['nullable', 'string', 'max:1000'],
         ] + $reglesParametres, [
-            'periode.required' => 'Choisissez la période du rapport envoyé.',
-            'jour.required_if' => 'Choisissez le jour de l\'envoi.',
-        ] + RapportBibliothequeController::MESSAGES_ADRESSES);
+            'periode.required' => __('Choisissez la période du rapport envoyé.'),
+            'jour.required_if' => __("Choisissez le jour de l'envoi."),
+        ] + RapportBibliothequeController::messagesAdresses());
 
         $questionIa = trim((string) ($donnees['question_ia'] ?? ''));
         if ($questionIa !== '' && ! $this->iaDisponible($request)) {
-            throw ValidationException::withMessages(['question_ia' => ["Les questions à l'IA ne sont pas disponibles pour votre compte ou votre entreprise."]]);
+            throw ValidationException::withMessages(['question_ia' => [__("Les questions à l'IA ne sont pas disponibles pour votre compte ou votre entreprise.")]]);
         }
 
         $parametres = array_filter(array_intersect_key($donnees['parametres'] ?? [], array_diff_key($definitions, $avecPeriode ? ['du' => 1, 'au' => 1] : [])),
@@ -189,7 +189,7 @@ class RapportProgrammeController extends Controller
     private function programme(Request $request, int $id): RapportProgramme
     {
         $programme = RapportProgramme::findOrFail($id);
-        abort_unless($this->rapports($request)->has($programme->code), 404, 'Envoi programmé introuvable.');
+        abort_unless($this->rapports($request)->has($programme->code), 404, __('Envoi programmé introuvable.'));
 
         return $programme;
     }

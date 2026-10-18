@@ -50,7 +50,7 @@ class ReleveBancaireController extends Controller
         return $this->executer(function () use ($import) {
             $this->releves->supprimerImport($import);
 
-            return response()->json(['message' => "Relevé « {$import->fichier} » supprimé avec ses opérations."]);
+            return response()->json(['message' => __('Relevé « :fichier » supprimé avec ses opérations.', ['fichier' => $import->fichier])]);
         });
     }
 
@@ -141,7 +141,7 @@ class ReleveBancaireController extends Controller
         return $this->executer(function () use ($compte, $filtres) {
             $nombre = $this->releves->relierSuggestions($compte, $filtres);
 
-            return response()->json(['message' => "{$nombre} opération(s) reliée(s).", 'reliees' => $nombre]);
+            return response()->json(['message' => __(':nombre opération(s) reliée(s).', ['nombre' => $nombre]), 'reliees' => $nombre]);
         });
     }
 

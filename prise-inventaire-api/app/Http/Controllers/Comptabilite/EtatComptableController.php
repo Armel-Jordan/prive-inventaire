@@ -155,7 +155,9 @@ class EtatComptableController extends Controller
         $ecriture = $this->ecritures->enregistrerOuverture($donnees['lignes'], $request->user()?->id);
 
         return response()->json([
-            'message' => $ecriture ? "Soldes d'ouverture enregistrés ({$ecriture->numero})." : 'Soldes d\'ouverture effacés.',
+            'message' => $ecriture
+                ? __("Soldes d'ouverture enregistrés (:numero).", ['numero' => $ecriture->numero])
+                : __("Soldes d'ouverture effacés."),
             'ecriture' => $ecriture?->only(['id', 'numero']),
         ]);
     }

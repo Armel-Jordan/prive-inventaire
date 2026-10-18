@@ -23,14 +23,17 @@ class RapportBibliothequeController extends Controller
 {
     public const FORMATS = ['json', 'csv', 'xlsx', 'pdf'];
 
-    /** Messages des adresses de courriel refusées (destinataires, copies). */
-    public const MESSAGES_ADRESSES = [
-        'destinataires.required' => 'Indiquez au moins un destinataire.',
-        'destinataires.max' => 'Vingt destinataires au plus.',
-        'destinataires.*.email' => 'Adresse de courriel invalide : « :input ».',
-        'copies.*.email' => 'Adresse de courriel invalide : « :input ».',
-        'copies_cachees.*.email' => 'Adresse de courriel invalide : « :input ».',
-    ];
+    /** Messages des adresses de courriel refusées (destinataires, copies), dans la langue de la requête. */
+    public static function messagesAdresses(): array
+    {
+        return [
+            'destinataires.required' => __('Indiquez au moins un destinataire.'),
+            'destinataires.max' => __('Vingt destinataires au plus.'),
+            'destinataires.*.email' => __('Adresse de courriel invalide : « :input ».'),
+            'copies.*.email' => __('Adresse de courriel invalide : « :input ».'),
+            'copies_cachees.*.email' => __('Adresse de courriel invalide : « :input ».'),
+        ];
+    }
 
     public function __construct(private readonly Production $production) {}
 
@@ -104,7 +107,7 @@ class RapportBibliothequeController extends Controller
             'copies_cachees.*' => ['required', 'email', 'max:255'],
             'objet' => ['required', 'string', 'max:255'],
             'contenu' => ['required', 'string', 'max:20000'],
-        ], self::MESSAGES_ADRESSES);
+        ], self::messagesAdresses());
 
         $envoi = $envois->creerRapport($rapport, [
             'valeurs' => $rapport->valeurs($donnees['parametres'] ?? []),
@@ -120,7 +123,7 @@ class RapportBibliothequeController extends Controller
     private function rapport(Request $request, string $code): Rapport
     {
         $rapport = Catalogue::pour($request->user(), $request->attributes->get('tenant'))->get($code);
-        abort_unless($rapport, 404, 'Rapport introuvable, ou réservé à un autre droit.');
+        abort_unless($rapport, 404, __('Rapport introuvable, ou réservé à un autre droit.'));
         $rapport->langue = $this->langue($request);
 
         return $rapport;

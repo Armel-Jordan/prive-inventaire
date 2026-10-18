@@ -63,7 +63,7 @@ class BonLivraisonController extends Controller
         $bon = BonLivraison::findOrFail($id);
 
         if ($bon->statut !== 'cree') {
-            return response()->json(['message' => 'Ce bon ne peut pas être préparé'], 422);
+            return response()->json(['message' => __('Ce bon ne peut pas être préparé')], 422);
         }
 
         $bon->statut = 'en_preparation';
@@ -81,7 +81,7 @@ class BonLivraisonController extends Controller
         $bon = BonLivraison::with('lignes')->findOrFail($id);
 
         if (! in_array($bon->statut, ['en_preparation'])) {
-            return response()->json(['message' => 'Ce bon ne peut pas être modifié'], 422);
+            return response()->json(['message' => __('Ce bon ne peut pas être modifié')], 422);
         }
 
         $validated = $request->validate([
@@ -129,7 +129,7 @@ class BonLivraisonController extends Controller
         $bon = BonLivraison::with('lignes')->findOrFail($id);
 
         if ($bon->statut !== 'en_preparation') {
-            return response()->json(['message' => 'Ce bon n\'est pas en préparation'], 422);
+            return response()->json(['message' => __("Ce bon n'est pas en préparation")], 422);
         }
 
         foreach ($bon->lignes as $ligne) {
@@ -151,7 +151,7 @@ class BonLivraisonController extends Controller
         $bon = BonLivraison::with(['lignes', 'facture'])->findOrFail($id);
 
         if (! in_array($bon->statut, ['pret', 'en_livraison'])) {
-            return response()->json(['message' => 'Ce bon ne peut pas être livré'], 422);
+            return response()->json(['message' => __('Ce bon ne peut pas être livré')], 422);
         }
 
         $validated = $request->validate([
@@ -168,7 +168,7 @@ class BonLivraisonController extends Controller
             'signature_client' => ['nullable', 'string', 'max:500000', 'regex:#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#'],
             'signataire_nom' => ['nullable', 'string', 'max:150'],
             'notes_livraison' => 'nullable|string',
-        ], ['signature_client.regex' => 'La signature doit être une image (PNG ou JPEG).']);
+        ], ['signature_client.regex' => __('La signature doit être une image (PNG ou JPEG).')]);
 
         $tenantId = auth()->user()->tenant_id ?? $request->attributes->get('tenant')->id;
 
@@ -249,7 +249,7 @@ class BonLivraisonController extends Controller
         $bon = BonLivraison::findOrFail($id);
 
         if (! in_array($bon->statut, ['cree', 'en_preparation'])) {
-            return response()->json(['message' => 'Seuls les bons créés ou en préparation peuvent être annulés'], 422);
+            return response()->json(['message' => __('Seuls les bons créés ou en préparation peuvent être annulés')], 422);
         }
 
         $bon->statut = 'annule';

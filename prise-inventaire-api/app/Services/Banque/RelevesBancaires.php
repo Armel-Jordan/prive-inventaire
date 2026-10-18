@@ -50,7 +50,11 @@ class RelevesBancaires
         // Le journal compte dans la devise de l'entreprise : les montants d'un relevé en devise ne s'y comparent pas.
         $reference = app(DevisesVente::class)->reference();
         if (! DevisesVente::memeDevise($compte->devise_code ?: $reference, $reference)) {
-            throw new DomainException("Le compte « {$compte->nom} » est en {$compte->devise_code} : les relevés s'importent pour les comptes dans la devise de l'entreprise ({$reference}), celle du journal.");
+            throw new DomainException(__("Le compte « :nom » est en :devise : les relevés s'importent pour les comptes dans la devise de l'entreprise (:reference), celle du journal.", [
+                'nom' => $compte->nom,
+                'devise' => $compte->devise_code,
+                'reference' => $reference,
+            ]));
         }
         $this->exigerRelie($compte);
         $format = $this->lecteur->estOfx($contenu) ? 'ofx' : ($this->lecteur->estCamt($contenu) ? 'camt' : 'csv');
@@ -134,7 +138,7 @@ class RelevesBancaires
     public function supprimerImport(ReleveBancaire $releve): void
     {
         if ($releve->lignes()->whereHas('liens')->exists()) {
-            throw new DomainException("Des opérations de ce relevé sont reliées à des mouvements : déliez-les d'abord.");
+            throw new DomainException(__("Des opérations de ce relevé sont reliées à des mouvements : déliez-les d'abord."));
         }
         DB::transaction(function () use ($releve) {
             $releve->lignes()->delete();
@@ -207,13 +211,13 @@ class RelevesBancaires
     {
         $compteId = $this->exigerRelie($ligne->compteBancaire);
         if ($ligne->exclue) {
-            throw new DomainException("Cette opération est exclue : rétablissez-la d'abord.");
+            throw new DomainException(__("Cette opération est exclue : rétablissez-la d'abord."));
         }
         $this->lier(function () use ($ligne, $ids, $compteId) {
             $mouvements = $this->mouvementsLibres($compteId)->whereIn('ecritures_comptables_lignes.id', $ids)
                 ->where((float) $ligne->montant > 0 ? 'ecritures_comptables_lignes.debit' : 'ecritures_comptables_lignes.credit', '>', 0)->lockForUpdate()->get();
             if ($mouvements->count() !== count(array_unique($ids))) {
-                throw ValidationException::withMessages(['lignes' => 'Choisissez des mouvements libres de ce compte, dans le sens de l\'opération.']);
+                throw ValidationException::withMessages(['lignes' => __("Choisissez des mouvements libres de ce compte, dans le sens de l'opération.")]);
             }
             foreach ($mouvements as $mouvement) {
                 ReleveBancaireLien::create(['releve_ligne_id' => $ligne->id, 'ecriture_ligne_id' => $mouvement->id]);
@@ -236,7 +240,7 @@ class RelevesBancaires
     public function exclure(ReleveBancaireLigne $ligne, ?string $motif): array
     {
         if ($ligne->liens()->exists()) {
-            throw new DomainException("Une opération reliée ne s'exclut pas : déliez d'abord ses mouvements.");
+            throw new DomainException(__("Une opération reliée ne s'exclut pas : déliez d'abord ses mouvements."));
         }
         $ligne->update(['exclue' => true, 'motif_exclusion' => trim((string) $motif) ?: null]);
 
@@ -274,7 +278,7 @@ class RelevesBancaires
     {
         $compteId = $this->exigerRelie($ligne->compteBancaire);
         if ($ligne->exclue || $ligne->liens()->exists()) {
-            throw new DomainException('Seule une opération ni reliée ni exclue se classe.');
+            throw new DomainException(__('Seule une opération ni reliée ni exclue se classe.'));
         }
         $transaction = app(TransactionsBancaires::class)->enregistrer([
             'compte_bancaire_id' => $ligne->compte_bancaire_id,
@@ -289,10 +293,10 @@ class RelevesBancaires
             $ecriture = app(Comptabilisation::class)->comptabiliserDocument('transaction_bancaire', $transaction->id, $auteur);
             $mouvement = $ecriture->lignes()->where('compte_id', $compteId)->value('id');
             ReleveBancaireLien::create(['releve_ligne_id' => $ligne->id, 'ecriture_ligne_id' => $mouvement]);
-            $message = "Transaction {$transaction->numero} créée, passée au journal ({$ecriture->numero}) et reliée.";
+            $message = __('Transaction :numero créée, passée au journal (:ecriture) et reliée.', ['numero' => $transaction->numero, 'ecriture' => $ecriture->numero]);
         } catch (DomainException|ValidationException $e) {
             $raison = $e instanceof ValidationException ? (collect($e->errors())->flatten()->first() ?? $e->getMessage()) : $e->getMessage();
-            $message = "Transaction {$transaction->numero} créée ; elle se reliera une fois passée au journal : {$raison}";
+            $message = __('Transaction :numero créée ; elle se reliera une fois passée au journal : :raison', ['numero' => $transaction->numero, 'raison' => $raison]);
         }
 
         return ['ligne' => $this->presenter($ligne->fresh()), 'transaction' => $transaction->toArray(), 'message' => $message];
@@ -371,7 +375,7 @@ class RelevesBancaires
         try {
             DB::transaction($ecriture);
         } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages(['lignes' => "Un de ces mouvements vient d'être relié à une autre opération : rechargez."]);
+            throw ValidationException::withMessages(['lignes' => __("Un de ces mouvements vient d'être relié à une autre opération : rechargez.")]);
         }
     }
 
@@ -411,7 +415,7 @@ class RelevesBancaires
     private function exigerRelie(?CompteBancaire $compte): int
     {
         if (! $compte?->compte_comptable_id) {
-            throw new DomainException("Reliez d'abord le compte bancaire « {$compte?->nom} » à son compte comptable.");
+            throw new DomainException(__("Reliez d'abord le compte bancaire « :nom » à son compte comptable.", ['nom' => $compte?->nom]));
         }
 
         return $compte->compte_comptable_id;

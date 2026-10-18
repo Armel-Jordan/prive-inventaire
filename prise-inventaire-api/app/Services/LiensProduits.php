@@ -52,19 +52,19 @@ class LiensProduits
         $type = $donnees['type'];
         $lie = ProduitTenant::query()->find($donnees['lie_id']);
         if (! $lie) {
-            throw ValidationException::withMessages(['lie_id' => 'Produit introuvable.']);
+            throw ValidationException::withMessages(['lie_id' => __('Produit introuvable.')]);
         }
         if ($lie->id === $produit->id) {
-            throw ValidationException::withMessages(['lie_id' => 'Un produit ne se lie pas à lui-même.']);
+            throw ValidationException::withMessages(['lie_id' => __('Un produit ne se lie pas à lui-même.')]);
         }
         if (! $lie->actif) {
-            throw ValidationException::withMessages(['lie_id' => "{$lie->numero} est désactivé : réactivez-le d'abord."]);
+            throw ValidationException::withMessages(['lie_id' => __(":numero est désactivé : réactivez-le d'abord.", ['numero' => $lie->numero])]);
         }
         if (ProduitLien::query()->where('type', $type)->where('produit_id', $produit->id)->where('lie_id', $lie->id)->exists()) {
-            throw ValidationException::withMessages(['lie_id' => "{$lie->numero} est déjà lié à ce produit."]);
+            throw ValidationException::withMessages(['lie_id' => __(':numero est déjà lié à ce produit.', ['numero' => $lie->numero])]);
         }
         if ($type === ProduitLien::COMPOSANT && $this->contient($lie->id, $produit->id)) {
-            throw ValidationException::withMessages(['lie_id' => "{$lie->numero} contient déjà {$produit->numero} : l'ensemble tournerait en rond."]);
+            throw ValidationException::withMessages(['lie_id' => __(":numero contient déjà :produit : l'ensemble tournerait en rond.", ['numero' => $lie->numero, 'produit' => $produit->numero])]);
         }
 
         return DB::transaction(function () use ($produit, $lie, $type, $donnees) {

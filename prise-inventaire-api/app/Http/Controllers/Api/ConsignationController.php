@@ -51,7 +51,7 @@ class ConsignationController extends Controller
             'lignes' => ['required', 'array', 'min:1', 'max:200'],
             'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')->whereNull('deleted_at')],
             'lignes.*.quantite' => ['required', 'integer', 'min:1', 'max:999999'],
-        ], ['lignes.required' => 'Ajoutez au moins un produit déposé.']);
+        ], ['lignes.required' => __('Ajoutez au moins un produit déposé.')]);
         $consignation = $this->consignations->deposer($donnees, $request->user()?->id, $request->user()->tenant_id);
 
         return $this->show($consignation->id)->setStatusCode(201);
@@ -90,10 +90,10 @@ class ConsignationController extends Controller
             'lignes' => ['required', 'array', 'min:1'],
             'lignes.*.produit_id' => ['required', 'integer'],
             'lignes.*.quantite' => ['required', 'integer', 'min:0', 'max:999999'],
-        ], ['lieu_retour.required' => 'Choisissez le lieu où la marchandise revient.']);
+        ], ['lieu_retour.required' => __('Choisissez le lieu où la marchandise revient.')]);
         $unites = $this->consignations->reprendre($donnees['client_id'], $donnees['lignes'], trim($donnees['lieu_retour']), $request->user()?->id);
 
-        return response()->json(['message' => "{$unites} unité(s) reprise(s)."]);
+        return response()->json(['message' => __(':nombre unité(s) reprise(s).', ['nombre' => $unites])]);
     }
 
     /** Consommation : facture brouillon aux prix du client (créer une facture, et l'émettre si demandé, sont exigés). */
@@ -115,7 +115,7 @@ class ConsignationController extends Controller
         $facture = $this->consignations->facturer($donnees['client_id'], $donnees['lignes'], $emettre, $request->user()?->id, $request->user()->tenant_id);
 
         return response()->json([
-            'message' => "Facture {$facture->numero} créée ; le solde consigné est déduit.",
+            'message' => __('Facture :numero créée ; le solde consigné est déduit.', ['numero' => $facture->numero]),
             'facture' => $facture->fresh()->only(['id', 'numero', 'statut', 'montant_ttc', 'devise']),
         ], 201);
     }
@@ -127,7 +127,7 @@ class ConsignationController extends Controller
             'client_id' => ['required', 'integer', TenantRule::exists('clients')],
             'du' => ['nullable', 'date'],
             'au' => ['nullable', 'date', 'after_or_equal:du'],
-        ], ['au.after_or_equal' => 'La date de début est postérieure à la date de fin : corrigez la période.']);
+        ], ['au.after_or_equal' => __('La date de début est postérieure à la date de fin : corrigez la période.')]);
         $du = isset($donnees['du']) ? Carbon::parse($donnees['du']) : today()->subYear();
         $au = isset($donnees['au']) ? Carbon::parse($donnees['au']) : today();
 

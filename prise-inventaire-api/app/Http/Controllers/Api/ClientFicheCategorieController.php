@@ -40,7 +40,7 @@ class ClientFicheCategorieController extends Controller
             $categorie->delete();
         });
 
-        return response()->json(['message' => 'Catégorie supprimée.']);
+        return response()->json(['message' => __('Catégorie supprimée.')]);
     }
 
     private function valider(Request $request, ?int $ignorer = null): array
@@ -49,7 +49,7 @@ class ClientFicheCategorieController extends Controller
             'nom' => ['required', 'string', 'max:100', TenantRule::unique('client_categories', 'nom', $ignorer)],
             'description' => ['nullable', 'string', 'max:255'],
             'actif' => ['sometimes', 'boolean'],
-        ], ['nom.unique' => 'Une catégorie porte déjà ce nom.']);
+        ], ['nom.unique' => __('Une catégorie porte déjà ce nom.')]);
         $donnees['nom'] = trim($donnees['nom']);
 
         return $donnees;

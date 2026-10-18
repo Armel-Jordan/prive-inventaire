@@ -33,16 +33,16 @@ final class CodesBarres
         if (isset($longueurs[$type])) {
             $nom = ['ean13' => 'EAN-13', 'ean8' => 'EAN-8', 'upca' => 'UPC-A'][$type];
             if (strlen($code) !== $longueurs[$type] || ! ctype_digit($code)) {
-                return "Un code {$nom} compte {$longueurs[$type]} chiffres.";
+                return __('Un code :nom compte :chiffres chiffres.', ['nom' => $nom, 'chiffres' => $longueurs[$type]]);
             }
             if (! self::cleValide($code)) {
-                return "La clé de contrôle du code {$nom} est fausse : le dernier chiffre devrait être ".self::cle(substr($code, 0, -1)).'.';
+                return __('La clé de contrôle du code :nom est fausse : le dernier chiffre devrait être :cle.', ['nom' => $nom, 'cle' => self::cle(substr($code, 0, -1))]);
             }
 
             return null;
         }
         if ($type === 'code128' && ! preg_match('/^[\x20-\x7E]{1,48}$/', $code)) {
-            return 'Un code 128 compte de 1 à 48 caractères imprimables, sans accent.';
+            return __('Un code 128 compte de 1 à 48 caractères imprimables, sans accent.');
         }
 
         return null;

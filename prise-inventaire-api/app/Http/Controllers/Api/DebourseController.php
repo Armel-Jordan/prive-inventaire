@@ -132,7 +132,7 @@ class DebourseController extends Controller
             $debourses = $this->debourses->payerLot($donnees, $request->attributes->get('tenant')->id, $request->user()?->id);
 
             return response()->json([
-                'message' => count($debourses).' déboursé(s) enregistré(s) : '.$debourses->pluck('numero')->join(', ').'.',
+                'message' => __(':nombre déboursé(s) enregistré(s) : :numeros.', ['nombre' => count($debourses), 'numeros' => $debourses->pluck('numero')->join(', ')]),
                 'debourses' => $debourses->values(),
             ], 201);
         });

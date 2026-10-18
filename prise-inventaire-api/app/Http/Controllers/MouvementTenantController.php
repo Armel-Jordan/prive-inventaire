@@ -71,25 +71,25 @@ class MouvementTenantController extends Controller
         if ($validated['type'] === 'transfert') {
             if (empty($validated['secteur_source']) || empty($validated['secteur_destination'])) {
                 return response()->json([
-                    'message' => 'Un transfert nécessite un secteur source et destination',
+                    'message' => __('Un transfert nécessite un secteur source et destination'),
                 ], 422);
             }
             if ($validated['secteur_source'] === $validated['secteur_destination']) {
                 return response()->json([
-                    'message' => 'Le secteur source et destination doivent être différents',
+                    'message' => __('Le secteur source et destination doivent être différents'),
                 ], 422);
             }
         }
 
         if ($validated['type'] === 'arrivage' && empty($validated['secteur_destination'])) {
             return response()->json([
-                'message' => 'Un arrivage nécessite un secteur de destination',
+                'message' => __('Un arrivage nécessite un secteur de destination'),
             ], 422);
         }
 
         if ($validated['type'] === 'sortie' && empty($validated['secteur_source'])) {
             return response()->json([
-                'message' => 'Une sortie nécessite un secteur source',
+                'message' => __('Une sortie nécessite un secteur source'),
             ], 422);
         }
 
@@ -99,7 +99,7 @@ class MouvementTenantController extends Controller
             return response()->json([
                 'success' => true,
                 'requires_approval' => true,
-                'message' => 'Quantité supérieure ou égale au seuil ('.(float) $approbation->seuil_declenchement.') : le mouvement attend une approbation.',
+                'message' => __('Quantité supérieure ou égale au seuil (:seuil) : le mouvement attend une approbation.', ['seuil' => (float) $approbation->seuil_declenchement]),
                 'approbation' => $approbation,
             ], 202);
         }
@@ -112,7 +112,7 @@ class MouvementTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Mouvement enregistré avec succès',
+            'message' => __('Mouvement enregistré avec succès'),
             'mouvement' => $mouvement,
         ], 201);
     }
@@ -144,7 +144,7 @@ class MouvementTenantController extends Controller
 
         if ($validated['secteur_source'] === $validated['secteur_destination']) {
             return response()->json([
-                'message' => 'Le secteur source et destination doivent être différents',
+                'message' => __('Le secteur source et destination doivent être différents'),
             ], 422);
         }
 
@@ -158,7 +158,7 @@ class MouvementTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $this->messageLot(count($mouvements), count($approbations), 'relocalisé(s)'),
+            'message' => $this->messageLot(__(':nombre produit(s) relocalisé(s) avec succès', ['nombre' => count($mouvements)]), count($approbations)),
             'mouvements' => $mouvements,
             'approbations' => $approbations,
         ], 201);
@@ -190,7 +190,7 @@ class MouvementTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $this->messageLot(count($mouvements), count($approbations), 'ajouté(s)'),
+            'message' => $this->messageLot(__(':nombre produit(s) ajouté(s) avec succès', ['nombre' => count($mouvements)]), count($approbations)),
             'mouvements' => $mouvements,
             'approbations' => $approbations,
         ], 201);
@@ -236,11 +236,10 @@ class MouvementTenantController extends Controller
         return [$mouvements, $approbations];
     }
 
-    private function messageLot(int $enregistres, int $enAttente, string $participe): string
+    /** Message du lot : celui des produits enregistrés, suivi du nombre de lignes en attente d'approbation s'il y en a. */
+    private function messageLot(string $message, int $enAttente): string
     {
-        $message = "{$enregistres} produit(s) {$participe} avec succès";
-
-        return $enAttente > 0 ? "{$message} ; {$enAttente} en attente d'approbation (seuil atteint)" : $message;
+        return $enAttente > 0 ? __(":message ; :nombre en attente d'approbation (seuil atteint)", ['message' => $message, 'nombre' => $enAttente]) : $message;
     }
 
     /**

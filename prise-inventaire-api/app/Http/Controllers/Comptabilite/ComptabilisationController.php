@@ -73,7 +73,7 @@ class ComptabilisationController extends Controller
             ->merge(collect($donnees['correspondances']['categories'] ?? [])->flatten())->filter()->unique();
         $entetes = CompteComptable::query()->whereIn('id', $comptes)->where('type', CompteComptable::EN_TETE)->pluck('numero');
         if ($entetes->isNotEmpty()) {
-            throw ValidationException::withMessages(['comptes' => 'Un compte d\'en-tête ne reçoit pas d\'écriture : '.$entetes->implode(', ').'.']);
+            throw ValidationException::withMessages(['comptes' => __("Un compte d'en-tête ne reçoit pas d'écriture : :comptes.", ['comptes' => $entetes->implode(', ')])]);
         }
         $parametres = $this->comptabilisation->parametres();
         $parametres->update($donnees);
@@ -97,9 +97,13 @@ class ComptabilisationController extends Controller
         } catch (DomainException $erreur) {
             return response()->json(['message' => $erreur->getMessage()], 422);
         }
-        $message = $resultat['creees'] + $resultat['contre_passations'] > 0
-            ? "{$resultat['creees']} écriture(s) créée(s)".($resultat['contre_passations'] ? ", {$resultat['contre_passations']} contre-passation(s)" : '').'.'
-            : 'Aucune écriture à créer.';
+        $message = match (true) {
+            $resultat['creees'] + $resultat['contre_passations'] <= 0 => __('Aucune écriture à créer.'),
+            (bool) $resultat['contre_passations'] => __(':nombre écriture(s) créée(s), :contre_passations contre-passation(s).', [
+                'nombre' => $resultat['creees'], 'contre_passations' => $resultat['contre_passations'],
+            ]),
+            default => __(':nombre écriture(s) créée(s).', ['nombre' => $resultat['creees']]),
+        };
 
         return response()->json($resultat + ['message' => $message]);
     }

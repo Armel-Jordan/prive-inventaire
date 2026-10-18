@@ -46,7 +46,7 @@ class ProduitTenantController extends Controller
             $desactive = ProduitTenant::where('numero', $valeur)->where('actif', false)
                 ->when($ignorer, fn ($q) => $q->whereKeyNot($ignorer))->first();
             if ($desactive) {
-                $echec("Le numéro « {$valeur} » appartient au produit désactivé « {$desactive->description} » : réactivez-le (filtre « Désactivés » de la liste des produits).");
+                $echec(__('Le numéro « :numero » appartient au produit désactivé « :description » : réactivez-le (filtre « Désactivés » de la liste des produits).', ['numero' => $valeur, 'description' => $desactive->description]));
             }
         };
     }
@@ -83,7 +83,7 @@ class ProduitTenantController extends Controller
                 $jointe = $produit && PieceJointe::query()->whereKey($image)->where('entite', 'produit')->where('entite_id', $produit->id)
                     ->whereIn('type_mime', ProduitTenant::TYPES_IMAGE)->exists();
                 if (! $jointe) {
-                    throw ValidationException::withMessages(['image_id' => 'Choisissez une image jointe à cette fiche produit.']);
+                    throw ValidationException::withMessages(['image_id' => __('Choisissez une image jointe à cette fiche produit.')]);
                 }
             }
             $valeurs['image_id'] = $image;
@@ -115,7 +115,7 @@ class ProduitTenantController extends Controller
         if ($request->has('suivi')) {
             $suivi = $request->input('suivi') ?: null;
             if ($produit && $suivi !== $produit->suivi && ! app(LotsSeries::class)->suiviModifiable($produit)) {
-                throw ValidationException::withMessages(['suivi' => 'Des lots ou des numéros de série sont déjà enregistrés pour ce produit : son suivi ne peut plus changer.']);
+                throw ValidationException::withMessages(['suivi' => __('Des lots ou des numéros de série sont déjà enregistrés pour ce produit : son suivi ne peut plus changer.')]);
             }
             $valeurs['suivi'] = $suivi;
         }
@@ -170,7 +170,7 @@ class ProduitTenantController extends Controller
         ]);
         if ($request->filled('image_id')) {
             // Une image se joint à la fiche une fois le produit créé.
-            throw ValidationException::withMessages(['image_id' => 'Choisissez une image jointe à cette fiche produit.']);
+            throw ValidationException::withMessages(['image_id' => __('Choisissez une image jointe à cette fiche produit.')]);
         }
 
         // Générer le numéro automatiquement si non fourni
@@ -183,7 +183,7 @@ class ProduitTenantController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Le numéro est requis (pas de configuration auto-increment)',
+                    'message' => __('Le numéro est requis (pas de configuration auto-increment)'),
                 ], 422);
             }
         }
@@ -206,7 +206,7 @@ class ProduitTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Produit créé avec succès',
+            'message' => __('Produit créé avec succès'),
             'produit' => $produit,
         ], 201);
     }
@@ -249,7 +249,7 @@ class ProduitTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Produit modifié avec succès',
+            'message' => __('Produit modifié avec succès'),
             'produit' => $produit,
         ]);
     }
@@ -262,7 +262,7 @@ class ProduitTenantController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Produit désactivé avec succès',
+            'message' => __('Produit désactivé avec succès'),
         ]);
     }
 
@@ -282,7 +282,7 @@ class ProduitTenantController extends Controller
         if (! $lecture) {
             return response()->json([
                 'valide' => false,
-                'message' => 'Produit introuvable',
+                'message' => __('Produit introuvable'),
             ], 404);
         }
         $produit = $lecture['produit'];

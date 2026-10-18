@@ -62,7 +62,7 @@ class TransfertPlanifieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transfert planifié créé',
+            'message' => __('Transfert planifié créé'),
             'transfert' => $transfert,
         ], 201);
     }
@@ -89,7 +89,7 @@ class TransfertPlanifieController extends Controller
         if ($transfert->statut !== 'planifie') {
             return response()->json([
                 'success' => false,
-                'message' => 'Seuls les transferts planifiés peuvent être modifiés',
+                'message' => __('Seuls les transferts planifiés peuvent être modifiés'),
             ], 422);
         }
 
@@ -111,7 +111,7 @@ class TransfertPlanifieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transfert planifié mis à jour',
+            'message' => __('Transfert planifié mis à jour'),
             'transfert' => $transfert->fresh(),
         ]);
     }
@@ -127,7 +127,7 @@ class TransfertPlanifieController extends Controller
         if ($transfert->statut !== 'planifie') {
             return response()->json([
                 'success' => false,
-                'message' => 'Ce transfert ne peut pas être exécuté',
+                'message' => __('Ce transfert ne peut pas être exécuté'),
             ], 422);
         }
 
@@ -135,7 +135,7 @@ class TransfertPlanifieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transfert exécuté avec succès',
+            'message' => __('Transfert exécuté avec succès'),
             'transfert' => $transfert->fresh(),
         ]);
     }
@@ -151,7 +151,7 @@ class TransfertPlanifieController extends Controller
         if ($transfert->statut !== 'planifie') {
             return response()->json([
                 'success' => false,
-                'message' => 'Ce transfert ne peut pas être annulé',
+                'message' => __('Ce transfert ne peut pas être annulé'),
             ], 422);
         }
 
@@ -159,7 +159,7 @@ class TransfertPlanifieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Transfert annulé',
+            'message' => __('Transfert annulé'),
             'transfert' => $transfert->fresh(),
         ]);
     }
@@ -175,13 +175,13 @@ class TransfertPlanifieController extends Controller
         if ($transfert->statut === 'execute') {
             return response()->json([
                 'success' => false,
-                'message' => 'Un transfert exécuté ne peut pas être supprimé',
+                'message' => __('Un transfert exécuté ne peut pas être supprimé'),
             ], 422);
         }
 
         $transfert->delete();
 
-        return response()->json(['success' => true, 'message' => 'Transfert supprimé']);
+        return response()->json(['success' => true, 'message' => __('Transfert supprimé')]);
     }
 
     /**

@@ -63,7 +63,7 @@ class ExerciceComptableController extends Controller
     {
         $exercice = ExerciceComptable::with('periodes')->findOrFail($id);
         if ($exercice->estCloture()) {
-            return response()->json(['message' => 'Un exercice clôturé ne se modifie plus.'], 422);
+            return response()->json(['message' => __('Un exercice clôturé ne se modifie plus.')], 422);
         }
         $donnees = $this->valider($request);
         [$debut, $fin] = [Carbon::parse($donnees['date_debut'])->startOfDay(), Carbon::parse($donnees['date_fin'])->startOfDay()];
@@ -72,14 +72,14 @@ class ExerciceComptableController extends Controller
 
         if ($redecouper) {
             if ($exercice->periodes->contains('fermee', true)) {
-                return response()->json(['message' => 'Des périodes de cet exercice sont fermées : ses dates et son découpage ne peuvent plus changer.'], 422);
+                return response()->json(['message' => __('Des périodes de cet exercice sont fermées : ses dates et son découpage ne peuvent plus changer.')], 422);
             }
             if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
-                return response()->json(['message' => 'Cet exercice a des écritures : ses dates et son découpage ne peuvent plus changer.'], 422);
+                return response()->json(['message' => __('Cet exercice a des écritures : ses dates et son découpage ne peuvent plus changer.')], 422);
             }
             // Le budget est saisi par période : les recréer le perdrait.
             if (BudgetComptable::where('exercice_id', $exercice->id)->exists()) {
-                return response()->json(['message' => 'Cet exercice a un budget : ses dates et son découpage ne peuvent plus changer.'], 422);
+                return response()->json(['message' => __('Cet exercice a un budget : ses dates et son découpage ne peuvent plus changer.')], 422);
             }
             if ($erreur = $this->exercices->controlerDates($debut, $fin, $exercice)) {
                 return response()->json(['message' => $erreur, 'errors' => ['date_fin' => [$erreur]]], 422);
@@ -104,20 +104,20 @@ class ExerciceComptableController extends Controller
     {
         $exercice = ExerciceComptable::findOrFail($id);
         if ($exercice->estCloture() || $exercice->periodes()->where('fermee', true)->exists()) {
-            return response()->json(['message' => 'Un exercice clôturé, ou dont une période est fermée, ne peut pas être supprimé.'], 422);
+            return response()->json(['message' => __('Un exercice clôturé, ou dont une période est fermée, ne peut pas être supprimé.')], 422);
         }
         if (EcritureComptable::where('exercice_id', $exercice->id)->exists()) {
-            return response()->json(['message' => 'Cet exercice a des écritures : il ne peut pas être supprimé.'], 422);
+            return response()->json(['message' => __('Cet exercice a des écritures : il ne peut pas être supprimé.')], 422);
         }
         if (BudgetComptable::where('exercice_id', $exercice->id)->exists()) {
-            return response()->json(['message' => 'Cet exercice a un budget : il ne peut pas être supprimé.'], 422);
+            return response()->json(['message' => __('Cet exercice a un budget : il ne peut pas être supprimé.')], 422);
         }
         DB::transaction(function () use ($exercice) {
             $exercice->periodes()->delete();
             $exercice->delete();
         });
 
-        return response()->json(['message' => 'Exercice supprimé.']);
+        return response()->json(['message' => __('Exercice supprimé.')]);
     }
 
     /** Ce que donnerait la clôture : produits, charges, résultat, compte qui le reçoit, et ce qui l'empêche. */
@@ -145,7 +145,7 @@ class ExerciceComptableController extends Controller
     {
         $periode = PeriodeComptable::findOrFail($id);
         if ($periode->fermee) {
-            return response()->json(['message' => 'Cette période est déjà fermée.'], 422);
+            return response()->json(['message' => __('Cette période est déjà fermée.')], 422);
         }
         $periode->update(['fermee' => true, 'fermee_le' => now(), 'fermee_par' => $request->user()?->id]);
 
@@ -156,10 +156,10 @@ class ExerciceComptableController extends Controller
     {
         $periode = PeriodeComptable::with('exercice')->findOrFail($id);
         if (! $periode->fermee) {
-            return response()->json(['message' => 'Cette période est déjà ouverte.'], 422);
+            return response()->json(['message' => __('Cette période est déjà ouverte.')], 422);
         }
         if ($periode->exercice->estCloture()) {
-            return response()->json(['message' => "L'exercice {$periode->exercice->libelle} est clôturé : sa période ne peut pas être rouverte."], 422);
+            return response()->json(['message' => __("L'exercice :exercice est clôturé : sa période ne peut pas être rouverte.", ['exercice' => $periode->exercice->libelle])], 422);
         }
         $periode->update(['fermee' => false, 'fermee_le' => null, 'fermee_par' => null]);
 
@@ -173,7 +173,7 @@ class ExerciceComptableController extends Controller
             'date_debut' => ['required', 'date'],
             'date_fin' => ['required', 'date'],
             'decoupage' => ['required', Rule::in(Exercices::DECOUPAGES)],
-        ], ['decoupage.in' => 'Découpage inconnu : mensuel, trimestriel ou unique.']);
+        ], ['decoupage.in' => __('Découpage inconnu : mensuel, trimestriel ou unique.')]);
     }
 
     private function presenter(ExerciceComptable $exercice, ?PeriodeComptable $courante): array

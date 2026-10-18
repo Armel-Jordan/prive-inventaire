@@ -40,18 +40,18 @@ class CartesCadeaux
         $automatique = $config && $config->auto_increment;
         $saisi = mb_strtoupper(trim((string) ($donnees['numero'] ?? '')));
         if (! $automatique && $saisi === '') {
-            throw ValidationException::withMessages(['numero' => 'Saisissez ou scannez le numéro de la carte.']);
+            throw ValidationException::withMessages(['numero' => __('Saisissez ou scannez le numéro de la carte.')]);
         }
         $devise = $this->devise($donnees['devise'] ?? null);
         if ($devise !== null && ! Devise::where('code', $devise)->where('actif', true)->exists()) {
-            throw ValidationException::withMessages(['devise' => "La devise {$devise} n'est pas dans le référentiel des devises."]);
+            throw ValidationException::withMessages(['devise' => __("La devise :devise n'est pas dans le référentiel des devises.", ['devise' => $devise])]);
         }
 
         return DB::transaction(function () use ($donnees, $auteur, $tenantId, $automatique, $saisi, $devise) {
             $session = $this->caisses->sessionPourEncaissement($donnees['caisse_id'] ?? null);
             $numero = $automatique ? $this->prochainNumero($tenantId) : $saisi;
             if (! $automatique && CarteCadeau::where('numero', $numero)->exists()) {
-                throw ValidationException::withMessages(['numero' => "Le numéro {$numero} est déjà utilisé : une carte ne réutilise jamais un numéro."]);
+                throw ValidationException::withMessages(['numero' => __('Le numéro :numero est déjà utilisé : une carte ne réutilise jamais un numéro.', ['numero' => $numero])]);
             }
             $montant = round((float) $donnees['montant'], 2);
             $carte = CarteCadeau::create([
@@ -78,7 +78,7 @@ class CartesCadeaux
             $session = $this->caisses->sessionPourEncaissement($caisseId);
             $carte = CarteCadeau::whereKey($carte->id)->lockForUpdate()->firstOrFail();
             if ($carte->annulee) {
-                throw new DomainException("La carte {$carte->numero} est annulée : elle ne se recharge plus.");
+                throw new DomainException(__('La carte :numero est annulée : elle ne se recharge plus.', ['numero' => $carte->numero]));
             }
             $this->mouvement($carte, 'recharge', round($montant, 2), $auteur, ['mode' => $mode, 'reference' => $reference, 'caisse_session_id' => $session]);
 
@@ -93,7 +93,7 @@ class CartesCadeaux
             $session = $this->caisses->sessionPourEncaissement($caisseId);
             $carte = CarteCadeau::whereKey($carte->id)->lockForUpdate()->firstOrFail();
             if ($carte->annulee) {
-                throw new DomainException("La carte {$carte->numero} est déjà annulée.");
+                throw new DomainException(__('La carte :numero est déjà annulée.', ['numero' => $carte->numero]));
             }
             if ((float) $carte->solde > self::TOLERANCE) {
                 $this->mouvement($carte, 'remboursement', -round((float) $carte->solde, 2), $auteur, ['mode' => $mode, 'reference' => $reference, 'caisse_session_id' => $session]);
@@ -113,11 +113,14 @@ class CartesCadeaux
         $numero = mb_strtoupper(trim($numero));
         $carte = CarteCadeau::where('numero', $numero)->lockForUpdate()->first();
         $refus = match (true) {
-            ! $carte => "Carte cadeau {$numero} introuvable.",
-            $carte->annulee => "La carte cadeau {$numero} est annulée.",
-            $carte->expire_le !== null && $carte->expire_le->toDateString() < $date => "La carte cadeau {$numero} a expiré le {$carte->expire_le->format('d/m/Y')}.",
-            ! DevisesVente::memeDevise($this->devise($carte->devise), $this->devise($devise)) => "La carte cadeau {$numero} n'est pas dans la devise de la facture.",
-            $montant > (float) $carte->solde + self::TOLERANCE => "Solde insuffisant sur la carte {$numero} (solde disponible : ".number_format((float) $carte->solde, 2, ',', ' ').' '.$this->devises->symbole($carte->devise).').',
+            ! $carte => __('Carte cadeau :numero introuvable.', ['numero' => $numero]),
+            $carte->annulee => __('La carte cadeau :numero est annulée.', ['numero' => $numero]),
+            $carte->expire_le !== null && $carte->expire_le->toDateString() < $date => __('La carte cadeau :numero a expiré le :date.', ['numero' => $numero, 'date' => $carte->expire_le->format('d/m/Y')]),
+            ! DevisesVente::memeDevise($this->devise($carte->devise), $this->devise($devise)) => __("La carte cadeau :numero n'est pas dans la devise de la facture.", ['numero' => $numero]),
+            $montant > (float) $carte->solde + self::TOLERANCE => __('Solde insuffisant sur la carte :numero (solde disponible : :solde).', [
+                'numero' => $numero,
+                'solde' => number_format((float) $carte->solde, 2, ',', ' ').' '.$this->devises->symbole($carte->devise),
+            ]),
             default => null,
         };
         if ($refus) {
@@ -160,7 +163,7 @@ class CartesCadeaux
                 return $numero;
             }
         }
-        throw new DomainException('Aucun numéro de carte libre : vérifiez la numérotation des cartes cadeaux.');
+        throw new DomainException(__('Aucun numéro de carte libre : vérifiez la numérotation des cartes cadeaux.'));
     }
 
     /** Devise d'une carte : null pour celle de l'entreprise. */

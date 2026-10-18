@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\DefinirLangue;
 use App\Observers\JournalModifications;
 use App\Services\Planificateur;
 use Illuminate\Console\Scheduling\Schedule;
@@ -22,6 +23,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Messages produits hors requête (tâches planifiées, files d'attente, commandes, tests) : en français, la langue
+        // de l'application, quel que soit APP_LOCALE ; une requête prend la langue de l'écran (DefinirLangue).
+        if ($this->app->runningInConsole()) {
+            $this->app->setLocale(DefinirLangue::PAR_DEFAUT);
+        }
+
         // Dev local sans MySQL : rediriger la connexion 'mysql' (forcée en dur par certains
         // modèles) vers le sqlite local afin de pouvoir lancer l'app via `php artisan serve`.
         // Strictement limité à l'environnement local + connexion par défaut sqlite ;

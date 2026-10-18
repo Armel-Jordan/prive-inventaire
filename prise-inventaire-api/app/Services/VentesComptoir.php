@@ -97,7 +97,7 @@ class VentesComptoir
     {
         $config = Configuration::pourEntite('facture', $tenantId);
         if (! $config || ! $config->auto_increment) {
-            throw ValidationException::withMessages(['facture' => 'La numérotation automatique des factures doit être active.']);
+            throw ValidationException::withMessages(['facture' => __('La numérotation automatique des factures doit être active.')]);
         }
         $client = $this->client($donnees['client_id'] ?? null);
         $devise = $this->devises->pourDocument(null, null, $client);
@@ -163,7 +163,7 @@ class VentesComptoir
                 : (($calcule['prix'] ?? null) !== null ? round((float) $calcule['prix'] / $taux, 2) : null);
             $produit = $produits->get((int) $ligne['produit_id']);
             if ($prix === null && $exiger) {
-                throw ValidationException::withMessages(['lignes' => 'Aucun prix pour '.($produit?->numero ?? "#{$ligne['produit_id']}").' : saisissez-le.']);
+                throw ValidationException::withMessages(['lignes' => __('Aucun prix pour :produit : saisissez-le.', ['produit' => $produit?->numero ?? "#{$ligne['produit_id']}"])]);
             }
 
             return [
@@ -191,14 +191,16 @@ class VentesComptoir
         $especes = round(array_sum(array_map(fn (array $p) => $p['mode'] === 'especes' ? (float) $p['montant'] : 0.0, $paiements)), 2);
         $autres = round(array_sum(array_map(fn (array $p) => $p['mode'] !== 'especes' ? (float) $p['montant'] : 0.0, $paiements)), 2);
         if ($autres > $du + self::TOLERANCE) {
-            throw ValidationException::withMessages(['paiements' => 'Seules les espèces peuvent dépasser le montant dû (la monnaie est rendue) : ramenez les autres modes à '.$this->montant($du, $devise).' au plus.']);
+            throw ValidationException::withMessages(['paiements' => __('Seules les espèces peuvent dépasser le montant dû (la monnaie est rendue) : ramenez les autres modes à :montant au plus.', [
+                'montant' => $this->montant($du, $devise),
+            ])]);
         }
         $manque = round($du - $especes - $autres, 2);
         if ($manque > self::TOLERANCE && $dePassage) {
-            throw ValidationException::withMessages(['paiements' => 'Le client de passage paie toute la vente : il manque '.$this->montant($manque, $devise).'.']);
+            throw ValidationException::withMessages(['paiements' => __('Le client de passage paie toute la vente : il manque :montant.', ['montant' => $this->montant($manque, $devise)])]);
         }
         if ($manque > self::TOLERANCE && $especes > 0) {
-            throw ValidationException::withMessages(['paiements' => 'Un paiement en espèces règle toute la vente (la monnaie est rendue) : il manque '.$this->montant($manque, $devise).'.']);
+            throw ValidationException::withMessages(['paiements' => __('Un paiement en espèces règle toute la vente (la monnaie est rendue) : il manque :montant.', ['montant' => $this->montant($manque, $devise)])]);
         }
         $monnaie = max(0.0, round($especes + $autres - $du, 2));
         $resultat = [];

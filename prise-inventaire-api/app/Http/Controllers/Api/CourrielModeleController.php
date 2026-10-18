@@ -51,7 +51,7 @@ class CourrielModeleController extends Controller
                 Rule::in(Courriels::LANGUES),
                 TenantRule::unique('courriel_modeles', 'langue')->where('type', $request->input('type')),
             ],
-        ], ['langue.unique' => 'Un modèle existe déjà pour ce type et cette langue.']);
+        ], ['langue.unique' => __('Un modèle existe déjà pour ce type et cette langue.')]);
 
         return response()->json(CourrielModele::create($donnees), 201);
     }
@@ -69,7 +69,7 @@ class CourrielModeleController extends Controller
     {
         CourrielModele::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Modèle de courriel supprimé.']);
+        return response()->json(['message' => __('Modèle de courriel supprimé.')]);
     }
 
     /**

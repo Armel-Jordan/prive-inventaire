@@ -90,10 +90,10 @@ class CourrielParametresController extends Controller
                 reponseA: $this->mailer->repondreA($parametres),
             ));
         } catch (Throwable $erreur) {
-            return response()->json(['message' => 'Échec de l\'envoi : '.Str::limit($erreur->getMessage(), 500)], 422);
+            return response()->json(['message' => __("Échec de l'envoi : :erreur", ['erreur' => Str::limit($erreur->getMessage(), 500)])], 422);
         }
 
-        return response()->json(['message' => 'Courriel de test envoyé à '.$donnees['destinataire'].'.']);
+        return response()->json(['message' => __('Courriel de test envoyé à :destinataire.', ['destinataire' => $donnees['destinataire']])]);
     }
 
     private function presenter(?CourrielParametres $parametres): array

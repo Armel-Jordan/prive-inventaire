@@ -52,7 +52,7 @@ class VirementController extends Controller
             'date_execution' => ['required', 'date', 'after_or_equal:today'],
             'numero' => ['nullable', 'integer', 'min:1', 'max:99999999'],
             'emetteur' => ['nullable', 'string', 'max:35'],
-        ], ['date_execution.after_or_equal' => "La date d'exécution ne peut pas être passée."]);
+        ], ['date_execution.after_or_equal' => __("La date d'exécution ne peut pas être passée.")]);
         $compte = CompteBancaire::query()->findOrFail($donnees['compte_bancaire_id']);
         $lot = $this->virements->generer($compte, array_map('intval', $donnees['debourses']), $donnees['format'], $donnees['date_execution'],
             isset($donnees['numero']) ? (int) $donnees['numero'] : null, $donnees['emetteur'] ?? null, $request->user()?->id);

@@ -63,7 +63,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Toutes les notifications ont été marquées comme lues',
+            'message' => __('Toutes les notifications ont été marquées comme lues'),
         ]);
     }
 
@@ -77,7 +77,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Notification supprimée',
+            'message' => __('Notification supprimée'),
         ]);
     }
 

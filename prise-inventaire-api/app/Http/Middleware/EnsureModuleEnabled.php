@@ -19,7 +19,7 @@ class EnsureModuleEnabled
 
         if ($tenant && ! $tenant->hasModule($module)) {
             return response()->json([
-                'message' => "Le module « {$module} » n'est pas activé pour cette entreprise.",
+                'message' => __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => $module]),
                 'module' => $module,
                 'status' => 403,
             ], 403);

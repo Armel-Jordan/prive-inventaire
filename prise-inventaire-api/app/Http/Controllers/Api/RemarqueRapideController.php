@@ -33,7 +33,7 @@ class RemarqueRapideController extends Controller
     {
         RemarqueRapide::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Remarque rapide supprimée.']);
+        return response()->json(['message' => __('Remarque rapide supprimée.')]);
     }
 
     private function valider(Request $request): array

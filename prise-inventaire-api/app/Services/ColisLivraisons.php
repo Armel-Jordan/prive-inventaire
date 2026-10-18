@@ -51,7 +51,7 @@ class ColisLivraisons
             BonLivraison::whereKey($bon->id)->lockForUpdate()->first();
             $quantites = $this->quantites($bon, $donnees['lignes'], null);
             if ($quantites === []) {
-                throw ValidationException::withMessages(['lignes' => 'Mettez au moins une quantité dans le colis.']);
+                throw ValidationException::withMessages(['lignes' => __('Mettez au moins une quantité dans le colis.')]);
             }
             $colis = ColisLivraison::create([
                 'bon_livraison_id' => $bon->id,
@@ -130,11 +130,11 @@ class ColisLivraisons
             $id = (int) $ligne['bon_livraison_ligne_id'];
             $quantite = (int) $ligne['quantite'];
             if (! array_key_exists($id, $restants)) {
-                throw ValidationException::withMessages(['lignes' => "Une ligne n'appartient pas à ce bon."]);
+                throw ValidationException::withMessages(['lignes' => __("Une ligne n'appartient pas à ce bon.")]);
             }
             $quantites[$id] = ($quantites[$id] ?? 0) + $quantite;
             if ($quantites[$id] > $restants[$id]) {
-                throw ValidationException::withMessages(['lignes' => "Quantité trop grande : il reste {$restants[$id]} à mettre en colis sur cette ligne."]);
+                throw ValidationException::withMessages(['lignes' => __('Quantité trop grande : il reste :reste à mettre en colis sur cette ligne.', ['reste' => $restants[$id]])]);
             }
         }
 
@@ -154,7 +154,7 @@ class ColisLivraisons
     private function verifierStatut(BonLivraison $bon): void
     {
         if (! in_array($bon->statut, self::STATUTS, true)) {
-            throw ValidationException::withMessages(['bon' => 'Les colis ne se modifient plus une fois le bon parti en livraison.']);
+            throw ValidationException::withMessages(['bon' => __('Les colis ne se modifient plus une fois le bon parti en livraison.')]);
         }
     }
 
@@ -162,7 +162,7 @@ class ColisLivraisons
     private function verifierPasCharge(ColisLivraison $colis): void
     {
         if ($colis->charge_le) {
-            throw ValidationException::withMessages(['colis' => "Le colis {$colis->numero} est chargé dans le camion : décochez-le avant de le modifier."]);
+            throw ValidationException::withMessages(['colis' => __('Le colis :numero est chargé dans le camion : décochez-le avant de le modifier.', ['numero' => $colis->numero])]);
         }
     }
 }

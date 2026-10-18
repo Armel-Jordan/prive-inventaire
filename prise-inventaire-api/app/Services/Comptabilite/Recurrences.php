@@ -28,7 +28,7 @@ class Recurrences
     public function planifier(EcritureComptable $modele, array $donnees, ?int $auteur): RecurrenceComptable
     {
         if ($modele->source !== EcritureComptable::MANUELLE || $modele->contrepassation_de) {
-            throw ValidationException::withMessages(['ecriture' => 'Seule une écriture saisie à la main se répète.']);
+            throw ValidationException::withMessages(['ecriture' => __('Seule une écriture saisie à la main se répète.')]);
         }
         $modele->loadMissing('lignes');
 

@@ -79,7 +79,7 @@ class SupportController extends Controller
     private function demande(Request $request, int $id): DemandeSupport
     {
         $demande = DemandeSupport::with('auteur:id,nom')->findOrFail($id);
-        abort_unless((int) $demande->admin_user_id === (int) $request->user()->id || $this->droits->permet($request->user(), 'support', 'voir'), 404, 'Demande introuvable.');
+        abort_unless((int) $demande->admin_user_id === (int) $request->user()->id || $this->droits->permet($request->user(), 'support', 'voir'), 404, __('Demande introuvable.'));
 
         return $demande;
     }

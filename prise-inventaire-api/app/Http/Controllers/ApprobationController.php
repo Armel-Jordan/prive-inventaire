@@ -57,7 +57,7 @@ class ApprobationController extends Controller
             return response()->json([
                 'success' => true,
                 'requires_approval' => true,
-                'message' => 'Quantité >= '.(float) $approbation->seuil_declenchement.', approbation requise',
+                'message' => __('Quantité >= :seuil, approbation requise', ['seuil' => (float) $approbation->seuil_declenchement]),
                 'approbation' => $approbation,
             ], 201);
         }
@@ -81,7 +81,7 @@ class ApprobationController extends Controller
         return response()->json([
             'success' => true,
             'requires_approval' => false,
-            'message' => 'Mouvement créé directement',
+            'message' => __('Mouvement créé directement'),
             'mouvement' => $mouvement,
         ], 201);
     }
@@ -97,7 +97,7 @@ class ApprobationController extends Controller
         if ($approbation->statut !== 'en_attente') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cette demande a déjà été traitée',
+                'message' => __('Cette demande a déjà été traitée'),
             ], 422);
         }
 
@@ -130,7 +130,7 @@ class ApprobationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Demande approuvée et mouvement créé',
+            'message' => __('Demande approuvée et mouvement créé'),
             'approbation' => $approbation->fresh(),
         ]);
     }
@@ -146,7 +146,7 @@ class ApprobationController extends Controller
         if ($approbation->statut !== 'en_attente') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cette demande a déjà été traitée',
+                'message' => __('Cette demande a déjà été traitée'),
             ], 422);
         }
 
@@ -163,7 +163,7 @@ class ApprobationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Demande rejetée',
+            'message' => __('Demande rejetée'),
             'approbation' => $approbation->fresh(),
         ]);
     }
@@ -240,7 +240,7 @@ class ApprobationController extends Controller
                 );
         }
 
-        return response()->json(['success' => true, 'message' => 'Seuils mis à jour']);
+        return response()->json(['success' => true, 'message' => __('Seuils mis à jour')]);
     }
 
     /** Nom de l'utilisateur connecté qui décide (son courriel s'il n'a pas de nom). */

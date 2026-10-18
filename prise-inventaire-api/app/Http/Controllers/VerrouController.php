@@ -31,10 +31,10 @@ class VerrouController extends Controller
         $compte = $request->user();
         $entite = $donnees['entite'];
         $id = (int) $donnees['entite_id'];
-        abort_unless($droits->permet($compte, Verrous::module($entite), 'modifier'), 403, "Vous n'avez pas le droit de modifier cette fiche.");
+        abort_unless($droits->permet($compte, Verrous::module($entite), 'modifier'), 403, __("Vous n'avez pas le droit de modifier cette fiche."));
         $prendreLaMain = (bool) ($donnees['prendre_la_main'] ?? false);
         abort_if($prendreLaMain && ! $droits->permet($compte, 'verrous', 'liberer'), 403, $droits->messageRefus('verrous', 'liberer'));
-        abort_unless($verrous->existe($entite, $id), 404, 'Fiche introuvable.');
+        abort_unless($verrous->existe($entite, $id), 404, __('Fiche introuvable.'));
 
         [$verrou, $empechement] = $verrous->poser($entite, $id, $compte, $prendreLaMain, (bool) ($donnees['renouveler'] ?? false));
         if ($empechement) {
@@ -56,7 +56,7 @@ class VerrouController extends Controller
     public function liberer(Request $request, Verrous $verrous, int $id): JsonResponse
     {
         $verrou = Verrou::query()->findOrFail($id);
-        abort_unless($verrou->actif(), 404, "Cette fiche n'est plus en cours de modification.");
+        abort_unless($verrou->actif(), 404, __("Cette fiche n'est plus en cours de modification."));
         $verrous->liberer($verrou, $request->user());
 
         return response()->json(null, 204);

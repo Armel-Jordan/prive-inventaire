@@ -36,7 +36,7 @@ class Ecritures
         $periode = $this->periodeOuverte($date, $systeme);
         $journal = JournalComptable::findOrFail($donnees['journal_id']);
         if (! $journal->actif) {
-            throw ValidationException::withMessages(['journal_id' => "Le journal {$journal->code} est désactivé."]);
+            throw ValidationException::withMessages(['journal_id' => __('Le journal :code est désactivé.', ['code' => $journal->code])]);
         }
         $lignes = $this->controlerLignes($donnees['lignes'], in_array($source, self::MODIFIABLES, true) && ! $contrepassationDe, $systeme);
         $total = array_sum(array_column($lignes, 'debit'));
@@ -79,17 +79,17 @@ class Ecritures
     {
         if (! in_array($ecriture->source, self::MODIFIABLES, true)) {
             return match ($ecriture->source) {
-                EcritureComptable::OUVERTURE => 'Les soldes d\'ouverture se modifient depuis leur écran.',
-                EcritureComptable::CLOTURE => 'Une écriture de clôture s\'annule en rouvrant son exercice.',
-                default => 'Cette écriture est générée par l\'application : contre-passez-la si elle doit être corrigée.',
+                EcritureComptable::OUVERTURE => __("Les soldes d'ouverture se modifient depuis leur écran."),
+                EcritureComptable::CLOTURE => __("Une écriture de clôture s'annule en rouvrant son exercice."),
+                default => __("Cette écriture est générée par l'application : contre-passez-la si elle doit être corrigée."),
             };
         }
         $ecriture->loadMissing('periode.exercice');
         if ($ecriture->periode->exercice->estCloture() || $ecriture->periode->fermee) {
-            return 'La période de cette écriture est fermée : contre-passez-la plutôt que de la modifier.';
+            return __('La période de cette écriture est fermée : contre-passez-la plutôt que de la modifier.');
         }
         if ($ecriture->lignes()->whereNotNull('rapprochement_id')->exists()) {
-            return 'Cette écriture est pointée dans un rapprochement bancaire : retirez-la d\'abord du rapprochement.';
+            return __("Cette écriture est pointée dans un rapprochement bancaire : retirez-la d'abord du rapprochement.");
         }
 
         return null;
@@ -99,11 +99,11 @@ class Ecritures
     public function contrePasser(EcritureComptable $ecriture, Carbon $date, ?int $auteur): EcritureComptable
     {
         if ($ecriture->source === EcritureComptable::CLOTURE) {
-            throw ValidationException::withMessages(['date' => 'Une écriture de clôture s\'annule en rouvrant son exercice.']);
+            throw ValidationException::withMessages(['date' => __("Une écriture de clôture s'annule en rouvrant son exercice.")]);
         }
         $deja = EcritureComptable::where('contrepassation_de', $ecriture->id)->value('numero');
         if ($deja) {
-            throw ValidationException::withMessages(['date' => "Cette écriture a déjà été contre-passée par {$deja}."]);
+            throw ValidationException::withMessages(['date' => __('Cette écriture a déjà été contre-passée par :numero.', ['numero' => $deja])]);
         }
         $ecriture->loadMissing('lignes');
 
@@ -138,21 +138,21 @@ class Ecritures
     public function enregistrerOuverture(array $lignes, ?int $auteur): ?EcritureComptable
     {
         $exercice = $this->exerciceOuverture()
-            ?? throw ValidationException::withMessages(['lignes' => 'Créez d\'abord le premier exercice comptable.']);
+            ?? throw ValidationException::withMessages(['lignes' => __("Créez d'abord le premier exercice comptable.")]);
         $lignes = array_values(array_filter($lignes, fn ($l) => round((float) ($l['debit'] ?? 0), 2) != 0 || round((float) ($l['credit'] ?? 0), 2) != 0));
         $comptes = CompteComptable::whereIn('id', array_column($lignes, 'compte_id'))->get()->keyBy('id');
         foreach ($lignes as $index => $ligne) {
             $compte = $comptes[$ligne['compte_id']] ?? null;
             if ($compte && in_array($compte->nature, ['produit', 'charge'], true)) {
-                throw ValidationException::withMessages(["lignes.{$index}.compte_id" => "Le compte {$compte->numero} est un compte de résultat : les soldes d'ouverture ne portent que sur les comptes de bilan."]);
+                throw ValidationException::withMessages(["lignes.{$index}.compte_id" => __("Le compte :numero est un compte de résultat : les soldes d'ouverture ne portent que sur les comptes de bilan.", ['numero' => $compte->numero])]);
             }
         }
         $existante = EcritureComptable::where('source', EcritureComptable::OUVERTURE)->where('exercice_id', $exercice->id)->first();
         if ($existante && $this->periodeFermee($existante)) {
-            throw ValidationException::withMessages(['lignes' => 'La première période est fermée : les soldes d\'ouverture ne peuvent plus changer.']);
+            throw ValidationException::withMessages(['lignes' => __("La première période est fermée : les soldes d'ouverture ne peuvent plus changer.")]);
         }
         if ($existante && $existante->lignes()->whereNotNull('rapprochement_id')->exists()) {
-            throw ValidationException::withMessages(['lignes' => 'Des soldes d\'ouverture sont pointés dans un rapprochement bancaire : retirez-les d\'abord du rapprochement.']);
+            throw ValidationException::withMessages(['lignes' => __("Des soldes d'ouverture sont pointés dans un rapprochement bancaire : retirez-les d'abord du rapprochement.")]);
         }
         if (! $lignes) {
             $existante?->delete();
@@ -187,17 +187,17 @@ class Ecritures
             $credit = round((float) ($ligne['credit'] ?? 0), 2);
             $compte = $comptes[$ligne['compte_id']] ?? null;
             $erreur = match (true) {
-                ! $compte => 'compte introuvable',
-                ! $compte->actif && ! $systeme => "le compte {$compte->numero} est inactif",
-                ! $compte->estImputable() => "le compte {$compte->numero} est un en-tête : choisissez l'un de ses sous-comptes",
-                $saisieManuelle && ! $compte->saisie_manuelle => "le compte {$compte->numero} n'accepte pas la saisie manuelle",
-                $debit < 0 || $credit < 0 => 'montant négatif',
-                $debit > 0 && $credit > 0 => 'un débit ou un crédit, pas les deux',
-                $debit == 0 && $credit == 0 => 'saisissez un débit ou un crédit',
+                ! $compte => __('compte introuvable'),
+                ! $compte->actif && ! $systeme => __('le compte :numero est inactif', ['numero' => $compte->numero]),
+                ! $compte->estImputable() => __("le compte :numero est un en-tête : choisissez l'un de ses sous-comptes", ['numero' => $compte->numero]),
+                $saisieManuelle && ! $compte->saisie_manuelle => __("le compte :numero n'accepte pas la saisie manuelle", ['numero' => $compte->numero]),
+                $debit < 0 || $credit < 0 => __('montant négatif'),
+                $debit > 0 && $credit > 0 => __('un débit ou un crédit, pas les deux'),
+                $debit == 0 && $credit == 0 => __('saisissez un débit ou un crédit'),
                 default => null,
             };
             if ($erreur) {
-                $erreurs["lignes.{$index}"] = "Ligne {$rang} : {$erreur}.";
+                $erreurs["lignes.{$index}"] = __('Ligne :rang : :probleme.', ['rang' => $rang, 'probleme' => $erreur]);
 
                 continue;
             }
@@ -215,7 +215,11 @@ class Ecritures
         $credits = (int) round(array_sum(array_column($propres, 'credit')) * 100);
         if ($debits !== $credits) {
             $ecart = $this->montant(abs($debits - $credits) / 100);
-            throw ValidationException::withMessages(['lignes' => "L'écriture n'est pas équilibrée : débit {$this->montant($debits / 100)}, crédit {$this->montant($credits / 100)} (écart {$ecart})."]);
+            throw ValidationException::withMessages(['lignes' => __("L'écriture n'est pas équilibrée : débit :debit, crédit :credit (écart :ecart).", [
+                'debit' => $this->montant($debits / 100),
+                'credit' => $this->montant($credits / 100),
+                'ecart' => $ecart,
+            ])]);
         }
 
         return $propres;
@@ -226,13 +230,16 @@ class Ecritures
     {
         $periode = $this->exercices->periodeDu($date)?->load('exercice');
         if (! $periode) {
-            throw ValidationException::withMessages(['date' => "Aucun exercice ne couvre le {$date->format('d/m/Y')} : créez-le dans Exercices comptables."]);
+            throw ValidationException::withMessages(['date' => __('Aucun exercice ne couvre le :date : créez-le dans Exercices comptables.', ['date' => $date->format('d/m/Y')])]);
         }
         if ($periode->exercice->estCloture()) {
-            throw ValidationException::withMessages(['date' => "L'exercice {$periode->exercice->libelle} est clôturé."]);
+            throw ValidationException::withMessages(['date' => __("L'exercice :exercice est clôturé.", ['exercice' => $periode->exercice->libelle])]);
         }
         if ($periode->fermee && ! $systeme) {
-            throw ValidationException::withMessages(['date' => "La période du {$periode->date_debut->format('d/m/Y')} au {$periode->date_fin->format('d/m/Y')} est fermée."]);
+            throw ValidationException::withMessages(['date' => __('La période du :debut au :fin est fermée.', [
+                'debut' => $periode->date_debut->format('d/m/Y'),
+                'fin' => $periode->date_fin->format('d/m/Y'),
+            ])]);
         }
 
         return $periode;

@@ -57,7 +57,7 @@ class RegleController extends Controller
     {
         ReglePrix::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Règle de prix supprimée.']);
+        return response()->json(['message' => __('Règle de prix supprimée.')]);
     }
 
     private function valider(Request $request): array
@@ -75,8 +75,8 @@ class RegleController extends Controller
             'valeur' => ['required', 'numeric', 'min:0', Rule::when($request->input('type') === 'remise_pourcentage', ['max:100'])],
             'actif' => ['sometimes', 'boolean'],
         ], [
-            'date_fin.after_or_equal' => 'La fin doit suivre le début.',
-            'valeur.max' => 'Une remise ne peut pas dépasser 100 %.',
+            'date_fin.after_or_equal' => __('La fin doit suivre le début.'),
+            'valeur.max' => __('Une remise ne peut pas dépasser 100 %.'),
         ]);
         $donnees['quantite_min'] = $donnees['quantite_min'] ?? 1;
         $donnees['categorie_produit'] = filled($donnees['categorie_produit'] ?? null) ? trim($donnees['categorie_produit']) : null;

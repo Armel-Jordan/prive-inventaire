@@ -20,7 +20,7 @@ class RequireRole
 
         if (! $role || ! in_array($role, $roles, true)) {
             return response()->json([
-                'message' => 'Rôle insuffisant pour cette action.',
+                'message' => __('Rôle insuffisant pour cette action.'),
                 'required_roles' => $roles,
                 'status' => 403,
             ], 403);

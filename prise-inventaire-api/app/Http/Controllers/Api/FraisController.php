@@ -53,7 +53,7 @@ class FraisController extends Controller
             $frais->delete();
         });
 
-        return response()->json(['message' => 'Frais supprimé.']);
+        return response()->json(['message' => __('Frais supprimé.')]);
     }
 
     /** Lignes de frais à proposer pour un document en cours de saisie. */
@@ -92,14 +92,14 @@ class FraisController extends Controller
             'produits' => ['nullable', 'array', Rule::requiredIf($request->input('application') === Frais::PRODUITS && ! $request->boolean('matieres_dangereuses'))],
             'produits.*' => ['integer', 'distinct', TenantRule::exists('produits')->whereNull('deleted_at')],
         ], [
-            'produits.required' => 'Choisissez les produits qui déclenchent ce frais (ou appliquez-le aux matières dangereuses).',
-            'valeur.max' => 'Un pourcentage ne dépasse pas 100.',
+            'produits.required' => __('Choisissez les produits qui déclenchent ce frais (ou appliquez-le aux matières dangereuses).'),
+            'valeur.max' => __('Un pourcentage ne dépasse pas 100.'),
         ]);
         if (! ($donnees['sur_devis'] ?? true) && ! ($donnees['sur_commandes'] ?? true) && ! ($donnees['sur_factures'] ?? true)) {
-            throw ValidationException::withMessages(['sur_factures' => 'Choisissez au moins un type de document.']);
+            throw ValidationException::withMessages(['sur_factures' => __('Choisissez au moins un type de document.')]);
         }
         if (in_array((int) $donnees['produit_id'], array_map('intval', $donnees['produits'] ?? []), true)) {
-            throw ValidationException::withMessages(['produits' => 'Le produit du frais ne peut pas le déclencher lui-même.']);
+            throw ValidationException::withMessages(['produits' => __('Le produit du frais ne peut pas le déclencher lui-même.')]);
         }
 
         return $donnees;

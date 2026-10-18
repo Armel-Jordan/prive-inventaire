@@ -68,7 +68,7 @@ final class Referentiels
                 'ordre' => ['code', 'asc'],
                 'suppression' => fn (Model $unite) => UniteConversion::where(
                     fn ($q) => $q->where('unite_source_id', $unite->getKey())->orWhere('unite_cible_id', $unite->getKey())
-                )->exists() ? 'Cette unité est utilisée dans une conversion.' : null,
+                )->exists() ? __('Cette unité est utilisée dans une conversion.') : null,
             ],
 
             'unite_conversions' => [
@@ -83,7 +83,7 @@ final class Referentiels
                 'controle' => fn (array $d, ?Model $fiche) => UniteConversion::where('unite_source_id', $d['unite_source_id'])
                     ->where('unite_cible_id', $d['unite_cible_id'])
                     ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
-                    ->exists() ? ['unite_cible_id' => 'Cette conversion existe déjà.'] : null,
+                    ->exists() ? ['unite_cible_id' => __('Cette conversion existe déjà.')] : null,
             ],
 
             'categories' => [
@@ -99,7 +99,7 @@ final class Referentiels
                 'avec' => ['parent:id,nom'],
                 'controle' => fn (array $d, ?Model $fiche) => self::controlerCategorie($d, $fiche),
                 'suppression' => fn (Model $categorie) => Categorie::where('parent_id', $categorie->getKey())->exists()
-                    ? 'Cette catégorie contient des sous-catégories.' : null,
+                    ? __('Cette catégorie contient des sous-catégories.') : null,
             ],
 
             'fabricants' => [
@@ -138,7 +138,7 @@ final class Referentiels
                 'ordre' => ['code', 'asc'],
                 'majuscules' => ['code'],
                 'suppression' => fn (Model $caisse) => CaisseSession::where('caisse_id', $caisse->getKey())->exists()
-                    ? 'Cette caisse a déjà servi : désactivez-la plutôt que de la supprimer.' : null,
+                    ? __('Cette caisse a déjà servi : désactivez-la plutôt que de la supprimer.') : null,
             ],
 
             'conditions_paiement' => [
@@ -233,7 +233,7 @@ final class Referentiels
                 'ordre' => ['code', 'asc'],
                 'suppression' => fn (Model $territoire) => Itineraire::where('territoire_id', $territoire->getKey())->exists()
                     || Representant::where('territoire_id', $territoire->getKey())->exists()
-                    ? 'Ce territoire est utilisé par un itinéraire ou un représentant.' : null,
+                    ? __('Ce territoire est utilisé par un itinéraire ou un représentant.') : null,
             ],
 
             'itineraires' => [
@@ -309,7 +309,7 @@ final class Referentiels
                 'controle' => fn (array $d, ?Model $fiche) => Raison::where('type', $d['type'])
                     ->where('code', $d['code'])
                     ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
-                    ->exists() ? ['code' => 'Ce code existe déjà pour ce type de raison.'] : null,
+                    ->exists() ? ['code' => __('Ce code existe déjà pour ce type de raison.')] : null,
             ],
 
             'statuts_personnalises' => [
@@ -326,7 +326,7 @@ final class Referentiels
                 'controle' => fn (array $d, ?Model $fiche) => StatutPersonnalise::where('document', $d['document'])
                     ->where('code', $d['code'])
                     ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
-                    ->exists() ? ['code' => 'Ce code existe déjà pour ce type de document.'] : null,
+                    ->exists() ? ['code' => __('Ce code existe déjà pour ce type de document.')] : null,
             ],
         ];
     }
@@ -341,7 +341,7 @@ final class Referentiels
             $vus = [];
             for ($ancetre = (int) $parentId; $ancetre && ! isset($vus[$ancetre]); $ancetre = (int) Categorie::whereKey($ancetre)->value('parent_id')) {
                 if ($ancetre === (int) $fiche->getKey()) {
-                    return ['parent_id' => 'Une catégorie ne peut pas être placée sous elle-même ou sous une de ses sous-catégories.'];
+                    return ['parent_id' => __('Une catégorie ne peut pas être placée sous elle-même ou sous une de ses sous-catégories.')];
                 }
                 $vus[$ancetre] = true;
             }
@@ -352,6 +352,6 @@ final class Referentiels
             ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
             ->exists();
 
-        return $homonyme ? ['nom' => 'Une catégorie porte déjà ce nom à cet endroit.'] : null;
+        return $homonyme ? ['nom' => __('Une catégorie porte déjà ce nom à cet endroit.')] : null;
     }
 }

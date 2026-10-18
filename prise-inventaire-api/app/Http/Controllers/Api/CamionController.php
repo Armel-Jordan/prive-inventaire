@@ -90,11 +90,11 @@ class CamionController extends Controller
         $camion = Camion::findOrFail($id);
 
         if ($camion->tournees()->whereIn('statut', ['planifiee', 'en_cours'])->exists()) {
-            return response()->json(['message' => 'Impossible de supprimer un camion avec des tournées actives'], 422);
+            return response()->json(['message' => __('Impossible de supprimer un camion avec des tournées actives')], 422);
         }
 
         $camion->delete();
 
-        return response()->json(['message' => 'Camion supprimé']);
+        return response()->json(['message' => __('Camion supprimé')]);
     }
 }

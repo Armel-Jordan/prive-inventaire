@@ -78,7 +78,7 @@ class DemandeAcompteController extends Controller
         return $this->executer(function () use ($demande) {
             $this->demandes->supprimer($demande);
 
-            return response()->json(['message' => "Demande d'acompte supprimée."]);
+            return response()->json(['message' => __("Demande d'acompte supprimée.")]);
         });
     }
 

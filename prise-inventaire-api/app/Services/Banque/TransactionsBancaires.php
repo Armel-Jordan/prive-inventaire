@@ -39,7 +39,7 @@ class TransactionsBancaires
     {
         $compte = CompteBancaire::query()->where('actif', true)->find($donnees['compte_bancaire_id']);
         if (! $compte) {
-            throw ValidationException::withMessages(['compte_bancaire_id' => 'Choisissez un compte bancaire actif.']);
+            throw ValidationException::withMessages(['compte_bancaire_id' => __('Choisissez un compte bancaire actif.')]);
         }
         $devise = app(DevisesVente::class)->pourDocument($compte->devise_code ?: null, $donnees['taux_change'] ?? null, null);
         $type = $donnees['type'];
@@ -49,30 +49,30 @@ class TransactionsBancaires
         if ($type === TransactionBancaire::VIREMENT) {
             $destination = CompteBancaire::query()->where('actif', true)->find($donnees['compte_bancaire_destination_id'] ?? 0);
             if (! $destination || $destination->id === $compte->id) {
-                throw ValidationException::withMessages(['compte_bancaire_destination_id' => 'Choisissez un autre compte bancaire actif, qui reçoit le virement.']);
+                throw ValidationException::withMessages(['compte_bancaire_destination_id' => __('Choisissez un autre compte bancaire actif, qui reçoit le virement.')]);
             }
             if (! DevisesVente::memeDevise($destination->devise_code ?: null, $compte->devise_code ?: null)) {
-                throw ValidationException::withMessages(['compte_bancaire_destination_id' => 'Un virement se fait entre deux comptes de la même devise.']);
+                throw ValidationException::withMessages(['compte_bancaire_destination_id' => __('Un virement se fait entre deux comptes de la même devise.')]);
             }
             $montant = round((float) ($donnees['montant'] ?? 0), 2);
             if ($montant <= 0) {
-                throw ValidationException::withMessages(['montant' => 'Indiquez le montant viré.']);
+                throw ValidationException::withMessages(['montant' => __('Indiquez le montant viré.')]);
             }
         } else {
             $lignes = collect($donnees['lignes'] ?? [])
                 ->map(fn (array $l) => ['compte_comptable_id' => (int) $l['compte_comptable_id'], 'libelle' => trim((string) ($l['libelle'] ?? '')) ?: null, 'montant' => round((float) $l['montant'], 2)])
                 ->filter(fn (array $l) => $l['montant'] != 0)->values();
             if ($lignes->isEmpty()) {
-                throw ValidationException::withMessages(['lignes' => 'Ajoutez au moins une ligne : un compte et un montant.']);
+                throw ValidationException::withMessages(['lignes' => __('Ajoutez au moins une ligne : un compte et un montant.')]);
             }
             $this->verifierComptes($lignes->pluck('compte_comptable_id')->all(), $compte);
             $montant = round($lignes->sum('montant'), 2);
             if ($montant <= 0) {
-                throw ValidationException::withMessages(['lignes' => 'Le total de la transaction doit être positif.']);
+                throw ValidationException::withMessages(['lignes' => __('Le total de la transaction doit être positif.')]);
             }
             // Montant saisi à part : il doit égaler le total des lignes.
             if (filled($donnees['montant'] ?? null) && abs(round((float) $donnees['montant'], 2) - $montant) > 0.005) {
-                throw ValidationException::withMessages(['montant' => 'Le montant de la transaction diffère du total des lignes ('.number_format($montant, 2, ',', ' ').').']);
+                throw ValidationException::withMessages(['montant' => __('Le montant de la transaction diffère du total des lignes (:total).', ['total' => number_format($montant, 2, ',', ' ')])]);
             }
         }
 
@@ -107,9 +107,9 @@ class TransactionsBancaires
         return DB::transaction(function () use ($transaction, $motif, $auteur) {
             $transaction = TransactionBancaire::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
             if ($transaction->statut === TransactionBancaire::ANNULE) {
-                throw new DomainException("La transaction {$transaction->numero} est déjà annulée.");
+                throw new DomainException(__('La transaction :numero est déjà annulée.', ['numero' => $transaction->numero]));
             }
-            app(Rapprochements::class)->verifierDocument('transaction_bancaire', $transaction->id, "La transaction {$transaction->numero}");
+            app(Rapprochements::class)->verifierDocument('transaction_bancaire', $transaction->id, __('La transaction :numero', ['numero' => $transaction->numero]));
             $transaction->update([
                 'statut' => TransactionBancaire::ANNULE,
                 'annule_le' => now(),
@@ -133,15 +133,15 @@ class TransactionsBancaires
         foreach (array_values($ids) as $index => $id) {
             $c = $comptes->get($id);
             $erreur = match (true) {
-                ! $c => 'compte introuvable',
-                ! $c->actif => "le compte {$c->numero} est inactif",
-                ! $c->estImputable() => "le compte {$c->numero} est un en-tête : choisissez l'un de ses sous-comptes",
-                ! $c->saisie_manuelle => "le compte {$c->numero} n'accepte pas la saisie manuelle",
-                $c->id === $compte->compte_comptable_id => "le compte {$c->numero} est celui du compte bancaire lui-même",
+                ! $c => __('compte introuvable'),
+                ! $c->actif => __('le compte :numero est inactif', ['numero' => $c->numero]),
+                ! $c->estImputable() => __("le compte :numero est un en-tête : choisissez l'un de ses sous-comptes", ['numero' => $c->numero]),
+                ! $c->saisie_manuelle => __("le compte :numero n'accepte pas la saisie manuelle", ['numero' => $c->numero]),
+                $c->id === $compte->compte_comptable_id => __('le compte :numero est celui du compte bancaire lui-même', ['numero' => $c->numero]),
                 default => null,
             };
             if ($erreur) {
-                throw ValidationException::withMessages(["lignes.{$index}.compte_comptable_id" => 'Ligne '.($index + 1)." : {$erreur}."]);
+                throw ValidationException::withMessages(["lignes.{$index}.compte_comptable_id" => __('Ligne :rang : :probleme.', ['rang' => $index + 1, 'probleme' => $erreur])]);
             }
         }
     }
@@ -150,7 +150,7 @@ class TransactionsBancaires
     {
         $config = Configuration::pourEntite('transaction_bancaire', $tenantId);
         if (! $config?->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des transactions bancaires (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des transactions bancaires (Configuration → Numérotation).'));
         }
 
         return Configuration::consommerNumero('transaction_bancaire', $tenantId);

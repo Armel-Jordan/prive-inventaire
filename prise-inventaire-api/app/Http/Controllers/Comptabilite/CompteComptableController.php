@@ -56,7 +56,7 @@ class CompteComptableController extends Controller
         }
         $compte->delete();
 
-        return response()->json(['message' => 'Compte supprimé.']);
+        return response()->json(['message' => __('Compte supprimé.')]);
     }
 
     /** Plans types proposés à la mise en place. */
@@ -79,29 +79,33 @@ class CompteComptableController extends Controller
         ]);
         $completer = (bool) ($donnees['completer'] ?? false);
         if (! $completer && CompteComptable::exists()) {
-            return response()->json(['message' => 'Le plan comptable contient déjà des comptes : choisissez de le compléter pour n\'ajouter que les comptes manquants.'], 422);
+            return response()->json(['message' => __("Le plan comptable contient déjà des comptes : choisissez de le compléter pour n'ajouter que les comptes manquants.")], 422);
         }
         $crees = $this->plan->importerPlan($donnees['plan'], $completer);
 
         return response()->json([
             'crees' => $crees,
-            'message' => $crees === 0 ? 'Aucun compte à ajouter : le plan contient déjà tous ces comptes.' : "{$crees} compte(s) créé(s).",
+            'message' => $crees === 0
+                ? __('Aucun compte à ajouter : le plan contient déjà tous ces comptes.')
+                : __(':nombre compte(s) créé(s).', ['nombre' => $crees]),
         ]);
     }
 
     public function importerFichier(Request $request): JsonResponse
     {
         $request->validate(['fichier' => ['required', 'file', 'max:2048', 'mimes:csv,txt']], [
-            'fichier.mimes' => 'Le fichier doit être un CSV (séparateur point-virgule, virgule ou tabulation).',
+            'fichier.mimes' => __('Le fichier doit être un CSV (séparateur point-virgule, virgule ou tabulation).'),
         ]);
         $resultat = $this->plan->importerFichier((string) file_get_contents($request->file('fichier')->getRealPath()));
         if ($resultat['erreurs']) {
             return response()->json([
-                'message' => 'Le fichier contient des erreurs : aucun compte n\'a été créé.',
+                'message' => __("Le fichier contient des erreurs : aucun compte n'a été créé."),
                 'erreurs' => $resultat['erreurs'],
             ], 422);
         }
-        $message = "{$resultat['crees']} compte(s) créé(s)".($resultat['ignores'] ? ", {$resultat['ignores']} déjà au plan (ignoré(s))" : '').'.';
+        $message = $resultat['ignores']
+            ? __(':nombre compte(s) créé(s), :ignores déjà au plan (ignoré(s)).', ['nombre' => $resultat['crees'], 'ignores' => $resultat['ignores']])
+            : __(':nombre compte(s) créé(s).', ['nombre' => $resultat['crees']]);
 
         return response()->json($resultat + ['message' => $message]);
     }
@@ -129,8 +133,8 @@ class CompteComptableController extends Controller
             'budgetable' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [
-            'numero.unique' => 'Ce numéro de compte existe déjà.',
-            'numero.regex' => 'Le numéro ne peut contenir que des chiffres, des lettres, des points et des tirets.',
+            'numero.unique' => __('Ce numéro de compte existe déjà.'),
+            'numero.regex' => __('Le numéro ne peut contenir que des chiffres, des lettres, des points et des tirets.'),
         ]);
     }
 

@@ -78,7 +78,7 @@ class Acomptes
         $change = fn (string $champ, mixed $valeur) => array_key_exists($champ, $donnees) && (string) $donnees[$champ] !== (string) $valeur;
         if ($utilise && ($change('date_acompte', $acompte->date_acompte->toDateString()) || $change('mode', $acompte->mode)
             || (array_key_exists('montant', $donnees) && abs((float) $donnees['montant'] - (float) $acompte->montant) > self::TOLERANCE))) {
-            throw new DomainException('Un acompte déjà appliqué ou remboursé ne change plus de date, de mode ni de montant.');
+            throw new DomainException(__('Un acompte déjà appliqué ou remboursé ne change plus de date, de mode ni de montant.'));
         }
         if ($change('date_acompte', $acompte->date_acompte->toDateString()) || $change('mode', $acompte->mode)
             || (array_key_exists('montant', $donnees) && abs((float) $donnees['montant'] - (float) $acompte->montant) > self::TOLERANCE)) {
@@ -100,26 +100,26 @@ class Acomptes
             $acompte = Acompte::whereKey($acompte->id)->lockForUpdate()->firstOrFail();
             $facture = Facture::whereKey($factureId)->lockForUpdate()->first();
             if (! $facture || $facture->client_id !== $acompte->client_id) {
-                throw ValidationException::withMessages(['facture_id' => 'Choisissez une facture du même client.']);
+                throw ValidationException::withMessages(['facture_id' => __('Choisissez une facture du même client.')]);
             }
             if (! in_array($facture->statut, self::FACTURES_DUES, true)) {
-                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} ne reste pas due."]);
+                throw ValidationException::withMessages(['facture_id' => __('La facture :numero ne reste pas due.', ['numero' => $facture->numero])]);
             }
             if (! DevisesVente::memeDevise($acompte->devise, $facture->devise)) {
-                throw ValidationException::withMessages(['facture_id' => "La facture {$facture->numero} n'est pas dans la devise de l'acompte."]);
+                throw ValidationException::withMessages(['facture_id' => __("La facture :numero n'est pas dans la devise de l'acompte.", ['numero' => $facture->numero])]);
             }
             if ($acompte->disponible <= 0) {
-                throw new DomainException("Il ne reste rien de l'acompte du {$acompte->date_acompte->format('d/m/Y')}.");
+                throw new DomainException(__("Il ne reste rien de l'acompte du :date.", ['date' => $acompte->date_acompte->format('d/m/Y')]));
             }
             if ($montant > $acompte->disponible + self::TOLERANCE) {
-                throw ValidationException::withMessages(['montant' => "Le montant dépasse ce qui reste de l'acompte ({$this->montant($acompte->disponible)})."]);
+                throw ValidationException::withMessages(['montant' => __("Le montant dépasse ce qui reste de l'acompte (:montant).", ['montant' => $this->montant($acompte->disponible)])]);
             }
             if ($montant > (float) $facture->reste_a_payer + self::TOLERANCE) {
-                throw ValidationException::withMessages(['montant' => "Le montant dépasse le reste à payer de la facture ({$this->montant($facture->reste_a_payer)})."]);
+                throw ValidationException::withMessages(['montant' => __('Le montant dépasse le reste à payer de la facture (:montant).', ['montant' => $this->montant($facture->reste_a_payer)])]);
             }
             $plusTot = max($acompte->date_acompte->toDateString(), $facture->date_facture->toDateString());
             if ($date < $plusTot) {
-                throw ValidationException::withMessages(['date' => 'La date ne peut pas précéder celle de l\'acompte ni celle de la facture ('.Carbon::parse($plusTot)->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date' => __("La date ne peut pas précéder celle de l'acompte ni celle de la facture (:date).", ['date' => Carbon::parse($plusTot)->format('d/m/Y')])]);
             }
 
             // Un paiement de la facture comme un autre (reste, statut, échéances, encours), rattaché à l'acompte.
@@ -180,13 +180,13 @@ class Acomptes
             $acompte = Acompte::whereKey($acompte->id)->lockForUpdate()->firstOrFail();
             $montant = (float) $donnees['montant'];
             if ($acompte->disponible <= 0) {
-                throw new DomainException("Il ne reste rien à rembourser de l'acompte du {$acompte->date_acompte->format('d/m/Y')}.");
+                throw new DomainException(__("Il ne reste rien à rembourser de l'acompte du :date.", ['date' => $acompte->date_acompte->format('d/m/Y')]));
             }
             if ($montant > $acompte->disponible + self::TOLERANCE) {
-                throw ValidationException::withMessages(['montant' => "Le montant dépasse ce qui reste de l'acompte ({$this->montant($acompte->disponible)})."]);
+                throw ValidationException::withMessages(['montant' => __("Le montant dépasse ce qui reste de l'acompte (:montant).", ['montant' => $this->montant($acompte->disponible)])]);
             }
             if ($donnees['date_remboursement'] < $acompte->date_acompte->toDateString()) {
-                throw ValidationException::withMessages(['date_remboursement' => 'Le remboursement ne peut pas précéder l\'acompte ('.$acompte->date_acompte->format('d/m/Y').').']);
+                throw ValidationException::withMessages(['date_remboursement' => __("Le remboursement ne peut pas précéder l'acompte (:date).", ['date' => $acompte->date_acompte->format('d/m/Y')])]);
             }
             AcompteRemboursement::create([
                 'acompte_id' => $acompte->id,
@@ -212,10 +212,10 @@ class Acomptes
     public function supprimer(Acompte $acompte): void
     {
         if ((float) $acompte->montant_applique > 0 || (float) $acompte->montant_rembourse > 0) {
-            throw new DomainException('Un acompte déjà appliqué ou remboursé ne se supprime plus.');
+            throw new DomainException(__('Un acompte déjà appliqué ou remboursé ne se supprime plus.'));
         }
         $this->verifierEncaissement($acompte);
-        app(Rapprochements::class)->verifierDocument('acompte', $acompte->id, 'Cet acompte');
+        app(Rapprochements::class)->verifierDocument('acompte', $acompte->id, __('Cet acompte'));
         DB::transaction(function () use ($acompte) {
             if ($acompte->demande_id) {
                 DemandeAcompte::whereKey($acompte->demande_id)->where('acompte_id', $acompte->id)->get()
@@ -242,7 +242,7 @@ class Acomptes
     {
         $numero = Encaissement::query()->where('acompte_id', $acompte->id)->value('numero');
         if ($numero) {
-            throw new DomainException("Cet acompte est le surplus de l'encaissement {$numero} : il se corrige en annulant l'encaissement.");
+            throw new DomainException(__("Cet acompte est le surplus de l'encaissement :numero : il se corrige en annulant l'encaissement.", ['numero' => $numero]));
         }
     }
 
@@ -254,7 +254,7 @@ class Acomptes
         }
         $commande = ComClientEntete::find((int) $commandeId);
         if (! $commande || $commande->client_id !== $clientId || in_array($commande->statut, self::COMMANDES_CLOSES, true)) {
-            throw ValidationException::withMessages(['commande_id' => 'Choisissez une commande en cours du même client.']);
+            throw ValidationException::withMessages(['commande_id' => __('Choisissez une commande en cours du même client.')]);
         }
     }
 

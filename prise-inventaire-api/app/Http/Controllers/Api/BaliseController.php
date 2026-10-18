@@ -53,7 +53,7 @@ class BaliseController extends Controller
         // Passer à un seul choix est refusé si des fiches portent déjà plusieurs items de la balise.
         if ($donnees['type'] === 'choix' && $balise->type !== 'choix' && $this->ficheAvecPlusieursItems($balise)) {
             throw ValidationException::withMessages([
-                'type' => 'Des fiches portent déjà plusieurs items de cette balise : retirez-les avant de passer à un seul choix.',
+                'type' => __('Des fiches portent déjà plusieurs items de cette balise : retirez-les avant de passer à un seul choix.'),
             ]);
         }
 
@@ -71,7 +71,7 @@ class BaliseController extends Controller
             $balise->delete();
         });
 
-        return response()->json(['message' => 'Balise supprimée, avec ses items et leurs poses.']);
+        return response()->json(['message' => __('Balise supprimée, avec ses items et leurs poses.')]);
     }
 
     public function ajouterItem(Request $request, int $id): JsonResponse
@@ -100,7 +100,7 @@ class BaliseController extends Controller
             $item->delete();
         });
 
-        return response()->json(['message' => 'Item supprimé.']);
+        return response()->json(['message' => __('Item supprimé.')]);
     }
 
     // ── Pose sur les fiches ──────────────────────────────────────
@@ -138,12 +138,12 @@ class BaliseController extends Controller
         $applicables = $this->itemsApplicables($donnees['entite']);
         $choisis = $applicables->whereIn('id', $donnees['items']);
         if ($choisis->count() !== count($donnees['items'])) {
-            throw ValidationException::withMessages(['items' => 'Certains items n\'existent pas ou ne s\'appliquent pas à ce type de fiche.']);
+            throw ValidationException::withMessages(['items' => __("Certains items n'existent pas ou ne s'appliquent pas à ce type de fiche.")]);
         }
         foreach ($choisis->groupBy('balise_id') as $groupe) {
             $balise = $groupe->first()->balise;
             if ($balise->type === 'choix' && $groupe->count() > 1) {
-                throw ValidationException::withMessages(['items' => "« {$balise->nom} » n'accepte qu'un seul choix."]);
+                throw ValidationException::withMessages(['items' => __("« :balise » n'accepte qu'un seul choix.", ['balise' => $balise->nom])]);
             }
         }
 
@@ -197,7 +197,7 @@ class BaliseController extends Controller
             'entites' => ['required', 'array', 'min:1'],
             'entites.*' => ['distinct', Rule::in(Fiches::entites())],
             'actif' => ['boolean'],
-        ], ['entites.required' => 'Choisissez au moins un type de fiche.']);
+        ], ['entites.required' => __('Choisissez au moins un type de fiche.')]);
     }
 
     private function validerItem(Request $request, Balise $balise, ?BaliseItem $item = null): array
@@ -213,7 +213,7 @@ class BaliseController extends Controller
             ->whereRaw('LOWER(libelle) = ?', [mb_strtolower(trim($donnees['libelle']))])
             ->exists();
         if ($existe) {
-            throw ValidationException::withMessages(['libelle' => 'Cet item existe déjà dans la balise.']);
+            throw ValidationException::withMessages(['libelle' => __('Cet item existe déjà dans la balise.')]);
         }
 
         return ['libelle' => trim($donnees['libelle']), 'couleur' => $donnees['couleur'] ?? ($item?->couleur ?? 'gris')]

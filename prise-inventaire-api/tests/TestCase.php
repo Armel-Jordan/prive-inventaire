@@ -12,6 +12,22 @@ use Laravel\Sanctum\Sanctum;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Les requêtes de test annoncent « en-us » par défaut ; les écrans envoient la langue choisie, le français par
+        // défaut. Les tests parlent donc français, sauf ceux qui donnent leur propre en-tête (LangueMessagesTest).
+        $this->withHeader('Accept-Language', 'fr');
+    }
+
+    /** Retire les en-têtes posés (compte, entreprise…) ; la langue reste le français. */
+    public function flushHeaders(): static
+    {
+        parent::flushHeaders();
+
+        return $this->withHeader('Accept-Language', 'fr');
+    }
+
     public function createApplication(): Application
     {
         $app = require __DIR__.'/../bootstrap/app.php';

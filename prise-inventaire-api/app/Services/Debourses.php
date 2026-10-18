@@ -116,14 +116,14 @@ class Debourses
             ->map(fn (array $l) => ['facture_id' => (int) $l['facture_fournisseur_id'], 'argent' => round((float) $l['montant'], 2), 'escompte' => round((float) ($l['escompte'] ?? 0), 2)])
             ->filter(fn (array $l) => $l['argent'] + $l['escompte'] > 0)->values();
         if ($lignes->isEmpty()) {
-            throw ValidationException::withMessages(['lignes' => 'Indiquez ce qui est payé sur au moins une facture.']);
+            throw ValidationException::withMessages(['lignes' => __('Indiquez ce qui est payé sur au moins une facture.')]);
         }
         if ($lignes->pluck('facture_id')->duplicates()->isNotEmpty()) {
-            throw ValidationException::withMessages(['lignes' => 'Une facture ne figure qu\'une fois dans un déboursé.']);
+            throw ValidationException::withMessages(['lignes' => __("Une facture ne figure qu'une fois dans un déboursé.")]);
         }
         $montant = round($lignes->sum('argent'), 2);
         if ($montant <= 0) {
-            throw ValidationException::withMessages(['lignes' => 'Le déboursé doit verser de l\'argent : un escompte seul ne fait pas un paiement.']);
+            throw ValidationException::withMessages(['lignes' => __("Le déboursé doit verser de l'argent : un escompte seul ne fait pas un paiement.")]);
         }
 
         return DB::transaction(function () use ($donnees, $tenantId, $auteur, $fournisseur, $devise, $date, $lignes, $montant, $compteBancaire) {
@@ -196,11 +196,11 @@ class Debourses
         return DB::transaction(function () use ($ids, $date, $donnees, $tenantId, $auteur) {
             $factures = FactureFournisseur::query()->whereIn('id', $ids)->orderBy('id')->get();
             if ($factures->count() !== count($ids)) {
-                throw ValidationException::withMessages(['factures' => "Choisissez des factures fournisseurs de l'entreprise."]);
+                throw ValidationException::withMessages(['factures' => __("Choisissez des factures fournisseurs de l'entreprise.")]);
             }
             foreach ($factures as $facture) {
                 if ($facture->statut !== FactureFournisseur::ENREGISTREE || $facture->reste_a_payer <= 0) {
-                    throw ValidationException::withMessages(['factures' => "La facture {$facture->numero} ne reste pas à payer."]);
+                    throw ValidationException::withMessages(['factures' => __('La facture :numero ne reste pas à payer.', ['numero' => $facture->numero])]);
                 }
             }
             $creees = collect();
@@ -231,7 +231,7 @@ class Debourses
     public function modifier(Debourse $debourse, array $donnees): Debourse
     {
         if ($debourse->statut === Debourse::ANNULE) {
-            throw new DomainException("Le déboursé {$debourse->numero} est annulé : il ne se modifie plus.");
+            throw new DomainException(__('Le déboursé :numero est annulé : il ne se modifie plus.', ['numero' => $debourse->numero]));
         }
 
         return DB::transaction(function () use ($debourse, $donnees) {
@@ -256,13 +256,16 @@ class Debourses
         return DB::transaction(function () use ($debourse, $motif, $auteur) {
             $debourse = Debourse::query()->whereKey($debourse->id)->lockForUpdate()->firstOrFail();
             if ($debourse->statut === Debourse::ANNULE) {
-                throw new DomainException("Le déboursé {$debourse->numero} est déjà annulé.");
+                throw new DomainException(__('Le déboursé :numero est déjà annulé.', ['numero' => $debourse->numero]));
             }
             // Un virement transmis à la banque peut encore être exécuté : le lot doit d'abord être marqué refusé.
             if ($debourse->virement_statut === VirementLot::EMIS) {
-                throw new DomainException("Le déboursé {$debourse->numero} est dans le lot de virements n° {$debourse->virementLot?->numero} transmis à la banque : marquez le lot refusé avant de l'annuler.");
+                throw new DomainException(__("Le déboursé :numero est dans le lot de virements n° :lot transmis à la banque : marquez le lot refusé avant de l'annuler.", [
+                    'numero' => $debourse->numero,
+                    'lot' => $debourse->virementLot?->numero,
+                ]));
             }
-            app(Rapprochements::class)->verifierDocument('debourse', $debourse->id, "Le déboursé {$debourse->numero}");
+            app(Rapprochements::class)->verifierDocument('debourse', $debourse->id, __('Le déboursé :numero', ['numero' => $debourse->numero]));
             $paiements = FactureFournisseurPaiement::query()->where('debourse_id', $debourse->id)->get();
             $factures = FactureFournisseur::query()->whereIn('id', $paiements->pluck('facture_fournisseur_id'))->orderBy('id')->lockForUpdate()->get();
             foreach ($factures as $facture) {
@@ -294,19 +297,25 @@ class Debourses
     private function verifierFacture(?FactureFournisseur $facture, Fournisseur $fournisseur, ?string $devise, float $porte, string $date): void
     {
         if (! $facture || $facture->fournisseur_id !== $fournisseur->id) {
-            throw ValidationException::withMessages(['lignes' => 'Choisissez des factures du fournisseur.']);
+            throw ValidationException::withMessages(['lignes' => __('Choisissez des factures du fournisseur.')]);
         }
         if ($facture->statut !== FactureFournisseur::ENREGISTREE) {
-            throw ValidationException::withMessages(['lignes' => "La facture {$facture->numero} est annulée."]);
+            throw ValidationException::withMessages(['lignes' => __('La facture :numero est annulée.', ['numero' => $facture->numero])]);
         }
         if (! DevisesVente::memeDevise($facture->devise, $devise)) {
-            throw ValidationException::withMessages(['lignes' => "La facture {$facture->numero} n'est pas dans la devise du déboursé."]);
+            throw ValidationException::withMessages(['lignes' => __("La facture :numero n'est pas dans la devise du déboursé.", ['numero' => $facture->numero])]);
         }
         if ($porte > $facture->reste_a_payer + self::TOLERANCE) {
-            throw ValidationException::withMessages(['lignes' => "Le paiement et l'escompte dépassent le reste à payer de la facture {$facture->numero} ({$this->montant($facture->reste_a_payer)})."]);
+            throw ValidationException::withMessages(['lignes' => __("Le paiement et l'escompte dépassent le reste à payer de la facture :numero (:montant).", [
+                'numero' => $facture->numero,
+                'montant' => $this->montant($facture->reste_a_payer),
+            ])]);
         }
         if ($date < $facture->date_facture->toDateString()) {
-            throw ValidationException::withMessages(['date_debourse' => "Le déboursé ne peut pas précéder la facture {$facture->numero} ({$facture->date_facture->format('d/m/Y')})."]);
+            throw ValidationException::withMessages(['date_debourse' => __('Le déboursé ne peut pas précéder la facture :numero (:date).', [
+                'numero' => $facture->numero,
+                'date' => $facture->date_facture->format('d/m/Y'),
+            ])]);
         }
     }
 
@@ -318,14 +327,14 @@ class Debourses
         }
 
         return CompteBancaire::query()->where('actif', true)->find((int) $id)
-            ?? throw ValidationException::withMessages(['compte_bancaire_id' => 'Choisissez un compte bancaire actif.']);
+            ?? throw ValidationException::withMessages(['compte_bancaire_id' => __('Choisissez un compte bancaire actif.')]);
     }
 
     private function numero(int $tenantId): string
     {
         $config = Configuration::pourEntite('debourse', $tenantId);
         if (! $config?->auto_increment) {
-            throw new DomainException('Numéro requis : activez la numérotation automatique des déboursés (Configuration → Numérotation).');
+            throw new DomainException(__('Numéro requis : activez la numérotation automatique des déboursés (Configuration → Numérotation).'));
         }
 
         return Configuration::consommerNumero('debourse', $tenantId);

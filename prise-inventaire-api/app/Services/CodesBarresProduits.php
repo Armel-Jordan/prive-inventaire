@@ -43,10 +43,10 @@ class CodesBarresProduits
         }
         $autre = ProduitCodeBarre::query()->where('code', $code)->when($existant, fn ($q) => $q->whereKeyNot($existant->id))->with('produit:id,numero')->first();
         if ($autre) {
-            throw ValidationException::withMessages(['code' => "Le code {$code} est déjà celui du produit {$autre->produit?->numero}."]);
+            throw ValidationException::withMessages(['code' => __('Le code :code est déjà celui du produit :produit.', ['code' => $code, 'produit' => $autre->produit?->numero])]);
         }
         if (ProduitTenant::withTrashed()->where('numero', $code)->whereKeyNot($produit->id)->exists()) {
-            throw ValidationException::withMessages(['code' => "Le code {$code} est le numéro d'un autre produit : une lecture serait ambiguë."]);
+            throw ValidationException::withMessages(['code' => __("Le code :code est le numéro d'un autre produit : une lecture serait ambiguë.", ['code' => $code])]);
         }
 
         return DB::transaction(function () use ($produit, $donnees, $existant, $code, $type) {

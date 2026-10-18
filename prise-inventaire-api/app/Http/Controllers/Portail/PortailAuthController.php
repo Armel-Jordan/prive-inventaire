@@ -54,7 +54,7 @@ class PortailAuthController extends Controller
         $valide = $compte && $compte->actif && $compte->estActive() && Hash::check($donnees['password'], $compte->password)
             && Client::where('id', $compte->client_id)->where('actif', true)->exists();
         if (! $valide) {
-            return response()->json(['message' => 'Adresse ou mot de passe incorrect.'], 422);
+            return response()->json(['message' => __('Adresse ou mot de passe incorrect.')], 422);
         }
 
         return response()->json(['token' => $this->acces->ouvrirSession($compte), 'compte' => $this->presenter($compte)]);
@@ -67,13 +67,13 @@ class PortailAuthController extends Controller
             'jeton' => ['required', 'string', 'size:64'],
             'password' => ['required', 'string', 'confirmed', 'min:'.config('comptes.longueur_min_mot_de_passe'), 'max:255'],
         ], [
-            'password.min' => 'Le mot de passe doit contenir au moins :min caractères.',
-            'password.confirmed' => 'La confirmation ne correspond pas au mot de passe.',
+            'password.min' => __('Le mot de passe doit contenir au moins :min caractères.'),
+            'password.confirmed' => __('La confirmation ne correspond pas au mot de passe.'),
         ]);
         $tenant = $this->tenantOuvert($slug);
         $compte = $tenant ? $this->acces->compteDuLien($donnees['jeton']) : null;
         if (! $compte || $compte->tenant_id !== $tenant->id || ! $compte->actif) {
-            return response()->json(['message' => 'Ce lien n\'est plus valable : demandez-en un nouveau.'], 422);
+            return response()->json(['message' => __("Ce lien n'est plus valable : demandez-en un nouveau.")], 422);
         }
 
         DB::transaction(function () use ($compte, $donnees) {
@@ -103,14 +103,14 @@ class PortailAuthController extends Controller
             defer(fn () => $this->acces->envoyer($compte, $tenant, $lien, $donnees['langue'] ?? 'fr', $compte->estActive()));
         }
 
-        return response()->json(['message' => 'Si un compte correspond à cette adresse, un courriel avec un lien vient de vous être envoyé.']);
+        return response()->json(['message' => __('Si un compte correspond à cette adresse, un courriel avec un lien vient de vous être envoyé.')]);
     }
 
     public function deconnexion(Request $request): JsonResponse
     {
         $request->attributes->get('portail_jeton')->delete();
 
-        return response()->json(['message' => 'Vous êtes déconnecté.']);
+        return response()->json(['message' => __('Vous êtes déconnecté.')]);
     }
 
     /** Compte connecté, son client (adresses de livraison) et l'entreprise. */
@@ -152,17 +152,17 @@ class PortailAuthController extends Controller
             'mot_de_passe_actuel' => ['required', 'string'],
             'password' => ['required', 'string', 'confirmed', 'different:mot_de_passe_actuel', 'min:'.config('comptes.longueur_min_mot_de_passe'), 'max:255'],
         ], [
-            'password.min' => 'Le mot de passe doit contenir au moins :min caractères.',
-            'password.confirmed' => 'La confirmation ne correspond pas au mot de passe.',
-            'password.different' => 'Le nouveau mot de passe doit être différent de l\'actuel.',
+            'password.min' => __('Le mot de passe doit contenir au moins :min caractères.'),
+            'password.confirmed' => __('La confirmation ne correspond pas au mot de passe.'),
+            'password.different' => __("Le nouveau mot de passe doit être différent de l'actuel."),
         ]);
         if (! Hash::check($donnees['mot_de_passe_actuel'], $compte->password)) {
-            throw ValidationException::withMessages(['mot_de_passe_actuel' => 'Mot de passe actuel incorrect.']);
+            throw ValidationException::withMessages(['mot_de_passe_actuel' => __('Mot de passe actuel incorrect.')]);
         }
         $compte->forceFill(['password' => $donnees['password']])->save();
         $compte->jetons()->whereKeyNot($request->attributes->get('portail_jeton')->id)->delete();
 
-        return response()->json(['message' => 'Mot de passe modifié. Vos autres sessions ont été fermées.']);
+        return response()->json(['message' => __('Mot de passe modifié. Vos autres sessions ont été fermées.')]);
     }
 
     /** Entreprise active, avec le module Ventes et un portail ouvert ; fixe son contexte. */
@@ -179,7 +179,7 @@ class PortailAuthController extends Controller
 
     private function introuvable(): JsonResponse
     {
-        return response()->json(['message' => 'Ce portail client n\'existe pas ou n\'est pas ouvert.'], 404);
+        return response()->json(['message' => __("Ce portail client n'existe pas ou n'est pas ouvert.")], 404);
     }
 
     private function presenter(PortailCompte $compte): array

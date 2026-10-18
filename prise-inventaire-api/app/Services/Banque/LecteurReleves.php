@@ -35,7 +35,7 @@ class LecteurReleves
         $contenu = $this->utf8($contenu);
         preg_match_all('/<STMTTRN>(.*?)(?=<\/STMTTRN>|<STMTTRN>|<\/BANKTRANLIST>|$)/is', $contenu, $blocs);
         if (($blocs[1] ?? []) === []) {
-            throw ValidationException::withMessages(['fichier' => 'Aucune opération trouvée dans ce fichier OFX.']);
+            throw ValidationException::withMessages(['fichier' => __('Aucune opération trouvée dans ce fichier OFX.')]);
         }
         $lignes = [];
         $ignorees = [];
@@ -44,7 +44,7 @@ class LecteurReleves
             $date = preg_match('/^(\d{4})(\d{2})(\d{2})/', $valeur('DTPOSTED'), $d) ? "{$d[1]}-{$d[2]}-{$d[3]}" : null;
             $montant = $this->montant($valeur('TRNAMT'));
             if (! $date || ! checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4)) || $montant === null || $montant == 0) {
-                $ignorees[] = ['ligne' => $index + 1, 'raison' => 'Date ou montant illisible.'];
+                $ignorees[] = ['ligne' => $index + 1, 'raison' => __('Date ou montant illisible.')];
 
                 continue;
             }
@@ -80,7 +80,7 @@ class LecteurReleves
     {
         // Un relevé n'a pas de déclaration de type : refusée, elle ne peut ni lire un fichier ni s'étendre (XXE).
         if (stripos($contenu, '<!DOCTYPE') !== false || stripos($contenu, '<!ENTITY') !== false) {
-            throw ValidationException::withMessages(['fichier' => 'Ce fichier CAMT contient une déclaration de type de document : il est refusé.']);
+            throw ValidationException::withMessages(['fichier' => __('Ce fichier CAMT contient une déclaration de type de document : il est refusé.')]);
         }
         $document = new DOMDocument;
         $erreurs = libxml_use_internal_errors(true);
@@ -90,7 +90,7 @@ class LecteurReleves
         $xpath = $lu ? new DOMXPath($document) : null;
         $entrees = $xpath?->query('//'.$this->chemin('Ntry'));
         if (! $xpath || ! $entrees || $entrees->length === 0) {
-            throw ValidationException::withMessages(['fichier' => 'Aucune opération trouvée dans ce fichier CAMT.']);
+            throw ValidationException::withMessages(['fichier' => __('Aucune opération trouvée dans ce fichier CAMT.')]);
         }
         $valeur = fn (DOMNode $noeud, string $chemin) => trim((string) preg_replace('/\s+/u', ' ', (string) $xpath->evaluate("string({$chemin})", $noeud)));
 
@@ -100,14 +100,14 @@ class LecteurReleves
         foreach ($entrees as $index => $entree) {
             $statut = strtoupper($valeur($entree, $this->chemin('Sts')));
             if ($statut !== '' && ! str_starts_with($statut, 'BOOK')) {
-                $ignorees[] = ['ligne' => $index + 1, 'raison' => 'Opération pas encore passée par la banque.'];
+                $ignorees[] = ['ligne' => $index + 1, 'raison' => __('Opération pas encore passée par la banque.')];
 
                 continue;
             }
             $date = substr($valeur($entree, $this->chemin('BookgDt').'/*') ?: $valeur($entree, $this->chemin('ValDt').'/*'), 0, 10);
             $montant = $this->montant($valeur($entree, $this->chemin('Amt')));
             if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $d) || ! checkdate((int) $d[2], (int) $d[3], (int) $d[1]) || $montant === null || $montant == 0) {
-                $ignorees[] = ['ligne' => $index + 1, 'raison' => 'Date ou montant illisible.'];
+                $ignorees[] = ['ligne' => $index + 1, 'raison' => __('Date ou montant illisible.')];
 
                 continue;
             }
@@ -140,18 +140,18 @@ class LecteurReleves
     public function lireCsv(string $contenu, array $reglages): array
     {
         if (empty($reglages['colonne_date']) || empty($reglages['colonne_libelle'])) {
-            throw ValidationException::withMessages(['colonne_date' => 'Indiquez les colonnes de la date et du libellé.']);
+            throw ValidationException::withMessages(['colonne_date' => __('Indiquez les colonnes de la date et du libellé.')]);
         }
         if (empty($reglages['colonne_montant']) && empty($reglages['colonne_debit']) && empty($reglages['colonne_credit'])) {
-            throw ValidationException::withMessages(['colonne_montant' => 'Indiquez la colonne du montant, ou celles du débit et du crédit.']);
+            throw ValidationException::withMessages(['colonne_montant' => __('Indiquez la colonne du montant, ou celles du débit et du crédit.')]);
         }
         $lignes = preg_split('/\r\n|\r|\n/', preg_replace('/^\xEF\xBB\xBF/', '', $this->utf8($contenu)));
         $nonVides = array_values(array_filter($lignes, fn (string $l) => trim($l) !== ''));
         if ($nonVides === []) {
-            throw ValidationException::withMessages(['fichier' => 'Le fichier est vide.']);
+            throw ValidationException::withMessages(['fichier' => __('Le fichier est vide.')]);
         }
         if (count($lignes) > self::MAX_LIGNES) {
-            throw ValidationException::withMessages(['fichier' => 'Le fichier dépasse '.self::MAX_LIGNES.' lignes.']);
+            throw ValidationException::withMessages(['fichier' => __('Le fichier dépasse :max lignes.', ['max' => self::MAX_LIGNES])]);
         }
         $separateur = collect([';', "\t", ','])->sortByDesc(fn (string $s) => substr_count($nonVides[0], $s))->first();
         $cellule = fn (array $cellules, mixed $colonne) => empty($colonne) ? '' : trim((string) ($cellules[(int) $colonne - 1] ?? ''));
@@ -174,7 +174,7 @@ class LecteurReleves
                 $montant = $debit === null && $credit === null ? null : round(abs((float) $credit) - abs((float) $debit), 2);
             }
             if (! $date || $montant === null || $montant == 0) {
-                $ignorees[] = ['ligne' => $index + 1, 'raison' => ! $date ? 'Date illisible.' : 'Montant illisible ou nul.'];
+                $ignorees[] = ['ligne' => $index + 1, 'raison' => ! $date ? __('Date illisible.') : __('Montant illisible ou nul.')];
 
                 continue;
             }

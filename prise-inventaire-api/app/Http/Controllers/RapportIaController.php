@@ -40,21 +40,21 @@ class RapportIaController extends Controller
             'question' => ['required', 'string', 'min:3', 'max:1000'],
             'langue' => ['nullable', Rule::in(['fr', 'en'])],
         ], [
-            'question.required' => 'Écrivez votre question.',
-            'question.min' => 'Écrivez votre question.',
-            'question.max' => 'La question tient en 1 000 caractères au plus.',
+            'question.required' => __('Écrivez votre question.'),
+            'question.min' => __('Écrivez votre question.'),
+            'question.max' => __('La question tient en 1 000 caractères au plus.'),
         ]);
         $entreprise = $request->attributes->get('tenant');
         $raison = AssistantRapports::indisponibilite($entreprise);
         if ($raison === 'cle') {
-            return response()->json(['message' => "Le service d'IA n'est pas configuré sur ce serveur."], 503);
+            return response()->json(['message' => __("Le service d'IA n'est pas configuré sur ce serveur.")], 503);
         }
         if ($raison === 'module') {
-            return response()->json(['message' => "Le module « Intelligence artificielle » n'est pas activé pour votre entreprise."], 403);
+            return response()->json(['message' => __("Le module « Intelligence artificielle » n'est pas activé pour votre entreprise.")], 403);
         }
         $limite = (int) config('ia.questions_par_jour');
         if ($this->questionsDuJour($request) >= $limite) {
-            return response()->json(['message' => "Limite de {$limite} questions par jour atteinte : réessayez demain."], 429);
+            return response()->json(['message' => __('Limite de :limite questions par jour atteinte : réessayez demain.', ['limite' => $limite])], 429);
         }
 
         $langue = $donnees['langue'] ?? 'fr';

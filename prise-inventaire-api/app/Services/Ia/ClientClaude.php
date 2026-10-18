@@ -41,15 +41,17 @@ class ClientClaude
                     'messages' => $messages,
                 ], fn ($valeur) => $valeur !== null));
         } catch (ConnectionException) {
-            throw new RuntimeException("Le service d'IA ne répond pas ; réessayez dans un moment.");
+            throw new RuntimeException(__("Le service d'IA ne répond pas ; réessayez dans un moment."));
         }
 
         if ($reponse->failed()) {
             throw new RuntimeException(match (true) {
-                in_array($reponse->status(), [401, 403], true) => "La clé de l'API du service d'IA est refusée : vérifiez la configuration du serveur.",
-                $reponse->status() === 429 => "Trop de demandes au service d'IA ; réessayez dans une minute.",
-                in_array($reponse->status(), [500, 502, 503, 529], true) => "Le service d'IA est surchargé ; réessayez dans un moment.",
-                default => "Le service d'IA a refusé la demande : ".mb_strimwidth((string) ($reponse->json('error.message') ?? $reponse->status()), 0, 200, '…'),
+                in_array($reponse->status(), [401, 403], true) => __("La clé de l'API du service d'IA est refusée : vérifiez la configuration du serveur."),
+                $reponse->status() === 429 => __("Trop de demandes au service d'IA ; réessayez dans une minute."),
+                in_array($reponse->status(), [500, 502, 503, 529], true) => __("Le service d'IA est surchargé ; réessayez dans un moment."),
+                default => __("Le service d'IA a refusé la demande : :detail", [
+                    'detail' => mb_strimwidth((string) ($reponse->json('error.message') ?? $reponse->status()), 0, 200, '…'),
+                ]),
             });
         }
 
