@@ -40,6 +40,7 @@ import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import { useReferencesClient } from '@/hooks/useReferencesClient';
 import OriginePrix from '@/components/OriginePrix';
 import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import { annexesALaVente, prixUnite, uniteParDefaut } from '@/lib/unitesVente';
@@ -94,6 +95,12 @@ export default function CommandesClientPage() {
   // Coordonnées du client de passage, notées sur la commande.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
+  // Référence du produit chez le client choisi, à côté de sa désignation (phase 1.2c).
+  const referencesClient = useReferencesClient(formData.client_id ? Number(formData.client_id) : null);
+  const avecReference = (produitId?: number) => {
+    const reference = produitId ? referencesClient.get(produitId) : undefined;
+    return reference ? ` — ${t.clientFile.references.short.replace('{ref}', reference)}` : '';
+  };
   const [lignes, setLignes] = useState<(LignePrix & { prix_unitaire_ht: number })[]>([]);
   // Frais additionnels et de livraison proposés pour la commande en cours de saisie (ceux déjà sur un brouillon
   // modifié ne sont pas proposés de nouveau).
@@ -623,7 +630,7 @@ export default function CommandesClientPage() {
                         >
                           <option value={0}>Produit...</option>
                           {produits.map(p => (
-                            <option key={p.id} value={p.id}>{p.description}</option>
+                            <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>
                           ))}
                         </select>
                         <input

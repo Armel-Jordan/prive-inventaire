@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Avoir;
 use App\Models\BonLivraison;
+use App\Models\ClientProduit;
 use App\Models\ComClientEntete;
 use App\Models\DemandeAcompte;
 use App\Models\Devis;
@@ -54,7 +55,7 @@ class DocumentsVentePdf
             'Valable jusqu\'au' => $this->date($devis->date_validite),
         ], [
             'destinataire' => $this->client($devis->client, false, $devis),
-            'lignes' => $devis->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire, 0, $l->montant_ligne))->all(),
+            'lignes' => $this->lignesPrix($devis->client_id, $devis->lignes, fn ($l) => [$l->prix_unitaire, 0, $l->montant_ligne]),
             // Les devis sont établis hors taxes.
             'totaux' => [['Total HT', (float) $devis->montant_total, true]],
             'mention' => 'Montants hors taxes.',
@@ -72,7 +73,7 @@ class DocumentsVentePdf
             'Livraison souhaitée' => $this->date($commande->date_livraison_souhaitee),
         ], [
             'destinataire' => $this->client($commande->client, false, $commande),
-            'lignes' => $commande->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
+            'lignes' => $this->lignesPrix($commande->client_id, $commande->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('commande_client', $commande, $commande->lignes),
             'notes' => $commande->notes,
         ]);
@@ -88,7 +89,7 @@ class DocumentsVentePdf
             'Conditions de paiement' => $facture->conditionPaiement?->libelle,
         ], [
             'destinataire' => $this->client($facture->client, false, $facture),
-            'lignes' => $facture->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
+            'lignes' => $this->lignesPrix($facture->client_id, $facture->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('facture', $facture, $facture->lignes),
             'reglement' => array_values(array_filter([
                 ['Payé', (float) $facture->montant_paye],
@@ -110,7 +111,7 @@ class DocumentsVentePdf
             'Motif' => $avoir->motif,
         ], [
             'destinataire' => $this->client($avoir->client, false, $avoir->facture),
-            'lignes' => $avoir->lignes->map(fn ($l) => $this->lignePrix($l, $l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht))->all(),
+            'lignes' => $this->lignesPrix($avoir->client_id, $avoir->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('avoir', $avoir, $avoir->lignes),
             'reglement' => $avoir->statut === Avoir::BROUILLON ? [] : array_values(array_filter([
                 ['Imputé sur des factures', (float) $avoir->montant_impute],
@@ -149,6 +150,7 @@ class DocumentsVentePdf
     public function bonLivraison(BonLivraison $bon): array
     {
         $bon->loadMissing(['facture.client', 'lignes.produit']);
+        $referencesLivraison = $this->referencesClient($bon->facture?->client_id, $bon->lignes);
 
         return $this->document('BON DE LIVRAISON', $bon, array_filter([
             'Facture' => $bon->facture?->numero,
@@ -159,7 +161,7 @@ class DocumentsVentePdf
             'colonnes' => 'livraison',
             'lignes' => $bon->lignes->map(fn ($l) => [
                 'reference' => $l->produit?->numero ?? '-',
-                'designation' => $l->produit?->description ?? 'Produit #'.$l->produit_id,
+                'designation' => $this->designation($l, $referencesLivraison),
                 'a_livrer' => $l->quantite_a_livrer,
                 'preparee' => $l->quantite_preparee,
                 'livree' => $l->quantite_livree,
@@ -236,12 +238,41 @@ class DocumentsVentePdf
         ];
     }
 
-    private function lignePrix(Model $ligne, mixed $prixUnitaire, mixed $remise, mixed $total): array
+    /**
+     * Lignes à prix d'un document, avec la référence de chaque produit chez le client du document (phase 1.2c).
+     *
+     * @param  callable(Model): array{0: mixed, 1: mixed, 2: mixed}  $montants  prix unitaire, remise, total d'une ligne
+     */
+    private function lignesPrix(?int $clientId, iterable $lignes, callable $montants): array
+    {
+        $references = $this->referencesClient($clientId, $lignes);
+
+        return collect($lignes)->map(fn (Model $ligne) => $this->lignePrix($ligne, ...[...$montants($ligne), $references]))->all();
+    }
+
+    /** Références des produits des lignes chez le client : id du produit => référence. */
+    private function referencesClient(?int $clientId, iterable $lignes): array
+    {
+        $produits = collect($lignes)->pluck('produit_id')->filter()->unique()->values()->all();
+
+        return array_map(fn (array $reference) => $reference['reference'], ClientProduit::pourClient($clientId, $produits));
+    }
+
+    /** Désignation du produit, le texte propre à la ligne s'il y en a un (période d'un abonnement…), la référence du client. */
+    private function designation(Model $ligne, array $references): string
+    {
+        return implode("\n", array_filter([
+            $ligne->produit?->description ?? 'Produit #'.$ligne->produit_id,
+            $ligne->description ?? null,
+            isset($references[$ligne->produit_id]) ? 'Réf. client : '.$references[$ligne->produit_id] : null,
+        ]));
+    }
+
+    private function lignePrix(Model $ligne, mixed $prixUnitaire, mixed $remise, mixed $total, array $references = []): array
     {
         return [
             'reference' => $ligne->produit?->numero ?? '-',
-            // Désignation du produit, et le texte propre à la ligne s'il y en a un (période d'un abonnement…).
-            'designation' => implode("\n", array_filter([$ligne->produit?->description ?? 'Produit #'.$ligne->produit_id, $ligne->description ?? null])),
+            'designation' => $this->designation($ligne, $references),
             'quantite' => $ligne->quantite,
             // Unité de vente de la ligne (la caisse de 12) ; sinon l'unité de stock du produit.
             'unite' => $ligne->unite ?? null,

@@ -23,6 +23,7 @@ import ChampDevise from '@/components/ChampDevise';
 import { useFraisAutomatiques } from '@/hooks/useFraisAutomatiques';
 import FraisDocument from '@/components/FraisDocument';
 import { usePrixAutomatiques } from '@/hooks/usePrixAutomatiques';
+import { useReferencesClient } from '@/hooks/useReferencesClient';
 import OriginePrix from '@/components/OriginePrix';
 import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, type LignePrix } from '@/lib/prixDocuments';
 import { annexesALaVente, prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
@@ -72,6 +73,12 @@ export default function DevisPage() {
   // Coordonnées du client de passage, notées sur le devis.
   const [passage, setPassage] = useState(PASSAGE_VIDE);
   const clientDePassage = clients.find(c => c.id === Number(formData.client_id))?.de_passage;
+  // Référence du produit chez le client choisi, à côté de sa désignation (phase 1.2c).
+  const referencesClient = useReferencesClient(formData.client_id ? Number(formData.client_id) : null);
+  const avecReference = (produitId?: number) => {
+    const reference = produitId ? referencesClient.get(produitId) : undefined;
+    return reference ? ` — ${t.clientFile.references.short.replace('{ref}', reference)}` : '';
+  };
   const [lignes, setLignes] = useState<(LignePrix & { id?: number; prix_unitaire: number })[]>([]);
   // Frais additionnels et de livraison proposés pour le devis en cours de saisie.
   const frais = useFraisAutomatiques({
@@ -512,7 +519,7 @@ export default function DevisPage() {
                       <div key={idx} className="flex gap-2 items-center">
                         <select value={ligne.produit_id} onChange={(e) => updateLigne(idx, 'produit_id', parseInt(e.target.value))} className="flex-1 px-2 py-1 border rounded text-sm">
                           <option value={0}>Produit...</option>
-                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}</option>)}
+                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
                         </select>
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
                         <ChoixUnite produit={produits.find(p => p.id === ligne.produit_id)} valeur={ligne.unite} onChange={u => changerUniteLigne(idx, u)}

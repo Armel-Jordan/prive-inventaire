@@ -2,9 +2,11 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2, Mail, MapPin, Phone, Star, User } from 'lucide-react';
 import {
-  basculerFavoriClient, changerCategorieClient, getCategoriesClients, getFicheClient,
-  type AdresseClient, type CategorieClient, type ContactClient, type FicheClient,
+  basculerFavoriClient, changerCategorieClient, getCategoriesClients, getFicheClient, getProduits,
+  type AdresseClient, type CategorieClient, type ContactClient, type FicheClient, type ReferenceProduitClient,
 } from '@/services/api';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import type { Produit } from '@/types';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import ListeElementsFiche from '@/components/fiche/ListeElementsFiche';
@@ -14,10 +16,10 @@ import OngletRemarques from '@/components/fiche/OngletRemarques';
 import { formatMontant, useSymboleDevise } from '@/components/fiche/format';
 import { PastilleClientDePassage } from '@/components/ClientDePassage';
 
-type Onglet = 'synthese' | 'historique' | 'contacts' | 'adresses' | 'remarques';
-type Compteur = 'contacts_count' | 'adresses_count' | 'remarques_count';
+type Onglet = 'synthese' | 'historique' | 'contacts' | 'adresses' | 'remarques' | 'references';
+type Compteur = 'contacts_count' | 'adresses_count' | 'remarques_count' | 'references_count';
 
-/** Fiche client : coordonnées, synthèse des ventes, historique d'achats, contacts, adresses et remarques. */
+/** Fiche client : coordonnées, synthèse des ventes, historique d'achats, contacts, adresses, remarques, références produits. */
 export default function FicheClientPage() {
   const { id: idParam } = useParams();
   const clientId = Number(idParam);
@@ -29,6 +31,16 @@ export default function FicheClientPage() {
   const [categories, setCategories] = useState<CategorieClient[]>([]);
   const [onglet, setOnglet] = useState<Onglet>('synthese');
   const [erreur, setErreur] = useState('');
+  const { peut } = usePermissions();
+  // Produits proposés pour une référence du client, chargés à la première ouverture de l'onglet.
+  const [produits, setProduits] = useState<Produit[]>([]);
+  const ongletReferences = onglet === 'references';
+  useEffect(() => {
+    if (!ongletReferences || produits.length > 0) return;
+    let actif = true;
+    getProduits().then(p => { if (actif) setProduits(p); }).catch(() => {});
+    return () => { actif = false; };
+  }, [ongletReferences, produits.length]);
 
   useEffect(() => {
     let actif = true;
@@ -43,6 +55,7 @@ export default function FicheClientPage() {
   const compterContacts = useCallback((n: number) => compter('contacts_count')(n), [compter]);
   const compterAdresses = useCallback((n: number) => compter('adresses_count')(n), [compter]);
   const compterRemarques = useCallback((n: number) => compter('remarques_count')(n), [compter]);
+  const compterReferences = useCallback((n: number) => compter('references_count')(n), [compter]);
 
   if (!client) {
     return (
@@ -75,7 +88,9 @@ export default function FicheClientPage() {
     { cle: 'contacts', libelle: tf.tabs.contacts, nombre: client.contacts_count },
     { cle: 'adresses', libelle: tf.tabs.addresses, nombre: client.adresses_count },
     { cle: 'remarques', libelle: tf.tabs.notes, nombre: client.remarques_count },
+    { cle: 'references', libelle: tf.tabs.references, nombre: client.references_count },
   ];
+  const tr = tf.references;
   const tc = tf.contacts;
   const ta = tf.addresses;
   const rappel = 'p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40 text-sm text-gray-600 dark:text-gray-300';
@@ -148,6 +163,29 @@ export default function FicheClientPage() {
         <div role="tabpanel" id={`${id}-panneau`} aria-labelledby={`${id}-onglet-${onglet}`} className="p-6">
           {onglet === 'synthese' && <OngletSynthese clientId={client.id} devise={devise} />}
           {onglet === 'historique' && <OngletHistorique clientId={client.id} devise={devise} />}
+          {onglet === 'references' && (
+            <ListeElementsFiche<ReferenceProduitClient>
+              chemin={`/clients/${client.id}/references-produits`}
+              colonnePrincipale="principal"
+              onCompte={compterReferences}
+              lectureSeule={!peut('clients', 'modifier')}
+              libelles={{ add: tr.add, empty: tr.empty, main: '' }}
+              titre={r => r.reference}
+              details={r => (
+                <>
+                  <p>{r.produit ? `${r.produit.numero} — ${r.produit.description}` : `#${r.produit_id}`}</p>
+                  {r.description && <p className="text-xs text-gray-500 dark:text-gray-400">{r.description}</p>}
+                </>
+              )}
+              champs={[
+                { cle: 'produit_id', libelle: tr.product, type: 'liste', requis: true,
+                  options: produits.map(p => ({ valeur: String(p.id), libelle: `${p.numero} — ${p.description}` })) },
+                { cle: 'reference', libelle: tr.reference, requis: true },
+                { cle: 'description', libelle: tr.description, aide: tr.descriptionHint },
+              ]}
+              entete={<p className={rappel}>{tr.help}</p>}
+            />
+          )}
           {onglet === 'contacts' && (
             <ListeElementsFiche<ContactClient>
               chemin={`/clients/${client.id}/contacts`}

@@ -9,9 +9,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** Règles de prix : prix client, paliers de quantité, promotions. */
+/** Règles de prix : prix client ou d'une catégorie de clients, paliers de quantité, promotions. */
 class RegleController extends Controller
 {
+    private const RELATIONS = ['client:id,code,raison_sociale', 'categorieClient:id,nom', 'produit:id,numero,description', 'listePrix:id,nom'];
+
     public function index(Request $request): JsonResponse
     {
         $filtres = $request->validate([
@@ -22,7 +24,7 @@ class RegleController extends Controller
         ]);
         $aujourdhui = now()->toDateString();
 
-        $regles = ReglePrix::with(['client:id,code,raison_sociale', 'produit:id,numero,description', 'listePrix:id,nom'])
+        $regles = ReglePrix::with(self::RELATIONS)
             ->when($filtres['client_id'] ?? null, fn ($q, $client) => $q->where('client_id', $client))
             ->when($filtres['produit_id'] ?? null, fn ($q, $produit) => $q->where('produit_id', $produit))
             ->when($filtres['recherche'] ?? null, fn ($q, $texte) => $q->where('libelle', 'like', "%{$texte}%"))
@@ -42,7 +44,7 @@ class RegleController extends Controller
     {
         $regle = ReglePrix::create($this->valider($request));
 
-        return response()->json($regle->load(['client:id,code,raison_sociale', 'produit:id,numero,description', 'listePrix:id,nom']), 201);
+        return response()->json($regle->load(self::RELATIONS), 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -50,7 +52,7 @@ class RegleController extends Controller
         $regle = ReglePrix::findOrFail($id);
         $regle->update($this->valider($request));
 
-        return response()->json($regle->load(['client:id,code,raison_sociale', 'produit:id,numero,description', 'listePrix:id,nom']));
+        return response()->json($regle->load(self::RELATIONS));
     }
 
     public function destroy(int $id): JsonResponse
@@ -65,6 +67,7 @@ class RegleController extends Controller
         $donnees = $request->validate([
             'libelle' => ['required', 'string', 'max:150'],
             'client_id' => ['nullable', 'integer', TenantRule::exists('clients')],
+            'categorie_client_id' => ['nullable', 'integer', TenantRule::exists('client_categories')],
             'liste_prix_id' => ['nullable', 'integer', TenantRule::exists('listes_prix')],
             'produit_id' => ['nullable', 'integer', TenantRule::exists('produits')],
             'categorie_produit' => ['nullable', 'string', 'max:100'],

@@ -29,7 +29,7 @@ class ClientFicheController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $client = Client::with(['categorie:id,nom', 'conditionsPaiement'])
-            ->withCount(['contacts', 'adresses', 'remarques'])
+            ->withCount(['contacts', 'adresses', 'remarques', 'referencesProduits as references_count'])
             ->withExists(['favoris as favori' => fn ($q) => $q->where('user_id', $request->user()->id)])
             ->findOrFail($id);
 

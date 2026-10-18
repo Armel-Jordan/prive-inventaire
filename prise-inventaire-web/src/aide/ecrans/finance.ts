@@ -485,7 +485,7 @@ export const AIDES_FINANCE: AidesEcrans = {
       etapes: [
         "Onglet « Grille de prix » : modifiez le prix de base et les prix par liste directement dans le tableau, puis cliquez sur « Enregistrer ».",
         "Onglet « Listes de prix » : cliquez sur « Nouvelle liste », donnez un nom et un ajustement en % sur le prix de base ; dépliez une liste pour rattacher des clients.",
-        "Onglet « Règles de prix » : cliquez sur « Nouvelle règle », puis choisissez la portée (client, liste, produit, catégorie), les conditions et l'effet.",
+        "Onglet « Règles de prix » : cliquez sur « Nouvelle règle », puis choisissez la portée (client, catégorie de clients, liste, produit, catégorie de produits), les conditions et l'effet.",
         "Onglet « Simulateur » : choisissez un client, un produit, une quantité et une date, puis cliquez sur « Calculer » pour voir le prix retenu.",
       ],
       astuces: [
@@ -501,7 +501,7 @@ export const AIDES_FINANCE: AidesEcrans = {
       etapes: [
         "“Price grid” tab: change the base price and the list prices directly in the table, then click “Save”.",
         "“Price lists” tab: click “New list”, give it a name and an adjustment in % on the base price; expand a list to attach customers.",
-        "“Price rules” tab: click “New rule”, then choose the scope (customer, list, product, category), the conditions and the effect.",
+        "“Price rules” tab: click “New rule”, then choose the scope (customer, customer category, list, product, product category), the conditions and the effect.",
         "“Simulator” tab: choose a customer, a product, a quantity and a date, then click “Compute” to see the selected price.",
       ],
       astuces: [

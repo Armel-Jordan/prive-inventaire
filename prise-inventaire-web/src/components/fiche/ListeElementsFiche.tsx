@@ -7,7 +7,9 @@ import { useLanguage } from '@/i18n/useLanguage';
 export interface ChampElement {
   cle: string;
   libelle: string;
-  type?: 'text' | 'email' | 'tel' | 'textarea' | 'case';
+  type?: 'text' | 'email' | 'tel' | 'textarea' | 'case' | 'liste';
+  /** Choix d'un champ « liste » (valeur envoyée, libellé affiché). */
+  options?: { valeur: string; libelle: string }[];
   requis?: boolean;
   aide?: string;
   defaut?: boolean;
@@ -137,6 +139,12 @@ export default function ListeElementsFiche<T extends { id: number }>({ chemin, c
                 {c.type === 'textarea' ? (
                   <textarea id={`${id}-${c.cle}`} rows={2} required={c.requis} value={String(edition.valeurs[c.cle])}
                     onChange={e => setEdition({ ...edition, valeurs: { ...edition.valeurs, [c.cle]: e.target.value } })} className={champSaisie} />
+                ) : c.type === 'liste' ? (
+                  <select id={`${id}-${c.cle}`} required={c.requis} value={String(edition.valeurs[c.cle])}
+                    onChange={e => setEdition({ ...edition, valeurs: { ...edition.valeurs, [c.cle]: e.target.value } })} className={champSaisie}>
+                    <option value="">—</option>
+                    {(c.options ?? []).map(o => <option key={o.valeur} value={o.valeur}>{o.libelle}</option>)}
+                  </select>
                 ) : (
                   <input id={`${id}-${c.cle}`} type={c.type ?? 'text'} required={c.requis} value={String(edition.valeurs[c.cle])} placeholder={c.aide}
                     onChange={e => setEdition({ ...edition, valeurs: { ...edition.valeurs, [c.cle]: e.target.value } })} className={champSaisie} />

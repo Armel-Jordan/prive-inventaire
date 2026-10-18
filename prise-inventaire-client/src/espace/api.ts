@@ -70,6 +70,8 @@ export interface ProduitCatalogue {
   /** Prix du client à l'unité ; null : prix sur demande (pas commandable en ligne). */
   prix: number | null;
   prix_liste: number | null;
+  /** Référence du produit chez le client (son numéro d'article), s'il en a donné une. */
+  reference_client: string | null;
 }
 
 export interface Page<T> {
@@ -90,6 +92,7 @@ export interface LignePanier {
 
 export interface LignePrix extends LignePanier {
   numero: string | null;
+  reference_client?: string | null;
   description: string | null;
   mesure: string | null;
   prix: number | null;

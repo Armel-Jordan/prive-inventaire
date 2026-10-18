@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\ClientFicheAdresseController;
 use App\Http\Controllers\Api\ClientFicheCategorieController;
 use App\Http\Controllers\Api\ClientFicheContactController;
 use App\Http\Controllers\Api\ClientFicheController;
+use App\Http\Controllers\Api\ClientFicheReferenceController;
 use App\Http\Controllers\Api\ClientFicheRemarqueController;
 use App\Http\Controllers\Api\ColisLivraisonController;
 use App\Http\Controllers\Api\CommandeClientController;
@@ -733,6 +734,12 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/synthese', [ClientFicheController::class, 'synthese']);
         Route::get('/historique-achats', [ClientFicheController::class, 'historique']);
         Route::put('/categorie', [ClientFicheController::class, 'categorie']);
+        // Références des produits chez le client : reprises sur ses documents et dans son espace client (droit de
+        // modifier les clients, aussi pour en retirer une).
+        Route::get('/references-produits', [ClientFicheReferenceController::class, 'index']);
+        Route::post('/references-produits', [ClientFicheReferenceController::class, 'store']);
+        Route::put('/references-produits/{id}', [ClientFicheReferenceController::class, 'update'])->whereNumber('id');
+        Route::delete('/references-produits/{id}', [ClientFicheReferenceController::class, 'destroy'])->whereNumber('id');
         Route::post('/favori', [ClientFicheController::class, 'ajouterFavori']);
         Route::delete('/favori', [ClientFicheController::class, 'retirerFavori']);
         foreach (['contacts' => ClientFicheContactController::class, 'adresses' => ClientFicheAdresseController::class, 'remarques' => ClientFicheRemarqueController::class] as $liste => $controleur) {

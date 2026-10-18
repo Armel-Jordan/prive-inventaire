@@ -122,6 +122,12 @@ class Client extends Model
         return $this->hasMany(ClientAdresse::class)->orderByDesc('principale')->orderBy('libelle');
     }
 
+    /** Références des produits chez ce client (phase 1.2c). */
+    public function referencesProduits(): HasMany
+    {
+        return $this->hasMany(ClientProduit::class)->orderBy('reference');
+    }
+
     public function remarques(): HasMany
     {
         return $this->hasMany(ClientRemarque::class)->orderByDesc('epinglee')->latest()->orderByDesc('id');
