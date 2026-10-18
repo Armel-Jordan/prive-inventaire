@@ -34,6 +34,7 @@ const roleLabels: Record<string, { label: string; color: string }> = {
   admin:   { label: 'Admin',       color: 'bg-red-100 text-red-700' },
   manager: { label: 'Manager',     color: 'bg-orange-100 text-orange-700' },
   user:    { label: 'Utilisateur', color: 'bg-blue-100 text-blue-700' },
+  readonly: { label: 'Lecture seule', color: 'bg-gray-100 text-gray-700' },
 };
 
 function Avatar({ photo, nom, size = 'md' }: { photo?: string | null; nom: string; size?: 'sm' | 'md' | 'lg' }) {

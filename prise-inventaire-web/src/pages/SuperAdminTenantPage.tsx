@@ -668,8 +668,8 @@ export default function SuperAdminTenantPage() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   required={!editingAdminId}
-                  minLength={6}
-                  placeholder={editingAdminId ? 'Laisser vide' : 'Min. 6 caractères'}
+                  minLength={8}
+                  placeholder={editingAdminId ? 'Laisser vide' : 'Min. 8 caractères'}
                 />
               </div>
               <div>

@@ -103,8 +103,8 @@ class RapportController extends Controller
             ->selectRaw('COUNT(*) as nombre_mouvements')
             ->selectRaw('SUM(quantite) as quantite_totale')
             ->groupBy('employe')
-            ->orderByDesc('nombre_mouvements')
-            ->get();
+            ->get()
+            ->keyBy('employe');
 
         $scans = ScanTenant::where('tenant_id', $tenantId)
             ->whereYear('date_saisie', $annee)
@@ -116,17 +116,20 @@ class RapportController extends Controller
             ->get()
             ->keyBy('employe');
 
-        $rapport = $mouvements->map(function ($m) use ($scans) {
-            $scan = $scans->get($m->employe);
+        // Les employés qui ont des mouvements ou des scans dans le mois (un employé qui n'a fait que scanner compte
+        // aussi), les plus actifs d'abord.
+        $rapport = $mouvements->keys()->merge($scans->keys())->unique()->map(function ($employe) use ($mouvements, $scans) {
+            $mouvement = $mouvements->get($employe);
+            $scan = $scans->get($employe);
 
             return [
-                'employe' => $m->employe,
-                'mouvements' => $m->nombre_mouvements,
-                'scans' => $scan ? $scan->nombre_scans : 0,
-                'quantite_mouvements' => (float) $m->quantite_totale,
-                'quantite_scans' => $scan ? (float) $scan->quantite_totale : 0,
+                'employe' => $employe,
+                'mouvements' => (int) ($mouvement?->nombre_mouvements ?? 0),
+                'scans' => (int) ($scan?->nombre_scans ?? 0),
+                'quantite_mouvements' => (float) ($mouvement?->quantite_totale ?? 0),
+                'quantite_scans' => (float) ($scan?->quantite_totale ?? 0),
             ];
-        });
+        })->sortByDesc(fn (array $ligne) => $ligne['mouvements'] + $ligne['scans'])->values();
 
         return response()->json(['mois' => $mois, 'annee' => $annee, 'rapport' => $rapport]);
     }

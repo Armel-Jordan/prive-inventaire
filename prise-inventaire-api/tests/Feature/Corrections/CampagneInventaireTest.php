@@ -4,6 +4,7 @@ namespace Tests\Feature\Corrections;
 
 use App\Models\AdminUser;
 use App\Models\EmployeTenant;
+use App\Models\MouvementTenant;
 use App\Models\ScanTenant;
 use App\Models\Secteur;
 use App\Models\Tenant;
@@ -95,6 +96,40 @@ class CampagneInventaireTest extends TestCase
         $this->assertSame(3, $suggestions['A1']['jours_depuis_scan']);
         $this->assertNull($suggestions['B1']['jours_depuis_scan']);
         $this->assertGreaterThan($suggestions['A1']['score_priorite'], $suggestions['B1']['score_priorite']);
+    }
+
+    public function test_un_secteur_scanne_sous_son_nom_compte_pour_l_inventaire_tournant(): void
+    {
+        $this->connecter();
+        $this->chezLeTenant(function () {
+            Secteur::create(['code' => 'A1', 'nom' => 'Allée 1', 'actif' => true]);
+            Secteur::create(['code' => 'B1', 'nom' => 'Allée 2', 'actif' => true]);
+            Secteur::create(['code' => 'C1', 'nom' => 'Allée 3', 'actif' => true]);
+            $scan = fn (string $secteur, string $date) => ScanTenant::create([
+                'numero' => 'P-1', 'type' => 'produit', 'quantite' => 3, 'unite_mesure' => 'UN',
+                'employe' => 'E1', 'secteur' => $secteur, 'date_saisie' => $date,
+            ]);
+            // Code saisi à l'écran ; nom noté par l'application mobile (autre casse), plus récent que le code.
+            $scan('A1', '2026-10-13 08:00:00');
+            $scan('B1', '2026-09-01 08:00:00');
+            $scan('allée 2', '2026-10-15 08:00:00');
+            // Mouvement noté sous le nom du secteur, après son dernier scan.
+            MouvementTenant::create([
+                'type' => MouvementTenant::TYPE_SORTIE, 'produit_numero' => 'P-1', 'quantite' => 1, 'employe' => 'E1',
+                'secteur_source' => 'Allée 2', 'date_mouvement' => now(),
+            ]);
+        });
+
+        $suggestions = collect($this->getJson('/api/inventaire-tournant/suggestions')->assertOk()->json('suggestions'))->keyBy('secteur');
+        $this->assertSame([3, 1, null], [$suggestions['A1']['jours_depuis_scan'], $suggestions['B1']['jours_depuis_scan'], $suggestions['C1']['jours_depuis_scan']]);
+        $this->assertSame('2026-10-15T08:00:00.000000Z', $suggestions['B1']['dernier_scan']);
+        $this->assertSame(1, $suggestions['B1']['mouvements_depuis_scan']);
+
+        $this->getJson('/api/inventaire-tournant/stats')->assertOk()
+            ->assertJsonPath('total_secteurs', 3)
+            ->assertJsonPath('scannes_ce_mois', 2)
+            ->assertJsonPath('jamais_scannes', 1)
+            ->assertJsonPath('non_scannes_30_jours', 1);
     }
 
     public function test_l_evolution_annuelle_compte_les_scans_par_mois(): void

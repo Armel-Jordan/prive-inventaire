@@ -16,6 +16,10 @@
 
 Rien ne change pour un compte qui n'active pas la double authentification : la connexion reste celle d'aujourd'hui.
 
+**Longueur des mots de passe : 8 caractères au moins**, partout. Cela vaut pour un compte créé ou modifié par un
+administrateur, l'accès d'un employé, les administrateurs d'une entreprise réglés par le super-administrateur, la
+réinitialisation et le changement de mot de passe. Avant, 6 caractères suffisaient à la création d'un compte.
+
 ### Fin de session
 
 - **Déconnexion** : le jeton de connexion est révoqué par l'API (`POST /auth/logout`). Il restait auparavant

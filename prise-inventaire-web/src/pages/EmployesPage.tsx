@@ -460,7 +460,7 @@ export default function EmployesPage() {
                       </label>
                       <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
                         className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                        required={!editingId} minLength={6} placeholder="Minimum 6 caractères" />
+                        required={!editingId} minLength={8} placeholder="Minimum 8 caractères" />
                     </div>
                   )}
                 </div>

@@ -143,7 +143,8 @@ export default function BonsLivraisonPage() {
       await marquerBLPret(id);
       loadBons();
     } catch (error) {
-      signaler(error, 'Toutes les lignes doivent être préparées avant de marquer le bon comme prêt.');
+      // Les lignes non préparées partent pour la quantité à livrer : seul un bon qui n'est plus en préparation est refusé.
+      signaler(error, "Le bon n'a pas pu être marqué prêt.");
     }
   };
 

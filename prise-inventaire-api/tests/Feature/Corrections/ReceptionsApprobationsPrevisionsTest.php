@@ -111,4 +111,23 @@ class ReceptionsApprobationsPrevisionsTest extends TestCase
         $this->assertEquals(1, $ligne['consommation_jour']);
         $this->assertSame(40, $ligne['jours_restants']);
     }
+
+    public function test_les_compteurs_d_alertes_suivent_les_niveaux_de_la_liste(): void
+    {
+        $this->chez(function () {
+            // Seuil 100 : critique jusqu'à 25 %, avertissement jusqu'à 50 %, information au-delà (sous le seuil).
+            foreach (['CRIT' => 20, 'AVERT' => 40, 'INFO' => 80, 'OK' => 150] as $numero => $stock) {
+                ProduitTenant::create(['numero' => $numero, 'description' => $numero, 'seuil_alerte' => 100, 'actif' => true]);
+                ScanTenant::create(['numero' => $numero, 'quantite' => $stock, 'employe' => 'Paul', 'secteur' => 'A-01', 'date_saisie' => now()]);
+            }
+        });
+
+        $this->getJson('/api/alertes/stats')->assertOk()->assertJson([
+            'total_produits_surveilles' => 4, 'en_alerte' => 3, 'critiques' => 1, 'warnings' => 1, 'informations' => 1, 'ok' => 1,
+        ]);
+        // La liste (que l'écran filtre par niveau) compte ses avertissements comme le compteur.
+        $liste = $this->getJson('/api/alertes')->assertOk()->json();
+        $this->assertSame([3, 1, 1], [$liste['total'], $liste['critiques'], $liste['warnings']]);
+        $this->assertSame(['CRIT', 'AVERT', 'INFO'], array_column($liste['alertes'], 'numero'));
+    }
 }
