@@ -110,11 +110,14 @@ class EnvoiCourriel
         ]);
     }
 
-    /** Champs de la fenêtre de rédaction d'un rapport, variables déjà remplacées ; l'adresse donnée est proposée. */
-    public function preparerRapport(Rapport $rapport, array $valeurs, string $langue, ?string $adresse): array
+    /**
+     * Champs de la fenêtre de rédaction d'un rapport, variables déjà remplacées ; l'adresse donnée est proposée.
+     * L'analyse de l'IA (envoi programmé avec une question) remplit {analyse_ia}.
+     */
+    public function preparerRapport(Rapport $rapport, array $valeurs, string $langue, ?string $adresse, ?string $analyse = null): array
     {
         $modele = $this->modele('rapport', $langue);
-        $variables = $this->variablesRapport($rapport, $valeurs, $langue);
+        $variables = $this->variablesRapport($rapport, $valeurs, $langue, $analyse);
 
         return [
             'type' => 'rapport',
@@ -125,7 +128,8 @@ class EnvoiCourriel
             'destinataires' => $this->adresses([$adresse]),
             'statut_document' => null,
             'objet' => $this->variables->remplacer($modele['objet'], $variables),
-            'contenu' => $this->variables->remplacer($modele['contenu'], $variables),
+            // Une variable vide ({analyse_ia} sans question à l'IA) ne laisse pas de lignes vides en trop.
+            'contenu' => preg_replace("/\n{3,}/", "\n\n", $this->variables->remplacer($modele['contenu'], $variables)),
             'piece_jointe' => null,
         ];
     }
@@ -179,8 +183,8 @@ class EnvoiCourriel
         ]);
     }
 
-    /** Variables d'un courriel de rapport : son titre, sa période, ses paramètres lisibles et la date du jour. */
-    private function variablesRapport(Rapport $rapport, array $valeurs, string $langue): array
+    /** Variables d'un courriel de rapport : son titre, sa période, ses paramètres lisibles, la date du jour, l'analyse de l'IA. */
+    private function variablesRapport(Rapport $rapport, array $valeurs, string $langue, ?string $analyse = null): array
     {
         $rapport->langue = $langue;
         $en = $langue === 'en';
@@ -197,6 +201,7 @@ class EnvoiCourriel
                 : '',
             'parametres' => implode("\n", $parametres),
             'date_rapport' => $date(today()),
+            'analyse_ia' => filled($analyse) ? ($en ? '**AI analysis**' : "**Analyse de l'IA**")."\n\n".trim($analyse) : '',
         ]);
     }
 

@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\RapportProgramme;
 use App\Models\TachePlanifiee;
+use App\Rapports\AssistantRapports;
 use App\Rapports\Catalogue;
 use App\Rapports\Production;
 use App\Rapports\Programmation;
 use App\Rapports\Rapport;
 use App\Services\Planificateur;
+use App\Support\Droits;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Envois programmés des rapports (plan de parité fripv2, phase 5.2) : chaque jour, chaque semaine ou chaque mois, un
@@ -25,7 +28,11 @@ class RapportProgrammeController extends Controller
     /** Code de la tâche planifiée qui fait partir les envois. */
     public const TACHE = 'rapports_programmes';
 
-    public function __construct(private readonly Programmation $programmation, private readonly Planificateur $planificateur) {}
+    public function __construct(
+        private readonly Programmation $programmation,
+        private readonly Planificateur $planificateur,
+        private readonly Droits $droits,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -39,6 +46,8 @@ class RapportProgrammeController extends Controller
             'periodes' => collect(Programmation::PERIODES)->map(fn (array $l, string $code) => ['code' => $code, 'libelle' => $l[$langue] ?? $l['fr']])->values()->all(),
             // Sans la tâche planifiée active, rien ne part : l'écran le dit.
             'tache_active' => (bool) TachePlanifiee::query()->where('code', self::TACHE)->value('actif'),
+            // Question à l'IA possible sur les envois (clé du serveur, module de l'entreprise, droit du compte).
+            'ia_disponible' => $this->iaDisponible($request),
         ]);
     }
 
@@ -119,10 +128,17 @@ class RapportProgrammeController extends Controller
             'frequence' => ['required', Rule::in(RapportProgramme::FREQUENCES)],
             'jour' => ['nullable', 'required_if:frequence,hebdomadaire,mensuelle', 'integer', $hebdomadaire ? 'between:1,7' : 'between:1,31'],
             'actif' => ['sometimes', 'boolean'],
+            // Question à l'IA : son analyse du rapport entre dans chaque courriel.
+            'question_ia' => ['nullable', 'string', 'max:1000'],
         ] + $reglesParametres, [
             'periode.required' => 'Choisissez la période du rapport envoyé.',
             'jour.required_if' => 'Choisissez le jour de l\'envoi.',
         ] + RapportBibliothequeController::MESSAGES_ADRESSES);
+
+        $questionIa = trim((string) ($donnees['question_ia'] ?? ''));
+        if ($questionIa !== '' && ! $this->iaDisponible($request)) {
+            throw ValidationException::withMessages(['question_ia' => ["Les questions à l'IA ne sont pas disponibles pour votre compte ou votre entreprise."]]);
+        }
 
         $parametres = array_filter(array_intersect_key($donnees['parametres'] ?? [], array_diff_key($definitions, $avecPeriode ? ['du' => 1, 'au' => 1] : [])),
             fn ($valeur) => $valeur !== null && $valeur !== '');
@@ -143,6 +159,7 @@ class RapportProgrammeController extends Controller
             'frequence' => $donnees['frequence'],
             'jour' => $jour,
             'actif' => $donnees['actif'] ?? true,
+            'question_ia' => $questionIa !== '' ? $questionIa : null,
             'prochain_envoi' => Programmation::prochainEnvoi($donnees['frequence'], $jour, now(config('taches.fuseau') ?: config('app.timezone')))->toDateString(),
         ]];
     }
@@ -159,6 +176,13 @@ class RapportProgrammeController extends Controller
             $tache->prochaine_execution = $this->planificateur->prochaine($tache, now());
             $tache->save();
         }
+    }
+
+    /** L'IA est-elle disponible pour l'entreprise, et le compte peut-il lui poser des questions ? */
+    private function iaDisponible(Request $request): bool
+    {
+        return AssistantRapports::indisponibilite($request->attributes->get('tenant')) === null
+            && $this->droits->permet($request->user(), 'rapports', 'questionner');
     }
 
     /** Un envoi programmé d'un rapport que le compte peut ouvrir ; sinon « introuvable ». */
@@ -185,7 +209,7 @@ class RapportProgrammeController extends Controller
 
     private function presenter(RapportProgramme $programme, Rapport $rapport, string $langue): array
     {
-        return $programme->only(['id', 'code', 'nom', 'parametres', 'periode', 'format', 'langue', 'destinataires', 'frequence', 'jour', 'actif', 'derniere_erreur']) + [
+        return $programme->only(['id', 'code', 'nom', 'parametres', 'periode', 'format', 'langue', 'destinataires', 'frequence', 'jour', 'actif', 'derniere_erreur', 'question_ia']) + [
             'rapport' => $rapport->titre()[$langue] ?? $rapport->titre()['fr'],
             'compte' => $programme->compte?->nom,
             'prochain_envoi' => $programme->prochain_envoi?->toDateString(),

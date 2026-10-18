@@ -32,13 +32,14 @@ class ClientClaude
             $reponse = Http::withHeaders(['x-api-key' => (string) config('ia.cle'), 'anthropic-version' => self::VERSION_API])
                 ->acceptJson()
                 ->timeout((int) config('ia.delai', 120))
-                ->post((string) config('ia.url'), [
+                ->post((string) config('ia.url'), array_filter([
                     'model' => config('ia.modele'),
                     'max_tokens' => $jetonsMax,
                     'system' => $consignes,
-                    'tools' => $outils,
+                    // Sans outils (simple commentaire), la clé n'est pas envoyée.
+                    'tools' => $outils ?: null,
                     'messages' => $messages,
-                ]);
+                ], fn ($valeur) => $valeur !== null));
         } catch (ConnectionException) {
             throw new RuntimeException("Le service d'IA ne répond pas ; réessayez dans un moment.");
         }

@@ -125,9 +125,11 @@ export interface ProgrammeRapport {
   prochain_envoi: string | null;
   dernier_envoi_le: string | null;
   dernier_envoi: { id: number; statut: StatutCourriel; erreur: string | null } | null;
+  /** Question à l'IA : son analyse du rapport entre dans chaque courriel. */
+  question_ia: string | null;
 }
 
-export type ProgrammeSaisi = Pick<ProgrammeRapport, 'code' | 'nom' | 'periode' | 'format' | 'langue' | 'destinataires' | 'frequence' | 'jour' | 'actif'>
+export type ProgrammeSaisi = Pick<ProgrammeRapport, 'code' | 'nom' | 'periode' | 'format' | 'langue' | 'destinataires' | 'frequence' | 'jour' | 'actif' | 'question_ia'>
   & { parametres: Record<string, string> };
 
 export interface ListeProgrammes {
@@ -135,6 +137,8 @@ export interface ListeProgrammes {
   periodes: { code: string; libelle: string }[];
   /** La tâche planifiée qui fait partir les envois est-elle active ? */
   tache_active: boolean;
+  /** Le compte peut-il ajouter une question à l'IA à un envoi (service, module de l'entreprise, droit) ? */
+  ia_disponible: boolean;
 }
 
 export function getProgrammesRapports(langue: string): Promise<ListeProgrammes> {
