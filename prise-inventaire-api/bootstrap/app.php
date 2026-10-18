@@ -38,6 +38,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ResolveTenantContext::class,
         );
 
+        // Langue des messages (validation…) : celle de l'en-tête Accept-Language des écrans, le français sinon.
+        $middleware->api(prepend: [\App\Http\Middleware\DefinirLangue::class]);
+
         // API sans page de connexion côté serveur : un appel non authentifié ne doit pas chercher la route
         // « login » (inexistante), ce qui donnait une erreur 500 au lieu d'un 401.
         $middleware->redirectGuestsTo(fn () => null);

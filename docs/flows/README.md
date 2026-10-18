@@ -26,6 +26,7 @@
 | [FLOW-RECHERCHE-GLOBALE.md](./FLOW-RECHERCHE-GLOBALE.md) | Transverse | Recherche globale de l'en-tête (Ctrl+K) sur les fiches et documents |
 | [FLOW-RAPPORTS.md](./FLOW-RAPPORTS.md) | Transverse | Bibliothèque des rapports (ventes, clients, achats, inventaire, finance) à l'écran, en CSV, Excel et PDF, par courriel et en envois programmés |
 | [FLOW-FILTRES-MEMORISES.md](./FLOW-FILTRES-MEMORISES.md) | Transverse | Filtres d'un écran enregistrés par chaque compte, filtre par défaut appliqué à l'ouverture |
+| [FLOW-LANGUES.md](./FLOW-LANGUES.md) | Transverse | Français et anglais : écrans, messages de l'API selon la langue de l'écran, données traduisibles |
 
 ## Le flow global de l'application
 
