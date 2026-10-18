@@ -92,7 +92,8 @@ class FiltresMemorisesTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors(['valeurs']);
         // Listes, nombres et booléens admis.
         $this->enregistrer(['ecran' => 'clients', 'nom' => 'Favoris de la catégorie 3', 'valeurs' => ['categorie_id' => 3, 'favoris' => true, 'villes' => ['Douala', 'Yaoundé']]]);
-        $this->assertSame(['categorie_id' => 3, 'favoris' => true, 'villes' => ['Douala', 'Yaoundé']], $this->getJson('/api/filtres-memorises?ecran=clients')->json('0.valeurs'));
+        // MySQL range les clés d'un objet JSON à sa façon : on compare sans tenir compte de l'ordre.
+        $this->assertEquals(['categorie_id' => 3, 'favoris' => true, 'villes' => ['Douala', 'Yaoundé']], $this->getJson('/api/filtres-memorises?ecran=clients')->json('0.valeurs'));
 
         // Nombre limité par écran ; remplacer un filtre existant reste possible.
         for ($i = 1; $i <= FiltreMemoriseController::MAXIMUM; $i++) {
