@@ -4,6 +4,7 @@
 
 **Date** : 15 octobre 2026
 **Référence** : fripv2 compte environ 137 écrans au menu (Gestion 58, Inventaire 11, Vente 17, Achats 7, Comptabilité 37, Aide 7) et 229 tables.
+**Suite** : ce qui reste à faire au 19 octobre 2026, écran par écran, est dans [17-RESTE-A-FAIRE.md](./17-RESTE-A-FAIRE.md).
 
 ---
 
