@@ -14,6 +14,7 @@ use App\Models\PortailParametres;
 use App\Models\ProduitTenant;
 use App\Models\TenantParametres;
 use App\Services\CalculPrix;
+use App\Services\EntetesVente;
 use App\Services\TaxesDocument;
 use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
@@ -143,7 +144,8 @@ class CommandesPortail
         $groupe = $this->taxes->groupePour([]);
 
         $commande = DB::transaction(function () use ($compte, $client, $donnees, $tenantId, $lignes, $notes, $taux, $groupe) {
-            $commande = ComClientEntete::create([
+            // Le représentant du client suit sa commande.
+            $commande = ComClientEntete::create(app(EntetesVente::class)->pourCreation([], $client) + [
                 'tenant_id' => $tenantId,
                 'numero' => Configuration::consommerNumero('commande', $tenantId),
                 'client_id' => $client->id,

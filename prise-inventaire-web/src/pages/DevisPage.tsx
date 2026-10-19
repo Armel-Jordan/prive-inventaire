@@ -33,6 +33,8 @@ import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/client
 import { useLanguage } from '@/i18n/useLanguage';
 import { useVerrou } from '@/hooks/useVerrou';
 import BandeauVerrou from '@/components/BandeauVerrou';
+import ChoixRepresentant from '@/components/ChoixRepresentant';
+import { useRepresentants } from '@/hooks/useRepresentants';
 
 export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
@@ -50,6 +52,10 @@ export default function DevisPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
+  // Représentants commerciaux (phase 1.11a) : filtre de la liste, et celui du devis (par défaut, celui du client).
+  const representants = useRepresentants();
+  const [filterRepresentant, setFilterRepresentant] = useState<number | null>(null);
+  const [representantId, setRepresentantId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -108,7 +114,7 @@ export default function DevisPage() {
     try {
       setLoading(true);
       const [devisRes, clientsRes, produitsRes, config] = await Promise.all([
-        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, page }),
+        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
         getConfiguration('devis').catch(() => null),
@@ -123,7 +129,7 @@ export default function DevisPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, page]);
+  }, [filterStatut, recherche, filterRepresentant, page]);
 
   useEffect(() => {
     loadData();
@@ -149,6 +155,7 @@ export default function DevisPage() {
         ],
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
+        representant_id: representantId,
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -259,6 +266,7 @@ export default function DevisPage() {
       taux: String(devis.taux_change ?? 1),
     });
     setPassage(saisiePassage(devis));
+    setRepresentantId(devis.representant_id ?? null);
     setLignes(devis.lignes.map(l => ({
       id: l.id,
       produit_id: l.produit_id,
@@ -305,12 +313,14 @@ export default function DevisPage() {
     frais.reinitialiser();
     setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
     setPassage(PASSAGE_VIDE);
+    setRepresentantId(null);
     setLignes([]);
   };
 
-  // Client choisi : sa devise est proposée, avec son taux.
+  // Client choisi : sa devise est proposée, avec son taux ; son représentant aussi.
   const choisirClient = (id: string, liste: Client[] = clients) => {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
+    setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -373,6 +383,8 @@ export default function DevisPage() {
           <option value="refuse">Refusé</option>
           <option value="expire">Expiré</option>
         </select>
+        <ChoixRepresentant value={filterRepresentant} onChange={id => { setFilterRepresentant(id); setPage(1); }} representants={representants}
+          libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg" />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -500,6 +512,11 @@ export default function DevisPage() {
                   <input type="text" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="Optionnel" />
                   <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
                 </div>
+                <div>
+                  <label htmlFor="devis-representant" className="block text-sm font-medium mb-1">{t.salesReps.label}</label>
+                  <ChoixRepresentant id="devis-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
+                  <p className="text-xs text-gray-500 mt-1">{t.salesReps.documentHint}</p>
+                </div>
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               {editingId ? (formData.devise && <p className="text-sm text-gray-500">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
@@ -584,6 +601,7 @@ export default function DevisPage() {
                 <div><span className="text-gray-500">Statut:</span><p className="mt-1">{getStatutBadge(selectedDevis.statut)}</p></div>
                 <div><span className="text-gray-500">Date:</span><p>{fmtDate(selectedDevis.date_devis)}</p></div>
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
+                {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}
               </div>
               {selectedDevis.lignes?.length > 0 && (
                 <div className="border-t pt-3">

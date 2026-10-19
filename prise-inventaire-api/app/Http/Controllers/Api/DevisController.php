@@ -11,6 +11,7 @@ use App\Models\Devis;
 use App\Models\DevisLigne;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
+use App\Services\EntetesVente;
 use App\Services\FacturesVente;
 use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
@@ -33,7 +34,7 @@ class DevisController extends Controller
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
         Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
             ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero'])->where('tenant_id', $tenantId);
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -41,6 +42,9 @@ class DevisController extends Controller
 
         if ($request->has('client_id') && $request->client_id) {
             $query->where('client_id', $request->client_id);
+        }
+        if ($request->filled('representant_id')) {
+            $query->where('representant_id', $request->integer('representant_id'));
         }
 
         if ($request->has('search') && $request->search) {
@@ -72,10 +76,13 @@ class DevisController extends Controller
             'lignes.*.unite' => 'nullable|string|max:20',
             ...DevisesVente::regles(),
             ...ClientsDePassage::regles(),
+            ...EntetesVente::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
-        // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise.
-        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, Client::find($validated['client_id']));
+        // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
+        $client = Client::find($validated['client_id']);
+        $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client)
+            + app(EntetesVente::class)->pourCreation($validated, $client);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('devis', $tenantId);
@@ -118,7 +125,7 @@ class DevisController extends Controller
 
     public function show(Devis $devis): JsonResponse
     {
-        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero']);
+        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom']);
 
         return response()->json($devis);
     }
@@ -141,16 +148,18 @@ class DevisController extends Controller
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
+            ...EntetesVente::regles($devis),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
 
         DB::transaction(function () use ($validated, $devis) {
-            $devis->update(app(ClientsDePassage::class)->pourModification($validated, $devis, Client::find($validated['client_id'])) + [
-                'client_id' => $validated['client_id'],
-                'date_devis' => $validated['date_devis'],
-                'date_validite' => $validated['date_validite'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
+            $devis->update(app(ClientsDePassage::class)->pourModification($validated, $devis, Client::find($validated['client_id']))
+                + app(EntetesVente::class)->pourModification($validated) + [
+                    'client_id' => $validated['client_id'],
+                    'date_devis' => $validated['date_devis'],
+                    'date_validite' => $validated['date_validite'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
 
             $existingIds = collect($validated['lignes'])->pluck('id')->filter()->toArray();
             $devis->lignes()->whereNotIn('id', $existingIds)->delete();
@@ -270,7 +279,7 @@ class DevisController extends Controller
             // Même séquence que la création normale de commande (cohérence + verrou).
             $numero = Configuration::consommerNumero('commande', $tenantId);
 
-            $commande = ComClientEntete::create(app(ClientsDePassage::class)->copier($devis) + [
+            $commande = ComClientEntete::create(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + [
                 'numero' => $numero,
                 'client_id' => $devis->client_id,
                 // La commande reste dans la devise du devis, à son taux.
@@ -364,7 +373,7 @@ class DevisController extends Controller
                 return null;
             }
             $devis->load('lignes');
-            $facture = $factures->creer(app(ClientsDePassage::class)->copier($devis) + [
+            $facture = $factures->creer(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + [
                 'client_id' => $devis->client_id,
                 'date_facture' => now()->toDateString(),
                 // La facture reste dans la devise du devis, à son taux : les montants acceptés ne changent pas.
@@ -406,7 +415,7 @@ class DevisController extends Controller
         $copie = DB::transaction(function () use ($devis, $request, $devise) {
             $duree = $devis->date_devis && $devis->date_validite ? (int) $devis->date_devis->diffInDays($devis->date_validite) : 30;
             $aujourdhui = now()->startOfDay();
-            $copie = Devis::create($devise + app(ClientsDePassage::class)->copier($devis) + [
+            $copie = Devis::create($devise + app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + [
                 'tenant_id' => $devis->tenant_id,
                 'numero' => Configuration::consommerNumero('devis', $devis->tenant_id),
                 'client_id' => $devis->client_id,

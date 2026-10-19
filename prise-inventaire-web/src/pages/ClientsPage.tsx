@@ -18,6 +18,8 @@ import FiltresMemorises from '@/components/FiltresMemorises';
 import { texteFiltre } from '@/services/filtresMemorises';
 import { PastilleClientDePassage } from '@/components/ClientDePassage';
 import { signaler } from '@/lib/erreurs';
+import ChoixRepresentant from '@/components/ChoixRepresentant';
+import { useRepresentants } from '@/hooks/useRepresentants';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 import { getFrais, type Frais } from '@/services/frais';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -67,6 +69,9 @@ export default function ClientsPage() {
     sequence_livraison: '',
     actif: true,
   });
+  // Représentant commercial du client, repris par ses documents de vente (phase 1.11a).
+  const representants = useRepresentants();
+  const [representantId, setRepresentantId] = useState<number | null>(null);
   // Conditions de paiement et devises du référentiel, frais de livraison.
   const [fraisLivraison, setFraisLivraison] = useState<Frais[]>([]);
   // Routes de livraison (référentiel des itinéraires).
@@ -127,6 +132,7 @@ export default function ClientsPage() {
         frais_livraison_id: formData.frais_livraison_id ? Number(formData.frais_livraison_id) : null,
         itineraire_id: formData.itineraire_id ? Number(formData.itineraire_id) : null,
         sequence_livraison: formData.sequence_livraison === '' ? null : Number(formData.sequence_livraison),
+        representant_id: representantId,
       };
 
       if (editingClient) {
@@ -164,6 +170,7 @@ export default function ClientsPage() {
       sequence_livraison: client.sequence_livraison != null ? String(client.sequence_livraison) : '',
       actif: client.actif !== false,
     });
+    setRepresentantId(client.representant_id ?? null);
     setShowModal(true);
   };
 
@@ -199,6 +206,7 @@ export default function ClientsPage() {
       sequence_livraison: '',
       actif: true,
     });
+    setRepresentantId(null);
   };
 
   return (
@@ -529,6 +537,11 @@ export default function ClientsPage() {
                     onChange={(e) => setFormData({ ...formData, sequence_livraison: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   <span className="text-xs text-gray-500">{t.sequences.sequenceHelp}</span>
+                </div>
+                <div>
+                  <label htmlFor="client-representant" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.salesReps.label}</label>
+                  <ChoixRepresentant id="client-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
+                  <span className="text-xs text-gray-500">{t.salesReps.clientHint}</span>
                 </div>
               </div>
               {editingClient && (

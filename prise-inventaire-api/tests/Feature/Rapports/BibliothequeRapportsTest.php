@@ -104,7 +104,7 @@ class BibliothequeRapportsTest extends TestCase
         $this->assertSame(['ventes', 'clients', 'achats', 'inventaire', 'finance'], $categories->keys()->all());
         // Les catégories de produits, pour les rapports filtrés par catégorie.
         $this->assertSame(['Boissons', 'Épicerie'], $catalogue['categories_produits']);
-        $this->assertSame(12, $categories->sum(fn ($c) => count($c['rapports'])));
+        $this->assertSame(13, $categories->sum(fn ($c) => count($c['rapports'])));
         $periode = collect($categories['ventes']['rapports'])->firstWhere('code', 'ventes-par-periode');
         $this->assertSame(['Ventes par période', ['du', 'au', 'regroupement'], '2026-10-01'], [$periode['titre'], array_column($periode['parametres'], 'cle'), $periode['parametres'][0]['defaut']]);
         $this->assertSame('Sales by period', collect($this->getJson('/api/rapports/bibliotheque?langue=en')->json('categories.0.rapports'))->firstWhere('code', 'ventes-par-periode')['titre']);

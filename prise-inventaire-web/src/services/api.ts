@@ -1123,7 +1123,7 @@ export async function createReception(data: {
 // ============================================
 
 // Types
-export interface Client {
+export interface Client extends EnteteCommerciale {
   id: number;
   code: string;
   raison_sociale: string;
@@ -1164,6 +1164,12 @@ export interface CoordonneesPassage {
   passage_adresse?: string | null;
 }
 
+/** Représentant commercial d'un client, d'un devis, d'une commande ou d'une facture (phase 1.11a). */
+export interface EnteteCommerciale {
+  representant_id?: number | null;
+  representant?: { id: number; nom: string } | null;
+}
+
 export interface ConditionPaiement {
   id: number;
   client_id: number;
@@ -1181,7 +1187,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete extends CoordonneesPassage {
+export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale {
   recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
@@ -1217,7 +1223,9 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture extends CoordonneesPassage {
+export interface Facture extends CoordonneesPassage, EnteteCommerciale {
+  /** Taux de commission du représentant, figé à la création de la facture (%). */
+  taux_commission?: number | string | null;
   recapitulatif_taxes?: RecapitulatifTaxe[];
   id: number;
   numero: string;
@@ -1374,8 +1382,9 @@ export interface ZonePreparation {
 }
 
 // Clients API
-export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean; page?: number }): Promise<PageResultats<Client>> {
+export async function getClients(params?: { search?: string; actif?: boolean; categorie_id?: number; favoris?: boolean; representant_id?: number; page?: number }): Promise<PageResultats<Client>> {
   const queryParams = new URLSearchParams();
+  if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
   if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
@@ -1580,8 +1589,9 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; page?: number }): Promise<PageResultats<ComClientEntete>> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
+  if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
@@ -1600,6 +1610,7 @@ export async function createCommandeClient(data: {
   remise_globale?: number;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
+  representant_id?: number | null;
 } & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -1625,8 +1636,9 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
+export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
+  if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.statuts) queryParams.append('statuts', params.statuts);
   if (params?.recherche) queryParams.append('recherche', params.recherche);
@@ -1693,6 +1705,7 @@ export async function createFacture(data: {
   date_echeance?: string;
   notes?: string;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
+  representant_id?: number | null;
 } & CoordonneesPassage): Promise<Facture> {
   return fetchApi('/factures', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2515,7 +2528,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord extends CoordonneesPassage {
+export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale {
   id: number;
   numero: string;
   client_id: number;
@@ -2546,8 +2559,9 @@ export interface DevisRecord extends CoordonneesPassage {
   derniere_relance_le?: string | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string; page?: number }): Promise<PageResultats<DevisRecord>> {
+export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
+  if (params?.representant_id) qs.append('representant_id', String(params.representant_id));
   if (params?.statut) qs.append('statut', params.statut);
   if (params?.search) qs.append('search', params.search);
   if (params?.page) qs.append('page', String(params.page));
@@ -2562,6 +2576,7 @@ export async function createDevis(data: {
   devise?: string;
   taux_change?: number;
   lignes: { produit_id: number; quantite: number; prix_unitaire: number }[];
+  representant_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2572,6 +2587,7 @@ export async function updateDevis(id: number, data: {
   date_validite: string;
   notes?: string;
   lignes: { id?: number; produit_id: number; quantite: number; prix_unitaire: number }[];
+  representant_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

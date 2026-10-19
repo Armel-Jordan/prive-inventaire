@@ -2,11 +2,12 @@ import type { ParametreRapport } from '@/services/bibliothequeRapports';
 
 const classeChamp = 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm';
 
-/** Listes de choix des paramètres : clients, fournisseurs, catégories de produits. */
+/** Listes de choix des paramètres : clients, fournisseurs, catégories de produits, représentants. */
 export interface ListesParametres {
   clients: { id: number; nom: string }[];
   fournisseurs: { id: number; nom: string }[];
   categories: string[];
+  representants: { id: number; nom: string }[];
 }
 
 /**
@@ -36,7 +37,8 @@ export default function ChampParametre({ id, parametre, valeur, onChange, listes
     default: {
       const options = parametre.type === 'client' ? listes.clients.map(c => ({ valeur: String(c.id), libelle: c.nom }))
         : parametre.type === 'fournisseur' ? listes.fournisseurs.map(f => ({ valeur: String(f.id), libelle: f.nom }))
-          : listes.categories.map(c => ({ valeur: c, libelle: c }));
+          : parametre.type === 'representant' ? listes.representants.map(r => ({ valeur: String(r.id), libelle: r.nom }))
+            : listes.categories.map(c => ({ valeur: c, libelle: c }));
       return (
         <select id={id} value={valeur} onChange={e => onChange(e.target.value)} className={classeChamp}>
           <option value="">{sansFiltre}</option>

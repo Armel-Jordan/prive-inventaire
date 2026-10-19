@@ -12,6 +12,7 @@ use App\Models\Lot;
 use App\Models\MouvementVente;
 use App\Models\NumeroSerie;
 use App\Services\ClientsDePassage;
+use App\Services\EntetesVente;
 use App\Services\LotsSeries;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -270,7 +271,10 @@ class BonLivraisonController extends Controller
             $numeroFacture = Facture::generateNumero();
         }
 
-        $nouvelleFacture = Facture::create(app(ClientsDePassage::class)->copier($factureOrigine) + [
+        // Le reste à facturer garde le représentant de la facture d'origine et son taux de commission.
+        $entete = app(EntetesVente::class)->copier($factureOrigine);
+        $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id'], $factureOrigine);
+        $nouvelleFacture = Facture::create(app(ClientsDePassage::class)->copier($factureOrigine) + $entete + [
             'numero' => $numeroFacture,
             'commande_id' => $factureOrigine->commande_id,
             'client_id' => $factureOrigine->client_id,

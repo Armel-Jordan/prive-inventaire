@@ -30,6 +30,7 @@ La période va par défaut du premier jour du mois à aujourd'hui ; une période
 | Ventes | Ventes par client (payé, reste à payer) | période, nombre de clients (50) | Factures |
 | Ventes | Ventes par produit (quantités en unités de stock) | période, catégorie de produits, nombre de produits (100) | Factures |
 | Ventes | Ventes par catégorie | période | Factures |
+| Ventes | Ventes par représentant (notes de crédit déduites, commission au taux figé sur chaque facture ; phase 1.11a) | période, représentant | Factures |
 | Ventes | Devis et transformation (part des acceptés parmi les devis sortis) | période | Devis |
 | Ventes | Commandes client en cours (âge, date souhaitée) | client | Commandes client |
 | Clients | Clients sans achat récent | jours sans facture (90) | Clients |

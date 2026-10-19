@@ -17,6 +17,7 @@ use App\Services\CartesCadeaux;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
+use App\Services\EntetesVente;
 use App\Services\FacturesVente;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
@@ -41,7 +42,7 @@ class FactureController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
-        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut'])->where('tenant_id', $tenantId);
+        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -58,6 +59,9 @@ class FactureController extends Controller
         }
         if ($request->has('client_id')) {
             $query->where('client_id', $request->client_id);
+        }
+        if ($request->filled('representant_id')) {
+            $query->where('representant_id', $request->integer('representant_id'));
         }
         if ($request->has('date_debut')) {
             $query->whereDate('date_facture', '>=', $request->date_debut);
@@ -78,6 +82,7 @@ class FactureController extends Controller
         // retours de sa marchandise.
         $facture = Facture::with([
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison', 'conditionPaiement:id,code,libelle,delai_jours,fin_de_mois,escompte_pourcentage,escompte_jours',
+            'representant:id,nom',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
@@ -111,6 +116,8 @@ class FactureController extends Controller
             // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
+            // Représentant : par défaut, celui du client.
+            ...EntetesVente::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
 
@@ -143,10 +150,13 @@ class FactureController extends Controller
             return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $condition = $this->conditions->pourFacture(null, $commande->client);
-        $facture = DB::transaction(function () use ($commande, $tenantId, $condition) {
+        // Représentant de la commande, avec son taux de commission du jour.
+        $entete = app(EntetesVente::class)->copier($commande);
+        $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id']);
+        $facture = DB::transaction(function () use ($commande, $tenantId, $condition, $entete) {
             $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
 
-            $facture = Facture::create(app(ClientsDePassage::class)->copier($commande) + [
+            $facture = Facture::create(app(ClientsDePassage::class)->copier($commande) + $entete + [
                 'tenant_id' => $tenantId,
                 'numero' => $numeroFacture,
                 'commande_id' => $commande->id,

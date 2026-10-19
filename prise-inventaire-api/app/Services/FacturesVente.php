@@ -35,6 +35,9 @@ class FacturesVente
         $devise = $this->devises->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, $client);
         // Coordonnées du client de passage (pour lui seulement).
         $passage = app(ClientsDePassage::class)->coordonnees($donnees, $client);
+        // Représentant : celui demandé (ou du document d'origine), sinon celui du client ; son taux de commission est figé.
+        $entete = app(EntetesVente::class)->pourCreation($donnees, $client);
+        $passage += $entete + ['taux_commission' => app(EntetesVente::class)->commission($entete['representant_id'])];
 
         return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise, $passage) {
             $numero = Configuration::consommerNumero('facture', $tenantId);

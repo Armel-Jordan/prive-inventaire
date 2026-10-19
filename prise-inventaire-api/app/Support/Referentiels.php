@@ -5,12 +5,16 @@ namespace App\Support;
 use App\Models\Caisse;
 use App\Models\CaisseSession;
 use App\Models\Categorie;
+use App\Models\Client;
+use App\Models\ComClientEntete;
 use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
+use App\Models\Devis;
 use App\Models\Devise;
 use App\Models\DeviseTaux;
 use App\Models\Entrepot;
 use App\Models\Fabricant;
+use App\Models\Facture;
 use App\Models\Itineraire;
 use App\Models\ModePaiement;
 use App\Models\Raison;
@@ -278,6 +282,12 @@ final class Referentiels
                 ],
                 'ordre' => ['nom', 'asc'],
                 'avec' => ['territoire:id,code,nom'],
+                // Rattaché à un client ou à un document de vente : il garde l'attribution des ventes et des commissions.
+                'suppression' => fn (Model $representant) => Client::where('representant_id', $representant->getKey())->exists()
+                    || Devis::where('representant_id', $representant->getKey())->exists()
+                    || ComClientEntete::where('representant_id', $representant->getKey())->exists()
+                    || Facture::where('representant_id', $representant->getKey())->exists()
+                    ? __('Ce représentant est rattaché à des clients ou à des documents de vente : désactivez-le plutôt.') : null,
             ],
 
             'transporteurs' => [

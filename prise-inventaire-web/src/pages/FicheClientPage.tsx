@@ -143,6 +143,7 @@ export default function FicheClientPage() {
           <div className="space-y-1 text-gray-800 dark:text-gray-200">
             <dd>{tf.creditLimit} : {client.encours_max != null ? formatMontant(Number(client.encours_max), devise, language) : '—'}</dd>
             <dd>{tf.globalDiscount} : {Number(client.taux_remise_global)} %</dd>
+            {client.representant && <dd>{t.salesReps.label} : {client.representant.nom}</dd>}
           </div>
         </dl>
         <p className="mt-3 text-xs text-gray-400">{tf.editHint}</p>
