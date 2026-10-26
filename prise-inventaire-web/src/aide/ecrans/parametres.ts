@@ -625,7 +625,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       astuces: [
         "Après une libération, les changements que l'autre compte n'avait pas encore enregistrés sont refusés : prévenez-le si possible.",
         "Sans intervention, un verrou tombe de lui-même trois minutes après que l'écran a cessé de répondre (navigateur fermé, réseau coupé).",
-        "Sont verrouillés : clients, fournisseurs, produits, devis, commandes client et commandes fournisseur.",
+        "Sont verrouillés : clients, fournisseurs, produits, devis, commandes client, commandes fournisseur et factures brouillons.",
         "« Libérer » demande la permission « Prendre la main sur une fiche en cours de modification ».",
       ],
       motsCles: ["verrous", "verrouillage", "fiche bloquée", "modification en cours", "libérer", "prendre la main"],
@@ -641,7 +641,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       astuces: [
         "After a release, the changes the other account had not saved yet are refused: warn them if you can.",
         "Without any action, a lock drops by itself three minutes after the screen stopped answering (browser closed, network down).",
-        "Locked records: customers, suppliers, products, quotes, customer orders and purchase orders.",
+        "Locked records: customers, suppliers, products, quotes, customer orders, purchase orders and draft invoices.",
         "“Release” needs the “Take over a record being edited” permission.",
       ],
       motsCles: ["locks", "locking", "locked record", "being edited", "release", "take over"],

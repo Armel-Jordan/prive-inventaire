@@ -2234,7 +2234,7 @@ export const translations = {
       release: 'Libérer',
       confirmRelease: "Libérer « {fiche} » ? Les changements que {nom} n'a pas encore enregistrés seront refusés.",
       releasedOk: 'Fiche « {fiche} » libérée.',
-      types: { client: 'Client', fournisseur: 'Fournisseur', produit: 'Produit', devis: 'Devis', commande_client: 'Commande client', commande_fournisseur: 'Commande fournisseur' } as Record<string, string>,
+      types: { client: 'Client', fournisseur: 'Fournisseur', produit: 'Produit', devis: 'Devis', commande_client: 'Commande client', commande_fournisseur: 'Commande fournisseur', facture: 'Facture' } as Record<string, string>,
       loadError: "La liste n'a pas pu être chargée.",
       releaseError: "La fiche n'a pas pu être libérée.",
     },
@@ -3378,6 +3378,13 @@ export const translations = {
     },
     // Prix et remises
     // Représentants commerciaux sur les clients et les documents de vente (phase 1.11a).
+    invoiceEdit: {
+      edit: 'Modifier le brouillon',
+      title: 'Modifier la facture brouillon',
+      save: 'Enregistrer',
+      loadError: 'Impossible de charger la facture',
+      saveError: "Erreur lors de l'enregistrement de la facture",
+    },
     invoiceDelivery: {
       create: 'Créer le bon de livraison',
       remainder: 'Livrer le reste',
@@ -6934,7 +6941,7 @@ export const translations = {
       release: 'Release',
       confirmRelease: 'Release “{fiche}”? The changes {nom} has not saved yet will be refused.',
       releasedOk: 'Record “{fiche}” released.',
-      types: { client: 'Customer', fournisseur: 'Supplier', produit: 'Product', devis: 'Quote', commande_client: 'Customer order', commande_fournisseur: 'Purchase order' } as Record<string, string>,
+      types: { client: 'Customer', fournisseur: 'Supplier', produit: 'Product', devis: 'Quote', commande_client: 'Customer order', commande_fournisseur: 'Purchase order', facture: 'Invoice' } as Record<string, string>,
       loadError: 'The list could not be loaded.',
       releaseError: 'The record could not be released.',
     },
@@ -8078,6 +8085,13 @@ export const translations = {
     },
     // Prices and discounts
     // Sales reps on customers and sales documents (phase 1.11a).
+    invoiceEdit: {
+      edit: 'Edit the draft',
+      title: 'Edit the draft invoice',
+      save: 'Save',
+      loadError: 'Unable to load the invoice',
+      saveError: 'Error while saving the invoice',
+    },
     invoiceDelivery: {
       create: 'Create the delivery note',
       remainder: 'Deliver the rest',

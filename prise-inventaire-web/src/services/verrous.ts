@@ -5,7 +5,7 @@ import { ApiError, apiFetch } from '@/services/http';
  * verrou chaque minute et le lève à la fermeture ; un autre compte voit qui la modifie.
  */
 
-export type EntiteVerrouillable = 'client' | 'fournisseur' | 'produit' | 'devis' | 'commande_client' | 'commande_fournisseur';
+export type EntiteVerrouillable = 'client' | 'fournisseur' | 'produit' | 'devis' | 'commande_client' | 'commande_fournisseur' | 'facture';
 
 export interface InfoVerrou {
   entite: EntiteVerrouillable;

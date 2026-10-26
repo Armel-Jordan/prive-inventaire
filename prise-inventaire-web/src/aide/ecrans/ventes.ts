@@ -276,7 +276,8 @@ export const AIDES_VENTES: AidesEcrans = {
         "Au besoin : « Créditer » (note de crédit), « Retour de marchandise » ou « Créer bon de livraison ».",
       ],
       astuces: [
-        "Seul un brouillon s'émet ou se supprime. Une facture émise se corrige par une note de crédit (« Créditer »).",
+        "Seul un brouillon s'émet, se modifie (crayon) ou se supprime. Une facture émise se corrige par une note de crédit (« Créditer »).",
+        "Le crayon d'un brouillon rouvre le formulaire : changez client, dates, lignes ou représentant, puis « Enregistrer » ; les totaux se recalculent et le numéro reste le même. Une facture créée par un abonnement, un contrat, des reliquats ou une consignation se corrige à sa source.",
         "Sans date d'échéance saisie, elle se calcule selon la condition de paiement : celle choisie, sinon celle du client, sinon celle par défaut.",
         "Avec une condition de paiement à escompte, la case « Escompte » apparaît au premier paiement fait dans le délai ; ce paiement doit alors régler tout le reste.",
         "À l'émission, les acomptes réservés à la commande de la facture s'appliquent d'eux-mêmes.",
@@ -295,7 +296,8 @@ export const AIDES_VENTES: AidesEcrans = {
         "If needed: “Credit” (credit note), “Return goods” or “Créer bon de livraison” (delivery note).",
       ],
       astuces: [
-        "Only a draft can be issued or deleted. An issued invoice is corrected with a credit note (“Credit”).",
+        "Only a draft can be issued, edited (pencil) or deleted. An issued invoice is corrected with a credit note (“Credit”).",
+        "The pencil of a draft reopens the form: change the customer, dates, lines or sales rep, then “Save”; totals are recomputed and the number stays the same. An invoice created by a subscription, a contract, back orders or a consignment is corrected at its source.",
         "With no due date entered, it is computed from the payment terms: those chosen, otherwise the customer's, otherwise the default ones.",
         "With early-payment discount terms, an “Escompte” box appears on the first payment made in time; that payment must then settle the whole balance.",
         "When the invoice is issued, deposits reserved for its order are applied automatically.",

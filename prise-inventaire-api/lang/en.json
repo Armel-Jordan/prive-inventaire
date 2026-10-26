@@ -950,5 +950,12 @@
     "Écriture :numero supprimée.": "Entry :numero deleted.",
     "Écrivez votre question.": "Write your question.",
     "Élément supprimé.": "Item deleted.",
-    "Émettez d'abord la note de crédit.": "Issue the credit note first."
+    "Émettez d'abord la note de crédit.": "Issue the credit note first.",
+    "Seules les factures en brouillon peuvent être modifiées.": "Only draft invoices can be edited.",
+    "Cette facture vient :source : corrigez-la à sa source, ou supprimez-la et refaites-la.": "This invoice comes :source: correct it at its source, or delete it and create it again.",
+    "d'un abonnement": "from a subscription",
+    "d'un contrat de location": "from a rental contract",
+    "de reliquats clients": "from customer back orders",
+    "d'une consignation": "from a consignment",
+    "Le client d'une facture tirée d'une commande ne se change pas.": "The customer of an invoice drawn from an order cannot be changed."
 }

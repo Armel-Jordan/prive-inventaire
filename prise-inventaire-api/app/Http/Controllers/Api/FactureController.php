@@ -97,7 +97,49 @@ class FactureController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->regles());
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
+
+        $tenantId = $request->attributes->get('tenant')->id;
+        $config = Configuration::pourEntite('facture', $tenantId);
+        if (! $config || ! $config->auto_increment) {
+            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
+        }
+        // Condition de paiement, devise, taxes par ligne : voir App\Services\FacturesVente.
+        $facture = $this->factures->creer($validated, $tenantId);
+
+        return response()->json($facture->load(['client', 'lignes']), 201);
+    }
+
+    /**
+     * Modifie une facture brouillon : en-tête et lignes (toutes renvoyées, comme à la création), taxes et totaux
+     * recalculés. Une facture créée par un abonnement, un contrat de location, un reliquat ou une consignation se
+     * corrige à sa source : ses lignes y sont rattachées.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $facture = Facture::findOrFail($id);
+        if ($facture->statut !== 'brouillon') {
+            return response()->json(['message' => __('Seules les factures en brouillon peuvent être modifiées.')], 422);
+        }
+        $source = $this->sourceRattachee($facture);
+        if ($source !== null) {
+            return response()->json(['message' => __('Cette facture vient :source : corrigez-la à sa source, ou supprimez-la et refaites-la.', ['source' => $source])], 422);
+        }
+
+        $validated = $request->validate($this->regles($facture));
+        if ($facture->commande_id && (int) $validated['client_id'] !== (int) $facture->client_id) {
+            return response()->json(['message' => __("Le client d'une facture tirée d'une commande ne se change pas.")], 422);
+        }
+        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
+
+        return response()->json($this->factures->modifier($facture, $validated)->load(['client', 'lignes']));
+    }
+
+    /** Règles de saisie d'une facture (création ou modification d'un brouillon). */
+    private function regles(?Facture $facture = null): array
+    {
+        return [
             'client_id' => ['required', TenantRule::exists('clients')],
             'date_facture' => 'required|date',
             'date_echeance' => 'nullable|date',
@@ -116,20 +158,21 @@ class FactureController extends Controller
             // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
-            // Représentant : par défaut, celui du client.
-            ...EntetesVente::regles(),
-        ]);
-        $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
+            // Représentant : par défaut, celui du client ; celui de la facture reste accepté s'il a été retiré.
+            ...EntetesVente::regles($facture),
+        ];
+    }
 
-        $tenantId = $request->attributes->get('tenant')->id;
-        $config = Configuration::pourEntite('facture', $tenantId);
-        if (! $config || ! $config->auto_increment) {
-            return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
-        }
-        // Condition de paiement, devise, taxes par ligne : voir App\Services\FacturesVente.
-        $facture = $this->factures->creer($validated, $tenantId);
-
-        return response()->json($facture->load(['client', 'lignes']), 201);
+    /** Document à l'origine d'une facture brouillon dont les lignes y sont rattachées (texte du message), sinon null. */
+    private function sourceRattachee(Facture $facture): ?string
+    {
+        return match (true) {
+            DB::table('abonnement_echeances')->where('facture_id', $facture->id)->exists() => __("d'un abonnement"),
+            DB::table('contrat_location_lignes')->where('facture_id', $facture->id)->exists() => __("d'un contrat de location"),
+            DB::table('reliquats_clients')->where('facture_id', $facture->id)->exists() => __('de reliquats clients'),
+            DB::table('consignation_mouvements')->where('facture_id', $facture->id)->exists() => __("d'une consignation"),
+            default => null,
+        };
     }
 
     public function creerDepuisCommande(Request $request, int $commandeId): JsonResponse
