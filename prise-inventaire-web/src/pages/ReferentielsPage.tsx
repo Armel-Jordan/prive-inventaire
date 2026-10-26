@@ -10,6 +10,7 @@ import {
   type TypeReferentiel, type FicheReferentiel, type TauxDevise,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
+import { getFrais } from '@/services/frais';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { useToast } from '@/hooks/useToast';
@@ -18,13 +19,24 @@ import ConfirmModal from '@/components/ConfirmModal';
 
 type TypeChamp = 'texte' | 'nombre' | 'booleen' | 'liste' | 'zone' | 'reference' | 'couleur';
 
+/** Liste où choisir une référence : un autre référentiel, ou les frais de livraison (Paramètres → Frais additionnels). */
+type SourceReference = TypeReferentiel | 'frais_livraison';
+
+/** Fiches d'une source de références, sous la forme des fiches de référentiel (id, libellé). */
+async function chargerSource(source: SourceReference): Promise<FicheReferentiel[]> {
+  if (source === 'frais_livraison') {
+    return (await getFrais({ application: 'livraison' })).map(f => ({ id: f.id, libelle: f.libelle, actif: f.actif }));
+  }
+  return getReferentiel(source);
+}
+
 interface Champ {
   cle: string;
   type: TypeChamp;
   requis?: boolean;
   colonne?: boolean;       // affiché dans le tableau
   options?: string[];      // valeurs d'une liste
-  reference?: TypeReferentiel;
+  reference?: SourceReference;
   majuscules?: boolean;
   longueurMax?: number;
   min?: number;
@@ -164,6 +176,9 @@ const ONGLETS: Onglet[] = [
       { cle: 'url_suivi', type: 'texte', longueurMax: 255 },
       { cle: 'numero_compte', type: 'texte', longueurMax: 50 },
       { cle: 'notes', type: 'zone' },
+      // Livraison facturée (colonne de fripv2) et frais de transport d'achat (phase 1.11b).
+      { cle: 'frais_livraison_applicable', type: 'booleen', colonne: true, defaut: true },
+      { cle: 'frais_livraison_achat_id', type: 'reference', reference: 'frais_livraison' },
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },
@@ -268,7 +283,7 @@ export default function ReferentielsPage() {
   const [typeActif, setTypeActif] = useState<TypeReferentiel>('unites');
   const onglet = ONGLETS.find(o => o.type === typeActif) ?? ONGLETS[0];
   const [fiches, setFiches] = useState<FicheReferentiel[]>([]);
-  const [references, setReferences] = useState<Partial<Record<TypeReferentiel, FicheReferentiel[]>>>({});
+  const [references, setReferences] = useState<Partial<Record<SourceReference, FicheReferentiel[]>>>({});
   const [chargement, setChargement] = useState(true);
   const [recherche, setRecherche] = useState('');
   const [edition, setEdition] = useState<{ fiche: FicheReferentiel | null; valeurs: Valeurs } | null>(null);
@@ -290,7 +305,7 @@ export default function ReferentielsPage() {
     setChargement(true);
     try {
       const autres = [...new Set(onglet.champs.flatMap(c => (c.reference && c.reference !== onglet.type ? [c.reference] : [])))];
-      const [liste, ...listesAutres] = await Promise.all([getReferentiel(onglet.type), ...autres.map(r => getReferentiel(r))]);
+      const [liste, ...listesAutres] = await Promise.all([getReferentiel(onglet.type), ...autres.map(r => chargerSource(r))]);
       setFiches(liste);
       setReferences({ [onglet.type]: liste, ...Object.fromEntries(autres.map((r, i) => [r, listesAutres[i]])) });
     } catch {
@@ -447,7 +462,10 @@ export default function ReferentielsPage() {
       );
     }
 
-    const aides: Record<string, string> = { facteur: tr.conversionHint, taux: tr.rateHint, url_suivi: tr.trackingHint };
+    const aides: Record<string, string> = {
+      facteur: tr.conversionHint, taux: tr.rateHint, url_suivi: tr.trackingHint,
+      frais_livraison_applicable: tr.deliveryBilledHint, frais_livraison_achat_id: tr.purchaseFreightHint,
+    };
     const aide = aides[champ.cle];
     return (
       <div key={champ.cle}>

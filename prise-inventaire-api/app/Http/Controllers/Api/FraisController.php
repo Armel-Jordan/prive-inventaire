@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Frais;
+use App\Models\Transporteur;
 use App\Services\FraisDocuments;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -44,12 +45,13 @@ class FraisController extends Controller
         return response()->json($this->enregistrer($frais, $donnees));
     }
 
-    /** Suppression : les clients qui l'avaient comme frais de livraison n'en ont plus. */
+    /** Suppression : les clients qui l'avaient comme frais de livraison, et les transporteurs comme frais d'achat, n'en ont plus. */
     public function destroy(int $id): JsonResponse
     {
         $frais = Frais::findOrFail($id);
         DB::transaction(function () use ($frais) {
             Client::where('frais_livraison_id', $frais->id)->update(['frais_livraison_id' => null]);
+            Transporteur::where('frais_livraison_achat_id', $frais->id)->update(['frais_livraison_achat_id' => null]);
             $frais->delete();
         });
 
@@ -62,6 +64,8 @@ class FraisController extends Controller
         $donnees = $request->validate([
             'document' => ['required', Rule::in(array_keys(FraisDocuments::DOCUMENTS))],
             'client_id' => ['nullable', 'integer', TenantRule::exists('clients')],
+            // Transporteur du document : s'il ne facture pas la livraison, le frais de livraison n'est pas proposé.
+            'transporteur_id' => ['nullable', 'integer', TenantRule::exists('transporteurs')],
             'taux_change' => 'nullable|numeric|gt:0',
             'lignes' => 'present|array',
             'lignes.*.produit_id' => 'nullable|integer',
@@ -71,7 +75,9 @@ class FraisController extends Controller
         ]);
         $client = empty($donnees['client_id']) ? null : Client::find($donnees['client_id']);
 
-        return response()->json($this->frais->calculer($donnees['document'], $client, $donnees['lignes'], (float) ($donnees['taux_change'] ?? 1)));
+        $transporteur = empty($donnees['transporteur_id']) ? null : Transporteur::find($donnees['transporteur_id']);
+
+        return response()->json($this->frais->calculer($donnees['document'], $client, $donnees['lignes'], (float) ($donnees['taux_change'] ?? 1), $transporteur));
     }
 
     private function valider(Request $request): array
@@ -125,9 +131,10 @@ class FraisController extends Controller
             // Chaque ligne du pivot porte l'entreprise du frais (anomalie A14).
             $produits = $donnees['application'] === Frais::PRODUITS ? ($donnees['produits'] ?? []) : [];
             $frais->produits()->sync(collect($produits)->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $frais->tenant_id]])->all());
-            // Un frais qui n'est plus de livraison quitte les fiches clients.
+            // Un frais qui n'est plus de livraison quitte les fiches clients et celles des transporteurs.
             if ($donnees['application'] !== Frais::LIVRAISON) {
                 Client::where('frais_livraison_id', $frais->id)->update(['frais_livraison_id' => null]);
+                Transporteur::where('frais_livraison_achat_id', $frais->id)->update(['frais_livraison_achat_id' => null]);
             }
 
             return $frais->load(['produit:id,numero,description', 'produits:id,numero,description']);

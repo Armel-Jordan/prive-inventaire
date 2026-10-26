@@ -81,6 +81,8 @@ export async function supprimerFrais(id: number): Promise<void> {
 export async function calculerFrais(donnees: {
   document: DocumentFrais;
   client_id: number | null;
+  /** Transporteur du document : s'il ne facture pas la livraison, le frais de livraison n'est pas proposé. */
+  transporteur_id?: number | null;
   taux_change?: number;
   lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; remise_ligne?: number }[];
 }): Promise<FraisPropose[]> {

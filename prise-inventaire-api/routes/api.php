@@ -648,6 +648,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('factures-fournisseurs')->middleware('module:achats')->group(function () {
         Route::get('/', [FactureFournisseurController::class, 'index']);
         Route::get('/proposition', [FactureFournisseurController::class, 'proposition']);
+        // Frais de transport du transporteur du fournisseur (phase 1.11b).
+        Route::get('/frais-transport', [FactureFournisseurController::class, 'fraisTransport']);
         Route::post('/', [FactureFournisseurController::class, 'store']);
         Route::get('/{id}', [FactureFournisseurController::class, 'show'])->whereNumber('id');
         Route::put('/{id}', [FactureFournisseurController::class, 'update'])->whereNumber('id');

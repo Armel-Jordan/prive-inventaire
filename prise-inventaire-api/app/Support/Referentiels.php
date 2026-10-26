@@ -373,6 +373,9 @@ final class Referentiels
                     'numero_compte' => ['nullable', 'string', 'max:50'],
                     'notes' => ['nullable', 'string', 'max:2000'],
                     'actif' => ['boolean'],
+                    // « Livraison facturée » et frais de transport d'achat (un frais de livraison).
+                    'frais_livraison_applicable' => ['boolean'],
+                    'frais_livraison_achat_id' => ['nullable', 'integer', TenantRule::exists('frais')->where('application', 'livraison')->whereNull('deleted_at')],
                 ],
                 'ordre' => ['nom', 'asc'],
                 // Rattaché à un tiers ou à un document (phase 1.11b) : l'envoi garde son transporteur.

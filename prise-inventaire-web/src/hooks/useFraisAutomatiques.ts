@@ -16,12 +16,14 @@ export interface FraisAutomatiques {
 
 /**
  * Frais additionnels et de livraison proposés pendant la saisie d'un devis, d'une commande ou d'une facture : recalculés
- * par l'API quand le client ou les lignes changent. Les lignes de frais s'ajoutent à celles du document à
+ * par l'API quand le client, le transporteur ou les lignes changent. Les lignes de frais s'ajoutent à celles du document à
  * l'enregistrement ; l'utilisateur peut en retirer.
  */
-export function useFraisAutomatiques({ document, clientId, lignes, taux = 1, actif = true }: {
+export function useFraisAutomatiques({ document, clientId, transporteurId = null, lignes, taux = 1, actif = true }: {
   document: DocumentFrais;
   clientId: number | null;
+  /** Transporteur du document (phase 1.11b) : sans livraison facturée, pas de frais de livraison. */
+  transporteurId?: number | null;
   lignes: LigneDocument[];
   /** Valeur d'une unité de la devise du document dans celle de l'entreprise. */
   taux?: number;
@@ -29,17 +31,18 @@ export function useFraisAutomatiques({ document, clientId, lignes, taux = 1, act
 }): FraisAutomatiques {
   const [proposes, setProposes] = useState<FraisPropose[]>([]);
   const [retires, setRetires] = useState<number[]>([]);
-  // Clé stable : le calcul ne se relance que si le client, la devise ou les lignes changent vraiment.
-  const cle = JSON.stringify([document, clientId, taux, lignes.filter(l => l.produit_id).map(l => [l.produit_id, l.quantite, l.prix_unitaire_ht, l.remise_ligne ?? 0])]);
+  // Clé stable : le calcul ne se relance que si le client, le transporteur, la devise ou les lignes changent vraiment.
+  const cle = JSON.stringify([document, clientId, transporteurId, taux, lignes.filter(l => l.produit_id).map(l => [l.produit_id, l.quantite, l.prix_unitaire_ht, l.remise_ligne ?? 0])]);
 
   useEffect(() => {
-    const [doc, client, tauxDocument, saisies] = JSON.parse(cle) as [DocumentFrais, number | null, number, number[][]];
+    const [doc, client, transporteur, tauxDocument, saisies] = JSON.parse(cle) as [DocumentFrais, number | null, number | null, number, number[][]];
     if (!actif || saisies.length === 0) return;
     let vivant = true;
     const minuterie = setTimeout(() => {
       calculerFrais({
         document: doc,
         client_id: client,
+        transporteur_id: transporteur,
         taux_change: tauxDocument > 0 ? tauxDocument : 1,
         lignes: saisies.map(([produit_id, quantite, prix_unitaire_ht, remise_ligne]) => ({ produit_id, quantite, prix_unitaire_ht, remise_ligne })),
       }).then(r => { if (vivant) setProposes(r); }, () => { if (vivant) setProposes([]); });

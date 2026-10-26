@@ -241,8 +241,9 @@ devis.
 **Fait le 26/10** (FLOW-VENTES §2.8) : `transporteur_id` sur les clients, fournisseurs, devis, commandes, factures, bons
 de livraison et commandes fournisseur ; `numero_suivi` sur les commandes, factures, bons et colis ; report d'un document
 à l'autre (`EntetesVente`), défaut du fournisseur sur ses commandes, expédition du bon, filtres des listes, suppression
-refusée si utilisé, champs masqués sans transporteur actif. **Reste** : frais (case « Livraison facturée », frais
-d'achat, blocage du frais de vente), sorties (PDF, courriels, espace client) et option `transporteur_obligatoire`.
+refusée si utilisé, champs masqués sans transporteur actif. Puis les frais : case « Livraison facturée » (blocage du
+frais de livraison des ventes) et frais de transport d'achat proposé sur les factures fournisseurs. **Reste** : sorties
+(PDF, courriels, espace client) et option `transporteur_obligatoire`.
 
 
 Le référentiel `transporteurs` existe (code, nom, téléphone, courriel, lien de suivi avec `{numero}`, numéro de compte,

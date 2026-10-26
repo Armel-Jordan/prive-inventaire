@@ -120,6 +120,7 @@ export default function CommandesClientPage() {
   const frais = useFraisAutomatiques({
     document: 'commande',
     clientId: formData.client_id ? Number(formData.client_id) : null,
+    transporteurId,
     lignes,
     taux: formData.devise ? Number(formData.taux) || 1 : 1,
     actif: showModal,

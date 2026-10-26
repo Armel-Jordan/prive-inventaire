@@ -734,6 +734,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Filtrez la liste affichée avec « Rechercher… ».",
       ],
       astuces: [
+        "Transporteurs : « Livraison facturée » décochée, le frais de livraison du client n'est pas proposé sur ses documents expédiés par ce transporteur ; le « Frais de transport (achats) » est proposé sur les factures des fournisseurs qu'il livre.",
         "Décochez « Actif » plutôt que de supprimer : l'historique reste, et la suppression, définitive, est refusée pour un élément utilisé.",
         "Devises : le taux est la valeur d'une unité dans votre devise de référence ; chaque nouveau taux est gardé dans l'« Historique des taux ».",
         "Un seul élément « Par défaut » pour les conditions de paiement, les comptes bancaires et les entrepôts.",
@@ -750,6 +751,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Filter the list shown with “Search…”.",
       ],
       astuces: [
+        "Carriers: with “Delivery billed” unticked, the customer's delivery fee is not proposed on documents shipped by this carrier; the “Freight (purchases)” fee is proposed on the invoices of the suppliers it delivers.",
         "Untick “Active” rather than deleting: history is kept, and deletion, which is final, is refused for an item in use.",
         "Currencies: the rate is the value of one unit in your reference currency; each new rate is kept in the “Rate history”.",
         "Only one “Default” item for payment terms, bank accounts and warehouses.",

@@ -712,6 +712,7 @@ Plan de parité fripv2, phase 3.5 (« Compte à payer ») : la facture reçue d'
 - en-tête : fournisseur, numéro de la facture chez lui, date, condition de paiement, devise (celle de l'entreprise ou une autre, avec son taux), note ;
 - lignes : description, quantité, prix unitaire HT, taxe (taux de la ligne, sinon groupe de taxes par défaut, sinon taux de l'entreprise) ;
 - **depuis des réceptions** d'un même fournisseur, pas encore facturées : une ligne par ligne reçue, à la quantité reçue et au coût réel (sinon au prix commandé), dans la devise des commandes. Des réceptions dans des devises différentes se facturent séparément ;
+- **frais de transport** (phase 1.11b) : si le transporteur des commandes (sinon celui du fournisseur) a un « Frais de transport (achats) », une ligne « Frais de transport – {transporteur} » est proposée, au montant du frais (ou à son pourcentage de la marchandise), avec le produit du frais. De même pour une facture saisie à la main, dès le choix du fournisseur (`GET /factures-fournisseurs/frais-transport`). Rien sur une facture dans une autre devise que celle de l'entreprise, comme dans fripv2 ; la ligne se modifie ou se retire comme les autres ;
 - l'**échéance** se calcule d'après la condition de paiement choisie, sinon celle par défaut de l'entreprise (fin de mois comprise). Elle peut aussi se saisir ;
 - une même facture du fournisseur (même numéro) ne s'enregistre pas deux fois ;
 - numérotation « Factures fournisseurs » (`FF-00001`, Configuration → Numérotation).
@@ -737,7 +738,8 @@ Plan de parité fripv2, phase 3.5 (« Compte à payer ») : la facture reçue d'
 | Méthode | Route | Rôle |
 |---|---|---|
 | GET | `/factures-fournisseurs` | Liste (`recherche`, `fournisseur_id`, `etat` : impayee, partielle, payee, en_retard, annulee, a_payer ; `date_debut`, `date_fin`) avec le `resume` (à payer, en retard) |
-| GET | `/factures-fournisseurs/proposition?receptions[]=` | Facture proposée depuis des réceptions |
+| GET | `/factures-fournisseurs/proposition?receptions[]=` | Facture proposée depuis des réceptions (avec la ligne de frais de transport) |
+| GET | `/factures-fournisseurs/frais-transport?fournisseur_id=&devise=` | Ligne de frais de transport d'une facture saisie à la main (`ligne`, ou null) |
 | POST / PUT | `/factures-fournisseurs[/{id}]` | Enregistrer (la modification est refusée après un paiement) |
 | GET | `/factures-fournisseurs/{id}` | Détail : lignes avec `valeur_recue` et `ecart`, taxes, paiements, réceptions |
 | POST | `/factures-fournisseurs/{id}/aligner-couts` | Aligner le coût réel des réceptions sur la facture |
@@ -750,7 +752,7 @@ Code :
 
 Les écritures comptables des achats sont passées par la comptabilisation automatique (phase 4.3). Les paiements répartis sur plusieurs factures, avec escompte, sont les déboursés (§13).
 
-À venir : les frais d'achat de fripv2 (surcharges par produit ou par document).
+À venir : les autres frais d'achat de fripv2 (surcharges par produit ou par document, docs/reste-a-faire/02, option 16).
 
 ---
 

@@ -5,7 +5,7 @@ import { aujourdhui, dateSaisie, tauxPropose, useCodeDevise, useMontantDocument 
 import { messageErreur } from '@/lib/erreurs';
 import { getFournisseursActifs, getParametres, getReferentiel, type FicheReferentiel, type Fournisseur } from '@/services/api';
 import {
-  enregistrerFactureFournisseur, type FactureFournisseur, type PropositionFacture,
+  enregistrerFactureFournisseur, fraisTransport, type FactureFournisseur, type PropositionFacture,
 } from '@/services/facturesFournisseurs';
 
 /** Ligne en cours de saisie (nombres en texte, comme les champs). */
@@ -17,6 +17,8 @@ interface LigneSaisie {
   prix_unitaire: string;
   taux_tva: string;
   reception_ligne_id: number | null;
+  /** Frais de transport proposé d'après le transporteur du fournisseur : remplacé si le fournisseur change. */
+  transport?: boolean;
 }
 
 const classeChamp = 'w-full px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white';
@@ -60,6 +62,7 @@ export default function FenetreFactureFournisseur({ facture, proposition, onClos
     prix_unitaire: String(Number(l.prix_unitaire)),
     taux_tva: 'taux_tva' in l && l.taux_tva !== null && l.taux_tva !== undefined ? String(Number(l.taux_tva)) : '',
     reception_ligne_id: l.reception_ligne_id ?? null,
+    transport: 'frais_transport' in l && l.frais_transport === true,
   })));
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
@@ -77,6 +80,26 @@ export default function FenetreFactureFournisseur({ facture, proposition, onClos
     }, () => {});
     return () => { actif = false; };
   }, []);
+
+  // Facture saisie à la main : le frais de transport du transporteur du fournisseur choisi, proposé en ligne (phase 1.11b).
+  const manuelle = !facture && !proposition;
+  useEffect(() => {
+    if (!manuelle || !fournisseurId) return;
+    let actif = true;
+    fraisTransport(fournisseurId, devise).then(({ ligne }) => {
+      if (!actif) return;
+      setLignes(ls => [
+        ...ls.filter(l => !l.transport),
+        ...(ligne ? [{
+          cle: cle(), produit_id: ligne.produit_id, description: ligne.description, quantite: String(ligne.quantite),
+          prix_unitaire: String(ligne.prix_unitaire), taux_tva: tauxDefaut, reception_ligne_id: null, transport: true,
+        }] : []),
+      ]);
+    }, () => {});
+    return () => { actif = false; };
+    // Le taux par défaut arrive après coup : il complète la ligne sans relancer la demande.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manuelle, fournisseurId, devise]);
 
   const fournisseur = fournisseurs.find(f => f.id === fournisseurId);
   // Devises proposées : celle de l'entreprise, celle du fournisseur et celle de la facture.
