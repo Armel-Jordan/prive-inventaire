@@ -392,8 +392,9 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [TransfertPlanifieController::class, 'destroy']);
     });
 
-    // Tâches planifiées (traitements automatiques) : réglage, exécution manuelle, historique.
-    Route::prefix('taches-planifiees')->middleware('role:admin')->group(function () {
+    // Tâches planifiées (traitements automatiques) : réglage, exécution manuelle, historique ; module « taches_planifiees »
+    // (réservé aux administrateurs tant qu'aucun groupe n'en reçoit les droits).
+    Route::prefix('taches-planifiees')->group(function () {
         Route::get('/', [TachePlanifieController::class, 'index']);
         Route::get('/historique', [TachePlanifieController::class, 'historique']);
         Route::put('/{id}', [TachePlanifieController::class, 'update'])->whereNumber('id');

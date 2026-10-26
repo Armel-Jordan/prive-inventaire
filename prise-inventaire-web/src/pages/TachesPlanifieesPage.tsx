@@ -6,6 +6,7 @@ import {
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { fuseauValide, reglageDe as reglageTache, resumeTache } from '@/lib/taches';
 
 const RECURRENCES: RecurrenceTache[] = ['horaire', 'quotidienne', 'hebdomadaire', 'mensuelle', 'une_fois'];
@@ -15,6 +16,10 @@ const classeLibelle = 'block text-sm font-medium text-gray-700 dark:text-gray-30
 /** Traitements automatiques : activation, réglage de la fréquence, exécution manuelle, historique. */
 export default function TachesPlanifieesPage() {
   const { t, language } = useLanguage();
+  // Régler et lancer demandent leurs droits (module « Tâches planifiées ») ; l'historique se consulte avec la page.
+  const { peut } = usePermissions();
+  const peutRegler = peut('taches_planifiees', 'modifier');
+  const peutLancer = peut('taches_planifiees', 'executer');
   const ts = t.scheduledTasks;
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
 
@@ -160,10 +165,14 @@ export default function TachesPlanifieesPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => { setErreurEdition(''); setEdition({ tache, reglage: reglageDe(tache) }); }} title={ts.settings} aria-label={`${ts.settings} — ${nom(tache.code)}`}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Settings2 size={16} /></button>
-                    <button onClick={() => executer(tache)} disabled={enCours !== null} title={ts.runNow} aria-label={`${ts.runNow} — ${nom(tache.code)}`}
-                      className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-40"><Play size={16} className={enCours === tache.id ? 'animate-pulse' : ''} /></button>
+                    {peutRegler && (
+                      <button onClick={() => { setErreurEdition(''); setEdition({ tache, reglage: reglageDe(tache) }); }} title={ts.settings} aria-label={`${ts.settings} — ${nom(tache.code)}`}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Settings2 size={16} /></button>
+                    )}
+                    {peutLancer && (
+                      <button onClick={() => executer(tache)} disabled={enCours !== null} title={ts.runNow} aria-label={`${ts.runNow} — ${nom(tache.code)}`}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-40"><Play size={16} className={enCours === tache.id ? 'animate-pulse' : ''} /></button>
+                    )}
                     <button onClick={() => { setFiltre(tache.id); setPage(1); }} title={ts.history} aria-label={`${ts.history} — ${nom(tache.code)}`}
                       className="p-1 text-gray-600 hover:bg-gray-100 rounded"><History size={16} /></button>
                   </div>
