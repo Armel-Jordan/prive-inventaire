@@ -16,6 +16,7 @@ import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
 import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import {
   getCommandesFournisseur,
@@ -89,6 +90,8 @@ export default function CommandesFournisseurPage() {
   const transporteurRequis = useTransporteurRequis(transporteurs);
   const [formTransporteur, setFormTransporteur] = useState<number | null>(null);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  // Statut personnalisé (étiquette de repérage, phase 1.11c).
+  const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
   const [formDevise, setFormDevise] = useState('EUR');
   const [formTauxChange, setFormTauxChange] = useState(1);
@@ -106,7 +109,7 @@ export default function CommandesFournisseurPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const commandesRes = await getCommandesFournisseur({ search: recherche || undefined, statut: statutFilter || undefined, transporteur_id: filterTransporteur ?? undefined, page });
+      const commandesRes = await getCommandesFournisseur({ search: recherche || undefined, statut: statutFilter || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page });
       setCommandes(commandesRes.data || []);
       setPagination({ dernierePage: commandesRes.last_page ?? 1, total: commandesRes.total ?? 0 });
     } catch (error) {
@@ -114,7 +117,7 @@ export default function CommandesFournisseurPage() {
     } finally {
       setLoading(false);
     }
-  }, [recherche, statutFilter, filterTransporteur, page]);
+  }, [recherche, statutFilter, filterTransporteur, filterStatutPerso, page]);
 
   useEffect(() => {
     loadData();
@@ -373,6 +376,8 @@ export default function CommandesFournisseurPage() {
             <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
               libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-4 py-2 border rounded-lg" />
           )}
+          <FiltreStatutPersonnalise document="commande_fournisseur" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
+            className="px-4 py-2 border rounded-lg" />
           {/* Filtres mémorisés : recherche et statut. */}
           <FiltresMemorises ecran="commandes-fournisseur" valeurs={{ recherche: search, statut: statutFilter }}
             onAppliquer={v => { setSearch(texteFiltre(v.recherche)); setStatutFilter(texteFiltre(v.statut)); setPage(1); }} />
@@ -419,6 +424,7 @@ export default function CommandesFournisseurPage() {
                       <span className={`px-2 py-1 rounded text-xs font-medium ${statutLabels[commande.statut]?.color}`}>
                         {statutLabels[commande.statut]?.label}
                       </span>
+                      {commande.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={commande.statut_personnalise} /></span>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" />
@@ -750,6 +756,10 @@ export default function CommandesFournisseurPage() {
                 {/* Envoyer un brouillon par courriel le valide : l'écran se met à jour à la fermeture de la fenêtre. */}
                 <BoutonCourriel type="commande_fournisseur" documentId={selectedCommande.id} taille={16} className="ml-2 align-middle"
                   onFerme={() => { loadData(); openDetail(selectedCommande); }} />
+                <div className="mt-2">
+                  <ChoixStatutPersonnalise document="commande_fournisseur" documentId={selectedCommande.id} statut={selectedCommande.statut_personnalise} modifiable={peut('commandes_fournisseur', 'modifier')}
+                    onChange={statut => { setSelectedCommande(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
+                </div>
               </div>
               <button onClick={() => setShowDetailModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X size={20} />

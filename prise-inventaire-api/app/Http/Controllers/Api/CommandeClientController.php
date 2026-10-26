@@ -13,6 +13,7 @@ use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\EntetesVente;
+use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\TauxTaxe;
@@ -28,7 +29,7 @@ class CommandeClientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
+        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -41,6 +42,9 @@ class CommandeClientController extends Controller
         }
         if ($request->filled('transporteur_id')) {
             $query->where('transporteur_id', $request->integer('transporteur_id'));
+        }
+        if ($request->filled('statut_personnalise_id')) {
+            $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
@@ -62,7 +66,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi'])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', StatutsPersonnalises::COLONNES])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 

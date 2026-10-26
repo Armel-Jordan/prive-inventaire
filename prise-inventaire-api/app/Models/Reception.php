@@ -25,6 +25,8 @@ class Reception extends Model
     protected $fillable = [
         'tenant_id', 'numero', 'fournisseur_id', 'date_reception', 'bon_livraison', 'connaissement', 'notes', 'statut',
         'recue_par', 'annulee_le', 'annulee_par', 'motif_annulation', 'facture_fournisseur_id',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     protected $casts = [
@@ -35,6 +37,12 @@ class Reception extends Model
     public function fournisseur(): BelongsTo
     {
         return $this->belongsTo(Fournisseur::class)->withTrashed();
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     public function lignes(): HasMany

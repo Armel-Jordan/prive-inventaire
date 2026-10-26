@@ -125,6 +125,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Suivez vos commandes avec la recherche (numéro ou fournisseur) et le filtre de statut ; « Mes filtres » garde vos filtres habituels.",
       ],
       astuces: [
+        "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Le « Transporteur » est celui du fournisseur par défaut ; la liste se filtre par transporteur.",
         "Seul un brouillon se supprime. Une commande envoyée sans rien de reçu s'annule ; une commande reçue en partie se ferme avec « Clôturer le reste », et le manquant est noté abandonné.",
         "Envoyer un brouillon par courriel le valide. Le courriel est proposé aux contacts du fournisseur cochés « Reçoit les bons de commande », sinon à son email.",
@@ -143,6 +144,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Track your orders with the search box (number or supplier) and the status filter; “My filters” keeps your usual filters.",
       ],
       astuces: [
+        "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "The “Carrier” is the supplier's by default; the list can be filtered by carrier.",
         "Only a draft can be deleted. A sent order with nothing received can be cancelled; a partly received order is closed with “Clôturer le reste”, and the shortfall is recorded as abandoned.",
         "Emailing a draft confirms it. The email is offered to the supplier's contacts ticked “Receives purchase orders”, otherwise to its email address.",

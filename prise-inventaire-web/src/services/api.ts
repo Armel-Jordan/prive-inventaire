@@ -877,7 +877,7 @@ export interface ComFourLigne {
   commande?: ComFourEntete;
 }
 
-export interface ComFourEntete {
+export interface ComFourEntete extends AvecStatutPersonnalise {
   id: number;
   numero: string;
   fournisseur_id: number;
@@ -909,6 +909,7 @@ export async function getCommandesFournisseur(params?: {
   statut?: string;
   fournisseur_id?: number;
   transporteur_id?: number;
+  statut_personnalise_id?: number;
   search?: string;
   page?: number;
 }): Promise<PageResultats<ComFourEntete>> {
@@ -916,6 +917,7 @@ export async function getCommandesFournisseur(params?: {
   if (params?.statut) searchParams.append('statut', params.statut);
   if (params?.fournisseur_id) searchParams.append('fournisseur_id', params.fournisseur_id.toString());
   if (params?.transporteur_id) searchParams.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) searchParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.search) searchParams.append('search', params.search);
   if (params?.page) searchParams.append('page', String(params.page));
   return fetchApi(`/commandes-fournisseur?${searchParams}`);
@@ -1209,6 +1211,33 @@ export interface CoordonneesPassage {
 }
 
 /** Représentant commercial d'un client, d'un devis, d'une commande ou d'une facture (phase 1.11a). */
+/** Statut personnalisé posé sur un document (étiquette de repérage, phase 1.11c). */
+export interface StatutPersonnaliseDocument {
+  id: number;
+  libelle: string;
+  couleur: string | null;
+  couleur_texte: string | null;
+  actif: boolean;
+}
+
+export interface AvecStatutPersonnalise {
+  statut_personnalise_id?: number | null;
+  statut_personnalise?: StatutPersonnaliseDocument | null;
+}
+
+/** Types de document qui portent un statut personnalisé (ceux du référentiel). */
+export type DocumentStatut = 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'reception';
+
+const CHEMINS_STATUT: Record<DocumentStatut, string> = {
+  devis: 'devis', commande_client: 'commandes-client', facture: 'factures', bon_livraison: 'bons-livraison',
+  commande_fournisseur: 'commandes-fournisseur', reception: 'receptions/documents',
+};
+
+/** Pose (ou retire, avec null) le statut personnalisé d'un document, même clos. */
+export async function poserStatutPersonnalise(document: DocumentStatut, id: number, statutId: number | null): Promise<{ statut_personnalise_id: number | null; statut_personnalise: StatutPersonnaliseDocument | null }> {
+  return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/statut-personnalise`, { method: 'PUT', body: JSON.stringify({ statut_personnalise_id: statutId }) });
+}
+
 export interface EnteteCommerciale {
   representant_id?: number | null;
   representant?: { id: number; nom: string } | null;
@@ -1234,7 +1263,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale {
+export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
   /** Numéro de suivi de l'envoi (connaissement), repris par la facture puis le bon de livraison. */
   numero_suivi?: string | null;
   recapitulatif_taxes?: RecapitulatifTaxe[];
@@ -1272,7 +1301,7 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture extends CoordonneesPassage, EnteteCommerciale {
+export interface Facture extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
   /** Numéro de suivi de l'envoi (connaissement), repris par le bon de livraison. */
   numero_suivi?: string | null;
   /** Taux de commission du représentant, figé à la création de la facture (%). */
@@ -1347,7 +1376,7 @@ export interface FactureEcheance {
   ordre: number;
 }
 
-export interface BonLivraison {
+export interface BonLivraison extends AvecStatutPersonnalise {
   id: number;
   numero: string;
   facture_id: number;
@@ -1442,6 +1471,7 @@ export async function getClients(params?: { search?: string; actif?: boolean; ca
   const queryParams = new URLSearchParams();
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
   if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
@@ -1646,10 +1676,11 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.client_id) queryParams.append('client_id', String(params.client_id));
@@ -1696,10 +1727,11 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
+export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.statuts) queryParams.append('statuts', params.statuts);
   if (params?.recherche) queryParams.append('recherche', params.recherche);
@@ -1786,10 +1818,11 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
+export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; statut_personnalise_id?: number; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.recherche) queryParams.append('recherche', params.recherche);
   if (params?.page) queryParams.append('page', String(params.page));
   if (params?.per_page) queryParams.append('per_page', String(params.per_page));
@@ -2609,7 +2642,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale {
+export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
   id: number;
   numero: string;
   client_id: number;
@@ -2640,10 +2673,11 @@ export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale {
   derniere_relance_le?: string | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; page?: number }): Promise<PageResultats<DevisRecord>> {
+export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
   if (params?.representant_id) qs.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) qs.append('transporteur_id', String(params.transporteur_id));
+  if (params?.statut_personnalise_id) qs.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.statut) qs.append('statut', params.statut);
   if (params?.search) qs.append('search', params.search);
   if (params?.page) qs.append('page', String(params.page));

@@ -23,6 +23,8 @@ class ComClientEntete extends Model
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
         // Représentant commercial et transporteur (voir App\Services\EntetesVente), numéro de suivi de l'envoi.
         'representant_id', 'transporteur_id', 'numero_suivi',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     protected $casts = [
@@ -52,6 +54,12 @@ class ComClientEntete extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     /** Transporteur (même retiré du référentiel depuis). */

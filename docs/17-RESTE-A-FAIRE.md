@@ -282,7 +282,14 @@ ainsi que les options 15 et 16 pour les frais. En bref :
   - Masquer le transporteur en `retrait_client`.
   - Le BL créé depuis une facture (`POST /factures/{id}/creer-bl`) doit reprendre le transporteur.
 
-### 3.3 Statuts personnalisés (phase 1.11c) — ensuite
+### 3.3 Statuts personnalisés (phase 1.11c) — fait le 26/10
+
+**Fait** (FLOW-VENTES §2.9) : `couleur_texte`, `statut_personnalise_id` sur les devis, commandes, factures, bons de
+livraison, commandes fournisseur et réceptions ; `PUT /{documents}/{id}/statut-personnalise` (même clos, droit de
+modifier le document) ; filtre et pastille dans les listes ; choix dans le détail ; suppression refusée si posée.
+**Reste** : l'écran des réceptions (l'API est prête), la recopie de l'étiquette à la conversion (règle facultative), puis
+« Statuts des documents » (section 19, ci-dessous).
+
 
 Le référentiel `statuts_personnalises` existe (document, code, libellé, couleur, ordre, actif), **mais aucun document
 ne le porte**. Détail dans [01-gestion-configuration-usagers.md](./reste-a-faire/01-gestion-configuration-usagers.md),

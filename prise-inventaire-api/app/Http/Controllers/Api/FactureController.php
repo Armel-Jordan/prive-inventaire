@@ -19,6 +19,7 @@ use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
 use App\Services\EntetesVente;
 use App\Services\FacturesVente;
+use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
@@ -43,7 +44,7 @@ class FactureController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
-        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
+        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -67,6 +68,9 @@ class FactureController extends Controller
         if ($request->filled('transporteur_id')) {
             $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
+        if ($request->filled('statut_personnalise_id')) {
+            $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
+        }
         if ($request->has('date_debut')) {
             $query->whereDate('date_facture', '>=', $request->date_debut);
         }
@@ -88,6 +92,7 @@ class FactureController extends Controller
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison', 'conditionPaiement:id,code,libelle,delai_jours,fin_de_mois,escompte_pourcentage,escompte_jours',
             'representant:id,nom',
             'transporteur:id,nom,url_suivi',
+            StatutsPersonnalises::COLONNES,
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',

@@ -623,7 +623,7 @@ Listes de référence réutilisées par toute l'application, gérées dans **Par
 | Territoires | Zones commerciales ou de livraison | Un territoire utilisé par un itinéraire ou un représentant ne peut pas être supprimé |
 | Représentants | Représentants commerciaux : coordonnées, commission (%), territoire | Commission entre 0 et 100 % |
 | Raisons | Raisons normalisées par type : mouvement, ajustement, retour client, retour fournisseur, annulation, refus, autre | Code unique par type (le même code peut servir à deux types). Les raisons « Retour client » et « Retour fournisseur » qualifient les lignes des retours clients et fournisseurs, et deviennent obligatoires dès qu'il y en a une (FLOW-VENTES §5.12, FLOW-ACHATS §9) |
-| Statuts personnalisés | Statuts de suivi propres à l'entreprise, par type de document, avec couleur et ordre d'affichage | Code unique par type de document, couleur au format `#RRGGBB` |
+| Statuts personnalisés | Étiquettes de repérage des documents, par type de document (« autre » : tous), avec couleurs du fond et du texte et ordre d'affichage ; posées depuis le détail des documents (FLOW-VENTES §2.9) | Code unique par type de document, couleurs au format `#RRGGBB` ; suppression refusée si posée sur un document |
 
 Les motifs saisis aujourd'hui en texte libre (mouvements, refus de commande) ne changent pas : les écrans proposeront ces raisons au fil des fonctionnalités.
 

@@ -83,6 +83,7 @@ use App\Http\Controllers\Api\ReliquatClientController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\RetourClientController;
 use App\Http\Controllers\Api\RetourFournisseurController;
+use App\Http\Controllers\Api\StatutPersonnaliseDocumentController;
 use App\Http\Controllers\Api\SuggestionAchatController;
 use App\Http\Controllers\Api\TauxChangeController;
 use App\Http\Controllers\Api\TenantParametresController;
@@ -613,6 +614,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     // Commandes Fournisseurs
     // ============================================
     Route::prefix('commandes-fournisseur')->middleware('module:achats')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_fournisseur');
         Route::get('/', [CommandeFournisseurController::class, 'index']);
         Route::post('/', [CommandeFournisseurController::class, 'store']);
         // Prix proposés pour les lignes (dernier payé, sinon convenu) : avant « /{commande} », qui le prendrait pour un numéro.
@@ -630,6 +633,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     // Réceptions / Arrivages
     // ============================================
     Route::prefix('receptions')->middleware('module:achats')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/documents/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'reception');
         Route::get('/', [ReceptionController::class, 'index']);
         Route::get('/commandes-en-attente', [ReceptionController::class, 'commandesEnAttente']);
         Route::get('/commande/{commande}/lignes', [ReceptionController::class, 'lignesEnAttente']);
@@ -704,6 +709,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
 
     // Devis
     Route::prefix('devis')->middleware('module:ventes')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
         Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
@@ -767,6 +774,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
 
     // Commandes Clients
     Route::prefix('commandes-client')->middleware('module:ventes')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
@@ -780,6 +789,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
 
     // Factures
     Route::prefix('factures')->middleware('module:ventes')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);
@@ -984,6 +995,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
 
     // Bons de Livraison
     Route::prefix('bons-livraison')->middleware('module:ventes')->group(function () {
+        // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
+        Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'bonLivraison']);

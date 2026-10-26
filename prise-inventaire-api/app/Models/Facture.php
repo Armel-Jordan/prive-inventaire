@@ -26,6 +26,8 @@ class Facture extends Model
         'representant_id', 'taux_commission',
         // Transporteur (voir App\Services\EntetesVente) et numéro de suivi de l'envoi, repris par le bon de livraison.
         'transporteur_id', 'numero_suivi',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     protected $casts = [
@@ -64,6 +66,12 @@ class Facture extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     /** Transporteur (même retiré du référentiel depuis). */

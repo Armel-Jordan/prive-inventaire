@@ -17,6 +17,8 @@ class StatutPersonnalise extends Model
 
     protected $fillable = [
         'tenant_id', 'document', 'code', 'libelle', 'couleur', 'ordre', 'actif',
+        // Couleur du texte de l'étiquette (couleur : son fond), phase 1.11c.
+        'couleur_texte',
     ];
 
     protected $casts = [

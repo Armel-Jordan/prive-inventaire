@@ -10,6 +10,7 @@ use App\Models\MouvementVente;
 use App\Models\NumeroSerie;
 use App\Models\Transporteur;
 use App\Services\LotsSeries;
+use App\Services\StatutsPersonnalises;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ class BonLivraisonController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = BonLivraison::with(['facture.client', 'transporteur:id,nom'])->withCount('colis')->where('tenant_id', $tenantId);
+        $query = BonLivraison::with(['facture.client', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->withCount('colis')->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -29,6 +30,9 @@ class BonLivraisonController extends Controller
         }
         if ($request->filled('transporteur_id')) {
             $query->where('transporteur_id', $request->integer('transporteur_id'));
+        }
+        if ($request->filled('statut_personnalise_id')) {
+            $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
         // Numéro du bon ou de sa facture, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
@@ -50,7 +54,7 @@ class BonLivraisonController extends Controller
     public function show(int $id): JsonResponse
     {
         $bon = BonLivraison::with([
-            'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi',
+            'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi', StatutsPersonnalises::COLONNES,
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
         ])->findOrFail($id);
 

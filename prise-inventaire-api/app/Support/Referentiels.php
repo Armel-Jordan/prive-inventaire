@@ -41,6 +41,7 @@ use App\Models\Unite;
 use App\Models\UniteConversion;
 use App\Models\VirementLot;
 use App\Services\AbonnementsClients;
+use App\Services\StatutsPersonnalises;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
 
@@ -416,6 +417,7 @@ final class Referentiels
                     'code' => ['required', 'string', 'max:20'],
                     'libelle' => ['required', 'string', 'max:100'],
                     'couleur' => ['sometimes', 'regex:/^#[0-9a-fA-F]{6}$/'],
+                    'couleur_texte' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
                     'ordre' => ['sometimes', 'integer', 'min:0', 'max:999'],
                     'actif' => ['boolean'],
                 ],
@@ -424,6 +426,10 @@ final class Referentiels
                     ->where('code', $d['code'])
                     ->when($fiche, fn ($q) => $q->whereKeyNot($fiche->getKey()))
                     ->exists() ? ['code' => __('Ce code existe déjà pour ce type de document.')] : null,
+                // Posée sur un document (phase 1.11c) : on la désactive plutôt, le document la garde.
+                'suppression' => fn (Model $statut) => self::utilisee(array_map(fn (string $modele) => [$modele, 'statut_personnalise_id', $statut->getKey()],
+                    array_values(StatutsPersonnalises::DOCUMENTS)))
+                    ? __('Ce statut est posé sur des documents : désactivez-le plutôt.') : null,
             ],
         ];
     }

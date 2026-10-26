@@ -23,6 +23,8 @@ class BonLivraison extends Model
         'signataire_nom', 'signe_le',
         // Transporteur et numéro de suivi, repris de la facture (ne servent pas au retrait par le client).
         'transporteur_id', 'numero_suivi',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     protected $casts = [
@@ -40,6 +42,12 @@ class BonLivraison extends Model
     public function getASignatureAttribute(): bool
     {
         return filled($this->attributes['signature_client'] ?? null);
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     /** Transporteur (même retiré du référentiel depuis). */
