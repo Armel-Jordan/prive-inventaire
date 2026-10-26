@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Transporteurs : sur les fiches clients et fournisseurs, puis sur les devis, commandes, factures, bons de livraison et commandes fournisseur (repris d'un document à l'autre), avec le numéro de suivi et le lien « Suivre l'envoi ».",
+    en: 'Carriers: on customer and supplier records, then on quotes, orders, invoices, delivery notes and purchase orders (carried from one document to the next), with the tracking number and a “Track shipment” link.',
+    lien: '/bons-livraison',
+  },
+  {
+    date: '2026-10-26',
     fr: "Tâches planifiées : un administrateur peut en confier la consultation, le réglage ou le lancement à d'autres comptes (droits « Tâches planifiées »).",
     en: 'Scheduled tasks: an administrator can let other accounts view, adjust or run them (“Scheduled tasks” rights).',
     lien: '/taches-planifiees',

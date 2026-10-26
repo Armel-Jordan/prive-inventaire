@@ -15,6 +15,8 @@ import { texteFiltre } from '@/services/filtresMemorises';
 import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
 import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import {
   getCommandesFournisseur,
   getCommandeFournisseur,
@@ -82,6 +84,10 @@ export default function CommandesFournisseurPage() {
   // Multi-entrepôts : l'entrepôt où livrer (proposé : celui par défaut).
   const [formEntrepot, setFormEntrepot] = useState('');
   const [entrepots, setEntrepots] = useState<EntrepotChoix[]>([]);
+  // Transporteur (phase 1.11b) : celui du fournisseur par défaut ; champs masqués sans transporteur actif.
+  const transporteurs = useTransporteurs();
+  const [formTransporteur, setFormTransporteur] = useState<number | null>(null);
+  const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   const [formLignes, setFormLignes] = useState<LigneForm[]>([]);
   const [formDevise, setFormDevise] = useState('EUR');
   const [formTauxChange, setFormTauxChange] = useState(1);
@@ -99,7 +105,7 @@ export default function CommandesFournisseurPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const commandesRes = await getCommandesFournisseur({ search: recherche || undefined, statut: statutFilter || undefined, page });
+      const commandesRes = await getCommandesFournisseur({ search: recherche || undefined, statut: statutFilter || undefined, transporteur_id: filterTransporteur ?? undefined, page });
       setCommandes(commandesRes.data || []);
       setPagination({ dernierePage: commandesRes.last_page ?? 1, total: commandesRes.total ?? 0 });
     } catch (error) {
@@ -107,7 +113,7 @@ export default function CommandesFournisseurPage() {
     } finally {
       setLoading(false);
     }
-  }, [recherche, statutFilter, page]);
+  }, [recherche, statutFilter, filterTransporteur, page]);
 
   useEffect(() => {
     loadData();
@@ -160,6 +166,7 @@ export default function CommandesFournisseurPage() {
   async function handleFournisseurChange(id: number) {
     setFormFournisseur(id);
     const fournisseur = fournisseurs.find(f => f.id === id);
+    setFormTransporteur(fournisseur?.transporteur_id ?? null);
     const devise = fournisseur?.devise || deviseLocale;
     setFormDevise(devise);
     if (devise !== deviseLocale) {
@@ -183,6 +190,7 @@ export default function CommandesFournisseurPage() {
 
   function openCreate() {
     setFormFournisseur(0);
+    setFormTransporteur(null);
     setFormDateCommande(aujourdhui());
     setFormDateLivraison('');
     setFormNotes('');
@@ -268,6 +276,7 @@ export default function CommandesFournisseurPage() {
         devise: formDevise,
         taux_change: formTauxChange,
         entrepot_id: formEntrepot ? Number(formEntrepot) : null,
+        transporteur_id: formTransporteur,
         lignes: formLignes.map(l => ({ produit_id: l.produit_id, quantite_commandee: l.quantite_commandee, prix_unitaire: l.prix_unitaire })),
       });
       setShowModal(false);
@@ -359,6 +368,10 @@ export default function CommandesFournisseurPage() {
             <option value="complete">Complète</option>
             <option value="annulee">Annulée</option>
           </select>
+          {transporteursActifs(transporteurs) && (
+            <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
+              libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-4 py-2 border rounded-lg" />
+          )}
           {/* Filtres mémorisés : recherche et statut. */}
           <FiltresMemorises ecran="commandes-fournisseur" valeurs={{ recherche: search, statut: statutFilter }}
             onAppliquer={v => { setSearch(texteFiltre(v.recherche)); setStatutFilter(texteFiltre(v.statut)); setPage(1); }} />
@@ -577,6 +590,15 @@ export default function CommandesFournisseurPage() {
                 </div>
               )}
 
+              {(transporteursActifs(transporteurs) || formTransporteur !== null) && (
+                <div>
+                  <label htmlFor="commande-transporteur" className="block text-sm font-medium text-gray-700 mb-1">{t.carriers.label}</label>
+                  <ChoixTransporteur id="commande-transporteur" value={formTransporteur} onChange={setFormTransporteur} transporteurs={transporteurs}
+                    className="w-full px-3 py-2 border rounded-lg" />
+                  <p className="text-xs text-gray-500 mt-1">{t.carriers.purchaseHint}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
@@ -760,6 +782,9 @@ export default function CommandesFournisseurPage() {
                   </p>
                   {selectedCommande.entrepot && (
                     <p className="text-xs text-gray-500 mt-0.5">{t.warehouses.deliverTo} : {libelleEntrepot(selectedCommande.entrepot)}</p>
+                  )}
+                  {selectedCommande.transporteur && (
+                    <p className="text-xs text-gray-500 mt-0.5">{t.carriers.label} : {selectedCommande.transporteur.nom}</p>
                   )}
                 </div>
                 <div>

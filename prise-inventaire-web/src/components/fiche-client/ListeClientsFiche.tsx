@@ -7,6 +7,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import CategoriesClientsModal from './CategoriesClientsModal';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 
 /** Étoile favori + code menant à la fiche + catégorie, pour la cellule « Code » de la liste. */
 export function CelluleCodeClient({ client, onFavori }: { client: Client; onFavori: () => void }) {
@@ -44,6 +46,8 @@ export interface FiltresListeClients {
   favoris?: boolean;
   /** Clients d'un représentant (phase 1.11a). */
   representant_id?: number;
+  /** Clients d'un transporteur (phase 1.11b). */
+  transporteur_id?: number;
 }
 
 /** Filtres de la liste (catégorie, favoris) et accès à la gestion des catégories pour les administrateurs. */
@@ -55,6 +59,7 @@ export function FiltresClients({ valeur, onChange }: { valeur: FiltresListeClien
   const [categories, setCategories] = useState<CategorieClient[]>([]);
   const [gestion, setGestion] = useState(false);
   const representants = useRepresentants();
+  const transporteurs = useTransporteurs();
 
   useEffect(() => {
     getCategoriesClients().then(setCategories).catch(() => setCategories([]));
@@ -71,6 +76,10 @@ export function FiltresClients({ valeur, onChange }: { valeur: FiltresListeClien
       {representants.length > 0 && (
         <ChoixRepresentant value={valeur.representant_id ?? null} onChange={id => onChange({ ...valeur, representant_id: id ?? undefined })} representants={representants}
           libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+      )}
+      {transporteursActifs(transporteurs) && (
+        <ChoixTransporteur value={valeur.transporteur_id ?? null} onChange={id => onChange({ ...valeur, transporteur_id: id ?? undefined })} transporteurs={transporteurs}
+          libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
       )}
       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <input type="checkbox" checked={Boolean(valeur.favoris)} onChange={e => onChange({ ...valeur, favoris: e.target.checked || undefined })} />

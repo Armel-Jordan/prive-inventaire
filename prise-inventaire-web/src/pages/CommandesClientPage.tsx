@@ -14,6 +14,8 @@ import { useVerrou } from '@/hooks/useVerrou';
 import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { lienSuivi, transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -72,6 +74,11 @@ export default function CommandesClientPage() {
   const representants = useRepresentants();
   const [filterRepresentant, setFilterRepresentant] = useState<number | null>(null);
   const [representantId, setRepresentantId] = useState<number | null>(null);
+  // Transporteur (phase 1.11b) : celui du client par défaut ; champs masqués sans transporteur actif.
+  const transporteurs = useTransporteurs();
+  const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  const [numeroSuivi, setNumeroSuivi] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, reliquats, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -137,7 +144,7 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -150,7 +157,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, page]);
 
   useEffect(() => {
     loadData();
@@ -178,6 +185,8 @@ export default function CommandesClientPage() {
       // Retenues par l'API pour le client de passage seulement.
       ...passage,
       representant_id: representantId,
+      transporteur_id: transporteurId,
+      numero_suivi: numeroSuivi.trim() || null,
     };
     try {
       if (editingId) {
@@ -208,6 +217,8 @@ export default function CommandesClientPage() {
     });
     setPassage(saisiePassage(cmd));
     setRepresentantId(cmd.representant_id ?? null);
+    setTransporteurId(cmd.transporteur_id ?? null);
+    setNumeroSuivi(cmd.numero_suivi ?? '');
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -328,6 +339,8 @@ export default function CommandesClientPage() {
     });
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
+    setTransporteurId(null);
+    setNumeroSuivi('');
     setLignes([]);
   };
 
@@ -335,6 +348,7 @@ export default function CommandesClientPage() {
   const choisirClient = (id: string, liste: Client[] = clients) => {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
+    setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -406,6 +420,10 @@ export default function CommandesClientPage() {
           </select>
           <ChoixRepresentant value={filterRepresentant} onChange={id => { setFilterRepresentant(id); setPage(1); }} representants={representants}
             libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          {transporteursActifs(transporteurs) && (
+            <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
+              libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          )}
         </div>
       </div>
 
@@ -627,6 +645,21 @@ export default function CommandesClientPage() {
                 <ChoixRepresentant id="commande-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
                 <p className="text-xs text-gray-500 mt-1">{t.salesReps.documentHint}</p>
               </div>
+              {(transporteursActifs(transporteurs) || transporteurId !== null) && (
+                <div>
+                  <label htmlFor="commande-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}</label>
+                  <ChoixTransporteur id="commande-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
+                  <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
+                </div>
+              )}
+              {(transporteursActifs(transporteurs) || transporteurId !== null || numeroSuivi !== '') && (
+                <div>
+                  <label htmlFor="commande-suivi" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.tracking}</label>
+                  <input id="commande-suivi" type="text" maxLength={60} value={numeroSuivi} onChange={e => setNumeroSuivi(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  <p className="text-xs text-gray-500 mt-1">{t.carriers.trackingHint}</p>
+                </div>
+              )}
 
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -730,6 +763,19 @@ export default function CommandesClientPage() {
                   <span className="text-sm text-gray-500">Date livraison souhaitée:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_livraison_souhaitee)}</p>
                 </div>
+                {selectedCommande.transporteur && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.carriers.label} :</span>
+                    <p className="dark:text-white">
+                      {selectedCommande.transporteur.nom}
+                      {selectedCommande.numero_suivi && <span className="block text-xs text-gray-500">{t.carriers.tracking} : {selectedCommande.numero_suivi}</span>}
+                      {lienSuivi(selectedCommande.transporteur.url_suivi, selectedCommande.numero_suivi) && (
+                        <a href={lienSuivi(selectedCommande.transporteur.url_suivi, selectedCommande.numero_suivi) ?? undefined} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap">{t.carriers.track}</a>
+                      )}
+                    </p>
+                  </div>
+                )}
                 {selectedCommande.representant && (
                   <div>
                     <span className="text-sm text-gray-500">{t.salesReps.label} :</span>

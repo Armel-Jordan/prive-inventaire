@@ -14,7 +14,8 @@ class ColisLivraison extends Model
 
     protected $table = 'bl_colis';
 
-    protected $fillable = ['tenant_id', 'bon_livraison_id', 'numero', 'poids_kg', 'notes', 'prepare_par', 'charge_le', 'charge_par'];
+    // numero_suivi : numéro de suivi du colis chez le transporteur du bon.
+    protected $fillable = ['tenant_id', 'bon_livraison_id', 'numero', 'poids_kg', 'notes', 'prepare_par', 'charge_le', 'charge_par', 'numero_suivi'];
 
     protected $casts = [
         'poids_kg' => 'decimal:3',

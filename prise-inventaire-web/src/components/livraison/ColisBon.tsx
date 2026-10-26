@@ -21,7 +21,7 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
   const [donnees, setDonnees] = useState<ColisDuBon | null>(null);
   const [erreur, setErreur] = useState('');
   // Colis en cours de saisie : nouveau (id null) ou modifié.
-  const [saisie, setSaisie] = useState<{ id: number | null; quantites: Record<number, string>; poids: string; notes: string } | null>(null);
+  const [saisie, setSaisie] = useState<{ id: number | null; quantites: Record<number, string>; poids: string; notes: string; suivi: string } | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
   const charger = useCallback(() => {
@@ -34,12 +34,13 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
   const produit = (ligneId: number) => donnees?.lignes.find(l => l.id === ligneId)?.produit;
   const contenu = (colis: Colis) => colis.lignes.map(l => `${produit(l.bon_livraison_ligne_id)?.description ?? '?'} × ${l.quantite}`).join(', ');
 
-  const ouvrirNouveau = () => setSaisie({ id: null, quantites: {}, poids: '', notes: '' });
+  const ouvrirNouveau = () => setSaisie({ id: null, quantites: {}, poids: '', notes: '', suivi: '' });
   const ouvrirModification = (colis: Colis) => setSaisie({
     id: colis.id,
     quantites: Object.fromEntries(colis.lignes.map(l => [l.bon_livraison_ligne_id, String(l.quantite)])),
     poids: colis.poids_kg != null ? String(Number(colis.poids_kg)) : '',
     notes: colis.notes ?? '',
+    suivi: colis.numero_suivi ?? '',
   });
 
   // Quantité possible pour une ligne : le restant, plus ce que contient déjà le colis modifié.
@@ -58,6 +59,7 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
       lignes: donnees.lignes.map(l => ({ bon_livraison_ligne_id: l.id, quantite: Number(saisie.quantites[l.id] || 0) })),
       poids_kg: saisie.poids === '' ? null : Number(saisie.poids),
       notes: saisie.notes.trim() || null,
+      numero_suivi: saisie.suivi.trim() || null,
     };
     try {
       setDonnees(saisie.id ? await modifierColis(bonId, saisie.id, corps) : await creerColis(bonId, corps));
@@ -95,6 +97,7 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
           <div class="bon">${echapper(donnees.bon.numero)}</div>
           <div class="contenu">${echapper(contenu(c))}</div>
           ${c.poids_kg != null ? `<div class="contenu">${echapper(`${Number(c.poids_kg)} kg`)}</div>` : ''}
+          ${c.numero_suivi ? `<div class="contenu">${echapper(`${t.carriers.parcelTracking} : ${c.numero_suivi}`)}</div>` : ''}
         </div>
       </section>`).join('');
     fenetre.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${echapper(donnees.bon.numero)}</title><style>
@@ -127,7 +130,7 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
                   <div className="min-w-0">
                     <p className="font-mono text-sm font-medium dark:text-white">{c.numero}{c.charge_le && <span className="ml-2 text-xs text-green-700">{tc.loaded}</span>}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-300 break-words">{contenu(c)}</p>
-                    {(c.poids_kg != null || c.notes) && <p className="text-xs text-gray-500">{[c.poids_kg != null && `${Number(c.poids_kg)} kg`, c.notes].filter(Boolean).join(' — ')}</p>}
+                    {(c.poids_kg != null || c.notes || c.numero_suivi) && <p className="text-xs text-gray-500">{[c.poids_kg != null && `${Number(c.poids_kg)} kg`, c.notes, c.numero_suivi && `${t.carriers.parcelTracking} : ${c.numero_suivi}`].filter(Boolean).join(' — ')}</p>}
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <button type="button" onClick={() => imprimer([c])} className="p-1 text-gray-600 hover:bg-gray-100 rounded dark:text-gray-300" title={tc.printLabel} aria-label={`${tc.printLabel} — ${c.numero}`}><Printer size={16} /></button>
@@ -157,6 +160,8 @@ export default function ColisBon({ bonId, peutPreparer, onClose }: { bonId: numb
                 <div className="grid grid-cols-2 gap-2">
                   <input type="number" min={0} step="any" value={saisie.poids} onChange={e => setSaisie({ ...saisie, poids: e.target.value })} placeholder={tc.weight} aria-label={tc.weight} className={classeChamp} />
                   <input value={saisie.notes} onChange={e => setSaisie({ ...saisie, notes: e.target.value })} maxLength={500} placeholder={tc.notes} aria-label={tc.notes} className={classeChamp} />
+                  <input value={saisie.suivi} onChange={e => setSaisie({ ...saisie, suivi: e.target.value })} maxLength={60} placeholder={t.carriers.parcelTracking}
+                    aria-label={t.carriers.parcelTracking} className={`${classeChamp} col-span-2`} />
                 </div>
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setSaisie(null)} className="px-3 py-1.5 border rounded-lg text-sm dark:border-gray-600 dark:text-white">{tc.cancel}</button>

@@ -992,6 +992,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Lots et numéros de série à sortir à la livraison.
         Route::get('/{id}/exemplaires', [BonLivraisonController::class, 'exemplaires'])->whereNumber('id');
         Route::post('/{id}/annuler', [BonLivraisonController::class, 'annuler']);
+        // Transporteur et numéro de suivi (phase 1.11b).
+        Route::put('/{id}/expedition', [BonLivraisonController::class, 'expedition'])->whereNumber('id');
         // Colis du bon (préparation des boîtes) : liste, préparation, modification, suppression.
         Route::get('/{id}/colis', [ColisLivraisonController::class, 'index'])->whereNumber('id');
         Route::post('/{id}/colis', [ColisLivraisonController::class, 'store'])->whereNumber('id');

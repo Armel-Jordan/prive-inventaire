@@ -9,8 +9,8 @@ use App\Support\TenantRule;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * En-tête commercial des documents de vente (plan de parité fripv2, phase 1.11) : le représentant d'un devis, d'une
- * commande ou d'une facture.
+ * En-tête commercial des documents de vente (plan de parité fripv2, phase 1.11) : le représentant et le transporteur
+ * d'un devis, d'une commande ou d'une facture.
  *
  * - À la création, la valeur demandée (même vide), sinon celle du client.
  * - D'un document à celui qu'on en tire (conversion, copie, reste à facturer), elle suit le document d'origine.
@@ -19,14 +19,17 @@ use Illuminate\Database\Eloquent\Model;
 class EntetesVente
 {
     /** Champ de l'en-tête => colonne du client qui donne sa valeur par défaut. */
-    public const CHAMPS = ['representant_id' => 'representant_id'];
+    public const CHAMPS = ['representant_id' => 'representant_id', 'transporteur_id' => 'transporteur_id'];
 
     /** Règles de validation ; la valeur actuelle du document reste acceptée si elle a été retirée du référentiel depuis. */
     public static function regles(?Model $document = null): array
     {
+        $regle = fn (string $table, string $champ) => ['nullable', 'integer', TenantRule::exists($table)->where(fn ($q) => $q->whereNull('deleted_at')
+            ->when($document?->getAttribute($champ), fn ($q, $actuel) => $q->orWhere('id', $actuel)))];
+
         return [
-            'representant_id' => ['nullable', 'integer', TenantRule::exists('representants')->where(fn ($q) => $q->whereNull('deleted_at')
-                ->when($document?->getAttribute('representant_id'), fn ($q, $actuel) => $q->orWhere('id', $actuel)))],
+            'representant_id' => $regle('representants', 'representant_id'),
+            'transporteur_id' => $regle('transporteurs', 'transporteur_id'),
         ];
     }
 

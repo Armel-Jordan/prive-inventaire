@@ -24,6 +24,8 @@ class Facture extends Model
         'contrat_location_id',
         // Représentant commercial et son taux de commission, figé à la création (voir App\Services\EntetesVente).
         'representant_id', 'taux_commission',
+        // Transporteur (voir App\Services\EntetesVente) et numéro de suivi de l'envoi, repris par le bon de livraison.
+        'transporteur_id', 'numero_suivi',
     ];
 
     protected $casts = [
@@ -62,6 +64,12 @@ class Facture extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public function factureMere(): BelongsTo

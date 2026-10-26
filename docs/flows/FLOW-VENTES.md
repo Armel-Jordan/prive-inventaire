@@ -284,6 +284,46 @@ Code :
   `App\Rapports\VentesParRepresentant`, migration `2026_10_18_100089_representants_ventes` ;
 - web : `hooks/useRepresentants`, composant `ChoixRepresentant`.
 
+### 2.8 Transporteurs et numéros de suivi
+
+Plan de parité fripv2, phase 1.11b (première partie). Les transporteurs (Paramètres → Référentiels → Transporteurs :
+nom, téléphone, courriel, lien de suivi avec `{numero}`, numéro de compte) se rattachent aux tiers et aux documents.
+Tant que l'entreprise n'a aucun transporteur actif, les champs restent masqués (sauf sur une fiche qui en a déjà un).
+
+**Sur le client et le fournisseur :** champ « Transporteur » de la fiche (`clients.transporteur_id`,
+`fournisseurs.transporteur_id`). La liste des clients se filtre par transporteur, et la fiche client l'affiche.
+
+**Sur les devis, commandes, factures et bons de livraison** (même mécanique que le représentant, §2.7, service
+`EntetesVente`) :
+- à la création, celui du client est proposé (écran) et retenu par l'API si la demande n'en donne pas ; on peut en
+  choisir un autre, ou aucun ;
+- il suit le document d'origine : devis → commande → facture, devis facturé directement, copie d'un devis, et le bon de
+  livraison créé depuis la facture. Une commande passée dans l'espace client prend celui du client ; une vente au
+  comptoir n'en a pas ;
+- les listes (devis, commandes, factures, bons de livraison) se filtrent par transporteur.
+
+**Numéro de suivi** (connaissement, 60 caractères) : saisi sur la commande ou la facture, il passe de la commande à la
+facture puis au bon de livraison. Sur le bon, **Expédition** (détail du bon) change le transporteur et le numéro tant
+que le bon n'est ni livré ni annulé (`PUT /bons-livraison/{id}/expedition`, droit « Modifier » des bons de livraison) ;
+un bon retiré par le client n'a pas de transporteur. Chaque colis peut avoir son propre numéro de suivi (fenêtre des
+colis, étiquette). Le lien « Suivre l'envoi » ouvre le lien de suivi du transporteur, `{numero}` remplacé par le numéro.
+
+**Commandes fournisseur :** à la création, le transporteur du fournisseur, quelle que soit l'origine de la commande
+(saisie, reliquats clients, suggestions d'achat) ; une valeur donnée, même vide, est gardée. La liste se filtre par
+transporteur.
+
+**Référentiel :** un transporteur rattaché à un client, un fournisseur ou un document ne se supprime pas (on le
+désactive). Un transporteur désactivé n'est plus proposé, mais reste affiché sur les fiches et les documents qui l'ont.
+
+**Reste de la phase** (docs/17, §3.2) : la case « Livraison facturée » et le frais de livraison côté achats, le blocage
+du frais de livraison des ventes, les sorties (PDF « Expédié par », variables de courriel, lien dans l'espace client) et
+l'option « transporteur obligatoire ».
+
+Code :
+- API : `App\Services\EntetesVente` (champ `transporteur_id`), `Transporteur::regle()`, `ComFourEntete::booted()`,
+  `BonLivraisonController::expedition`, migration `2026_10_26_100093_transporteurs_documents` ;
+- web : `hooks/useTransporteurs` (`lienSuivi`), composants `ChoixTransporteur` et `livraison/ExpeditionBon`.
+
 ---
 
 ## 3. Devis

@@ -50,6 +50,8 @@ class ColisLivraisonController extends Controller
             'lignes.*.quantite' => ['required', 'integer', 'min:0', 'max:1000000'],
             'poids_kg' => ['nullable', 'numeric', 'min:0', 'max:999999'],
             'notes' => ['nullable', 'string', 'max:500'],
+            // Numéro de suivi du colis chez le transporteur du bon.
+            'numero_suivi' => ['nullable', 'string', 'max:60'],
         ]);
     }
 }

@@ -35,7 +35,7 @@ class DevisController extends Controller
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
         Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
             ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom'])->where('tenant_id', $tenantId);
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -46,6 +46,9 @@ class DevisController extends Controller
         }
         if ($request->filled('representant_id')) {
             $query->where('representant_id', $request->integer('representant_id'));
+        }
+        if ($request->filled('transporteur_id')) {
+            $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
 
         if ($request->has('search') && $request->search) {
@@ -126,7 +129,7 @@ class DevisController extends Controller
 
     public function show(Devis $devis): JsonResponse
     {
-        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom']);
+        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom']);
 
         return response()->json($devis);
     }

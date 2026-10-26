@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,10 +27,13 @@ class Fournisseur extends Model
         'conditions_paiement',
         'actif',
         'devise',
+        // Transporteur qui livre ce fournisseur, repris par ses commandes.
+        'transporteur_id',
     ];
 
     protected $casts = [
         'actif' => 'boolean',
+        'transporteur_id' => 'integer',
     ];
 
     public function produits(): BelongsToMany
@@ -38,6 +42,12 @@ class Fournisseur extends Model
         return $this->belongsToMany(ProduitTenant::class, 'produit_fournisseur', 'fournisseur_id', 'produit_id')
             ->withPivot(['reference_fournisseur', 'prix_achat', 'delai_livraison', 'fournisseur_principal', 'unite_achat', 'qte_par_unite_achat'])
             ->withTimestamps();
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public function contacts(): HasMany

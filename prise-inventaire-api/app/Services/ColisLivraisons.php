@@ -58,6 +58,7 @@ class ColisLivraisons
                 'numero' => $this->numero($bon),
                 'poids_kg' => $donnees['poids_kg'] ?? null,
                 'notes' => $donnees['notes'] ?? null,
+                'numero_suivi' => $donnees['numero_suivi'] ?? null,
                 'prepare_par' => $auteur,
             ]);
             foreach ($quantites as $ligne => $quantite) {
@@ -87,7 +88,7 @@ class ColisLivraisons
             foreach ($quantites as $ligne => $quantite) {
                 $colis->lignes()->updateOrCreate(['bon_livraison_ligne_id' => $ligne], ['quantite' => $quantite]);
             }
-            $colis->update(array_intersect_key($donnees, array_flip(['poids_kg', 'notes'])));
+            $colis->update(array_intersect_key($donnees, array_flip(['poids_kg', 'notes', 'numero_suivi'])));
 
             return $colis->load('lignes');
         });

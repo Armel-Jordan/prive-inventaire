@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
+use App\Models\Transporteur;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,8 @@ class FournisseurController extends Controller
             'conditions_paiement' => 'nullable|string|max:100',
             'devise' => 'nullable|string|max:10',
             'actif' => 'boolean',
+            // Transporteur qui livre ce fournisseur, repris par ses commandes.
+            'transporteur_id' => Transporteur::regle(),
         ]);
 
         if (empty($validated['code'])) {
@@ -89,6 +92,7 @@ class FournisseurController extends Controller
             'conditions_paiement' => 'nullable|string|max:100',
             'devise' => 'nullable|string|max:10',
             'actif' => 'boolean',
+            'transporteur_id' => Transporteur::regle($fournisseur->transporteur_id),
         ]);
 
         $fournisseur->update($validated);
@@ -116,7 +120,8 @@ class FournisseurController extends Controller
             ->orderBy('raison_sociale')
             // La devise sert au formulaire de commande : sans elle, toute commande partait dans la devise de
             // l'entreprise, sans taux de change, même chez un fournisseur qui facture en dollars.
-            ->get(['id', 'code', 'raison_sociale', 'devise']);
+            // Le transporteur aussi : proposé sur la commande (phase 1.11b).
+            ->get(['id', 'code', 'raison_sociale', 'devise', 'transporteur_id']);
 
         return response()->json($fournisseurs);
     }

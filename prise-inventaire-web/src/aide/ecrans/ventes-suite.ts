@@ -299,6 +299,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
         "À la livraison, cliquez sur « Enregistrer livraison », saisissez quantités livrées, lots ou numéros de série, notes et signature, puis « Valider livraison ».",
       ],
       astuces: [
+        "« Expédition » (détail du bon) : transporteur et numéro de suivi, repris de la facture, modifiables tant que le bon n'est ni livré ni annulé ; chaque colis peut avoir son numéro de suivi.",
         "Une livraison partielle met le bon au statut « Partiel ». La facture couvre déjà toute la quantité : pour livrer le reste, cliquez sur « Livrer le reste » dans l'écran « Factures », qui crée un nouveau bon pour les seules quantités non livrées, sans rien refacturer. Un reste qui ne sera pas livré se règle par une note de crédit.",
         "La quantité livrée ne peut pas dépasser la quantité préparée. Pour un produit suivi par lot, les lots proposés sont les premiers à périmer.",
         "Seuls les bons « Créé » ou « En préparation » s'annulent. Les colis se préparent jusqu'au départ du bon ; un colis coché comme chargé se décoche d'abord.",
@@ -316,6 +317,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
         "On delivery, click “Enregistrer livraison”, enter the quantities delivered, lots or serial numbers, notes and “Customer signature”, then click “Valider livraison”.",
       ],
       astuces: [
+        "“Shipment” (note details): carrier and tracking number, carried from the invoice, editable until the note is delivered or cancelled; each parcel can have its own tracking number.",
         "A partial delivery sets the note to “Partiel”. The invoice already covers the whole quantity: to deliver the rest, click “Deliver the rest” in the “Factures” screen, which creates a new note for the undelivered quantities only, without billing anything again. A remainder that will not be delivered is settled with a credit note.",
         "The quantity delivered cannot exceed the quantity picked. For lot-tracked products, the lots expiring first are suggested.",
         "Only notes that are “Créé” or “En préparation” can be cancelled. Parcels can be prepared until the note leaves; a parcel ticked as loaded must be unticked first.",

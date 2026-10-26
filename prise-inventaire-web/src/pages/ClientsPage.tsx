@@ -20,6 +20,8 @@ import { PastilleClientDePassage } from '@/components/ClientDePassage';
 import { signaler } from '@/lib/erreurs';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 import { getFrais, type Frais } from '@/services/frais';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -72,6 +74,9 @@ export default function ClientsPage() {
   // Représentant commercial du client, repris par ses documents de vente (phase 1.11a).
   const representants = useRepresentants();
   const [representantId, setRepresentantId] = useState<number | null>(null);
+  // Transporteur du client, repris par ses documents de vente (phase 1.11b) ; champ masqué sans transporteur actif.
+  const transporteurs = useTransporteurs();
+  const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Conditions de paiement et devises du référentiel, frais de livraison.
   const [fraisLivraison, setFraisLivraison] = useState<Frais[]>([]);
   // Routes de livraison (référentiel des itinéraires).
@@ -133,6 +138,7 @@ export default function ClientsPage() {
         itineraire_id: formData.itineraire_id ? Number(formData.itineraire_id) : null,
         sequence_livraison: formData.sequence_livraison === '' ? null : Number(formData.sequence_livraison),
         representant_id: representantId,
+        transporteur_id: transporteurId,
       };
 
       if (editingClient) {
@@ -171,6 +177,7 @@ export default function ClientsPage() {
       actif: client.actif !== false,
     });
     setRepresentantId(client.representant_id ?? null);
+    setTransporteurId(client.transporteur_id ?? null);
     setShowModal(true);
   };
 
@@ -207,6 +214,7 @@ export default function ClientsPage() {
       actif: true,
     });
     setRepresentantId(null);
+    setTransporteurId(null);
   };
 
   return (
@@ -543,6 +551,13 @@ export default function ClientsPage() {
                   <ChoixRepresentant id="client-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
                   <span className="text-xs text-gray-500">{t.salesReps.clientHint}</span>
                 </div>
+                {(transporteursActifs(transporteurs) || transporteurId !== null) && (
+                  <div>
+                    <label htmlFor="client-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}</label>
+                    <ChoixTransporteur id="client-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
+                    <span className="text-xs text-gray-500">{t.carriers.clientHint}</span>
+                  </div>
+                )}
               </div>
               {editingClient && (
                 // Un client qui a des documents ne se supprime pas : on le rend inactif.

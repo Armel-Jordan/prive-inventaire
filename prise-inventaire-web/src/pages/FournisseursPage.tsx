@@ -14,6 +14,8 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '@/i18n/useLanguage';
 import { useVerrou } from '@/hooks/useVerrou';
 import BandeauVerrou from '@/components/BandeauVerrou';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 
 interface ConfigNumero {
   auto_increment: boolean;
@@ -35,6 +37,8 @@ interface FournisseurForm {
   conditions_paiement: string;
   devise: string;
   actif: boolean;
+  /** Transporteur qui livre ce fournisseur, repris par ses commandes (phase 1.11b). */
+  transporteur_id: number | null;
 }
 
 const emptyForm: FournisseurForm = {
@@ -48,6 +52,7 @@ const emptyForm: FournisseurForm = {
   conditions_paiement: '',
   devise: 'EUR',
   actif: true,
+  transporteur_id: null,
 };
 
 export default function FournisseursPage() {
@@ -67,6 +72,7 @@ export default function FournisseursPage() {
   // Fiche verrouillée pendant sa modification : un autre compte voit qui la modifie.
   const verrou = useVerrou('fournisseur', showModal ? editingId : null);
   const [form, setForm] = useState<FournisseurForm>(emptyForm);
+  const transporteurs = useTransporteurs();
   const [configNumero, setConfigNumero] = useState<ConfigNumero | null>(null);
 
   async function loadData() {
@@ -120,6 +126,7 @@ export default function FournisseursPage() {
       conditions_paiement: fournisseur.conditions_paiement || '',
       devise: fournisseur.devise || codeDevise || 'EUR',
       actif: fournisseur.actif,
+      transporteur_id: fournisseur.transporteur_id ?? null,
     });
     setEditingId(fournisseur.id);
     setShowModal(true);
@@ -381,6 +388,14 @@ export default function FournisseursPage() {
                   />
                   <p className="text-xs text-gray-400 mt-1">Code ISO (EUR, USD, XAF...)</p>
                 </div>
+                {(transporteursActifs(transporteurs) || form.transporteur_id !== null) && (
+                  <div>
+                    <label htmlFor="fournisseur-transporteur" className="block text-sm font-medium text-gray-700 mb-1">{t.carriers.label}</label>
+                    <ChoixTransporteur id="fournisseur-transporteur" value={form.transporteur_id} onChange={id => setForm({ ...form, transporteur_id: id })}
+                      transporteurs={transporteurs} className="w-full px-3 py-2 border rounded-lg" />
+                    <p className="text-xs text-gray-400 mt-1">{t.carriers.supplierHint}</p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

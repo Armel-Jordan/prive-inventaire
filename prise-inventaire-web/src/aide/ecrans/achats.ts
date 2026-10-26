@@ -13,6 +13,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Pour mettre à jour des prix d'achat en masse, cliquez sur « Importer une grille de prix », choisissez le fichier CSV, puis cliquez sur « Simuler » et sur « Importer ».",
       ],
       astuces: [
+        "Le « Transporteur » du fournisseur est repris par ses commandes (modifiable sur chacune).",
         "Un fournisseur qui a des commandes ne peut pas être supprimé : décochez plutôt « Fournisseur actif ». Il disparaît alors des listes de choix (commandes, factures, déboursés…) mais garde son historique.",
         "Une fiche ouverte en modification est verrouillée : si un autre compte la modifie déjà, un bandeau indique qui et depuis quand, et l'enregistrement est bloqué. Cliquez sur « Réessayer », ou sur « Prendre la main » si vous en avez le droit.",
         "La devise proposée est celle de l'entreprise : changez-la pour un fournisseur qui facture dans une autre devise, ses commandes seront passées dans cette devise. Le code, lui, ne se modifie plus après la création.",
@@ -30,6 +31,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "To update purchase prices in bulk, click “Import a price list”, choose the CSV file, then click “Simulate” and “Import”.",
       ],
       astuces: [
+        "The supplier's “Carrier” carries over to their orders (changeable on each).",
         "A supplier that has purchase orders cannot be deleted: untick “Fournisseur actif” (active supplier) instead. It then disappears from the selection lists (orders, invoices, disbursements…) but keeps its history.",
         "A record opened for editing is locked: if another account is already editing it, a banner shows who and since when, and saving is blocked. Click “Try again”, or “Take over” if you have the right to.",
         "The proposed currency is the company's: change it for a supplier that invoices in another currency, and its purchase orders will be placed in that currency. The code cannot be changed after creation.",
@@ -123,6 +125,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Suivez vos commandes avec la recherche (numéro ou fournisseur) et le filtre de statut ; « Mes filtres » garde vos filtres habituels.",
       ],
       astuces: [
+        "Le « Transporteur » est celui du fournisseur par défaut ; la liste se filtre par transporteur.",
         "Seul un brouillon se supprime. Une commande envoyée sans rien de reçu s'annule ; une commande reçue en partie se ferme avec « Clôturer le reste », et le manquant est noté abandonné.",
         "Envoyer un brouillon par courriel le valide. Le courriel est proposé aux contacts du fournisseur cochés « Reçoit les bons de commande », sinon à son email.",
         "Pour un fournisseur dans une autre devise, le taux de change est proposé (référentiel des devises ou cours du jour) et reste modifiable ; s'il est introuvable, saisissez-le.",
@@ -140,6 +143,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Track your orders with the search box (number or supplier) and the status filter; “My filters” keeps your usual filters.",
       ],
       astuces: [
+        "The “Carrier” is the supplier's by default; the list can be filtered by carrier.",
         "Only a draft can be deleted. A sent order with nothing received can be cancelled; a partly received order is closed with “Clôturer le reste”, and the shortfall is recorded as abandoned.",
         "Emailing a draft confirms it. The email is offered to the supplier's contacts ticked “Receives purchase orders”, otherwise to its email address.",
         "For a supplier in another currency, the exchange rate is proposed (currency reference data or daily rate) and can be changed; if none is found, enter it.",

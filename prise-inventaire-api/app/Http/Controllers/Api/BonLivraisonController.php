@@ -8,6 +8,7 @@ use App\Models\BonLivraisonLigne;
 use App\Models\Lot;
 use App\Models\MouvementVente;
 use App\Models\NumeroSerie;
+use App\Models\Transporteur;
 use App\Services\LotsSeries;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,13 +19,16 @@ class BonLivraisonController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = BonLivraison::with(['facture.client'])->withCount('colis')->where('tenant_id', $tenantId);
+        $query = BonLivraison::with(['facture.client', 'transporteur:id,nom'])->withCount('colis')->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
         }
         if ($request->has('mode_livraison')) {
             $query->where('mode_livraison', $request->mode_livraison);
+        }
+        if ($request->filled('transporteur_id')) {
+            $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
         // Numéro du bon ou de sa facture, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
@@ -46,12 +50,34 @@ class BonLivraisonController extends Controller
     public function show(int $id): JsonResponse
     {
         $bon = BonLivraison::with([
-            'facture.client', 'lignes', 'tourneeBon.tournee',
+            'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
         ])->findOrFail($id);
 
         // Le détail donne l'image de la signature (les listes l'omettent).
         return response()->json($bon->makeVisible('signature_client'));
+    }
+
+    /**
+     * Expédition (phase 1.11b) : transporteur et numéro de suivi du bon, repris de la facture et modifiables tant que le
+     * bon n'est ni livré ni annulé. Un bon retiré par le client n'a pas de transporteur.
+     */
+    public function expedition(Request $request, int $id): JsonResponse
+    {
+        $bon = BonLivraison::findOrFail($id);
+        if (in_array($bon->statut, ['livre_complet', 'livre_partiel', 'annule'], true)) {
+            return response()->json(['message' => __("L'expédition d'un bon livré ou annulé ne se modifie plus.")], 422);
+        }
+        $validated = $request->validate([
+            'transporteur_id' => Transporteur::regle($bon->transporteur_id),
+            'numero_suivi' => ['nullable', 'string', 'max:60'],
+        ]);
+        if ($bon->mode_livraison === 'retrait_client' && ! empty($validated['transporteur_id'])) {
+            return response()->json(['message' => __('Un bon retiré par le client ne passe pas par un transporteur.')], 422);
+        }
+        $bon->update($validated);
+
+        return response()->json($bon->load('transporteur:id,nom,url_suivi'));
     }
 
     public function demarrerPreparation(Request $request, int $id): JsonResponse

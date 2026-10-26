@@ -8,6 +8,7 @@ use App\Models\ComFourLigne;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
+use App\Models\Transporteur;
 use App\Services\CommandesFournisseur;
 use App\Services\PrixAchatProposes;
 use App\Services\ReliquatsClients;
@@ -22,7 +23,7 @@ class CommandeFournisseurController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComFourEntete::with(['fournisseur', 'createdBy', 'entrepot:id,code,nom'])->where('tenant_id', $tenantId);
+        $query = ComFourEntete::with(['fournisseur', 'createdBy', 'entrepot:id,code,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -30,6 +31,10 @@ class CommandeFournisseurController extends Controller
 
         if ($request->has('fournisseur_id')) {
             $query->where('fournisseur_id', $request->fournisseur_id);
+        }
+
+        if ($request->filled('transporteur_id')) {
+            $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
 
         if ($request->has('date_debut')) {
@@ -65,6 +70,8 @@ class CommandeFournisseurController extends Controller
             'devise' => 'nullable|string|max:10',
             'taux_change' => 'nullable|numeric|gt:0',
             'entrepot_id' => $this->regleEntrepot(),
+            // Transporteur : celui du fournisseur s'il n'est pas transmis (voir ComFourEntete::booted()).
+            'transporteur_id' => Transporteur::regle(),
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
@@ -94,7 +101,7 @@ class CommandeFournisseurController extends Controller
                 'entrepot_id' => $validated['entrepot_id'] ?? null,
                 'statut' => ComFourEntete::STATUT_BROUILLON,
                 'created_by' => $request->user()->id,
-            ]);
+            ] + array_intersect_key($validated, array_flip(['transporteur_id'])));
 
             foreach ($validated['lignes'] as $ligne) {
                 $produit = ProduitTenant::find($ligne['produit_id']);
@@ -147,7 +154,7 @@ class CommandeFournisseurController extends Controller
 
     public function show(ComFourEntete $commande): JsonResponse
     {
-        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions' => fn ($q) => $q->where('annulee', false)->with('reception:id,numero'), 'createdBy', 'auteurEnvoi:id,nom', 'entrepot']);
+        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions' => fn ($q) => $q->where('annulee', false)->with('reception:id,numero'), 'createdBy', 'auteurEnvoi:id,nom', 'entrepot', 'transporteur:id,nom,url_suivi']);
 
         return response()->json($commande);
     }
@@ -166,6 +173,7 @@ class CommandeFournisseurController extends Controller
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'entrepot_id' => $this->regleEntrepot($commande),
+            'transporteur_id' => Transporteur::regle($commande->transporteur_id),
             'lignes' => 'required|array|min:1',
             'lignes.*.id' => 'nullable|exists:com_four_ligne,id',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
@@ -179,7 +187,7 @@ class CommandeFournisseurController extends Controller
                 'date_commande' => $validated['date_commande'],
                 'date_livraison_prevue' => $validated['date_livraison_prevue'] ?? null,
                 'notes' => $validated['notes'] ?? null,
-            ] + (array_key_exists('entrepot_id', $validated) ? ['entrepot_id' => $validated['entrepot_id']] : []));
+            ] + array_intersect_key($validated, array_flip(['entrepot_id', 'transporteur_id'])));
 
             $existingIds = collect($validated['lignes'])->pluck('id')->filter()->toArray();
             // Reliquats clients des lignes retirées ou changées de produit : ils redeviennent inscrits.
