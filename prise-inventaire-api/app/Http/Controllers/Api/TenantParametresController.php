@@ -48,6 +48,7 @@ class TenantParametresController extends Controller
             'md_telephone_urgence' => 'nullable|string|max:60',
             'md_declaration' => 'nullable|string|max:2000',
             'numero_facture_a_l_emission' => 'sometimes|boolean',
+            'transporteur_obligatoire' => 'sometimes|boolean',
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;

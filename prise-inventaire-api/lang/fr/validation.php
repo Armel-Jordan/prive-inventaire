@@ -196,6 +196,7 @@ return [
         'date_fin' => 'date de fin',
         'client_id' => 'client',
         'fournisseur_id' => 'fournisseur',
+        'transporteur_id' => 'transporteur',
         'produit_id' => 'produit',
         'secteur_id' => 'secteur',
         'lignes' => 'lignes',

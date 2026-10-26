@@ -32,6 +32,8 @@ class TenantParametres extends Model
         'md_declaration',
         // Numéro de facture attribué à l'émission (un brouillon porte un numéro provisoire « BR-… »).
         'numero_facture_a_l_emission',
+        // Transporteur exigé sur les devis, commandes, factures et commandes fournisseur saisis (phase 1.11b).
+        'transporteur_obligatoire',
     ];
 
     protected $casts = [
@@ -40,5 +42,6 @@ class TenantParametres extends Model
         'delai_livraison_jours' => 'integer',
         'stock_seuil_defaut' => 'integer',
         'numero_facture_a_l_emission' => 'boolean',
+        'transporteur_obligatoire' => 'boolean',
     ];
 }

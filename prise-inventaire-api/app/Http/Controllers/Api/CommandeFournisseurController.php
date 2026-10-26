@@ -71,7 +71,7 @@ class CommandeFournisseurController extends Controller
             'taux_change' => 'nullable|numeric|gt:0',
             'entrepot_id' => $this->regleEntrepot(),
             // Transporteur : celui du fournisseur s'il n'est pas transmis (voir ComFourEntete::booted()).
-            'transporteur_id' => Transporteur::regle(),
+            'transporteur_id' => [...Transporteur::regle(), Transporteur::exige(null, fn () => Fournisseur::whereKey($request->input('fournisseur_id'))->value('transporteur_id'))],
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
             'lignes.*.quantite_commandee' => 'required|integer|min:1',
@@ -173,7 +173,7 @@ class CommandeFournisseurController extends Controller
             'date_livraison_prevue' => 'nullable|date|after_or_equal:date_commande',
             'notes' => 'nullable|string',
             'entrepot_id' => $this->regleEntrepot($commande),
-            'transporteur_id' => Transporteur::regle($commande->transporteur_id),
+            'transporteur_id' => [...Transporteur::regle($commande->transporteur_id), Transporteur::exige($commande, fn () => null)],
             'lignes' => 'required|array|min:1',
             'lignes.*.id' => 'nullable|exists:com_four_ligne,id',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
