@@ -15,6 +15,8 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
+import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
@@ -83,6 +85,8 @@ export default function CommandesClientPage() {
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
+  const [livraison, setLivraison] = useState<ValeurLivraison>({});
   const [numeroSuivi, setNumeroSuivi] = useState('');
   // Numéro de commande du client (socle S4.1), exigé si sa fiche l'exige.
   const [numeroCommandeClient, setNumeroCommandeClient] = useState('');
@@ -197,6 +201,7 @@ export default function CommandesClientPage() {
       transporteur_id: transporteurId,
       numero_suivi: numeroSuivi.trim() || null,
       numero_commande_client: numeroCommandeClient.trim() || null,
+      ...saisieLivraison(livraison),
     };
     try {
       if (editingId) {
@@ -230,6 +235,7 @@ export default function CommandesClientPage() {
     setTransporteurId(cmd.transporteur_id ?? null);
     setNumeroSuivi(cmd.numero_suivi ?? '');
     setNumeroCommandeClient(cmd.numero_commande_client ?? '');
+    setLivraison(livraisonDuDocument(cmd));
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -353,6 +359,7 @@ export default function CommandesClientPage() {
     setTransporteurId(null);
     setNumeroSuivi('');
     setNumeroCommandeClient('');
+    setLivraison({});
     setLignes([]);
   };
 
@@ -361,6 +368,7 @@ export default function CommandesClientPage() {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
+    setLivraison({});
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -658,6 +666,7 @@ export default function CommandesClientPage() {
                   <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                 </div>
               )}
+              <ChoixLivraison idPrefixe="commande" clientId={formData.client_id ? Number(formData.client_id) : null} valeur={livraison} onChange={setLivraison} />
               <div>
                 <label htmlFor="commande-numero-client" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.customerPo.label}{numeroClientExige ? ' *' : ''}</label>
                 <input id="commande-numero-client" type="text" maxLength={30} value={numeroCommandeClient} required={numeroClientExige} onChange={e => setNumeroCommandeClient(e.target.value)}
@@ -802,6 +811,7 @@ export default function CommandesClientPage() {
                     <p className="dark:text-white">{selectedCommande.representant.nom}</p>
                   </div>
                 )}
+                <DetailLivraison document={selectedCommande} />
               </div>
               <div className="border-t pt-3 dark:border-gray-700">
                 <div className="flex justify-between">

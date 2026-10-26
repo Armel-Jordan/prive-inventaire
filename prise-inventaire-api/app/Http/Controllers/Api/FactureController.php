@@ -19,6 +19,7 @@ use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
 use App\Services\EntetesVente;
 use App\Services\FacturesVente;
+use App\Services\LivraisonDocuments;
 use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
@@ -94,6 +95,7 @@ class FactureController extends Controller
             'representant:id,nom',
             'transporteur:id,nom,url_suivi',
             StatutsPersonnalises::COLONNES,
+            'contact:id,nom,telephone,email',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
@@ -174,6 +176,7 @@ class FactureController extends Controller
             // Représentant et transporteur : par défaut, ceux du client ; ceux de la facture restent acceptés s'ils ont été retirés.
             ...EntetesVente::regles($facture),
             ...NumeroCommandeClient::regles($facture),
+            ...LivraisonDocuments::regles($facture),
         ];
     }
 
@@ -210,7 +213,7 @@ class FactureController extends Controller
         // Date de la facture : celle de l'usager (envoyée par l'écran), sinon le jour de l'entreprise.
         $date = DateDuJour::demandee($request);
         // Représentant de la commande, avec son taux de commission du jour.
-        $entete = app(EntetesVente::class)->copier($commande);
+        $entete = app(EntetesVente::class)->copier($commande) + app(LivraisonDocuments::class)->copier($commande);
         $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id']);
         $facture = DB::transaction(function () use ($commande, $tenantId, $condition, $entete, $date) {
             // Numéro de la séquence, ou provisoire si l'entreprise numérote à l'émission.
@@ -429,6 +432,7 @@ class FactureController extends Controller
                 'transporteur_id' => $facture->transporteur_id,
                 'numero_suivi' => $facture->numero_suivi,
                 'numero_commande_client' => $facture->numero_commande_client,
+            ] + app(LivraisonDocuments::class)->copier($facture) + [
                 'statut' => 'cree',
             ]);
 

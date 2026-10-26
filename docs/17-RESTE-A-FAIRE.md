@@ -197,7 +197,7 @@ Elles valent pour toute nouvelle fonction.
 
 ## 3. Travail en cours et phases suivantes
 
-### 3.1 Représentants commerciaux (phase 1.11a) — fusionnés (#131), à vérifier à l'écran
+### 3.1 Représentants commerciaux (phase 1.11a) — fusionnés (#131), vérifiés à l'écran le 26/10
 
 **Fait et testé par l'API** (`tests/Feature/Ventes/RepresentantsTest.php`, détail dans FLOW-VENTES §2.7) :
 - représentant sur la fiche client, repris par les devis, les commandes et les factures, et suivi dans les conversions ;
@@ -209,12 +209,12 @@ Elles valent pour toute nouvelle fonction.
 Déjà vérifié dans le navigateur : choix sur la fiche client, proposition sur un nouveau devis, filtre de la liste des
 devis.
 
-**Reste à vérifier dans le navigateur** (rien n'indique de défaut, mais ce n'a pas encore été vu à l'écran) :
-- [ ] nouvelle facture : le représentant du client est proposé, et le détail de la facture affiche « Commission x % » ;
-- [ ] commande : choix, modification d'un brouillon, filtre de la liste ;
-- [ ] liste des clients : filtre par représentant ;
-- [ ] Bibliothèque de rapports → « Ventes par représentant » : paramètre « Représentant », totaux, export PDF/Excel ;
-- [ ] Paramètres → Référentiels → Représentants :
+**Vérifié dans le navigateur le 26/10** (aucun défaut trouvé) :
+- [x] nouvelle facture : le représentant du client est proposé, et le détail de la facture affiche « Commission x % » ;
+- [x] commande : choix, modification d'un brouillon, filtre de la liste ;
+- [x] liste des clients : filtre par représentant ;
+- [x] Bibliothèque de rapports → « Ventes par représentant » : paramètre « Représentant », totaux, export PDF/Excel ;
+- [x] Paramètres → Référentiels → Représentants :
   - supprimer un représentant rattaché affiche « Ce représentant est rattaché à des clients ou à des documents de vente :
     désactivez-le plutôt. » ;
   - un représentant désactivé reste affiché (« inactif ») sur les fiches qui le portent.
@@ -500,12 +500,12 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
    7. limitation des tentatives de connexion : faite le 26/10 (30 par minute et par adresse, compte bloqué 15 minutes après
       10 échecs) ; le reste de 06, §6.1 (journal des connexions, politique de mot de passe, 2FA exigible) reste à faire.
 2. **Fin de la phase 1.11 (documents de vente)**
-   - Représentants à vérifier à l'écran (§3.1), transporteurs (§3.2), statuts personnalisés (§3.3), puis statuts des
-     documents (01, section 19).
+   - Représentants vérifiés à l'écran le 26/10 (§3.1) ; transporteurs (§3.2), statuts personnalisés (§3.3) et statuts
+     des documents (01, section 19) faits.
    - Socles de 03 : S3 (quantités décimales), S2 (nature du produit : cases et effets faits le 26/10, FLOW-INVENTAIRE §21 ;
      reste taxes par produit, location, référentiels), puis S4.1 à S4.7 (S4.1 : transporteur, n° de suivi, statut
-     personnalisé et n° de commande du client faits le 26/10 ; reste contact, adresse de livraison, condition de paiement,
-     groupe de taxe, date requise, prioritaire) (en-tête, lignes, copie, notes de
+     personnalisé, n° de commande du client, contact et « Livrer à » faits le 26/10, FLOW-VENTES §2.10 et §2.11 ; reste
+     condition de paiement, groupe de taxe, date requise, prioritaire) (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
    - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.
 3. **Référentiels, tiers et paramètres**

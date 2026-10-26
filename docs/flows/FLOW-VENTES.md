@@ -378,6 +378,29 @@ caractères) :
 - donnée par le client dans l'espace client au moment de commander (obligatoire si sa fiche l'exige), et rappelée dans le
   détail de sa commande.
 
+### 2.11 Contact et « Livrer à »
+
+Socle S4.1 du plan de parité fripv2. Sur les devis, les commandes, les factures et les bons de livraison :
+- **Contact** : un contact actif de la fiche du client (onglet « Contacts ») ; par défaut, son contact principal.
+- **Livrer à** : une adresse de livraison active du client (onglet « Adresses ») ; par défaut, sa principale. Vide :
+  l'adresse de la fiche client, comme avant.
+- **Copie** : l'adresse est recopiée sur le document (`livraison_adresse` : libellé, adresse, code postal et ville, pays,
+  une ligne chacun), avec ses instructions (`instructions_livraison`). La modifier ou la retirer ensuite dans la fiche ne
+  change pas les documents faits ; rechoisir la même adresse garde la copie, en choisir une autre la recopie.
+- **Suite** : tout passe d'un document à l'autre (conversion et copie du devis, facture d'une commande, bon de livraison
+  d'une facture).
+- **Contrôles** : le contact et l'adresse doivent être ceux du client du document et actifs (ceux déjà sur le document
+  restent acceptés) ; rien pour un client de passage.
+- **Impression** : « Contact » (nom et téléphone), « Livrer à » et « Instructions de livraison » dans l'en-tête du devis,
+  de la commande et de la facture. Sur le bon de livraison, l'adresse copiée devient le destinataire. La feuille de route
+  d'une tournée prend l'adresse choisie sur le bon, sinon l'adresse de livraison principale du client.
+- **Espace client** : l'adresse choisie au panier (sinon la principale) est recopiée sur la commande, avec le contact
+  principal.
+
+Code : service `App\Services\LivraisonDocuments` (règles, valeurs par défaut, copie), migration
+`2026_10_26_100100_livraison_contact_documents` ; web : composant `ChoixLivraison` (listes du formulaire) et
+`DetailLivraison` (détail des documents).
+
 ---
 
 ## 3. Devis

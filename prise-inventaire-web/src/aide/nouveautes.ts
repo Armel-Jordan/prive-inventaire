@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Contact et « Livrer à » sur les devis, commandes, factures et bons de livraison : le contact principal et l'adresse de livraison principale du client sont proposés ; l'adresse et ses instructions sont recopiées sur le document, imprimées et reprises d'un document à l'autre.",
+    en: "Contact and “Deliver to” on quotes, orders, invoices and delivery notes: the customer's main contact and main delivery address are proposed; the address and its instructions are copied onto the document, printed and carried from one document to the next.",
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-10-26',
     fr: "Numéro de commande du client : sur les commandes et factures (exigé si la fiche client coche « Exige un numéro de commande »), repris jusqu'au bon de livraison, imprimé, cherché dans les listes et saisi par le client dans l'espace client.",
     en: 'Customer PO number: on orders and invoices (required when the customer record ticks “Requires a PO number”), carried to the delivery note, printed, searchable in the lists and entered by the customer on the customer site.',
     lien: '/commandes-client',

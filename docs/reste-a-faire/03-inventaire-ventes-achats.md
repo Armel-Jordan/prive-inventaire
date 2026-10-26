@@ -1629,7 +1629,7 @@ Voir **S4.1 à S4.7** et **S3**.
 
 1. **fripv2** : la route et la séquence sont sur l'**adresse** du client. Le BL fige `route_code_origine` et `seq_route_origine`.
 2. **PI** : sur la fiche client.
-3. **À faire** : C7, puis `SequencesLivraison` lit l'adresse du BL (S4.1), sinon celle du client ; copie figée sur le BL ; tests.
+3. **À faire** : C7, puis `SequencesLivraison` lit l'adresse du BL (S4.1), sinon celle du client ; copie figée sur le BL ; tests. L'adresse choisie sur le BL et sa copie existent depuis le 26/10 (FLOW-VENTES §2.11) ; la feuille de route l'imprime déjà.
 
 #### SQ2 — Écran de planification multi-routes (M)
 

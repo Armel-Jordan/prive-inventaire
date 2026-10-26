@@ -13,6 +13,7 @@ use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\EntetesVente;
+use App\Services\LivraisonDocuments;
 use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
@@ -67,7 +68,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', StatutsPersonnalises::COLONNES])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', StatutsPersonnalises::COLONNES])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
@@ -99,12 +100,13 @@ class CommandeClientController extends Controller
             ...ClientsDePassage::regles(),
             ...EntetesVente::regles(),
             ...NumeroCommandeClient::regles(),
+            ...LivraisonDocuments::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
         $client = Client::find($validated['client_id']);
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client)
-            + app(EntetesVente::class)->pourCreation($validated, $client);
+            + app(EntetesVente::class)->pourCreation($validated, $client) + app(LivraisonDocuments::class)->pourCreation($validated, $client);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
@@ -179,6 +181,7 @@ class CommandeClientController extends Controller
             ...ClientsDePassage::regles(),
             ...EntetesVente::regles($commande),
             ...NumeroCommandeClient::regles($commande),
+            ...LivraisonDocuments::regles($commande),
         ]);
         if (isset($validated['lignes'])) {
             $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
@@ -187,7 +190,7 @@ class CommandeClientController extends Controller
         DB::transaction(function () use ($commande, $validated) {
             // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
             $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id))
-                + app(EntetesVente::class)->pourModification($validated));
+                + app(EntetesVente::class)->pourModification($validated) + app(LivraisonDocuments::class)->pourModification($validated, $commande));
             // Client et date se modifient aussi ; une note vidée est effacée (elle était conservée).
             $commande->update([
                 'client_id' => $validated['client_id'] ?? $commande->client_id,

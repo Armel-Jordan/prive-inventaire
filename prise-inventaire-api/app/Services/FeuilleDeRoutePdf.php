@@ -32,7 +32,9 @@ class FeuilleDeRoutePdf
             $facture = $bon?->facture;
             $client = $facture?->client;
             $passage = $client?->de_passage && filled($facture?->passage_nom);
-            $livraison = $client?->adresses?->first(fn (ClientAdresse $a) => $a->livraison && $a->principale && $a->actif);
+            // L'adresse « Livrer à » choisie sur le bon (socle S4.1), sinon celle de livraison principale du client.
+            $livraison = ($bon?->adresse_livraison_id ? $client?->adresses?->firstWhere('id', $bon->adresse_livraison_id) : null)
+                ?? $client?->adresses?->first(fn (ClientAdresse $a) => $a->livraison && $a->principale && $a->actif);
             $adresse = $passage
                 ? $facture->passage_adresse
                 : implode(', ', array_filter([$livraison?->adresse ?? ($client?->adresse_livraison ?: $client?->adresse_facturation), $livraison?->ville ?? $client?->ville]));

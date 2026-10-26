@@ -7,6 +7,7 @@ import { Eye, Package, CheckCircle, Truck, XCircle, PenLine, Boxes, Search } fro
 import PadSignature from '@/components/PadSignature';
 import ColisBon from '@/components/livraison/ColisBon';
 import ExpeditionBon from '@/components/livraison/ExpeditionBon';
+import { DetailLivraison } from '@/components/ChoixLivraison';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
@@ -450,6 +451,7 @@ export default function BonsLivraisonPage() {
                   <span className="text-sm text-gray-500">Date livraison:</span>
                   <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>
                 </div>
+                <DetailLivraison document={selectedBon} />
               </div>
 
               <ExpeditionBon key={selectedBon.id} bon={selectedBon} modifiable={peut('bons_livraison', 'modifier')}

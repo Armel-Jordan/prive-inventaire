@@ -25,6 +25,8 @@ class ComClientEntete extends Model
         'representant_id', 'transporteur_id', 'numero_suivi',
         // Numéro de commande du client (sa référence, socle S4.1).
         'numero_commande_client',
+        // Contact et « Livrer à » (copie de l'adresse et ses instructions), voir App\Services\LivraisonDocuments.
+        'contact_id', 'adresse_livraison_id', 'livraison_adresse', 'instructions_livraison',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
     ];
@@ -56,6 +58,12 @@ class ComClientEntete extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Contact du client sur le document (« Livrer à » et contact, socle S4.1). */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(ClientContact::class, 'contact_id');
     }
 
     /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
