@@ -16,6 +16,7 @@ use App\Models\TenantParametres;
 use App\Services\CalculPrix;
 use App\Services\EntetesVente;
 use App\Services\TaxesDocument;
+use App\Support\NumeroCommandeClient;
 use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -153,6 +154,7 @@ class CommandesPortail
                 'client_id' => $client->id,
                 'date_commande' => today()->toDateString(),
                 'date_livraison_souhaitee' => $donnees['date_livraison_souhaitee'] ?? null,
+                'numero_commande_client' => NumeroCommandeClient::valeur($donnees['numero_commande_client'] ?? null),
                 'remise_globale' => 0,
                 'notes' => implode("\n", $notes),
                 'statut' => 'en_attente',

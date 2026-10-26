@@ -188,6 +188,10 @@ class DocumentsVentePdf
         if ($document->getAttribute('representant_id')) {
             $infos['Représentant'] = Representant::withTrashed()->whereKey($document->getAttribute('representant_id'))->value('nom');
         }
+        // Numéro de commande du client (socle S4.1).
+        if (filled($document->getAttribute('numero_commande_client'))) {
+            $infos['N° commande client'] = $document->getAttribute('numero_commande_client');
+        }
         // Transporteur et numéro de suivi (phase 1.11b) : « Expédié par » sur le bon de livraison.
         if ($expedition = Expedition::de($document)) {
             $infos += array_filter([

@@ -91,6 +91,8 @@ export default function FacturesPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
+  // Numéro de commande du client (socle S4.1), exigé si sa fiche l'exige.
+  const [numeroCommandeClient, setNumeroCommandeClient] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, abonnements, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -136,6 +138,7 @@ export default function FacturesPage() {
     return reference ? ` — ${t.clientFile.references.short.replace('{ref}', reference)}` : '';
   };
   // Frais additionnels et de livraison proposés pour la facture en cours de saisie.
+  const numeroClientExige = clients.find(c => c.id === Number(createForm.client_id))?.commande_client_obligatoire === true;
   const frais = useFraisAutomatiques({
     document: 'facture',
     clientId: createForm.client_id ? Number(createForm.client_id) : null,
@@ -256,6 +259,7 @@ export default function FacturesPage() {
     setRepresentantId(null);
     setTransporteurId(null);
     setNumeroSuivi('');
+    setNumeroCommandeClient('');
     setCreateLignes([]);
   };
 
@@ -278,6 +282,7 @@ export default function FacturesPage() {
       setRepresentantId(facture.representant_id ?? null);
       setTransporteurId(facture.transporteur_id ?? null);
       setNumeroSuivi(facture.numero_suivi ?? '');
+      setNumeroCommandeClient(facture.numero_commande_client ?? '');
       setCreateLignes((facture.lignes ?? []).map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
@@ -312,6 +317,7 @@ export default function FacturesPage() {
         representant_id: representantId,
         transporteur_id: transporteurId,
         numero_suivi: numeroSuivi.trim() || null,
+        numero_commande_client: numeroCommandeClient.trim() || null,
       };
       if (editingId) await updateFacture(editingId, saisie);
       else await createFacture(saisie);
@@ -612,6 +618,12 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Date échéance:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_echeance)}</p>
                 </div>
+                {selectedFacture.numero_commande_client && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.customerPo.label} :</span>
+                    <p className="dark:text-white">{selectedFacture.numero_commande_client}</p>
+                  </div>
+                )}
                 {selectedFacture.transporteur && (
                   <div>
                     <span className="text-sm text-gray-500">{t.carriers.label} :</span>
@@ -844,6 +856,12 @@ export default function FacturesPage() {
                     <span className="text-xs text-gray-500">{t.carriers.documentHint}</span>
                   </div>
                 )}
+                <div>
+                  <label htmlFor="facture-numero-client" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.customerPo.label}{numeroClientExige ? ' *' : ''}</label>
+                  <input id="facture-numero-client" type="text" maxLength={30} value={numeroCommandeClient} required={numeroClientExige} onChange={e => setNumeroCommandeClient(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  <span className="text-xs text-gray-500">{numeroClientExige ? t.customerPo.required : t.customerPo.hint}</span>
+                </div>
                 {(transporteursActifs(transporteurs) || transporteurId !== null || numeroSuivi !== '') && (
                   <div>
                     <label htmlFor="facture-suivi" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.tracking}</label>

@@ -95,6 +95,8 @@ class ClientController extends Controller
             // Route de livraison et rang de passage (ordre des arrêts des tournées).
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            // Exige son numéro de commande sur ses commandes et factures (socle S4.1).
+            'commande_client_obligatoire' => 'sometimes|boolean',
             // Représentant commercial et transporteur : repris par ses documents de vente.
             ...EntetesVente::regles(tiers: true),
         ]);
@@ -137,6 +139,7 @@ class ClientController extends Controller
             'frais_livraison_id' => ['nullable', 'integer', TenantRule::exists('frais')->where('application', 'livraison')->whereNull('deleted_at')],
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'commande_client_obligatoire' => 'sometimes|boolean',
             'actif' => 'sometimes|boolean',
             ...EntetesVente::regles($client, tiers: true),
         ]);

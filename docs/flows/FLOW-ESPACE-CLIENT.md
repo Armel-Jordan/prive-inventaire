@@ -129,6 +129,8 @@ Actions sur un accès :
 - Les brouillons de l'entreprise ne sont pas montrés.
 - **Annuler :** possible tant que la commande est en attente, et seulement pour une commande passée en ligne. Une fois acceptée, il faut contacter l'entreprise.
 - **Commander à nouveau :** les produits et quantités vont au panier, où les prix du jour sont repris.
+- **Numéro de commande :** le client donne sa référence en commandant (obligatoire si sa fiche l'exige) ; elle est
+  rappelée dans le détail et suit la commande sur la facture et le bon de livraison (FLOW-VENTES §2.10).
 - **Expédition :** « Expédié par … », le numéro de suivi et le lien « Suivre l'envoi » du transporteur, d'après le
   dernier bon de livraison de la facture, sinon la facture, sinon la commande (FLOW-VENTES §2.8).
 

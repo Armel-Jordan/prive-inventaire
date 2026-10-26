@@ -3410,6 +3410,14 @@ export const translations = {
       documentHint: 'Celui du client par défaut.',
       commission: 'Commission {taux} %',
     },
+    // Numéro de commande du client (socle S4.1).
+    customerPo: {
+      label: 'N° de commande du client',
+      hint: 'Sa référence (son bon de commande), reprise sur la facture et le bon de livraison.',
+      required: 'Ce client exige son numéro de commande.',
+      clientRequires: 'Exige un numéro de commande',
+      clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
+    },
     // Nature et options du produit (socle S2).
     productNature: {
       title: 'Nature et options',
@@ -8198,6 +8206,14 @@ export const translations = {
       clientHint: 'Carried over to their quotes, orders and invoices.',
       documentHint: "The customer's by default.",
       commission: 'Commission {taux}%',
+    },
+    // Customer PO number (socket S4.1).
+    customerPo: {
+      label: 'Customer PO number',
+      hint: 'Their reference (their purchase order), carried to the invoice and the delivery note.',
+      required: 'This customer requires their PO number.',
+      clientRequires: 'Requires a PO number',
+      clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
     },
     // Product nature and options (socket S2).
     productNature: {

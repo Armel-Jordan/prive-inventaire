@@ -123,7 +123,7 @@ class PortailAuthController extends Controller
 
         return response()->json([
             'compte' => $this->presenter($compte),
-            'client' => $client->only(['id', 'code', 'raison_sociale', 'email', 'telephone', 'adresse_facturation', 'code_postal', 'ville']) + [
+            'client' => $client->only(['id', 'code', 'raison_sociale', 'email', 'telephone', 'adresse_facturation', 'code_postal', 'ville', 'commande_client_obligatoire']) + [
                 'adresses' => $client->adresses->map(fn ($a) => $a->only(['id', 'libelle', 'adresse', 'code_postal', 'ville', 'pays', 'livraison', 'principale']))->values(),
             ],
             'entreprise' => [

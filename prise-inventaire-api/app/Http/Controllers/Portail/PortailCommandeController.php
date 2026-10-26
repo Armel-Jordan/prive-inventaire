@@ -12,6 +12,7 @@ use App\Models\ProduitTraduction;
 use App\Services\DocumentsVentePdf;
 use App\Services\Portail\CommandesPortail;
 use App\Support\Expedition;
+use App\Support\NumeroCommandeClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -84,7 +85,7 @@ class PortailCommandeController extends Controller
         $expedition = Expedition::de($bon) ?? Expedition::de($facture) ?? Expedition::de($commande);
 
         return response()->json([
-            'commande' => $commande->only(['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'motif_refus', 'notes', 'montant_ht', 'montant_tva', 'montant_ttc', 'portail_compte_id', 'devise']) + [
+            'commande' => $commande->only(['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'motif_refus', 'notes', 'montant_ht', 'montant_tva', 'montant_ttc', 'portail_compte_id', 'devise', 'numero_commande_client']) + [
                 'lignes' => $commande->lignes->map(fn ($l) => [
                     // produit_id : pour « commander à nouveau ».
                     'produit_id' => $l->produit_id,
@@ -107,6 +108,8 @@ class PortailCommandeController extends Controller
             'date_livraison_souhaitee' => ['nullable', 'date', 'after_or_equal:today'],
             'adresse_livraison_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            // Sa référence (son bon de commande), exigée si sa fiche l'exige (socle S4.1).
+            'numero_commande_client' => [NumeroCommandeClient::exige($this->client($request)->id) ? 'required' : 'nullable', 'string', 'max:30'],
         ], ['date_livraison_souhaitee.after_or_equal' => __('La date de livraison souhaitée ne peut pas être passée.')]);
         $commande = $this->commandes->commander($request->attributes->get('portail_compte'), $this->client($request), ['lignes' => $this->lignes($donnees)] + $donnees);
 

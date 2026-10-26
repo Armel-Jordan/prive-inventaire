@@ -45,6 +45,8 @@ class Client extends Model
         'representant_id',
         // Transporteur, repris par ses devis, commandes, factures et bons de livraison.
         'transporteur_id',
+        // Exige son numéro de commande sur ses commandes et factures (socle S4.1).
+        'commande_client_obligatoire',
     ];
 
     protected $casts = [
@@ -56,6 +58,7 @@ class Client extends Model
         'sequence_livraison' => 'integer',
         'representant_id' => 'integer',
         'transporteur_id' => 'integer',
+        'commande_client_obligatoire' => 'boolean',
     ];
 
     /** Route de livraison du client (itinéraire du référentiel logistique). */

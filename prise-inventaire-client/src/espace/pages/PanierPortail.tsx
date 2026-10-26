@@ -27,6 +27,8 @@ export default function PanierPortail() {
   const [adresse, setAdresse] = useState<string | null>(null);
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
+  // Sa référence (son bon de commande), exigée si sa fiche l'exige.
+  const [numeroCommande, setNumeroCommande] = useState('');
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [confirmerVider, setConfirmerVider] = useState(false);
@@ -77,6 +79,7 @@ export default function PanierPortail() {
           adresse_livraison_id: adresseChoisie ? Number(adresseChoisie) : null,
           date_livraison_souhaitee: date || null,
           notes: notes.trim() || null,
+          numero_commande_client: numeroCommande.trim() || null,
         },
       });
       viderPanier();
@@ -163,6 +166,10 @@ export default function PanierPortail() {
             </label>
             <label className="block text-sm text-gray-700">{tp.desiredDate}
               <input type="date" min={aujourdhui()} value={date} onChange={e => setDate(e.target.value)} className={classeChamp} />
+            </label>
+            <label className="block text-sm text-gray-700">{moi?.client.commande_client_obligatoire ? tp.poNumberRequired : tp.poNumber}
+              <input type="text" maxLength={30} value={numeroCommande} required={moi?.client.commande_client_obligatoire === true}
+                onChange={e => setNumeroCommande(e.target.value)} className={classeChamp} />
             </label>
             <label className="block text-sm text-gray-700">{tp.notes}
               <textarea rows={3} maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} placeholder={tp.notesPlaceholder} className={classeChamp} />

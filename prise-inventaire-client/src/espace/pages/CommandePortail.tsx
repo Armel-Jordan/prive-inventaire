@@ -80,6 +80,7 @@ export default function CommandePortail() {
             <p className="text-sm text-gray-500">
               {remplir(tp.orderedOn, { date: jour(commande.date_commande, language) })}
               {commande.date_livraison_souhaitee && ` · ${remplir(tp.desiredOn, { date: jour(commande.date_livraison_souhaitee, language) })}`}
+              {commande.numero_commande_client && ` · ${remplir(tp.yourPo, { numero: commande.numero_commande_client })}`}
             </p>
           </div>
           <BadgeCommande statut={commande.statut} />
