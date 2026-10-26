@@ -30,6 +30,7 @@
 | [FLOW-AIDE.md](./FLOW-AIDE.md) | Transverse | Aide de chaque écran (bouton « ? », F1), carte des écrans, écrans dans la recherche globale, à propos et nouveautés |
 | [FLOW-VERROUS.md](./FLOW-VERROUS.md) | Transverse | Fiche verrouillée pendant sa modification, qui la modifie, prendre la main, fiches en cours de modification |
 | [FLOW-SUPPORT.md](./FLOW-SUPPORT.md) | Plateforme | Demandes d'aide et suggestions à l'éditeur, échange, statuts, console du super-administrateur |
+| [FLOW-NOTIFICATIONS.md](./FLOW-NOTIFICATIONS.md) | Transverse | Notifications de la cloche : selon les droits du compte, lues et supprimées pour soi seul |
 
 ## Le flow global de l'application
 

@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\NotificationsCompte;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function stats(): JsonResponse
+    public function stats(NotificationsCompte $notifications): JsonResponse
     {
         // Ces requêtes utilisent le query builder brut (hors Global Scope Eloquent) :
         // on scope explicitement par tenant_id pour ne pas agréger les données d'autres tenants.
@@ -68,11 +69,8 @@ class DashboardController extends Controller
             ->where('statut', 'en_attente')
             ->count();
 
-        // Notifications non lues
-        $notificationsNonLues = DB::table('notifications')
-            ->where('tenant_id', $tenantId)
-            ->where('lu', false)
-            ->count();
+        // Notifications non lues par le compte connecté (selon ses droits).
+        $notificationsNonLues = $notifications->nonLues(auth()->user())->count();
 
         return response()->json([
             'inventaire' => [

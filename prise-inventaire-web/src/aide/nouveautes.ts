@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Notifications : chacun ne reçoit que celles des modules qu'il peut voir et celles qui le visent ; « lue » et « supprimée » ne valent que pour soi.",
+    en: 'Notifications: everyone only gets those of the modules they can view and those addressed to them; “read” and “deleted” only apply to yourself.',
+    lien: '/notifications',
+  },
+  {
+    date: '2026-10-26',
     fr: "Factures : réglage « Numéro attribué à l'émission » (Configuration → Numérotation) : un brouillon porte un numéro provisoire et supprimer un brouillon ne laisse plus de trou.",
     en: 'Invoices: “Number assigned on issue” setting (Configuration → Numbering): a draft carries a provisional number and deleting a draft no longer leaves a gap.',
     lien: '/configuration',

@@ -85,12 +85,12 @@ class DemandesSupport
         }
     }
 
-    /** Notification à l'entreprise de l'usager, avec le lien vers la demande. */
+    /** Notification à l'auteur de la demande (lui seul la voit), avec le lien vers la demande. */
     private function prevenirUsager(DemandeSupport $demande, string $titre, string $message): void
     {
         $this->contexte->runAsTenant($demande->tenant_id, fn () => Notification::create([
             'type' => 'support', 'titre' => $titre, 'message' => $message, 'lien' => "/support?demande={$demande->id}",
-            'destinataire' => $demande->auteur?->nom, 'data' => ['demande_id' => $demande->id],
+            'destinataire' => $demande->auteur?->nom, 'data' => ['demande_id' => $demande->id], 'admin_user_id' => $demande->admin_user_id,
         ]));
     }
 
