@@ -9,6 +9,12 @@ export interface Nouveaute {
 
 export const NOUVEAUTES: Nouveaute[] = [
   {
+    date: '2026-10-26',
+    fr: "Droits : les pièces jointes suivent leur fiche (la voir pour les consulter, la modifier pour en ajouter ou en retirer) ; l'historique des courriels et le journal des modifications demandent leur droit.",
+    en: 'Rights: attachments follow their record (view it to see them, edit it to add or remove them); the email history and the change log require their own right.',
+    lien: '/pieces-jointes',
+  },
+  {
     date: '2026-10-18',
     fr: 'Représentants commerciaux : sur la fiche client, repris par ses devis, commandes et factures ; commission figée sur chaque facture et rapport des ventes par représentant.',
     en: 'Sales reps: on the customer record, carried over to their quotes, orders and invoices; commission frozen on each invoice and a sales-by-rep report.',

@@ -44,6 +44,26 @@ final class PiecesJointes
         'transaction_bancaire' => [TransactionBancaire::class, 'finance'],
     ];
 
+    /**
+     * Droits de chaque type de fiche (App\Support\Permissions) : consulter ses pièces demande de voir la fiche ; en
+     * ajouter, en modifier ou en retirer demande de pouvoir modifier la fiche (transaction bancaire : la saisir).
+     */
+    public const DROITS = [
+        'client' => ['clients', 'modifier'],
+        'fournisseur' => ['fournisseurs', 'modifier'],
+        'produit' => ['produits', 'modifier'],
+        'employe' => ['employes', 'modifier'],
+        'devis' => ['devis', 'modifier'],
+        'commande_client' => ['commandes_client', 'modifier'],
+        'facture' => ['factures', 'modifier'],
+        'encaissement' => ['encaissements', 'modifier'],
+        'bon_livraison' => ['bons_livraison', 'modifier'],
+        'commande_fournisseur' => ['commandes_fournisseur', 'modifier'],
+        'facture_fournisseur' => ['factures_fournisseurs', 'modifier'],
+        'debourse' => ['debourses', 'modifier'],
+        'transaction_bancaire' => ['banque', 'saisir'],
+    ];
+
     /** Types que le navigateur peut afficher sans risque ; les autres sont toujours téléchargés. */
     public const TYPES_AFFICHABLES = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain'];
 
@@ -61,6 +81,18 @@ final class PiecesJointes
     public static function module(string $entite): ?string
     {
         return self::ENTITES[$entite][1] ?? null;
+    }
+
+    /** Module des droits de la fiche (Permissions::MODULES). */
+    public static function moduleDroits(string $entite): string
+    {
+        return self::DROITS[$entite][0];
+    }
+
+    /** Droit qui permet d'ajouter, de modifier ou de retirer les pièces de ce type de fiche. */
+    public static function actionEcriture(string $entite): string
+    {
+        return self::DROITS[$entite][1];
     }
 
     /** Libellé lisible : raison sociale (tiers), prénom et nom (employé), sinon numéro et description. */

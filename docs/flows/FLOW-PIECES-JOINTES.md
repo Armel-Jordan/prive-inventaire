@@ -37,6 +37,11 @@ Ouvrir les pièces jointes d'un nouvel écran : ajouter une ligne au catalogue `
 
 **Paramètres → Pièces jointes** : toutes les pièces de l'entreprise, avec la fiche ou le document de rattachement. Recherche dans le nom du fichier, la description et la catégorie ; filtre par type de fiche ; suppression.
 
+**Droits** : les pièces suivent leur fiche (`App\Support\PiecesJointes::DROITS`).
+- Les consulter et les ouvrir : le droit de **voir** la fiche (par exemple Clients → Consulter). La liste de toutes les pièces ne montre que celles des fiches que le compte peut voir.
+- En ajouter, en modifier ou en retirer : le droit de **modifier** la fiche ; pour une transaction bancaire, celui de la saisir (Banque → Saisir).
+- Sans ce droit, le panneau n'affiche ni la zone d'ajout, ni le crayon, ni la corbeille ; l'API répond 403 avec le droit manquant.
+
 ---
 
 ## 3. Stockage
@@ -59,7 +64,7 @@ Ouvrir les pièces jointes d'un nouvel écran : ajouter une ligne au catalogue `
 - Fichiers **téléchargés par l'API** (jeton dans l'en-tête), jamais exposés par une URL publique.
 - Extensions refusées : exécutables et scripts (`exe`, `bat`, `cmd`, `msi`, `ps1`, `js`, `sh`, `php`, `iso`…), liste dans `config/pieces_jointes.php`.
 - Seuls les PDF, images (PNG, JPEG, GIF, WebP) et textes gardent leur type au téléchargement ; tout le reste (HTML, SVG…) part en `application/octet-stream` avec `X-Content-Type-Options: nosniff`, et l'application le télécharge au lieu de l'ouvrir.
-- Fiche d'une autre entreprise : 404. Module de la fiche inactif : 403, et ses pièces sont masquées de la liste globale.
+- Fiche d'une autre entreprise : 404. Module de la fiche inactif, ou fiche que le compte ne peut pas voir : 403, et ses pièces sont masquées de la liste globale.
 - Un envoi qui échoue en cours de route ne laisse aucun fichier orphelin.
 
 ---

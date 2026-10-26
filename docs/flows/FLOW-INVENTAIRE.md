@@ -440,6 +440,9 @@ GET /audit/stats                   → comptages par action
 GET /audit/{modelType}/{modelId}   → historique d'un objet spécifique
 ```
 
+Ces lectures demandent le droit **Historique → Consulter** (`Droits::LECTURES['audit']`) : le journal montre les
+valeurs avant et après de toutes les fiches, comptes et paramètres compris.
+
 ---
 
 ## 10. Flow complet bout en bout

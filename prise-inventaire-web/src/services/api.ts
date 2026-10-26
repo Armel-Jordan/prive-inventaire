@@ -968,6 +968,26 @@ export type EntitePieceJointe =
   | 'client' | 'fournisseur' | 'produit' | 'employe'
   | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'facture_fournisseur' | 'encaissement' | 'debourse' | 'transaction_bancaire';
 
+/**
+ * Droit (module, action) qui permet d'ajouter, de modifier ou de retirer les pièces de chaque type de fiche :
+ * le droit de modifier la fiche (miroir de PiecesJointes::DROITS côté serveur). Les voir demande de voir la fiche.
+ */
+export const DROITS_PIECES_JOINTES: Record<EntitePieceJointe, [string, string]> = {
+  client: ['clients', 'modifier'],
+  fournisseur: ['fournisseurs', 'modifier'],
+  produit: ['produits', 'modifier'],
+  employe: ['employes', 'modifier'],
+  devis: ['devis', 'modifier'],
+  commande_client: ['commandes_client', 'modifier'],
+  facture: ['factures', 'modifier'],
+  bon_livraison: ['bons_livraison', 'modifier'],
+  commande_fournisseur: ['commandes_fournisseur', 'modifier'],
+  facture_fournisseur: ['factures_fournisseurs', 'modifier'],
+  encaissement: ['encaissements', 'modifier'],
+  debourse: ['debourses', 'modifier'],
+  transaction_bancaire: ['banque', 'saisir'],
+};
+
 export interface PieceJointe {
   id: number;
   entite: EntitePieceJointe;
