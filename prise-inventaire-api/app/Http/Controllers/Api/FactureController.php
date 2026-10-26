@@ -325,12 +325,18 @@ class FactureController extends Controller
         return response()->json($this->conditions->escompte(Facture::findOrFail($id), $date) ?? ['applicable' => false]);
     }
 
+    /**
+     * Bon de livraison de la facture : la première livraison, puis le reste après une livraison partielle. Le bon
+     * reprend ce qui n'a pas encore été livré (quantité facturée moins quantités livrées par les bons précédents). La
+     * facture couvre déjà toute la quantité : livrer le reste ne refacture rien ; un reste abandonné se règle par une
+     * note de crédit.
+     */
     public function creerBonLivraison(Request $request, int $id): JsonResponse
     {
         $facture = Facture::with('lignes')->findOrFail($id);
 
-        // Un bon annulé ne compte pas : la facture doit pouvoir être livrée avec un nouveau bon.
-        if (BonLivraison::where('facture_id', $facture->id)->where('statut', '!=', 'annule')->exists()) {
+        // Un bon annulé ne compte pas ; un bon livré (en tout ou en partie) est terminé ; un autre bon est en cours.
+        if (BonLivraison::where('facture_id', $facture->id)->whereNotIn('statut', ['annule', 'livre_complet', 'livre_partiel'])->exists()) {
             return response()->json(['message' => __('Un bon de livraison existe déjà')], 422);
         }
 
@@ -338,12 +344,17 @@ class FactureController extends Controller
             return response()->json(['message' => __('La facture doit être émise')], 422);
         }
 
+        $restes = $this->resteALivrer($facture);
+        if (array_sum($restes) <= 0) {
+            return response()->json(['message' => __('La facture est entièrement livrée.')], 422);
+        }
+
         $tenantId = $request->attributes->get('tenant')->id;
         $configBon = Configuration::pourEntite('bon_livraison', $tenantId);
         if (! $configBon || ! $configBon->auto_increment) {
             return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
-        $bon = DB::transaction(function () use ($facture, $tenantId) {
+        $bon = DB::transaction(function () use ($facture, $tenantId, $restes) {
             $numeroBon = Configuration::consommerNumero('bon_livraison', $tenantId);
 
             $bon = BonLivraison::create([
@@ -355,10 +366,13 @@ class FactureController extends Controller
             ]);
 
             foreach ($facture->lignes as $ligne) {
+                if (($restes[$ligne->id] ?? 0) <= 0) {
+                    continue;
+                }
                 BonLivraisonLigne::create([
                     'bon_id' => $bon->id,
                     'produit_id' => $ligne->produit_id,
-                    'quantite_a_livrer' => $ligne->quantite,
+                    'quantite_a_livrer' => $restes[$ligne->id],
                     // Livré dans l'unité facturée.
                     'unite' => $ligne->unite,
                     'facteur' => $ligne->facteur,
@@ -369,6 +383,31 @@ class FactureController extends Controller
         });
 
         return response()->json($bon->load('lignes'), 201);
+    }
+
+    /**
+     * Reste à livrer de chaque ligne de la facture (id de ligne => quantité). Les bons livrés de la facture sont
+     * rapprochés de ses lignes par produit et unité (une caisse ne se confond pas avec l'unité), dans l'ordre des
+     * lignes quand un même produit revient plusieurs fois.
+     */
+    private function resteALivrer(Facture $facture): array
+    {
+        $livres = BonLivraisonLigne::query()
+            ->whereIn('bon_id', BonLivraison::where('facture_id', $facture->id)->whereIn('statut', ['livre_complet', 'livre_partiel'])->select('id'))
+            ->get()
+            ->groupBy(fn (BonLivraisonLigne $l) => $l->produit_id.'|'.$l->unite)
+            ->map(fn ($lignes) => (float) $lignes->sum('quantite_livree'))
+            ->all();
+
+        $restes = [];
+        foreach ($facture->lignes as $ligne) {
+            $cle = $ligne->produit_id.'|'.$ligne->unite;
+            $dejaLivre = min((float) ($livres[$cle] ?? 0), (float) $ligne->quantite);
+            $livres[$cle] = ($livres[$cle] ?? 0) - $dejaLivre;
+            $restes[$ligne->id] = max(0, $ligne->quantite - $dejaLivre);
+        }
+
+        return $restes;
     }
 
     public function destroy(int $id): JsonResponse

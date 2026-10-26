@@ -234,7 +234,7 @@ Plan de parité fripv2, phase 1.1 : le « client comptant » de fripv2. On vend 
 - quatre champs facultatifs apparaissent : nom, téléphone, courriel, adresse (`passage_nom`, `passage_telephone`, `passage_courriel`, `passage_adresse`).
 
 **Ce que deviennent ces coordonnées :**
-- elles suivent les documents : devis → commande (conversion) → facture (depuis la commande), puis la facture du reste d'un bon de livraison ;
+- elles suivent les documents : devis → commande (conversion) → facture (depuis la commande) ;
 - sur le PDF, le destinataire est le nom noté, avec son adresse, son téléphone et son courriel ; une note de crédit et un bon de livraison reprennent ceux de leur facture ;
 - dans le courriel, `{client_nom}` vaut le nom noté et le destinataire proposé est le courriel noté (celui de la facture pour une note de crédit, un bon de livraison ou une relance) ;
 - les listes de devis, de commandes et de factures affichent le nom noté ; la recherche globale et celle des devis trouvent le document par ce nom.
@@ -261,15 +261,14 @@ représentant, et sa fiche l'affiche.
 **Sur les devis, commandes et factures :**
 - à la création, le représentant du client est proposé (écran) et retenu par l'API si la demande n'en donne pas ; on peut
   en choisir un autre, ou aucun ;
-- il suit le document d'origine : devis → commande (conversion) → facture, devis facturé directement, copie d'un devis,
-  facture du reste d'un bon de livraison. Une commande passée dans l'espace client prend celui du client ;
+- il suit le document d'origine : devis → commande (conversion) → facture, devis facturé directement, copie d'un devis.
+  Une commande passée dans l'espace client prend celui du client ;
 - les factures créées par l'application (reliquats, abonnements, loyers, consignation, comptoir) prennent celui du client ;
 - un brouillon de devis ou de commande se modifie : le représentant se change ou se retire ;
 - les listes se filtrent par représentant ; le détail et le PDF l'affichent (« Représentant » parmi les informations).
 
 **Commission :** la facture fige le taux de commission du représentant à sa création (`factures.taux_commission`) ; un
-changement de taux ne touche pas les factures déjà faites. La facture du reste d'une livraison partielle garde le taux de
-sa facture d'origine.
+changement de taux ne touche pas les factures déjà faites.
 
 **Rapport « Ventes par représentant »** (Bibliothèque de rapports, ventes ; droit de voir les factures) : sur la période,
 par représentant, le nombre de factures émises, leurs ventes hors taxes, les notes de crédit émises sur ces factures,
@@ -551,7 +550,7 @@ La **Facture** est le document officiel de demande de paiement envoyé au client
 | `numero` | Ex: FAC-2026-0001 (auto-généré) |
 | `commande_id` | Commande d'origine |
 | `client_id` | Le client |
-| `facture_mere_id` | ID de la facture d'origine (si facture de reliquat) |
+| `facture_mere_id` | ID de la facture d'origine (factures « du reste » créées avant le 26/10/2026 ; plus utilisé) |
 | `date_facture` | Date d'émission |
 | `date_echeance` | Date limite de paiement |
 | `statut` | État actuel |
@@ -613,6 +612,8 @@ La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal :
           → Endpoint: POST /factures/{id}/creer-bl
           → Crée un BonLivraison lié à cette facture (émise, partiellement payée ou payée)
           → Un seul bon en cours par facture ; un bon annulé ne compte pas, on peut en recréer un
+          → Après une livraison partielle, un nouveau bon livre le reste : il reprend les quantités facturées
+            moins celles déjà livrées (« Livrer le reste ») ; une facture entièrement livrée est refusée
 
 Étape 4 : Enregistrer les paiements
           → Endpoint: POST /factures/{id}/paiement
@@ -650,12 +651,18 @@ Exemple : Facture de 3000€ → 1000€ le 1er mai + 1000€ le 1er juin + 1000
 
 Les paiements se répartissent sur les échéances dans leur ordre : chacune passe `payee`, `partiellement_payee` ou reste `en_attente`, avec son `montant_paye`.
 
-### 5.7 Facture de reliquat (livraison partielle)
+### 5.7 Reste d'une livraison partielle
 
-Quand un BL est livré partiellement, le système génère automatiquement une **nouvelle facture** pour les articles non livrés. Cette nouvelle facture :
-- Référence la facture d'origine via `facture_mere_id`
-- Contient uniquement les lignes non livrées avec les quantités restantes
-- Repart en statut `brouillon`
+La facture couvre toute la quantité vendue. Quand un BL n'est livré qu'en partie, il passe en `livre_partiel` et **rien
+n'est refacturé** :
+- pour livrer le reste, « Livrer le reste » (écran Factures, `POST /factures/{id}/creer-bl`) crée un nouveau bon avec les
+  seules quantités non livrées (quantité facturée moins quantités livrées par les bons de la facture, rapprochées par
+  produit et unité) ; ce bon suit le circuit habituel ;
+- un reste qui ne sera pas livré se règle par une **note de crédit** sur la facture.
+
+Jusqu'au 26/10/2026, une livraison partielle créait une nouvelle facture brouillon « du reste » (`facture_mere_id`) :
+émise, elle facturait une seconde fois les quantités non livrées. Les brouillons de ce type encore présents se
+suppriment.
 
 Une livraison **complète** passe le BL en `livre_complet` et ne crée aucune facture. (Avant le 2026-10-16, les quantités livrées étaient lues avant leur enregistrement : toute livraison était vue comme partielle et une facture de reliquat reprenait la totalité du bon.)
 
@@ -1565,7 +1572,7 @@ Il y a deux étapes clés :
 | `pret` | Prêt à charger | Ajouter à une tournée 📦, Enregistrer livraison 🚚 (retrait par le client, par exemple) |
 | `en_livraison` | Chargé dans un camion, en route | Enregistrer livraison 🚚 |
 | `livre_complet` | Tout livré | Terminé |
-| `livre_partiel` | Livraison partielle | Facture de reliquat créée auto |
+| `livre_partiel` | Livraison partielle | « Livrer le reste » depuis la facture (nouveau bon) |
 | `annule` | Annulé | Lecture seule |
 
 ### 6.3b Annulation d'un BL
@@ -1700,7 +1707,7 @@ Code : service `ColisLivraisons`, `ColisLivraisonController`, composant `livrais
 
   → Si livraison partielle :
        Statut: livre_partiel
-       + Création automatique d'une nouvelle facture pour le reliquat
+       (rien n'est refacturé : un nouveau bon de la facture livrera le reste)
 ```
 
 ### 6.6 Création du BL — comment ça se passe
@@ -2180,13 +2187,10 @@ planifiee → en_cours → terminee
 Quand un livreur arrive chez le client mais ne peut livrer qu'une partie des articles (rupture de stock, client absent pour une partie, refus client...) :
 
 1. Le livreur saisit les quantités réellement livrées (< quantités prévues)
-2. Le BL passe en `livre_partiel`
-3. **Automatiquement**, le backend crée une **nouvelle facture** pour les articles non livrés :
-   - Elle reprend les lignes non livrées avec les quantités restantes
-   - Les prix sont recalculés proportionnellement
-   - Elle part en statut `brouillon`
-   - Elle référence la facture d'origine (`facture_mere_id`)
-4. Cette nouvelle facture reprendra le circuit normal (émettre → nouveau BL → nouveau transport)
+2. Le BL passe en `livre_partiel` ; la facture, qui couvre déjà toute la quantité, ne change pas et rien n'est refacturé
+3. Pour livrer le reste : écran Factures, « Livrer le reste » → un nouveau bon reprend les seules quantités non livrées
+   et suit le circuit normal (préparation → nouveau transport → livraison)
+4. Si le reste ne sera pas livré : une note de crédit sur la facture pour les quantités non livrées
 
 ### Mouvements de stock générés
 

@@ -3378,6 +3378,13 @@ export const translations = {
     },
     // Prix et remises
     // Représentants commerciaux sur les clients et les documents de vente (phase 1.11a).
+    invoiceDelivery: {
+      create: 'Créer le bon de livraison',
+      remainder: 'Livrer le reste',
+      remainderHint: "Livraison partielle : créer un bon pour les quantités non livrées (la facture les couvre déjà, rien n'est refacturé).",
+      created: 'Bon de livraison {numero} créé.',
+      error: 'Erreur lors de la création du bon de livraison',
+    },
     salesReps: {
       label: 'Représentant',
       none: 'Aucun représentant',
@@ -8071,6 +8078,13 @@ export const translations = {
     },
     // Prices and discounts
     // Sales reps on customers and sales documents (phase 1.11a).
+    invoiceDelivery: {
+      create: 'Create the delivery note',
+      remainder: 'Deliver the rest',
+      remainderHint: 'Partial delivery: create a note for the quantities not delivered (the invoice already covers them, nothing is billed again).',
+      created: 'Delivery note {numero} created.',
+      error: 'Error while creating the delivery note',
+    },
     salesReps: {
       label: 'Sales rep',
       none: 'No sales rep',

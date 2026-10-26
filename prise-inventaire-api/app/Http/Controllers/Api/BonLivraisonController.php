@@ -5,14 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BonLivraison;
 use App\Models\BonLivraisonLigne;
-use App\Models\Configuration;
-use App\Models\Facture;
-use App\Models\FactureLigne;
 use App\Models\Lot;
 use App\Models\MouvementVente;
 use App\Models\NumeroSerie;
-use App\Services\ClientsDePassage;
-use App\Services\EntetesVente;
 use App\Services\LotsSeries;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -171,9 +166,7 @@ class BonLivraisonController extends Controller
             'notes_livraison' => 'nullable|string',
         ], ['signature_client.regex' => __('La signature doit être une image (PNG ou JPEG).')]);
 
-        $tenantId = auth()->user()->tenant_id ?? $request->attributes->get('tenant')->id;
-
-        $result = DB::transaction(function () use ($bon, $validated, $request, $tenantId) {
+        $result = DB::transaction(function () use ($bon, $validated, $request) {
             foreach ($validated['lignes'] as $index => $ligneData) {
                 $ligne = BonLivraisonLigne::with('produit')->find($ligneData['id']);
                 if ($ligne->bon_id !== $bon->id) {
@@ -211,12 +204,9 @@ class BonLivraisonController extends Controller
             // Sans cela, estComplet() lisait les quantités d'avant la livraison : toute livraison était vue
             // comme partielle et une facture du « reste » était émise pour la totalité du bon.
             $bon->load('lignes');
-            if ($bon->estComplet()) {
-                $bon->statut = 'livre_complet';
-            } else {
-                $bon->statut = 'livre_partiel';
-                $this->genererFactureReste($bon, $tenantId);
-            }
+            // Livraison partielle : la facture couvre déjà toute la quantité ; le reste se livre avec un nouveau bon de
+            // la facture (ou se règle par une note de crédit s'il ne sera pas livré). Rien n'est refacturé.
+            $bon->statut = $bon->estComplet() ? 'livre_complet' : 'livre_partiel';
             $bon->save();
 
             return $bon;
@@ -257,77 +247,5 @@ class BonLivraisonController extends Controller
         $bon->save();
 
         return response()->json($bon);
-    }
-
-    private function genererFactureReste(BonLivraison $bon, int $tenantId): void
-    {
-        $factureOrigine = $bon->facture;
-
-        $config = Configuration::pourEntite('facture', $tenantId);
-        if ($config && $config->auto_increment) {
-            $numeroFacture = $config->genererNumero();
-            $config->incrementer();
-        } else {
-            $numeroFacture = Facture::generateNumero();
-        }
-
-        // Le reste à facturer garde le représentant de la facture d'origine et son taux de commission.
-        $entete = app(EntetesVente::class)->copier($factureOrigine);
-        $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id'], $factureOrigine);
-        $nouvelleFacture = Facture::create(app(ClientsDePassage::class)->copier($factureOrigine) + $entete + [
-            'numero' => $numeroFacture,
-            'commande_id' => $factureOrigine->commande_id,
-            'client_id' => $factureOrigine->client_id,
-            'facture_mere_id' => $factureOrigine->id,
-            'date_facture' => now(),
-            'statut' => 'brouillon',
-        ]);
-
-        $montantHt = 0;
-        $montantTva = 0;
-        $montantTtc = 0;
-
-        foreach ($bon->lignes as $ligne) {
-            $reste = $ligne->quantite_a_livrer - $ligne->quantite_livree;
-            if ($reste <= 0) {
-                continue;
-            }
-
-            // La ligne facturée du même produit, dans la même unité (une caisse ne se confond pas avec l'unité).
-            $ligneFactureOrigine = $factureOrigine->lignes->first(fn ($l) => (int) $l->produit_id === (int) $ligne->produit_id && $l->unite === $ligne->unite);
-            if (! $ligneFactureOrigine) {
-                continue;
-            }
-
-            $ratio = $reste / $ligne->quantite_a_livrer;
-            $montantLigneHt = $ligneFactureOrigine->montant_ht * $ratio;
-            $montantLigneTva = $ligneFactureOrigine->montant_tva * $ratio;
-            $montantLigneTtc = $ligneFactureOrigine->montant_ttc * $ratio;
-
-            FactureLigne::create([
-                'facture_id' => $nouvelleFacture->id,
-                'produit_id' => $ligne->produit_id,
-                'quantite' => $reste,
-                'prix_unitaire_ht' => $ligneFactureOrigine->prix_unitaire_ht,
-                'taux_tva' => $ligneFactureOrigine->taux_tva,
-                'remise_ligne' => $ligneFactureOrigine->remise_ligne,
-                'montant_ht' => $montantLigneHt,
-                'montant_tva' => $montantLigneTva,
-                'montant_ttc' => $montantLigneTtc,
-                'unite' => $ligneFactureOrigine->unite,
-                'facteur' => $ligneFactureOrigine->facteur,
-            ]);
-
-            $montantHt += $montantLigneHt;
-            $montantTva += $montantLigneTva;
-            $montantTtc += $montantLigneTtc;
-        }
-
-        $nouvelleFacture->update([
-            'montant_ht' => $montantHt,
-            'montant_tva' => $montantTva,
-            'montant_ttc' => $montantTtc,
-            'reste_a_payer' => $montantTtc,
-        ]);
     }
 }

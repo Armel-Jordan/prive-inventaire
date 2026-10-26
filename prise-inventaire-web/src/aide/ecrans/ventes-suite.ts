@@ -299,7 +299,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
         "À la livraison, cliquez sur « Enregistrer livraison », saisissez quantités livrées, lots ou numéros de série, notes et signature, puis « Valider livraison ».",
       ],
       astuces: [
-        "Une livraison partielle met le bon au statut « Partiel » et crée d'elle-même une facture brouillon pour le reste non livré, dans l'écran « Factures ».",
+        "Une livraison partielle met le bon au statut « Partiel ». La facture couvre déjà toute la quantité : pour livrer le reste, cliquez sur « Livrer le reste » dans l'écran « Factures », qui crée un nouveau bon pour les seules quantités non livrées, sans rien refacturer. Un reste qui ne sera pas livré se règle par une note de crédit.",
         "La quantité livrée ne peut pas dépasser la quantité préparée. Pour un produit suivi par lot, les lots proposés sont les premiers à périmer.",
         "Seuls les bons « Créé » ou « En préparation » s'annulent. Les colis se préparent jusqu'au départ du bon ; un colis coché comme chargé se décoche d'abord.",
         "Une plume verte près du statut signale un bon signé ; « Voir détails » et le PDF du bon montrent la signature, le signataire et l'heure.",
@@ -316,7 +316,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
         "On delivery, click “Enregistrer livraison”, enter the quantities delivered, lots or serial numbers, notes and “Customer signature”, then click “Valider livraison”.",
       ],
       astuces: [
-        "A partial delivery sets the note to “Partiel” and automatically creates a draft invoice for the undelivered remainder, in the “Factures” screen.",
+        "A partial delivery sets the note to “Partiel”. The invoice already covers the whole quantity: to deliver the rest, click “Deliver the rest” in the “Factures” screen, which creates a new note for the undelivered quantities only, without billing anything again. A remainder that will not be delivered is settled with a credit note.",
         "The quantity delivered cannot exceed the quantity picked. For lot-tracked products, the lots expiring first are suggested.",
         "Only notes that are “Créé” or “En préparation” can be cancelled. Parcels can be prepared until the note leaves; a parcel ticked as loaded must be unticked first.",
         "A green pen next to the status marks a signed note; “Voir détails” and the note's PDF show the signature, the signer and the time.",
