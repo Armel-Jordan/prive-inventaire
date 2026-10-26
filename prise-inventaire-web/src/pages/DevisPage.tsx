@@ -203,7 +203,7 @@ export default function DevisPage() {
   const handleFacturer = async (devis: DevisRecord) => {
     if (!confirm(t.quoteActions.confirmInvoice.replace('{numero}', devis.numero))) return;
     try {
-      const { message } = await facturerDevis(devis.id);
+      const { message } = await facturerDevis(devis.id, aujourdhui());
       alert(message);
       loadData();
     } catch (e) { signalerErreur(e, 'Erreur lors de la facturation'); }
@@ -221,7 +221,7 @@ export default function DevisPage() {
   const handleConvertir = async (devis: DevisRecord) => {
     if (!confirm(`Convertir le devis ${devis.numero} en commande client ?`)) return;
     try {
-      const { commande } = await convertirDevisEnCommande(devis.id);
+      const { commande } = await convertirDevisEnCommande(devis.id, aujourdhui());
       alert(`Devis converti en commande ${commande.numero}.`);
       loadData();
     } catch (e) { signalerErreur(e, 'Erreur lors de la conversion'); }

@@ -350,6 +350,8 @@ Un devis accepté peut être **converti en commande client** directement — san
 Étape 4 : Convertir en commande (si accepté)
            → Endpoint: POST /devis/{id}/convertir
            → Crée une ComClientEntete avec les mêmes lignes
+           → Datée du jour de l'usager (`date`, envoyée par l'écran), sinon du jour de l'entreprise (TACHES_FUSEAU) ;
+             de même pour la facture tirée d'un devis ou d'une commande
            → Le devis reste dans l'historique
 ```
 
@@ -1923,7 +1925,7 @@ Une **Tournée** est un regroupement de plusieurs Bons de Livraison pour un mêm
 | `tournee_id` | La tournée |
 | `bon_id` | Le BL associé |
 | `ordre_livraison` | Ordre de passage chez les clients |
-| `statut` | `en_attente`, `livre`, `echec` |
+| `statut` | `en_attente`, `livre`, `echec` : à l'enregistrement de la livraison du bon, l'arrêt passe `livre` (quelque chose a été livré) ou `echec` (rien), avec l'heure (`heure_livraison`) |
 
 ### 8.3 Statuts d'une tournée
 

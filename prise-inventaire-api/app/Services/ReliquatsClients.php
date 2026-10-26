@@ -11,6 +11,7 @@ use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Models\ReliquatClient;
+use App\Support\DateDuJour;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -165,7 +166,7 @@ class ReliquatsClients
                     'tenant_id' => $tenantId,
                     'numero' => Configuration::consommerNumero('commande_fournisseur', $tenantId),
                     'fournisseur_id' => $fiche->id,
-                    'date_commande' => now()->toDateString(),
+                    'date_commande' => DateDuJour::aujourdhui(),
                     'notes' => 'Reliquats clients : '.$groupe->map(fn (ReliquatClient $r) => $r->client?->raison_sociale)->filter()->unique()->implode(', '),
                     'devise' => $fiche->devise ?? 'EUR',
                     'taux_change' => 1.0,

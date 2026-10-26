@@ -1690,8 +1690,9 @@ export async function getFacture(id: number): Promise<Facture> {
   return fetchApi(`/factures/${id}`);
 }
 
-export async function creerFactureDepuisCommande(commandeId: number): Promise<Facture> {
-  return fetchApi(`/factures/commande/${commandeId}`, { method: 'POST' });
+/** Facture d'une commande acceptée, datée du jour de l'usager (`date`, sa date locale). */
+export async function creerFactureDepuisCommande(commandeId: number, date?: string): Promise<Facture> {
+  return fetchApi(`/factures/commande/${commandeId}`, { method: 'POST', body: JSON.stringify({ date }) });
 }
 
 export async function emettreFacture(id: number): Promise<Facture> {
@@ -2647,13 +2648,15 @@ export async function refuserDevis(id: number): Promise<{ message: string; devis
   return fetchApi(`/devis/${id}/refuser`, { method: 'POST' });
 }
 
-export async function convertirDevisEnCommande(id: number): Promise<{ message: string; commande: ComClientEntete }> {
-  return fetchApi(`/devis/${id}/convertir`, { method: 'POST' });
+/** Commande tirée d'un devis accepté, datée du jour de l'usager (`date`, sa date locale). */
+export async function convertirDevisEnCommande(id: number, date?: string): Promise<{ message: string; commande: ComClientEntete }> {
+  return fetchApi(`/devis/${id}/convertir`, { method: 'POST', body: JSON.stringify({ date }) });
 }
 
 /** Facture brouillon issue d'un devis accepté, sans commande (un devis ne se convertit qu'une fois). */
-export async function facturerDevis(id: number): Promise<{ message: string; facture: Facture }> {
-  return fetchApi(`/devis/${id}/facturer`, { method: 'POST' });
+/** Facture tirée directement d'un devis accepté, datée du jour de l'usager (`date`, sa date locale). */
+export async function facturerDevis(id: number, date?: string): Promise<{ message: string; facture: Facture }> {
+  return fetchApi(`/devis/${id}/facturer`, { method: 'POST', body: JSON.stringify({ date }) });
 }
 
 /** Nouveau devis brouillon repris de celui-ci, daté du jour. */

@@ -21,6 +21,7 @@ use App\Services\EntetesVente;
 use App\Services\FacturesVente;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
+use App\Support\DateDuJour;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -193,10 +194,12 @@ class FactureController extends Controller
             return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         $condition = $this->conditions->pourFacture(null, $commande->client);
+        // Date de la facture : celle de l'usager (envoyée par l'écran), sinon le jour de l'entreprise.
+        $date = DateDuJour::demandee($request);
         // Représentant de la commande, avec son taux de commission du jour.
         $entete = app(EntetesVente::class)->copier($commande);
         $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id']);
-        $facture = DB::transaction(function () use ($commande, $tenantId, $condition, $entete) {
+        $facture = DB::transaction(function () use ($commande, $tenantId, $condition, $entete, $date) {
             $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
 
             $facture = Facture::create(app(ClientsDePassage::class)->copier($commande) + $entete + [
@@ -207,7 +210,7 @@ class FactureController extends Controller
                 // La facture reste dans la devise de la commande, à son taux.
                 'devise' => $commande->devise,
                 'taux_change' => $commande->taux_change ?? 1,
-                'date_facture' => now(),
+                'date_facture' => $date,
                 'condition_paiement_id' => $condition?->id,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
