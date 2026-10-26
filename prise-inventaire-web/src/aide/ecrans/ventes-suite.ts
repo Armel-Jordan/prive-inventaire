@@ -301,6 +301,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
       astuces: [
         "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "« Expédition » (détail du bon) : transporteur et numéro de suivi, repris de la facture, modifiables tant que le bon n'est ni livré ni annulé ; chaque colis peut avoir son numéro de suivi.",
+        "L'étoile de la liste marque le bon prioritaire (repris de sa facture) ; « Prioritaires » filtre la liste.",
         "Une livraison partielle met le bon au statut « Partiel ». La facture couvre déjà toute la quantité : pour livrer le reste, cliquez sur « Livrer le reste » dans l'écran « Factures », qui crée un nouveau bon pour les seules quantités non livrées, sans rien refacturer. Un reste qui ne sera pas livré se règle par une note de crédit.",
         "La quantité livrée ne peut pas dépasser la quantité préparée. Pour un produit suivi par lot, les lots proposés sont les premiers à périmer.",
         "Seuls les bons « Créé » ou « En préparation » s'annulent. Les colis se préparent jusqu'au départ du bon ; un colis coché comme chargé se décoche d'abord.",
@@ -320,6 +321,7 @@ export const AIDES_VENTES_SUITE: AidesEcrans = {
       astuces: [
         "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "“Shipment” (note details): carrier and tracking number, carried from the invoice, editable until the note is delivered or cancelled; each parcel can have its own tracking number.",
+        "The star in the list marks the note as a priority (carried from its invoice); “Priority only” filters the list.",
         "A partial delivery sets the note to “Partiel”. The invoice already covers the whole quantity: to deliver the rest, click “Deliver the rest” in the “Factures” screen, which creates a new note for the undelivered quantities only, without billing anything again. A remainder that will not be delivered is settled with a credit note.",
         "The quantity delivered cannot exceed the quantity picked. For lot-tracked products, the lots expiring first are suggested.",
         "Only notes that are “Créé” or “En préparation” can be cancelled. Parcels can be prepared until the note leaves; a parcel ticked as loaded must be unticked first.",

@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\LocalisationController;
 use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\PointDeVenteController;
 use App\Http\Controllers\Api\PortailClientController;
+use App\Http\Controllers\Api\PrioriteDocumentController;
 use App\Http\Controllers\Api\ReceptionController;
 use App\Http\Controllers\Api\ReferentielController;
 use App\Http\Controllers\Api\RelanceController;
@@ -719,6 +720,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('devis')->middleware('module:ventes')->group(function () {
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
+        Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
         Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
@@ -784,6 +786,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('commandes-client')->middleware('module:ventes')->group(function () {
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
+        Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
@@ -799,6 +802,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('factures')->middleware('module:ventes')->group(function () {
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
+        Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);
@@ -1005,6 +1009,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('bons-livraison')->middleware('module:ventes')->group(function () {
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
+        Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'bonLivraison']);

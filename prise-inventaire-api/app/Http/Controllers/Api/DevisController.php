@@ -56,6 +56,10 @@ class DevisController extends Controller
         if ($request->filled('statut_personnalise_id')) {
             $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
+        // Prioritaires seulement (l'étoile, socle S4.1).
+        if ($request->boolean('prioritaire')) {
+            $query->where('prioritaire', true);
+        }
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -299,6 +303,7 @@ class DevisController extends Controller
 
             $commande = ComClientEntete::create(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + app(LivraisonDocuments::class)->copier($devis) + [
                 'condition_paiement_id' => $devis->condition_paiement_id,
+                'prioritaire' => (bool) $devis->prioritaire,
                 'numero' => $numero,
                 'client_id' => $devis->client_id,
                 // La commande reste dans la devise du devis, à son taux.
@@ -396,6 +401,7 @@ class DevisController extends Controller
             $facture = $factures->creer(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + app(LivraisonDocuments::class)->copier($devis) + [
                 // La condition du devis (sinon celle du client, ou par défaut) ; l'échéance s'en calcule.
                 'condition_paiement_id' => $devis->condition_paiement_id,
+                'prioritaire' => (bool) $devis->prioritaire,
                 'client_id' => $devis->client_id,
                 'date_facture' => $date,
                 // La facture reste dans la devise du devis, à son taux : les montants acceptés ne changent pas.

@@ -42,12 +42,15 @@ class Devis extends Model
         'condition_paiement_id',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
+        // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
+        'prioritaire',
     ];
 
     /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
     protected $hidden = ['reponse_jeton', 'reponse_jeton_hash'];
 
     protected $casts = [
+        'prioritaire' => 'boolean',
         'date_devis' => 'date',
         'date_validite' => 'date',
         'montant_total' => 'decimal:2',

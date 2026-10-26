@@ -49,6 +49,10 @@ class CommandeClientController extends Controller
         if ($request->filled('statut_personnalise_id')) {
             $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
+        // Prioritaires seulement (l'étoile, socle S4.1).
+        if ($request->boolean('prioritaire')) {
+            $query->where('prioritaire', true);
+        }
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';

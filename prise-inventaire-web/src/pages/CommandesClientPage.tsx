@@ -20,6 +20,7 @@ import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
+import { EtoilePrioritaire, FiltrePrioritaires } from '@/components/Prioritaire';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -85,6 +86,8 @@ export default function CommandesClientPage() {
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
+  // Prioritaires seulement (l'étoile, socle S4.1).
+  const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
@@ -160,7 +163,7 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -173,7 +176,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
 
   useEffect(() => {
     loadData();
@@ -442,6 +445,7 @@ export default function CommandesClientPage() {
           )}
           <FiltreStatutPersonnalise document="commande_client" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
         </div>
       </div>
 
@@ -467,6 +471,8 @@ export default function CommandesClientPage() {
                 <tr key={cmd.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
                     {cmd.numero}
+                    <EtoilePrioritaire document="commande_client" documentId={cmd.id} valeur={cmd.prioritaire} modifiable={peut('commandes_client', 'modifier')}
+                      onChange={p => setCommandes(ls => ls.map(d => (d.id === cmd.id ? { ...d, prioritaire: p } : d)))} />
                     <BalisesFiche entite="commande_client" entiteId={cmd.id} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{nomClient(cmd)}<PastilleClientDePassage client={cmd.client} /></td>
