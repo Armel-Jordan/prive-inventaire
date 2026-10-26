@@ -261,7 +261,7 @@ export default function CommandesClientPage() {
 
   const handleCreerFacture = async (id: number) => {
     try {
-      const facture = await creerFactureDepuisCommande(id);
+      const facture = await creerFactureDepuisCommande(id, aujourdhui());
       alert(`Facture ${facture.numero} créée (brouillon).`);
       loadData();
     } catch (error) {

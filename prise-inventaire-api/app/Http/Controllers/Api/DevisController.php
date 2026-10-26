@@ -17,6 +17,7 @@ use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
+use App\Support\DateDuJour;
 use App\Support\Droits;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
@@ -262,6 +263,8 @@ class DevisController extends Controller
         }
 
         $devis->load('lignes');
+        // Date de la commande : celle de l'usager (envoyée par l'écran), sinon le jour de l'entreprise.
+        $date = DateDuJour::demandee($request);
 
         $tenantId = $devis->tenant_id;
         $configCommande = Configuration::pourEntite('commande', $tenantId);
@@ -269,7 +272,7 @@ class DevisController extends Controller
             return response()->json(['success' => false, 'message' => __('Configuration numéro commande manquante')], 422);
         }
 
-        $commande = DB::transaction(function () use ($devis, $request, $tenantId) {
+        $commande = DB::transaction(function () use ($devis, $request, $tenantId, $date) {
             // Verrou sur le devis : deux conversions simultanées ne créent pas deux commandes.
             $verrouille = Devis::whereKey($devis->id)->lockForUpdate()->first();
             if (($verrouille?->commande_id && $verrouille->commande()->exists()) || ($verrouille?->facture_id && $verrouille->facture()->exists())) {
@@ -285,7 +288,7 @@ class DevisController extends Controller
                 // La commande reste dans la devise du devis, à son taux.
                 'devise' => $devis->devise,
                 'taux_change' => $devis->taux_change ?? 1,
-                'date_commande' => now()->toDateString(),
+                'date_commande' => $date,
                 'statut' => 'brouillon',
                 'montant_ht' => 0,
                 'montant_tva' => 0,
@@ -366,7 +369,8 @@ class DevisController extends Controller
             return response()->json(['success' => false, 'message' => __('Configuration numéro facture manquante')], 422);
         }
 
-        $facture = DB::transaction(function () use ($devis, $factures) {
+        $date = DateDuJour::demandee($request);
+        $facture = DB::transaction(function () use ($devis, $factures, $date) {
             // Verrou sur le devis : deux conversions simultanées ne créent pas deux documents.
             $verrouille = Devis::whereKey($devis->id)->lockForUpdate()->first();
             if ($verrouille->commande_id || $verrouille->facture_id) {
@@ -375,7 +379,7 @@ class DevisController extends Controller
             $devis->load('lignes');
             $facture = $factures->creer(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + [
                 'client_id' => $devis->client_id,
-                'date_facture' => now()->toDateString(),
+                'date_facture' => $date,
                 // La facture reste dans la devise du devis, à son taux : les montants acceptés ne changent pas.
                 'devise' => $devis->devise ?: app(DevisesVente::class)->reference(),
                 'taux_change' => $devis->taux_change ?? 1,

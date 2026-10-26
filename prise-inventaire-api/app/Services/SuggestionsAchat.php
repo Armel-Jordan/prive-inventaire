@@ -10,6 +10,7 @@ use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Models\ReliquatClient;
 use App\Models\SuggestionAchat;
+use App\Support\DateDuJour;
 use DomainException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -170,7 +171,7 @@ class SuggestionsAchat
                         'tenant_id' => $tenantId,
                         'numero' => Configuration::consommerNumero('commande_fournisseur', $tenantId),
                         'fournisseur_id' => $fiche->id,
-                        'date_commande' => now()->toDateString(),
+                        'date_commande' => DateDuJour::aujourdhui(),
                         'notes' => "Suggestions d'achat",
                         'devise' => $fiche->devise ?? 'EUR',
                         'taux_change' => 1.0,

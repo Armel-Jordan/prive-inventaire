@@ -207,6 +207,11 @@ class BonLivraisonController extends Controller
             // Livraison partielle : la facture couvre déjà toute la quantité ; le reste se livre avec un nouveau bon de
             // la facture (ou se règle par une note de crédit s'il ne sera pas livré). Rien n'est refacturé.
             $bon->statut = $bon->estComplet() ? 'livre_complet' : 'livre_partiel';
+            // Arrêt de la tournée qui porte ce bon : livré à cette heure, ou en échec si rien n'a été livré.
+            $bon->tourneeBon?->update([
+                'statut' => $bon->lignes->sum('quantite_livree') > 0 ? 'livre' : 'echec',
+                'heure_livraison' => now(),
+            ]);
             $bon->save();
 
             return $bon;

@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Tournées : chaque arrêt passe « Livré » ou « Échec » à l'enregistrement de la livraison de son bon. Une commande ou une facture tirée d'un autre document prend la date du jour de l'usager.",
+    en: 'Delivery runs: each stop becomes “Delivered” or “Failed” when its delivery note is recorded. An order or invoice drawn from another document takes the user’s current date.',
+    lien: '/tournees',
+  },
+  {
+    date: '2026-10-26',
     fr: 'Connexion : après 10 mots de passe faux en 15 minutes, le compte est bloqué jusqu\'à la fin de ces 15 minutes ; 30 tentatives par minute au plus depuis une même adresse.',
     en: 'Sign-in: after 10 wrong passwords within 15 minutes, the account is blocked until those 15 minutes are over; at most 30 attempts per minute from the same address.',
   },
