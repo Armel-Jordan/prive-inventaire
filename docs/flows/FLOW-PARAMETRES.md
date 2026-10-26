@@ -705,7 +705,7 @@ Un modèle par **type d'envoi** et par **langue** (fr, en). Sans modèle personn
 | `general` | Courriel libre | — |
 
 - Champs : objet, contenu, nom du PDF joint (facultatif, variables admises), adresse de réponse propre au modèle, accusé de lecture.
-- **Variables** `{nom}` : celles du type (`{numero}`, `{client_nom}`, `{montant_ttc}`, `{date_echeance}`…) et celles de l'entreprise (`{entreprise_nom}`, `{entreprise_adresse}`…), insérées d'un clic. Montants écrits selon la langue, avec des espaces insécables, dans la devise de l'entreprise (ou celle du fournisseur pour une commande ou un retour fournisseur).
+- **Variables** `{nom}` : celles du type (`{numero}`, `{client_nom}`, `{montant_ttc}`, `{date_echeance}`, `{transporteur}`, `{numero_suivi}`, `{lien_suivi}`…) et celles de l'entreprise (`{entreprise_nom}`, `{entreprise_adresse}`…), insérées d'un clic. Montants écrits selon la langue, avec des espaces insécables, dans la devise de l'entreprise (ou celle du fournisseur pour une commande ou un retour fournisseur).
 - **Mise en forme** légère : `**gras**`, `*italique*`, listes. Le HTML saisi n'est jamais interprété et les valeurs insérées sont échappées.
 - **Aperçu** : rendu avec le document le plus récent du type, ou des valeurs d'exemple ; les variables inconnues sont signalées et surlignées.
 - Le type et la langue d'un modèle ne changent plus après sa création. « Revenir au modèle par défaut » supprime le modèle personnalisé.

@@ -123,6 +123,8 @@ export interface DetailCommande {
     notes: string | null;
     montant_tva: string;
     annulable: boolean;
+    /** Expédition : transporteur, numéro de suivi et lien de suivi (du bon de livraison, sinon de la facture ou de la commande). */
+    expedition: { transporteur: string | null; numero_suivi: string | null; lien_suivi: string | null } | null;
     lignes: {
       produit_id: number;
       produit: { numero: string; description: string; mesure: string | null } | null;

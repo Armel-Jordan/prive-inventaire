@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Portail;
 
 use App\Http\Controllers\Controller;
+use App\Models\BonLivraison;
 use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\Facture;
@@ -10,6 +11,7 @@ use App\Models\ProduitTenant;
 use App\Models\ProduitTraduction;
 use App\Services\DocumentsVentePdf;
 use App\Services\Portail\CommandesPortail;
+use App\Support\Expedition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -76,7 +78,10 @@ class PortailCommandeController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $commande = $this->commandeDuClient($request, $id)->load(['lignes.produit' => fn ($q) => $q->withTrashed()->select(['id', 'numero', 'description', 'mesure'])]);
-        $facture = Facture::where('commande_id', $commande->id)->whereNotIn('statut', ['brouillon', 'annulee'])->first(['id', 'numero', 'statut']);
+        $facture = Facture::where('commande_id', $commande->id)->whereNotIn('statut', ['brouillon', 'annulee'])->first(['id', 'numero', 'statut', 'transporteur_id', 'numero_suivi']);
+        // Expédition (phase 1.11b) : celle du dernier bon de livraison de la facture, sinon de la facture, sinon de la commande.
+        $bon = $facture ? BonLivraison::where('facture_id', $facture->id)->where('statut', '!=', 'annule')->latest('id')->first(['id', 'transporteur_id', 'numero_suivi']) : null;
+        $expedition = Expedition::de($bon) ?? Expedition::de($facture) ?? Expedition::de($commande);
 
         return response()->json([
             'commande' => $commande->only(['id', 'numero', 'date_commande', 'date_livraison_souhaitee', 'statut', 'motif_refus', 'notes', 'montant_ht', 'montant_tva', 'montant_ttc', 'portail_compte_id', 'devise']) + [
@@ -90,8 +95,9 @@ class PortailCommandeController extends Controller
                     'montant_ttc' => (float) $l->montant_ttc,
                 ])->values(),
                 'annulable' => $this->annulable($commande),
+                'expedition' => $expedition,
             ],
-            'facture' => $facture,
+            'facture' => $facture?->only(['id', 'numero', 'statut']),
         ]);
     }
 

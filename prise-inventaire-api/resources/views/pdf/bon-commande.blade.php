@@ -300,6 +300,12 @@
                             <div class="info-value">{{ $ligneAdresse }}</div>
                         @endforeach
                     @endif
+
+                    {{-- Transporteur de la commande (phase 1.11b). --}}
+                    @if($commande->transporteur)
+                        <div class="info-label">Transporteur</div>
+                        <div class="info-value">{{ $commande->transporteur->nom }}</div>
+                    @endif
                 </div>
             </div>
         </div>

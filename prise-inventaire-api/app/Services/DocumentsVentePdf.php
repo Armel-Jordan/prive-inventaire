@@ -11,6 +11,7 @@ use App\Models\Devis;
 use App\Models\Facture;
 use App\Models\Representant;
 use App\Support\EntreprisePdf;
+use App\Support\Expedition;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DocumentPdf;
 use Carbon\Carbon;
@@ -186,6 +187,13 @@ class DocumentsVentePdf
         // Représentant commercial du devis, de la commande ou de la facture.
         if ($document->getAttribute('representant_id')) {
             $infos['Représentant'] = Representant::withTrashed()->whereKey($document->getAttribute('representant_id'))->value('nom');
+        }
+        // Transporteur et numéro de suivi (phase 1.11b) : « Expédié par » sur le bon de livraison.
+        if ($expedition = Expedition::de($document)) {
+            $infos += array_filter([
+                ($document instanceof BonLivraison ? 'Expédié par' : 'Transporteur') => $expedition['transporteur'],
+                'N° de suivi' => $expedition['numero_suivi'],
+            ]);
         }
         // Document en devise étrangère : ses montants dans sa devise, avec son taux parmi les informations.
         if (! empty($document->devise)) {

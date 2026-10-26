@@ -324,8 +324,15 @@ désactive). Un transporteur désactivé n'est plus proposé, mais reste affich�
   transport – {transporteur} » sur les factures des fournisseurs livrés par ce transporteur (FLOW-ACHATS §12).
   Supprimer ce frais, ou le faire changer d'application, le retire de la fiche du transporteur.
 
-**Reste de la phase** (docs/17, §3.2) : les sorties (PDF « Expédié par », variables de courriel, lien dans l'espace
-client) et l'option « transporteur obligatoire ».
+**Sorties** (`App\Support\Expedition` : transporteur, numéro de suivi, lien de suivi avec `{numero}` remplacé) :
+- **PDF** des devis, commandes et factures : « Transporteur » et « N° de suivi » parmi les informations ; « Expédié
+  par » sur le bon de livraison ; « Transporteur » sur le bon de commande fournisseur ;
+- **courriels** des commandes, factures et bons de livraison : variables `{transporteur}`, `{numero_suivi}` et
+  `{lien_suivi}` (vides sans transporteur ni numéro) ;
+- **espace client** : le détail d'une commande montre « Expédié par … », le numéro de suivi et « Suivre l'envoi »,
+  d'après le dernier bon de livraison de sa facture, sinon la facture, sinon la commande.
+
+**Reste de la phase** (docs/17, §3.2) : l'option « transporteur obligatoire ».
 
 Code :
 - API : `App\Services\EntetesVente` (champ `transporteur_id`), `Transporteur::regle()`, `ComFourEntete::booted()`,
