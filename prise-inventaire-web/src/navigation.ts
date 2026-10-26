@@ -5,7 +5,7 @@ import {
   FileSignature, FileSpreadsheet, Gift, GitCompare, Globe, HandCoins, History, Hourglass, Landmark, Layers, Library,
   LibraryBig, Lightbulb, ListChecks, ListPlus, Lock, Mail, MapPin, Package, PackageCheck, PackageMinus, PackageOpen,
   PackageSearch, Paperclip, PiggyBank, ReceiptText, Repeat, RotateCcw, Route, Scale, ScrollText, Send, Settings, Shield,
-  ShieldCheck, ShoppingBasket, ShoppingCart, Tag, Tags, Timer, Truck, User, Users, Wallet, Warehouse,
+  Palette, ShieldCheck, ShoppingBasket, ShoppingCart, Tag, Tags, Timer, Truck, User, Users, Wallet, Warehouse,
 } from 'lucide-react';
 import type { TranslationKeys } from '@/i18n/translations';
 
@@ -141,6 +141,8 @@ export const getNavCategories = (t: TranslationKeys): NavCategory[] => [
       { path: '/champs-personnalises', label: t.customFields.title, icon: ListPlus, module: 'configuration' },
       { path: '/configuration', label: 'Configuration', icon: Settings, module: 'configuration' },
       { path: '/referentiels', label: t.nav.referentials, icon: Library, module: 'referentiels' },
+      // Libellés et couleurs des statuts des documents (« Statuts transactions » de fripv2).
+      { path: '/statuts-documents', label: t.documentStatuses.title, icon: Palette, module: 'configuration' },
       { path: '/frais', label: t.fees.nav, icon: BadgePercent, module: 'configuration' },
       { path: '/courriels', label: t.nav.sentEmails, icon: Mail, module: 'configuration' },
     ],

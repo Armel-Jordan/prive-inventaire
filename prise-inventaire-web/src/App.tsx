@@ -95,6 +95,7 @@ import AidePage from '@/pages/AidePage';
 import CompleteProfilePage from '@/pages/CompleteProfilePage';
 import FichesEmployesPage from '@/pages/FichesEmployesPage';
 import ReferentielsPage from '@/pages/ReferentielsPage';
+import StatutsDocumentsPage from '@/pages/StatutsDocumentsPage';
 import LoginPage from '@/pages/LoginPage';
 import MotDePasseOubliePage from '@/pages/MotDePasseOubliePage';
 import ReinitialiserMotDePassePage from '@/pages/ReinitialiserMotDePassePage';
@@ -231,6 +232,7 @@ function AppRoutes() {
         <Route path="aide" element={<AidePage />} />
         <Route path="fiches-employes" element={<FichesEmployesPage />} />
         <Route path="referentiels" element={<ReferentielsPage />} />
+        <Route path="statuts-documents" element={<StatutsDocumentsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         {/* Adresse inconnue : page introuvable dans le cadre de l'application (page blanche auparavant). */}
         <Route path="*" element={<PageIntrouvable />} />

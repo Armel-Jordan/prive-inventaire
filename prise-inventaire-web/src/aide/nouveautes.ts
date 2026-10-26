@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Statuts des documents (Paramètres) : choisissez le libellé et les couleurs de chaque statut des devis, commandes, factures, bons de livraison et commandes fournisseur.",
+    en: 'Document statuses (Settings): choose the label and colours of each status of quotes, orders, invoices, delivery notes and purchase orders.',
+    lien: '/statuts-documents',
+  },
+  {
+    date: '2026-10-26',
     fr: "Statuts personnalisés : une étiquette en couleur sur les devis, commandes, factures, bons de livraison et commandes fournisseur, posée depuis leur détail (même clos), avec un filtre dans les listes.",
     en: 'Custom statuses: a coloured label on quotes, orders, invoices, delivery notes and purchase orders, set from their details (even when closed), with a filter in the lists.',
     lien: '/referentiels',

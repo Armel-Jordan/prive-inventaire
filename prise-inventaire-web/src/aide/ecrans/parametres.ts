@@ -763,6 +763,37 @@ export const AIDES_PARAMETRES: AidesEcrans = {
     },
   },
 
+  "/statuts-documents": {
+    fr: {
+      resume: "Les libellés et les couleurs des statuts des documents (Brouillon, Émise, Payée…), tels qu'ils s'affichent dans les listes et les détails des devis, commandes, factures, bons de livraison et commandes fournisseur.",
+      etapes: [
+        "Choisissez le type de document dans les onglets.",
+        "Changez le libellé français ou anglais, la couleur du fond et celle du texte : l'aperçu montre le badge.",
+        "Cliquez sur « Enregistrer » sur la ligne ; la flèche « Revenir au défaut » rend le libellé et les couleurs d'origine.",
+      ],
+      astuces: [
+        "Seul l'affichage change : le cycle des documents (ce qu'un statut permet) reste le même.",
+        "Pour repérer des documents avec vos propres étiquettes (« Litige », « Urgent »…), utilisez les statuts personnalisés dans Référentiels.",
+        "Le réglage demande le droit de modifier la configuration ; tout le monde voit les statuts réglés.",
+      ],
+      motsCles: ["statuts", "couleurs", "badges", "libellés", "statuts transactions"],
+    },
+    en: {
+      resume: "The labels and colours of document statuses (Draft, Issued, Paid…), as shown in the lists and details of quotes, orders, invoices, delivery notes and purchase orders.",
+      etapes: [
+        "Choose the document type in the tabs.",
+        "Change the French or English label, the background colour and the text colour: the preview shows the badge.",
+        "Click “Save” on the line; the “Back to default” arrow restores the original label and colours.",
+      ],
+      astuces: [
+        "Only the display changes: the document cycle (what a status allows) stays the same.",
+        "To flag documents with your own labels (“Dispute”, “Urgent”…), use the custom statuses in Reference data.",
+        "Changing them requires the right to edit the configuration; everyone sees the statuses you set.",
+      ],
+      motsCles: ["statuses", "colours", "badges", "labels", "transaction statuses"],
+    },
+  },
+
   "/frais": {
     fr: {
       resume: "Les frais que les devis, commandes et factures proposent d'eux-mêmes, comme une ligne de produit : manutention, emballage, matière dangereuse, livraison…",

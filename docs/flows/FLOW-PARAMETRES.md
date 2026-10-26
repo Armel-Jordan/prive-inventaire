@@ -784,3 +784,21 @@ Lors de la mise en place de l'application pour une nouvelle entreprise, voici l'
 ```
 
 > Si on commence les Ventes sans avoir configuré la numérotation, les numéros seront générés avec les valeurs par défaut (ce qui peut ne pas correspondre à la charte de l'entreprise).
+
+## 14. Statuts des documents (Paramètres → Statuts des documents)
+
+« Statuts transactions » de fripv2, pour l'affichage seulement : le libellé (français, anglais) et les couleurs (fond,
+texte) des statuts système des devis, commandes client, factures, bons de livraison et commandes fournisseur. Les codes
+et le cycle des documents ne changent pas ; les étiquettes libres sont les statuts personnalisés (référentiel, FLOW-VENTES
+§2.9).
+
+- **Catalogue** `App\Support\StatutsDocuments` : chaque statut avec ses libellés et couleurs par défaut (ceux des écrans
+  d'avant ce réglage). Réglages par entreprise dans `statuts_documents_reglages` ; la liste fusionnée est gardée une
+  minute en cache par entreprise.
+- **API** : `GET /statuts-documents` (lecture libre : tous les écrans affichent les badges), `PUT
+  /statuts-documents/{document}/{code}` et `DELETE` (retour au défaut), avec le droit de modifier la configuration ; un
+  statut ou un document inconnu → 422.
+- **Écran** : un onglet par type de document, libellés, pipettes de couleur, aperçu du badge ; composant partagé
+  `BadgeStatut` dans les listes et les détails (le libellé de l'écran tant que la liste n'est pas chargée).
+- **Reste** (docs/17) : les autres familles de fripv2 (reliquats, réceptions, demandes d'acompte, cartes cadeaux, comptes
+  clients et fournisseurs avec la ligne colorée).

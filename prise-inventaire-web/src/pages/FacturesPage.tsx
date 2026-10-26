@@ -51,6 +51,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
@@ -378,15 +379,8 @@ export default function FacturesPage() {
     }
   };
 
+  // Libellé et couleurs du statut : ceux de l'entreprise (Paramètres → Statuts des documents) ; ces libellés en attendant.
   const getStatutBadge = (statut: string) => {
-    const styles: Record<string, string> = {
-      brouillon: 'bg-gray-100 text-gray-800',
-      emise: 'bg-blue-100 text-blue-800',
-      partiellement_payee: 'bg-yellow-100 text-yellow-800',
-      payee: 'bg-green-100 text-green-800',
-      creditee: 'bg-purple-100 text-purple-800',
-      annulee: 'bg-red-100 text-red-800',
-    };
     const labels: Record<string, string> = {
       brouillon: 'Brouillon',
       emise: 'Émise',
@@ -395,11 +389,7 @@ export default function FacturesPage() {
       creditee: 'Créditée',
       annulee: 'Annulée',
     };
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${styles[statut] || 'bg-gray-100'}`}>
-        {labels[statut] || statut}
-      </span>
-    );
+    return <BadgeStatut document="facture" statut={statut} libelleDefaut={labels[statut]} />;
   };
 
   return (
