@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Paperclip, Search, Trash2 } from 'lucide-react';
 import {
-  getPiecesJointes, supprimerPieceJointe, ouvrirPieceJointe,
+  getPiecesJointes, supprimerPieceJointe, ouvrirPieceJointe, DROITS_PIECES_JOINTES,
   type EntitePieceJointe, type PagePiecesJointes, type PieceJointe,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { IconePieceJointe } from '@/components/PiecesJointes';
 import { formatTaille } from '@/lib/utils';
 
 const ENTITES: EntitePieceJointe[] = ['client', 'fournisseur', 'produit', 'employe', 'devis', 'commande_client', 'facture', 'bon_livraison', 'commande_fournisseur', 'facture_fournisseur', 'encaissement', 'debourse', 'transaction_bancaire'];
 
-/** Toutes les pièces jointes de l'entreprise : recherche, filtre par type de fiche, ouverture, nettoyage. */
+/**
+ * Pièces jointes de l'entreprise que le compte peut voir (celles des fiches qu'il consulte) : recherche, filtre par
+ * type de fiche, ouverture, nettoyage (avec le droit de modifier la fiche).
+ */
 export default function PiecesJointesPage() {
+  const { peut } = usePermissions();
   const { t, language } = useLanguage();
   const ta = t.attachments;
   const anglais = language === 'en';
@@ -109,10 +114,12 @@ export default function PiecesJointesPage() {
                   {piece.created_at ? new Date(piece.created_at).toLocaleDateString(anglais ? 'en-US' : 'fr-FR') : '—'}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button type="button" onClick={() => supprimer(piece)} title={ta.delete} aria-label={`${ta.delete} — ${piece.nom_original}`}
-                    className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
-                    <Trash2 size={16} />
-                  </button>
+                  {peut(...DROITS_PIECES_JOINTES[piece.entite]) && (
+                    <button type="button" onClick={() => supprimer(piece)} title={ta.delete} aria-label={`${ta.delete} — ${piece.nom_original}`}
+                      className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

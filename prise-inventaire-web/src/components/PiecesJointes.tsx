@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Upload, FileText, Image as ImageIcon, File as FileIcon, Pencil, Trash2, X, Check } from 'lucide-react';
 import {
   getPiecesJointes, getCategoriesPiecesJointes, ajouterPiecesJointes, modifierPieceJointe, supprimerPieceJointe, ouvrirPieceJointe,
-  type EntitePieceJointe, type PieceJointe,
+  DROITS_PIECES_JOINTES, type EntitePieceJointe, type PieceJointe,
 } from '@/services/api';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { ApiError } from '@/services/http';
 import { useLanguage } from '@/i18n/useLanguage';
 import { formatTaille } from '@/lib/utils';
@@ -20,11 +21,14 @@ export function IconePieceJointe({ type }: { type: string | null }) {
 /**
  * Pièces jointes d'une fiche ou d'un document : ajout de plusieurs fichiers (sélection, glisser-déposer,
  * image collée), une description par fichier et une catégorie commune, ouverture, modification, suppression.
+ * Ajouter, modifier et retirer demandent le droit de modifier la fiche ; sinon les pièces se consultent seulement.
  */
 export default function PiecesJointes({ entite, entiteId }: { entite: EntitePieceJointe; entiteId: number }) {
   const { t, language } = useLanguage();
   const ta = t.attachments;
   const anglais = language === 'en';
+  const { peut } = usePermissions();
+  const modifiable = peut(...DROITS_PIECES_JOINTES[entite]);
 
   const [pieces, setPieces] = useState<PieceJointe[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -69,6 +73,7 @@ export default function PiecesJointes({ entite, entiteId }: { entite: EntitePiec
 
   // Image collée (capture d'écran…) pendant que le panneau est ouvert, hors des champs de saisie.
   useEffect(() => {
+    if (!modifiable) return;
     function coller(e: ClipboardEvent) {
       const cible = e.target as HTMLElement | null;
       if (cible && ['INPUT', 'TEXTAREA'].includes(cible.tagName)) return;
@@ -82,7 +87,7 @@ export default function PiecesJointes({ entite, entiteId }: { entite: EntitePiec
     }
     document.addEventListener('paste', coller);
     return () => document.removeEventListener('paste', coller);
-  }, [ajouterFichiers, ta.pastedImage]);
+  }, [ajouterFichiers, modifiable, ta.pastedImage]);
 
   async function envoyer() {
     setEnvoiEnCours(true);
@@ -133,6 +138,7 @@ export default function PiecesJointes({ entite, entiteId }: { entite: EntitePiec
       )}
 
       {/* Zone d'ajout : clic, glisser-déposer ou image collée */}
+      {modifiable && <>
       <button
         type="button"
         onClick={() => selecteur.current?.click()}
@@ -147,6 +153,7 @@ export default function PiecesJointes({ entite, entiteId }: { entite: EntitePiec
       </button>
       <input ref={selecteur} type="file" multiple className="hidden" aria-label={ta.add}
         onChange={e => { ajouterFichiers(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
+      </>}
 
       {aEnvoyer.length > 0 && (
         <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-2">
@@ -207,7 +214,7 @@ export default function PiecesJointes({ entite, entiteId }: { entite: EntitePiec
                   </p>
                 )}
               </div>
-              {edition?.id !== piece.id && (
+              {modifiable && edition?.id !== piece.id && (
                 <>
                   <button type="button" onClick={() => setEdition({ id: piece.id, description: piece.description ?? '', categorie: piece.categorie ?? '' })}
                     title={ta.edit} aria-label={`${ta.edit} — ${piece.nom_original}`} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded">

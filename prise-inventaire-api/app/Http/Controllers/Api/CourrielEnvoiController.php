@@ -14,13 +14,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** Envoi des documents par courriel, file d'envoi et historique. */
+/**
+ * Envoi des documents par courriel, file d'envoi et historique. Préparer, envoyer, relancer ou consulter l'envoi
+ * d'un document demande le droit de voir ce document (Courriels::DROITS) ; l'historique de toute l'entreprise
+ * demande le droit de voir la configuration (écran Courriels envoyés).
+ */
 class CourrielEnvoiController extends Controller
 {
     public function __construct(private readonly EnvoiCourriel $envois) {}
 
     /** Pré-remplissage de la fenêtre de rédaction pour un document. */
-    public function preparer(Request $request): JsonResponse
+    public function preparer(Request $request, Droits $droits): JsonResponse
     {
         $donnees = $request->validate([
             'type' => ['required', Rule::in(array_keys(Courriels::DOCUMENTS))],
@@ -30,6 +34,7 @@ class CourrielEnvoiController extends Controller
             'origine' => ['nullable', 'string', 'max:255'],
         ]);
         $this->verifierModule($request, $donnees['type']);
+        $this->exigerVoir($request, $droits, $donnees['type']);
         $document = $this->envois->document($donnees['type'], (int) $donnees['document_id']);
         if ($donnees['type'] === 'devis' && filled($donnees['origine'] ?? null)) {
             app(AccesPortail::class)->memoriserAdresse($donnees['origine']);
@@ -56,6 +61,7 @@ class CourrielEnvoiController extends Controller
             'joindre_pdf' => ['boolean'],
         ]);
         $this->verifierModule($request, $donnees['type']);
+        $this->exigerVoir($request, $droits, $donnees['type']);
         $document = $this->envois->document($donnees['type'], (int) $donnees['document_id']);
         // Le bon de commande au brouillon est validé par son envoi : il y faut le droit de valider la commande.
         if ($donnees['type'] === 'commande_fournisseur' && $document->getAttribute('statut') === ComFourEntete::STATUT_BROUILLON
@@ -71,8 +77,12 @@ class CourrielEnvoiController extends Controller
         return response()->json($this->presenter($envoi->refresh()->load('auteur:id,nom')), 201);
     }
 
-    /** Historique, du plus récent au plus ancien ; filtrable par document, par rapport joint et par statut. */
-    public function index(Request $request): JsonResponse
+    /**
+     * Historique, du plus récent au plus ancien ; filtrable par document, par rapport joint et par statut. Les envois
+     * d'un document : le droit de le voir ; ceux d'un rapport : le droit de voir les rapports ; sinon, l'historique
+     * de toute l'entreprise : le droit de voir la configuration.
+     */
+    public function index(Request $request, Droits $droits): JsonResponse
     {
         $filtres = $request->validate([
             'type' => ['nullable', Rule::in(Courriels::types())],
@@ -82,6 +92,13 @@ class CourrielEnvoiController extends Controller
             'statut' => ['nullable', Rule::in(CourrielEnvoi::STATUTS)],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
+        if (isset($filtres['type'], $filtres['document_id']) && isset(Courriels::DROITS[$filtres['type']])) {
+            $this->exigerVoir($request, $droits, $filtres['type']);
+        } elseif (isset($filtres['rapport'])) {
+            $droits->exiger($request->user(), 'rapports', 'voir');
+        } else {
+            $droits->exiger($request->user(), 'configuration', 'voir');
+        }
 
         $envois = CourrielEnvoi::with('auteur:id,nom')
             ->when($filtres['type'] ?? null, fn ($q, $type) => $q->where('type', $type))
@@ -94,9 +111,13 @@ class CourrielEnvoiController extends Controller
         return response()->json($envois->through(fn (CourrielEnvoi $envoi) => $this->presenter($envoi)));
     }
 
-    public function show(int $id): JsonResponse
+    /** Un envoi : le droit de voir la configuration (tout l'historique), sinon celui de voir son document. */
+    public function show(Request $request, Droits $droits, int $id): JsonResponse
     {
         $envoi = CourrielEnvoi::with('auteur:id,nom')->findOrFail($id);
+        if (! $droits->permet($request->user(), 'configuration', 'voir')) {
+            $this->exigerVoir($request, $droits, $envoi->type);
+        }
 
         return response()->json($this->presenter($envoi) + [
             'corps_html' => $envoi->corps_html,
@@ -105,13 +126,14 @@ class CourrielEnvoiController extends Controller
     }
 
     /** Relance manuelle d'un courriel en échec. */
-    public function reessayer(Request $request, int $id): JsonResponse
+    public function reessayer(Request $request, Droits $droits, int $id): JsonResponse
     {
         $envoi = CourrielEnvoi::findOrFail($id);
         if ($envoi->statut !== CourrielEnvoi::ECHEC) {
             return response()->json(['message' => __('Seul un courriel en échec peut être renvoyé.')], 422);
         }
         $this->verifierModule($request, $envoi->type);
+        $this->exigerVoir($request, $droits, $envoi->type);
 
         EnvoyerCourriel::dispatch($envoi->id);
 
@@ -121,6 +143,12 @@ class CourrielEnvoiController extends Controller
     private function presenter(CourrielEnvoi $envoi): array
     {
         return $envoi->resume();
+    }
+
+    /** Droit de voir le document de ce type (ou les rapports) ; un type sans document : celui de voir la configuration. */
+    private function exigerVoir(Request $request, Droits $droits, string $type): void
+    {
+        $droits->exiger($request->user(), Courriels::DROITS[$type] ?? 'configuration', 'voir');
     }
 
     /** Le document dépend d'un module (ventes, achats) que l'entreprise doit avoir activé. */

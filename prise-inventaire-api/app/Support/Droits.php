@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\AdminUser;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,8 @@ class Droits
     /**
      * Premier segment de l'adresse (après « api/ ») => module de la matrice, pour les écritures. Les préfixes
      * absents ne sont pas contrôlés par module : données personnelles (profil, notifications), routes réservées
-     * par rôle (utilisateurs, rôles, tâches planifiées), pièces jointes et envois rattachés à une fiche.
+     * par rôle (utilisateurs, rôles, tâches planifiées). Les pièces jointes et les envois de courriels suivent les
+     * droits de la fiche ou du document qu'ils concernent : leurs contrôleurs les vérifient (voir exiger()).
      */
     private const MODULES = [
         'support' => 'support',
@@ -87,6 +89,8 @@ class Droits
         'configurations' => 'configuration',
         'champs-personnalises' => 'configuration',
         'balises' => 'configuration',
+        // Remarques rapides : la liste se gère avec les balises ; la lire (pour insérer une remarque) reste libre.
+        'remarques-rapides' => 'configuration',
         'courriels' => 'configuration',
         'referentiels' => 'referentiels',
     ];
@@ -124,6 +128,8 @@ class Droits
         'verrous' => 'verrous',
         // Révisions de prix : les prix à venir.
         'revisions-prix' => 'gestion_prix',
+        // Journal des modifications : les valeurs avant et après de toutes les fiches, comptes et paramètres compris.
+        'audit' => 'historique',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -452,6 +458,21 @@ class Droits
     public function permet(AdminUser $compte, string $module, string $action): bool
     {
         return $this->effectives($compte)["{$module}.{$action}"] ?? false;
+    }
+
+    /**
+     * Refuse la requête (403, même réponse que le middleware « droits ») si le compte n'a pas ce droit. Sert aux
+     * contrôleurs dont le droit dépend des données : la fiche d'une pièce jointe, le document d'un courriel.
+     */
+    public function exiger(AdminUser $compte, string $module, string $action): void
+    {
+        if (! $this->permet($compte, $module, $action)) {
+            throw new HttpResponseException(response()->json([
+                'message' => $this->messageRefus($module, $action),
+                'module' => $module,
+                'action' => $action,
+            ], 403));
+        }
     }
 
     /**

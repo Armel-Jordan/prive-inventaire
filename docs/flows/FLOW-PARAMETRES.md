@@ -723,6 +723,9 @@ Les listes des devis, commandes client, factures, bons de livraison et commandes
 - Le PDF est régénéré à chaque tentative, depuis l'état actuel du document.
 - **Historique** : page **Paramètres → Courriels envoyés** (filtres par statut et par type, détail du courriel tel qu'il est parti), et envois précédents listés dans la fenêtre d'envoi de chaque document.
 - Le module du document (ventes, achats) doit être actif ; un document d'une autre entreprise est introuvable. Envois et relances sont limités à 30 par minute.
+- **Droits** (`App\Support\Courriels::DROITS`) :
+  - préparer, envoyer ou relancer le courriel d'un document, et consulter ses envois : le droit de **voir** ce document (Factures, Devis, Bons de livraison…) ; les envois d'un rapport : le droit de voir les rapports ;
+  - l'historique de toute l'entreprise (page Courriels envoyés, ou un envoi sans le droit de voir son document) : le droit de voir la **Configuration**.
 
 | Route | Rôle |
 |---|---|

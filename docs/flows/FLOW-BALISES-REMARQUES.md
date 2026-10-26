@@ -46,6 +46,8 @@ Textes réutilisables (2 000 caractères), classés par **catégorie libre** (Li
 
 Sous le champ, **Remarque rapide** ouvre la liste, groupée par catégorie avec une recherche ; un clic ajoute la remarque à la suite de la note existante. Les remarques se gèrent dans l'onglet Remarques rapides du même écran.
 
+**Droits** : tout compte lit la liste et insère une remarque ; ajouter, modifier ou supprimer une remarque demande les droits de la **Configuration** (comme les balises).
+
 ---
 
 ## 3. Stockage

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\PieceJointe;
+use App\Support\Droits;
 use App\Support\PiecesJointes;
 use App\Support\TenantContext;
 use Closure;
@@ -20,14 +22,18 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-/** Pièces jointes des fiches et documents : liste, ajout de plusieurs fichiers, téléchargement, suppression. */
+/**
+ * Pièces jointes des fiches et documents : liste, ajout de plusieurs fichiers, téléchargement, suppression.
+ * Les pièces suivent les droits de leur fiche (PiecesJointes::DROITS) : la voir pour consulter ses pièces, la
+ * modifier pour en ajouter, en changer ou en retirer.
+ */
 class PieceJointeController extends Controller
 {
     /**
      * Pièces d'une fiche (entite + entite_id) ou de toute l'entreprise, filtrables par type de fiche,
      * catégorie et mot-clé (nom du fichier, description, catégorie).
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, Droits $droits): JsonResponse
     {
         $filtres = $request->validate([
             'entite' => ['nullable', 'required_with:entite_id', Rule::in(PiecesJointes::entites())],
@@ -38,13 +44,14 @@ class PieceJointeController extends Controller
         ]);
 
         if (isset($filtres['entite_id'])) {
-            $this->fiche($request, $filtres['entite'], (int) $filtres['entite_id']);
+            $this->fiche($request, $droits, $filtres['entite'], (int) $filtres['entite_id']);
         } elseif (isset($filtres['entite'])) {
             $this->verifierModule($request, $filtres['entite']);
+            $droits->exiger($this->compte($request), PiecesJointes::moduleDroits($filtres['entite']), 'voir');
         }
 
         $pieces = PieceJointe::with('auteur:id,nom')
-            ->whereIn('entite', $this->entitesAccessibles($request))
+            ->whereIn('entite', $this->entitesAccessibles($request, $droits))
             ->when($filtres['entite'] ?? null, fn ($q, $entite) => $q->where('entite', $entite))
             ->when($filtres['entite_id'] ?? null, fn ($q, $id) => $q->where('entite_id', $id))
             ->when($filtres['categorie'] ?? null, fn ($q, $categorie) => $q->where('categorie', $categorie))
@@ -78,7 +85,7 @@ class PieceJointeController extends Controller
     }
 
     /** Ajoute un ou plusieurs fichiers à une fiche, avec une description commune ou une par fichier. */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, Droits $droits): JsonResponse
     {
         $donnees = $request->validate([
             'entite' => ['required', Rule::in(PiecesJointes::entites())],
@@ -93,7 +100,8 @@ class PieceJointeController extends Controller
             'fichiers.*.max' => __('Le fichier dépasse la taille maximale autorisée.'),
         ]);
 
-        $fiche = $this->fiche($request, $donnees['entite'], (int) $donnees['entite_id']);
+        $fiche = $this->fiche($request, $droits, $donnees['entite'], (int) $donnees['entite_id']);
+        $this->exigerEcriture($request, $droits, $donnees['entite']);
         $disque = config('pieces_jointes.disque');
         $dossier = sprintf('pieces-jointes/%d/%s/%d', app(TenantContext::class)->getTenantId(), $donnees['entite'], $fiche->getKey());
         $stockes = [];
@@ -134,10 +142,11 @@ class PieceJointeController extends Controller
     }
 
     /** Fichier d'origine, toujours en téléchargement ; seuls les types sûrs gardent leur type réel. */
-    public function fichier(Request $request, int $id): StreamedResponse
+    public function fichier(Request $request, Droits $droits, int $id): StreamedResponse
     {
         $piece = PieceJointe::findOrFail($id);
         $this->verifierModule($request, $piece->entite);
+        $droits->exiger($this->compte($request), PiecesJointes::moduleDroits($piece->entite), 'voir');
 
         $stockage = Storage::disk($piece->disque);
         abort_unless($stockage->exists($piece->chemin), 404, __("Le fichier n'existe plus sur le serveur."));
@@ -148,10 +157,11 @@ class PieceJointeController extends Controller
         ]);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, Droits $droits, int $id): JsonResponse
     {
         $piece = PieceJointe::findOrFail($id);
         $this->verifierModule($request, $piece->entite);
+        $this->exigerEcriture($request, $droits, $piece->entite);
 
         $piece->update($request->validate([
             'description' => ['nullable', 'string', 'max:500'],
@@ -161,10 +171,11 @@ class PieceJointeController extends Controller
         return response()->json($this->presenter($piece->load('auteur:id,nom')));
     }
 
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, Droits $droits, int $id): JsonResponse
     {
         $piece = PieceJointe::findOrFail($id);
         $this->verifierModule($request, $piece->entite);
+        $this->exigerEcriture($request, $droits, $piece->entite);
 
         Storage::disk($piece->disque)->delete($piece->chemin);
         $piece->delete();
@@ -181,10 +192,11 @@ class PieceJointeController extends Controller
         ];
     }
 
-    /** Fiche ou document de l'entreprise courante (404 sinon), dont le module est actif (403 sinon). */
-    private function fiche(Request $request, string $entite, int $id): Model
+    /** Fiche ou document de l'entreprise courante (404 sinon), dont le module est actif et que le compte voit (403 sinon). */
+    private function fiche(Request $request, Droits $droits, string $entite, int $id): Model
     {
         $this->verifierModule($request, $entite);
+        $droits->exiger($this->compte($request), PiecesJointes::moduleDroits($entite), 'voir');
 
         return PiecesJointes::modele($entite)::query()->findOrFail($id);
     }
@@ -197,14 +209,26 @@ class PieceJointeController extends Controller
         abort_if($module && $tenant && ! $tenant->hasModule($module), 403, __("Le module « :module » n'est pas activé pour cette entreprise.", ['module' => $module]));
     }
 
-    /** Types de fiches dont le module est actif : les pièces des autres restent masquées. */
-    private function entitesAccessibles(Request $request): array
+    /** Ajouter, modifier ou retirer une pièce : le droit de modifier sa fiche. */
+    private function exigerEcriture(Request $request, Droits $droits, string $entite): void
+    {
+        $droits->exiger($this->compte($request), PiecesJointes::moduleDroits($entite), PiecesJointes::actionEcriture($entite));
+    }
+
+    private function compte(Request $request): AdminUser
+    {
+        return $request->user();
+    }
+
+    /** Types de fiches dont le module est actif et que le compte peut voir : les pièces des autres restent masquées. */
+    private function entitesAccessibles(Request $request, Droits $droits): array
     {
         $tenant = $request->attributes->get('tenant');
 
         return array_values(array_filter(
             PiecesJointes::entites(),
-            fn (string $entite) => ! $tenant || ! PiecesJointes::module($entite) || $tenant->hasModule(PiecesJointes::module($entite)),
+            fn (string $entite) => (! $tenant || ! PiecesJointes::module($entite) || $tenant->hasModule(PiecesJointes::module($entite)))
+                && $droits->permet($this->compte($request), PiecesJointes::moduleDroits($entite), 'voir'),
         ));
     }
 

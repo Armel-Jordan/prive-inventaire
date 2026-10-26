@@ -72,6 +72,24 @@ final class Courriels
         'retour_fournisseur' => 'achats',
     ];
 
+    /**
+     * Module des droits (App\Support\Permissions) dont il faut le droit de voir pour préparer, envoyer, relancer ou
+     * consulter les envois de chaque type : celui du document joint, ou des rapports.
+     */
+    public const DROITS = [
+        'devis' => 'devis',
+        'commande_client' => 'commandes_client',
+        'facture' => 'factures',
+        'avoir' => 'avoirs',
+        'demande_acompte' => 'demandes_acompte',
+        'relance' => 'factures',
+        'relance_devis' => 'devis',
+        'bon_livraison' => 'bons_livraison',
+        'commande_fournisseur' => 'commandes_fournisseur',
+        'retour_fournisseur' => 'retours_fournisseurs',
+        'rapport' => 'rapports',
+    ];
+
     /** Nom par défaut du PDF joint, suivi du numéro du document (mêmes noms que les PDF téléchargés). */
     public const FICHIERS = [
         'devis' => 'devis',
