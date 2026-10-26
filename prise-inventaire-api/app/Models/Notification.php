@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Notification extends Model
@@ -14,6 +15,26 @@ class Notification extends Model
 
     protected $table = 'notifications';
 
+    /**
+     * Module des droits qu'il faut pouvoir voir pour recevoir chaque type de notification (anomalie A4) ; un type absent
+     * de la liste est montré à tous les comptes de l'entreprise.
+     */
+    public const DROITS = [
+        'transfert_complete' => 'planification',
+        'planification_imminente' => 'planification',
+        'approbation_requise' => 'approbations',
+        'alerte_stock' => 'alertes',
+        'revision_prix' => 'gestion_prix',
+        'commande_portail' => 'commandes_client',
+        'devis_accepte' => 'devis',
+        'devis_refuse' => 'devis',
+        'ct_expire' => 'camions',
+        'commande_retard' => 'commandes_fournisseur',
+        'peremption' => 'lots',
+        'facture_impayee' => 'factures',
+        'livraison_retard' => 'bons_livraison',
+    ];
+
     protected $fillable = [
         'type',
         'titre',
@@ -22,7 +43,14 @@ class Notification extends Model
         'lu',
         'data',
         'lien',
+        // Compte visé (vide : toute l'entreprise).
+        'admin_user_id',
     ];
+
+    public function lectures(): HasMany
+    {
+        return $this->hasMany(NotificationLecture::class);
+    }
 
     protected function casts(): array
     {

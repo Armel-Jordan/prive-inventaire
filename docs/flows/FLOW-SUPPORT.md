@@ -20,7 +20,7 @@ toutes les entreprises et y répond.
 - **Détail** : la description, l'échange de messages (usager, éditeur), la réponse et la fermeture. Répondre à une
   demande résolue ou fermée la rouvre ; répondre à une demande « en attente de l'usager » la repasse en cours.
 - **Notification** : une réponse de l'éditeur, ou la résolution d'une demande, arrive dans les notifications de
-  l'entreprise, avec le lien de la demande (`/support?demande=12`).
+  l'auteur de la demande (lui seul la voit, FLOW-NOTIFICATIONS), avec le lien de la demande (`/support?demande=12`).
 
 ### Statuts
 
