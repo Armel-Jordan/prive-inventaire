@@ -131,7 +131,7 @@ export const getNavCategories = (t: TranslationKeys): NavCategory[] => [
       { path: '/secteurs', label: t.nav.sectors, icon: MapPin, module: 'secteurs' },
       { path: '/configuration-a-completer', label: t.setup.title, icon: ListChecks, module: 'configuration' },
       { path: '/employes', label: t.nav.employees, icon: Users, module: 'employes' },
-      { path: '/taches-planifiees', label: t.scheduledTasks.title, icon: Timer, module: 'configuration' },
+      { path: '/taches-planifiees', label: t.scheduledTasks.title, icon: Timer, module: 'taches_planifiees' },
       // Paramètres (module toujours actif) : les alertes portent aussi sur le stock, les achats et les ventes.
       { path: '/alertes-config', label: t.alertsConfig.nav, icon: Bell, module: 'alertes_config' },
       { path: '/fiches-employes', label: 'Fiches Employés', icon: User, module: 'fiches_employes' },

@@ -9,7 +9,7 @@
 
 ## 1. Ce que c'est
 
-Des traitements automatiques prédéfinis par l'application. Chaque entreprise les active et règle leur fréquence dans **Paramètres → Tâches planifiées** (administrateurs). **Toutes sont inactives par défaut** : tant qu'une entreprise n'en active pas, rien ne change pour elle.
+Des traitements automatiques prédéfinis par l'application. Chaque entreprise les active et règle leur fréquence dans **Paramètres → Tâches planifiées** (module de droits « Tâches planifiées » : administrateurs, et les groupes ou comptes qui en reçoivent les droits). **Toutes sont inactives par défaut** : tant qu'une entreprise n'en active pas, rien ne change pour elle.
 
 | Tâche (`code`) | Par défaut | Ce qu'elle fait |
 |---|---|---|
@@ -90,7 +90,11 @@ L'exécution d'un transfert planifié (bouton « Exécuter » et tâche automati
 
 ---
 
-## 5. API (administrateurs)
+## 5. API
+
+Droits (module « Tâches planifiées ») : **Consulter** pour la liste et l'historique, **Modifier** pour régler une tâche,
+**Lancer une tâche tout de suite** pour l'exécution immédiate. Un administrateur a tout ; un autre compte, ce que son
+rôle, ses groupes ou ses exceptions lui accordent (aucun par défaut).
 
 | Route | Rôle |
 |---|---|

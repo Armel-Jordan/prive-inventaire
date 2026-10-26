@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Tâches planifiées : un administrateur peut en confier la consultation, le réglage ou le lancement à d'autres comptes (droits « Tâches planifiées »).",
+    en: 'Scheduled tasks: an administrator can let other accounts view, adjust or run them (“Scheduled tasks” rights).',
+    lien: '/taches-planifiees',
+  },
+  {
+    date: '2026-10-26',
     fr: "Notifications : chacun ne reçoit que celles des modules qu'il peut voir et celles qui le visent ; « lue » et « supprimée » ne valent que pour soi.",
     en: 'Notifications: everyone only gets those of the modules they can view and those addressed to them; “read” and “deleted” only apply to yourself.',
     lien: '/notifications',

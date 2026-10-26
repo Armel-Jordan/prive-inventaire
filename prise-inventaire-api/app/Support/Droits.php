@@ -93,6 +93,7 @@ class Droits
         'remarques-rapides' => 'configuration',
         'courriels' => 'configuration',
         'referentiels' => 'referentiels',
+        'taches-planifiees' => 'taches_planifiees',
     ];
 
     /** Écritures de tout un préfixe rattachées à une action nommée. */
@@ -130,6 +131,8 @@ class Droits
         'revisions-prix' => 'gestion_prix',
         // Journal des modifications : les valeurs avant et après de toutes les fiches, comptes et paramètres compris.
         'audit' => 'historique',
+        // Tâches planifiées : leurs réglages et l'historique de leurs exécutions.
+        'taches-planifiees' => 'taches_planifiees',
     ];
 
     /** États comptables : il faut le droit de voir les états. */
@@ -349,6 +352,8 @@ class Droits
         // Verrous : libérer la fiche d'un autre compte. Poser, renouveler et lever le sien : le contrôleur vérifie le
         // droit de modifier la fiche (prendre la main : droit de libérer).
         'DELETE api/verrous/{id}' => ['verrous', 'liberer'],
+        // Lancer une tâche planifiée tout de suite.
+        'POST api/taches-planifiees/{id}/executer' => ['taches_planifiees', 'executer'],
     ];
 
     /** Verbe de chaque droit de base dans le message de refus, par langue des messages. */

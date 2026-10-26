@@ -96,6 +96,34 @@ class TachesPlanifieesTest extends TestCase
         $this->getJson('/api/taches-planifiees')->assertForbidden();
     }
 
+    public function test_un_administrateur_delegue_les_taches_par_le_module_de_droits(): void
+    {
+        $id = $this->taches()['alertes_stock'];
+        $awa = AdminUser::factory()->for($this->tenant)->create(['role' => 'user']);
+        $acces = fn (array $exceptions) => $this->putJson("/api/acces-comptes/{$awa->id}", ['groupes' => [], 'exceptions' => $exceptions])->assertOk();
+        $agirEnAwa = function () use ($awa) {
+            $this->app['auth']->forgetGuards();
+            app(TenantContext::class)->reset();
+            Sanctum::actingAs($awa->fresh(), ['*']);
+        };
+        $reglage = ['actif' => true, 'recurrence' => 'quotidienne', 'heure' => '07:00'];
+
+        // Consulter seulement : la liste et l'historique, sans régler ni lancer.
+        $acces(['taches_planifiees.voir' => true]);
+        $agirEnAwa();
+        $this->getJson('/api/taches-planifiees')->assertOk();
+        $this->getJson('/api/taches-planifiees/historique')->assertOk();
+        $this->putJson("/api/taches-planifiees/{$id}", $reglage)->assertForbidden()->assertJsonPath('module', 'taches_planifiees');
+        $this->postJson("/api/taches-planifiees/{$id}/executer")->assertForbidden()->assertJsonPath('action', 'executer');
+
+        // Régler et lancer.
+        $this->connecter($this->tenant);
+        $acces(['taches_planifiees.voir' => true, 'taches_planifiees.modifier' => true, 'taches_planifiees.executer' => true]);
+        $agirEnAwa();
+        $this->putJson("/api/taches-planifiees/{$id}", $reglage)->assertOk();
+        $this->postJson("/api/taches-planifiees/{$id}/executer")->assertOk();
+    }
+
     public function test_prochaine_echeance_selon_la_recurrence_et_le_fuseau(): void
     {
         $planificateur = app(Planificateur::class);

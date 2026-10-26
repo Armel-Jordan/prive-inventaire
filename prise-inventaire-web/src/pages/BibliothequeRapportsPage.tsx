@@ -31,7 +31,7 @@ type Onglet = 'rapports' | 'programmes' | 'ia';
  */
 export default function BibliothequeRapportsPage() {
   const { t, language } = useLanguage();
-  const { peut, isAdmin } = usePermissions();
+  const { peut } = usePermissions();
   const tr = t.reportsLibrary;
   const locale = language === 'en' ? 'en-US' : 'fr-FR';
   const [onglet, setOnglet] = useState<Onglet>('rapports');
@@ -205,7 +205,7 @@ export default function BibliothequeRapportsPage() {
         {onglet === 'ia' ? (
           <QuestionsIa onOuvrirRapport={ouvrirRapportCite} />
         ) : onglet === 'programmes' ? (
-          <EnvoisProgrammes liste={programmes} peutProgrammer={peut('rapports', 'programmer')} estAdmin={isAdmin()}
+          <EnvoisProgrammes liste={programmes} peutProgrammer={peut('rapports', 'programmer')} estAdmin={peut('taches_planifiees', 'modifier')}
             onNouveau={() => setFenetre({ programme: null })} onModifier={programme => setFenetre({ programme })} onRecharger={rechargerProgrammes} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

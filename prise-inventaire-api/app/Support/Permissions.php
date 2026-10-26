@@ -311,6 +311,13 @@ class Permissions
         'referentiels' => ['onglet' => 'parametres', 'fr' => 'Référentiels', 'en' => 'Reference lists'],
         'alertes_config' => ['onglet' => 'parametres', 'fr' => 'Réglage des alertes', 'en' => 'Alert settings', 'crud' => ['voir', 'modifier']],
         'configuration' => ['onglet' => 'parametres', 'fr' => 'Configuration', 'en' => 'Configuration'],
+        // Tâches planifiées : les voir, régler leur horaire (modifier), en lancer une tout de suite. Réservées aux
+        // administrateurs tant qu'aucun groupe ne reçoit ces droits.
+        'taches_planifiees' => ['onglet' => 'parametres', 'fr' => 'Tâches planifiées', 'en' => 'Scheduled tasks', 'crud' => ['voir', 'modifier'], 'actions' => [
+            'executer' => ['base' => 'modifier', 'fr' => 'Lancer une tâche tout de suite', 'en' => 'Run a task now',
+                'aide_fr' => "Exécuter une tâche planifiée sans attendre son horaire (relances, factures d'abonnements, alertes…).",
+                'aide_en' => 'Run a scheduled task without waiting for its time (reminders, subscription invoices, alerts…).'],
+        ]],
         // Fiches en cours de modification (verrous) : voir qui modifie quoi ; prendre la main sur la fiche d'un autre compte.
         'verrous' => ['onglet' => 'parametres', 'fr' => 'Fiches en cours de modification', 'en' => 'Records being edited', 'crud' => ['voir'], 'actions' => [
             'liberer' => ['base' => 'modifier', 'fr' => 'Prendre la main sur une fiche en cours de modification', 'en' => 'Take over a record being edited',
