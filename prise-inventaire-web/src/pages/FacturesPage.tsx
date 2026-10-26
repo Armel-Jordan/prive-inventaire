@@ -202,10 +202,10 @@ export default function FacturesPage() {
   const handleCreerBL = async (id: number) => {
     try {
       const bon = await creerBonLivraison(id);
-      alert(`Bon de livraison ${bon.numero} créé.`);
+      alert(t.invoiceDelivery.created.replace('{numero}', bon.numero));
       loadFactures();
     } catch (error) {
-      signaler(error, 'Erreur lors de la création du bon de livraison');
+      signaler(error, t.invoiceDelivery.error);
     }
   };
 
@@ -488,13 +488,16 @@ export default function FacturesPage() {
                           <ArchiveRestore size={18} />
                         </Link>
                       )}
-                      {/* Une facture émise, même payée, se livre une fois : le bouton disparaît avec le bon en cours. */}
-                      {['emise', 'partiellement_payee', 'payee'].includes(facture.statut) && !facture.bon_livraison && (
+                      {/* Une facture émise, même payée, se livre avec un bon ; après une livraison partielle, un nouveau bon
+                          livre le reste (sans refacturer). Le bouton disparaît tant qu'un bon est en cours. */}
+                      {['emise', 'partiellement_payee', 'payee'].includes(facture.statut)
+                        && (!facture.bon_livraison || facture.bon_livraison.statut === 'livre_partiel') && (
                         <>{canCreate('bons_livraison') && (
                           <button
                             onClick={() => handleCreerBL(facture.id)}
                             className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                            title="Créer bon de livraison"
+                            title={facture.bon_livraison ? t.invoiceDelivery.remainderHint : t.invoiceDelivery.create}
+                            aria-label={`${facture.bon_livraison ? t.invoiceDelivery.remainder : t.invoiceDelivery.create} — ${facture.numero}`}
                           >
                             <FileText size={18} />
                           </button>

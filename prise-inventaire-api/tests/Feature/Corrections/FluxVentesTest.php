@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 /**
  * Corrections du flux de vente trouvées par la campagne de tests du 2026-10-16 : livraison complète
- * refacturée, numérotation absente, devis converti plusieurs fois ou expiré, taxes de la conversion,
+ * refacturée (et, depuis le 2026-10-26, le reste d'une livraison partielle livré sans être refacturé), numérotation absente, devis converti plusieurs fois ou expiré, taxes de la conversion,
  * produits d'une autre entreprise, bon annulé bloquant, suppression d'un client facturé, modification
  * d'une commande, numérotation des commandes fournisseur, échéances, sur-réception.
  * Aucune numérotation n'est créée à l'avance : chaque entité reçoit la sienne au premier besoin.
@@ -94,17 +94,26 @@ class FluxVentesTest extends TestCase
         $this->assertSame(1, $this->chezLeTenant(fn () => Facture::count()));
     }
 
-    public function test_une_livraison_partielle_facture_seulement_le_reste(): void
+    public function test_une_livraison_partielle_se_complete_avec_un_nouveau_bon_sans_refacturer(): void
     {
         $factureId = $this->factureEmise(3);
         $bon = $this->bonPret($factureId);
 
         $this->postJson("/api/bons-livraison/{$bon['id']}/livrer", ['lignes' => [['id' => $bon['lignes'][0]['id'], 'quantite_livree' => 1]]])
             ->assertOk()->assertJsonPath('statut', 'livre_partiel');
+        // La facture couvre déjà les 3 : aucune facture du reste (elle facturait deux fois les 2 non livrés).
+        $this->assertSame(1, $this->chezLeTenant(fn () => Facture::count()));
 
-        $reste = $this->chezLeTenant(fn () => Facture::with('lignes')->where('facture_mere_id', $factureId)->sole());
-        $this->assertSame('brouillon', $reste->statut);
-        $this->assertSame(2, (int) $reste->lignes->sole()->quantite);
+        // Le reste se livre avec un nouveau bon de la même facture, pour la seule quantité restante.
+        $reste = $this->bonPret($factureId);
+        $this->assertSame(2, (int) $reste['lignes'][0]['quantite_a_livrer']);
+        $this->postJson("/api/factures/{$factureId}/creer-bl")->assertUnprocessable();
+        $this->postJson("/api/bons-livraison/{$reste['id']}/livrer", ['lignes' => [['id' => $reste['lignes'][0]['id'], 'quantite_livree' => 2]]])
+            ->assertOk()->assertJsonPath('statut', 'livre_complet');
+
+        $this->postJson("/api/factures/{$factureId}/creer-bl")->assertUnprocessable()
+            ->assertJsonPath('message', 'La facture est entièrement livrée.');
+        $this->assertSame(1, $this->chezLeTenant(fn () => Facture::count()));
     }
 
     public function test_numerotations_creees_au_premier_besoin(): void

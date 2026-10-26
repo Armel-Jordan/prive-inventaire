@@ -313,7 +313,6 @@ Méthode backend : `Client::updateEncours()`
 L'encours est recalculé automatiquement :
 - À chaque enregistrement de paiement
 - À chaque émission de facture
-- À chaque livraison partielle (nouvelle facture de reliquat)
 
 ### 8.4 Plafond de crédit
 

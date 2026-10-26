@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Livraison partielle : le reste se livre avec un nouveau bon de la même facture (« Livrer le reste »), sans créer de facture qui le facturait une seconde fois.",
+    en: 'Partial delivery: the rest is delivered with a new note from the same invoice (“Deliver the rest”), without creating an invoice that billed it a second time.',
+    lien: '/factures',
+  },
+  {
+    date: '2026-10-26',
     fr: "Droits : les pièces jointes suivent leur fiche (la voir pour les consulter, la modifier pour en ajouter ou en retirer) ; l'historique des courriels et le journal des modifications demandent leur droit.",
     en: 'Rights: attachments follow their record (view it to see them, edit it to add or remove them); the email history and the change log require their own right.',
     lien: '/pieces-jointes',

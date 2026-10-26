@@ -486,6 +486,7 @@
     "La facture :numero n'est pas une facture de ce client.": "Invoice :numero is not an invoice of this customer.",
     "La facture :numero ne reste pas due.": "Invoice :numero is no longer due.",
     "La facture :numero ne reste pas à payer.": "Invoice :numero has nothing left to pay.",
+    "La facture est entièrement livrée.": "The invoice has been fully delivered.",
     "La facture doit être émise": "The invoice must be issued",
     "La fin de l'exercice doit suivre son début.": "The end of the fiscal year must come after its start.",
     "La fin de la période précède son début.": "The end of the period is before its start.",
