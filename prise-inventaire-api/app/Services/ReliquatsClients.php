@@ -44,6 +44,10 @@ class ReliquatsClients
      */
     public function creer(array $donnees, ?int $auteur = null): ReliquatClient
     {
+        // Nature du produit (socle S2) : « Garde ses reliquats » décoché (un service, par exemple).
+        if (ProduitTenant::query()->whereKey($donnees['produit_id'])->where('conserve_reliquat', false)->exists()) {
+            throw ValidationException::withMessages(['produit_id' => __('Ce produit ne garde pas de reliquats (fiche produit).')]);
+        }
         $client = Client::findOrFail($donnees['client_id']);
 
         return ReliquatClient::create($this->devises->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, $client) + [

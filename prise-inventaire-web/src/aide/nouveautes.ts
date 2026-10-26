@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Produits : « Nature et options » (service, stocké, acheté, vendu, valorisé, commissionnable, visible dans l'espace client, garde ses reliquats), avec leurs effets dans les ventes, les achats, la valorisation et les commissions.",
+    en: 'Products: “Nature and options” (service, stocked, purchased, sold, valued, commissionable, visible on the customer site, keeps back orders), with their effects in sales, purchasing, valuation and commissions.',
+    lien: '/produits',
+  },
+  {
+    date: '2026-10-26',
     fr: "Statuts des documents (Paramètres) : choisissez le libellé et les couleurs de chaque statut des devis, commandes, factures, bons de livraison et commandes fournisseur.",
     en: 'Document statuses (Settings): choose the label and colours of each status of quotes, orders, invoices, delivery notes and purchase orders.',
     lien: '/statuts-documents',

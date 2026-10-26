@@ -889,7 +889,7 @@ export default function FacturesPage() {
                           aria-label="Produit"
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                           <option value={0}>Produit...</option>
-                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
+                          {produits.filter(p => p.vendu !== false || p.id === l.produit_id).map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
                         </select>
                         <input type="number" min="1" value={l.quantite}
                           onChange={(e) => modifierLigne(idx, ligne => ({ ...ligne, quantite: parseInt(e.target.value) || 1 }))}

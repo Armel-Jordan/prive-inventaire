@@ -502,7 +502,8 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
 2. **Fin de la phase 1.11 (documents de vente)**
    - Représentants à vérifier à l'écran (§3.1), transporteurs (§3.2), statuts personnalisés (§3.3), puis statuts des
      documents (01, section 19).
-   - Socles de 03 : S3 (quantités décimales), S2 (nature du produit), puis S4.1 à S4.7 (en-tête, lignes, copie, notes de
+   - Socles de 03 : S3 (quantités décimales), S2 (nature du produit : cases et effets faits le 26/10, FLOW-INVENTAIRE §21 ;
+     reste taxes par produit, location, référentiels), puis S4.1 à S4.7 (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
    - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.
 3. **Référentiels, tiers et paramètres**

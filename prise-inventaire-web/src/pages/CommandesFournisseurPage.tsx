@@ -650,7 +650,7 @@ export default function CommandesFournisseurPage() {
                               className="w-full px-2 py-1 border rounded text-sm"
                             >
                               <option value={0}>Sélectionner...</option>
-                              {produits.map(p => (
+                              {produits.filter(p => p.achete !== false || p.id === ligne.produit_id).map(p => (
                                 <option key={p.id} value={p.id}>{p.numero} - {p.description}</option>
                               ))}
                             </select>

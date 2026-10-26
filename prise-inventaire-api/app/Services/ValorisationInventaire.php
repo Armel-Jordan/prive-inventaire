@@ -32,6 +32,11 @@ class ValorisationInventaire
     public function calculer(string $methode, ?int $secteurId = null, ?int $entrepotId = null): array
     {
         $lignes = $this->prises->inventaireOfficiel($secteurId, $entrepotId);
+        // Nature du produit (socle S2) : un produit non valorisé, ou non stocké (service), n'entre pas dans la valeur.
+        $exclus = ProduitTenant::withTrashed()->where(fn ($q) => $q->where('valorise', false)->orWhere('stocke', false))->pluck('numero')->all();
+        if ($exclus) {
+            $lignes = $lignes->reject(fn ($ligne) => in_array($ligne['produit_numero'], $exclus, true))->values();
+        }
         // Multi-entrepôts : l'entrepôt de chaque secteur, pour les totaux par entrepôt.
         $entrepots = Secteur::withTrashed()->with('entrepot:id,code,nom')->whereIn('id', $lignes->pluck('secteur_id')->filter()->unique()->values())
             ->get(['id', 'entrepot_id'])->keyBy('id');
