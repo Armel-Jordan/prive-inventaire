@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Factures : réglage « Numéro attribué à l'émission » (Configuration → Numérotation) : un brouillon porte un numéro provisoire et supprimer un brouillon ne laisse plus de trou.",
+    en: 'Invoices: “Number assigned on issue” setting (Configuration → Numbering): a draft carries a provisional number and deleting a draft no longer leaves a gap.',
+    lien: '/configuration',
+  },
+  {
+    date: '2026-10-26',
     fr: "Tournées : chaque arrêt passe « Livré » ou « Échec » à l'enregistrement de la livraison de son bon. Une commande ou une facture tirée d'un autre document prend la date du jour de l'usager.",
     en: 'Delivery runs: each stop becomes “Delivered” or “Failed” when its delivery note is recorded. An order or invoice drawn from another document takes the user’s current date.',
     lien: '/tournees',

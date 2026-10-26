@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
+use App\Models\TenantParametres;
 use App\Support\TauxTaxe;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\DB;
  */
 class FacturesVente
 {
+    /** Début du numéro provisoire d'un brouillon quand l'entreprise numérote ses factures à l'émission. */
+    public const PREFIXE_BROUILLON = 'BR-';
+
     public function __construct(
         private readonly TaxesDocument $taxes,
         private readonly ConditionsPaiement $conditions,
@@ -41,7 +45,7 @@ class FacturesVente
         $passage += $entete + ['taux_commission' => app(EntetesVente::class)->commission($entete['representant_id'])];
 
         return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise, $passage) {
-            $numero = Configuration::consommerNumero('facture', $tenantId);
+            $numero = $this->numeroBrouillon($tenantId);
             $calcul = $this->calculerLignes($donnees['lignes']);
             $lignesCalculees = $calcul['lignes'];
             ['montant_ht' => $montantHt, 'montant_tva' => $montantTva, 'montant_ttc' => $montantTtc] = $calcul;
@@ -63,6 +67,7 @@ class FacturesVente
             ]);
 
             $this->creerLignes($facture, $lignesCalculees);
+            $this->numeroterBrouillon($facture);
 
             return $facture;
         });
@@ -168,9 +173,38 @@ class FacturesVente
         return ['lignes' => $lignesCalculees, 'montant_ht' => $montantHt, 'montant_tva' => $montantTva, 'montant_ttc' => $montantTtc];
     }
 
-    /** Émet une facture brouillon : statut émise, encours du client, acomptes réservés à sa commande appliqués. */
+    /**
+     * Numérotation à l'émission (réglage de l'entreprise, anomalie A11) : un brouillon reçoit un numéro provisoire
+     * « BR-… » et ne consomme la séquence qu'à son émission ; un brouillon supprimé ne laisse pas de trou.
+     */
+    public static function numeroALEmission(): bool
+    {
+        return (bool) TenantParametres::query()->value('numero_facture_a_l_emission');
+    }
+
+    /** Numéro d'une nouvelle facture brouillon : le suivant de la séquence, ou un provisoire (voir numeroALEmission). */
+    public function numeroBrouillon(int $tenantId): string
+    {
+        return self::numeroALEmission() ? self::PREFIXE_BROUILLON.uniqid() : Configuration::consommerNumero('facture', $tenantId);
+    }
+
+    /** Numéro provisoire définitif du brouillon : « BR- » suivi de son identifiant. */
+    public function numeroterBrouillon(Facture $facture): void
+    {
+        if (str_starts_with((string) $facture->numero, self::PREFIXE_BROUILLON)) {
+            $facture->update(['numero' => self::PREFIXE_BROUILLON.$facture->id]);
+        }
+    }
+
+    /**
+     * Émet une facture brouillon : vrai numéro s'il était provisoire, statut émise, encours du client, acomptes
+     * réservés à sa commande appliqués.
+     */
     public function emettre(Facture $facture, ?int $auteur): void
     {
+        if (str_starts_with((string) $facture->numero, self::PREFIXE_BROUILLON)) {
+            $facture->numero = Configuration::consommerNumero('facture', $facture->tenant_id);
+        }
         $facture->statut = 'emise';
         $facture->save();
         $facture->client->updateEncours();

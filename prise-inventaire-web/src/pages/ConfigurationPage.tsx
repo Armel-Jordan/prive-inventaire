@@ -194,6 +194,17 @@ export default function ConfigurationPage() {
     setParametres(p => ({ ...p, [field]: value }));
   };
 
+  // Numéro de facture attribué à l'émission : enregistré tout de suite (réglage de l'entreprise).
+  const changerNumeroALEmission = async (actif: boolean) => {
+    setSaving(true);
+    try {
+      await updateParametres({ ...parametres, numero_facture_a_l_emission: actif });
+      setParametres(p => ({ ...p, numero_facture_a_l_emission: actif }));
+      showSuccess(t.invoiceNumbering.saved);
+    } catch { alert('Erreur lors de la sauvegarde'); }
+    finally { setSaving(false); }
+  };
+
   const handleAddTaxe = async () => {
     if (!newTaxe.nom || newTaxe.taux < 0) return;
     try {
@@ -325,6 +336,18 @@ export default function ConfigurationPage() {
                     </div>
                   </label>
                 </div>
+                {activeEntity === 'facture' && (
+                  <div className="md:col-span-2">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={!!parametres.numero_facture_a_l_emission} disabled={saving}
+                        onChange={(e) => changerNumeroALEmission(e.target.checked)} className="w-5 h-5 rounded" />
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{t.invoiceNumbering.atIssue}</span>
+                        <p className="text-xs text-gray-500">{t.invoiceNumbering.atIssueHelp}</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
                 {activeConfig.auto_increment && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prochain numéro</label>

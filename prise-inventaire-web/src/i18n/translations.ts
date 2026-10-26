@@ -3388,6 +3388,11 @@ export const translations = {
       lastPaid: 'Dernier prix payé ({document})',
       agreed: 'Prix convenu (catalogue du fournisseur)',
     },
+    invoiceNumbering: {
+      atIssue: "Numéro attribué à l'émission",
+      atIssueHelp: "Un brouillon porte un numéro provisoire (BR-…) et reçoit le vrai numéro quand il est émis : supprimer un brouillon ne laisse plus de trou dans la numérotation.",
+      saved: 'Réglage enregistré.',
+    },
     invoiceDelivery: {
       create: 'Créer le bon de livraison',
       remainder: 'Livrer le reste',
@@ -8098,6 +8103,11 @@ export const translations = {
     purchasePrices: {
       lastPaid: 'Last price paid ({document})',
       agreed: "Agreed price (supplier's catalogue)",
+    },
+    invoiceNumbering: {
+      atIssue: 'Number assigned on issue',
+      atIssueHelp: 'A draft carries a provisional number (BR-…) and gets the real number when it is issued: deleting a draft no longer leaves a gap in the numbering.',
+      saved: 'Setting saved.',
     },
     invoiceDelivery: {
       create: 'Create the delivery note',

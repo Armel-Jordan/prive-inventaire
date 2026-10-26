@@ -30,6 +30,8 @@ class TenantParametres extends Model
         // Document de transport des matières dangereuses : téléphone d'urgence et déclaration (selon le pays).
         'md_telephone_urgence',
         'md_declaration',
+        // Numéro de facture attribué à l'émission (un brouillon porte un numéro provisoire « BR-… »).
+        'numero_facture_a_l_emission',
     ];
 
     protected $casts = [
@@ -37,5 +39,6 @@ class TenantParametres extends Model
         'delai_paiement_jours' => 'integer',
         'delai_livraison_jours' => 'integer',
         'stock_seuil_defaut' => 'integer',
+        'numero_facture_a_l_emission' => 'boolean',
     ];
 }
