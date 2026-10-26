@@ -29,8 +29,9 @@ import {
   getTauxChange,
   getParametres,
   getProduitsFournis,
+  getPrixAchatProposes,
 } from '@/services/api';
-import type { ComFourEntete, Fournisseur, ProduitFourni } from '@/services/api';
+import type { ComFourEntete, Fournisseur, PrixAchatPropose, ProduitFourni } from '@/services/api';
 import type { Produit } from '@/types';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import BoutonPdf from '@/components/BoutonPdf';
@@ -47,6 +48,11 @@ interface LigneForm {
   produit_id: number;
   quantite_commandee: number;
   prix_unitaire: number;
+  /** Prix tapé par l'usager : il n'est plus remplacé par le prix proposé. */
+  prixSaisi?: boolean;
+  /** Origine du prix proposé (dernier payé, convenu) et commande du dernier prix payé. */
+  origine?: PrixAchatPropose['origine'];
+  document?: string | null;
 }
 
 export default function CommandesFournisseurPage() {
@@ -125,6 +131,28 @@ export default function CommandesFournisseurPage() {
     return () => { actif = false; };
   }, [formFournisseur]);
 
+  // Prix proposés (dernier payé au fournisseur, sinon convenu) pour les lignes dont le prix n'a pas été tapé : au choix
+  // du produit, du fournisseur, de la devise ou du taux. Clé stable : l'appel ne part que si ces données changent.
+  const produitsAProposer = formLignes.filter(l => l.produit_id && !l.prixSaisi).map(l => l.produit_id);
+  const tauxConnu = formDevise === deviseLocale || formTauxChange > 0;
+  const clePropositions = JSON.stringify([formFournisseur, formDevise, formDevise === deviseLocale ? 1 : formTauxChange, [...new Set(produitsAProposer)].sort()]);
+  useEffect(() => {
+    const [fournisseur, devise, taux, ids] = JSON.parse(clePropositions) as [number, string, number, number[]];
+    if (!showModal || !fournisseur || ids.length === 0 || !tauxConnu) return;
+    let actif = true;
+    const minuterie = setTimeout(() => {
+      getPrixAchatProposes(fournisseur, ids, devise, taux).then(propositions => {
+        if (!actif) return;
+        setFormLignes(lignes => lignes.map(l => {
+          const p = l.prixSaisi ? undefined : propositions[String(l.produit_id)];
+          if (!p) return l;
+          return p.prix === null ? { ...l, origine: null, document: null } : { ...l, prix_unitaire: p.prix, origine: p.origine, document: p.document };
+        }));
+      }, () => {});
+    }, 300);
+    return () => { actif = false; clearTimeout(minuterie); };
+  }, [clePropositions, showModal, tauxConnu]);
+
   /** Montant d'une commande dans sa devise (celle du fournisseur), et non en euros d'office. */
   const montantCommande = (valeur: number | string | null | undefined, devise?: string | null) =>
     formatMontantIso(valeur, devise || deviseLocale);
@@ -185,9 +213,15 @@ export default function CommandesFournisseurPage() {
     setFormLignes(formLignes.filter((_, i) => i !== index));
   }
 
-  function updateLigne(index: number, field: keyof LigneForm, value: number) {
+  function updateLigne(index: number, field: 'produit_id' | 'quantite_commandee' | 'prix_unitaire', value: number) {
     const newLignes = [...formLignes];
-    newLignes[index] = { ...newLignes[index], [field]: value };
+    newLignes[index] = field === 'prix_unitaire'
+      // Prix tapé : il l'emporte sur toute proposition.
+      ? { ...newLignes[index], prix_unitaire: value, prixSaisi: true, origine: null, document: null }
+      : field === 'produit_id'
+        // Autre produit : son prix sera proposé.
+        ? { ...newLignes[index], produit_id: value, prix_unitaire: 0, prixSaisi: false, origine: null, document: null }
+        : { ...newLignes[index], [field]: value };
     setFormLignes(newLignes);
   }
 
@@ -234,7 +268,7 @@ export default function CommandesFournisseurPage() {
         devise: formDevise,
         taux_change: formTauxChange,
         entrepot_id: formEntrepot ? Number(formEntrepot) : null,
-        lignes: formLignes,
+        lignes: formLignes.map(l => ({ produit_id: l.produit_id, quantite_commandee: l.quantite_commandee, prix_unitaire: l.prix_unitaire })),
       });
       setShowModal(false);
       loadData();
@@ -616,6 +650,13 @@ export default function CommandesFournisseurPage() {
                               min={0}
                               step={0.01}
                             />
+                            {ligne.origine && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-nowrap">
+                                {ligne.origine === 'dernier_paye'
+                                  ? t.purchasePrices.lastPaid.replace('{document}', ligne.document ?? '')
+                                  : t.purchasePrices.agreed}
+                              </p>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-sm font-medium">
                             {montantCommande(ligne.quantite_commandee * ligne.prix_unitaire, formDevise)}

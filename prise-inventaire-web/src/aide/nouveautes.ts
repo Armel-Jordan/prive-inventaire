@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Commandes fournisseur : le prix de chaque ligne se propose seul (dernier prix payé à ce fournisseur, sinon son prix convenu), dans l'unité d'achat et la devise de la commande.",
+    en: 'Purchase orders: each line price is proposed automatically (last price paid to this supplier, otherwise their agreed price), in the purchase unit and currency of the order.',
+    lien: '/commandes-fournisseur',
+  },
+  {
+    date: '2026-10-26',
     fr: "Référentiels : une unité, un fabricant, une condition de paiement, un compte bancaire, une devise, un entrepôt, un itinéraire, un type de location ou une raison encore utilisés ne se suppriment plus : désactivez-les.",
     en: 'Reference lists: a unit, manufacturer, payment terms, bank account, currency, warehouse, route, rental type or reason still in use can no longer be deleted: deactivate it.',
     lien: '/referentiels',

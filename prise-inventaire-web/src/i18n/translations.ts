@@ -3377,13 +3377,16 @@ export const translations = {
       normal: 'Normal',
     },
     // Prix et remises
-    // Représentants commerciaux sur les clients et les documents de vente (phase 1.11a).
     invoiceEdit: {
       edit: 'Modifier le brouillon',
       title: 'Modifier la facture brouillon',
       save: 'Enregistrer',
       loadError: 'Impossible de charger la facture',
       saveError: "Erreur lors de l'enregistrement de la facture",
+    },
+    purchasePrices: {
+      lastPaid: 'Dernier prix payé ({document})',
+      agreed: 'Prix convenu (catalogue du fournisseur)',
     },
     invoiceDelivery: {
       create: 'Créer le bon de livraison',
@@ -3392,6 +3395,7 @@ export const translations = {
       created: 'Bon de livraison {numero} créé.',
       error: 'Erreur lors de la création du bon de livraison',
     },
+    // Représentants commerciaux sur les clients et les documents de vente (phase 1.11a).
     salesReps: {
       label: 'Représentant',
       none: 'Aucun représentant',
@@ -8084,13 +8088,16 @@ export const translations = {
       normal: 'Normal',
     },
     // Prices and discounts
-    // Sales reps on customers and sales documents (phase 1.11a).
     invoiceEdit: {
       edit: 'Edit the draft',
       title: 'Edit the draft invoice',
       save: 'Save',
       loadError: 'Unable to load the invoice',
       saveError: 'Error while saving the invoice',
+    },
+    purchasePrices: {
+      lastPaid: 'Last price paid ({document})',
+      agreed: "Agreed price (supplier's catalogue)",
     },
     invoiceDelivery: {
       create: 'Create the delivery note',
@@ -8099,6 +8106,7 @@ export const translations = {
       created: 'Delivery note {numero} created.',
       error: 'Error while creating the delivery note',
     },
+    // Sales reps on customers and sales documents (phase 1.11a).
     salesReps: {
       label: 'Sales rep',
       none: 'No sales rep',

@@ -613,6 +613,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('commandes-fournisseur')->middleware('module:achats')->group(function () {
         Route::get('/', [CommandeFournisseurController::class, 'index']);
         Route::post('/', [CommandeFournisseurController::class, 'store']);
+        // Prix proposés pour les lignes (dernier payé, sinon convenu) : avant « /{commande} », qui le prendrait pour un numéro.
+        Route::get('/prix-proposes', [CommandeFournisseurController::class, 'prixProposes']);
         Route::get('/{commande}', [CommandeFournisseurController::class, 'show']);
         Route::get('/{id}/pdf', BonCommandePdfController::class)->whereNumber('id');
         Route::put('/{commande}', [CommandeFournisseurController::class, 'update'])->middleware('verrou:commande_fournisseur,commande');

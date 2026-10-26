@@ -9,6 +9,7 @@ use App\Models\Configuration;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Services\CommandesFournisseur;
+use App\Services\PrixAchatProposes;
 use App\Services\ReliquatsClients;
 use App\Services\UnitesAchat;
 use App\Support\TenantRule;
@@ -120,6 +121,28 @@ class CommandeFournisseurController extends Controller
     {
         return ['nullable', 'integer', TenantRule::exists('entrepots')->where(fn ($q) => $q->whereNull('deleted_at')
             ->when($commande?->entrepot_id, fn ($q, $actuel) => $q->orWhere('id', $actuel)))];
+    }
+
+    /**
+     * Prix proposés pour les lignes d'une nouvelle commande : dernier prix payé au fournisseur, sinon prix convenu de
+     * son catalogue, dans l'unité d'achat du produit chez lui et dans la devise de la commande (voir PrixAchatProposes).
+     */
+    public function prixProposes(Request $request, PrixAchatProposes $prix): JsonResponse
+    {
+        $donnees = $request->validate([
+            'fournisseur_id' => ['required', 'integer', TenantRule::exists('fournisseurs')],
+            'produits' => ['required', 'array', 'max:200'],
+            'produits.*' => ['integer'],
+            'devise' => ['nullable', 'alpha', 'size:3'],
+            'taux_change' => ['nullable', 'numeric', 'gt:0'],
+        ]);
+
+        return response()->json($prix->pour(
+            Fournisseur::findOrFail($donnees['fournisseur_id']),
+            array_values(array_unique(array_map('intval', $donnees['produits']))),
+            $donnees['devise'] ?? null,
+            (float) ($donnees['taux_change'] ?? 1),
+        ));
     }
 
     public function show(ComFourEntete $commande): JsonResponse
