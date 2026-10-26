@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, RotateCcw, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, FileText, RotateCcw, Truck, XCircle } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import { telecharger, type DetailCommande } from '../api';
@@ -87,6 +87,16 @@ export default function CommandePortail() {
         <p className="mt-3 text-sm text-gray-700">{remplir(tp.statusHelp[commande.statut] ?? '', { entreprise: infos.entreprise })}</p>
         {commande.statut === 'refusee' && commande.motif_refus && (
           <p className="mt-1 text-sm text-red-700"><span className="font-medium">{tp.refusalReason} :</span> {commande.motif_refus}</p>
+        )}
+        {commande.expedition && (
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700">
+            <Truck size={16} className="text-gray-500" aria-hidden="true" />
+            {commande.expedition.transporteur && <span>{remplir(tp.shippedBy, { transporteur: commande.expedition.transporteur })}</span>}
+            {commande.expedition.numero_suivi && <span className="text-gray-500">{remplir(tp.tracking, { numero: commande.expedition.numero_suivi })}</span>}
+            {commande.expedition.lien_suivi && (
+              <a href={commande.expedition.lien_suivi} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{tp.track}</a>
+            )}
+          </p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={boutonSecondaire} onClick={() => { void pdf(`/espace-client/commandes/${commande.id}/pdf`, `commande-${commande.numero}.pdf`); }}>

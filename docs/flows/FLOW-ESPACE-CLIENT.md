@@ -129,6 +129,8 @@ Actions sur un accès :
 - Les brouillons de l'entreprise ne sont pas montrés.
 - **Annuler :** possible tant que la commande est en attente, et seulement pour une commande passée en ligne. Une fois acceptée, il faut contacter l'entreprise.
 - **Commander à nouveau :** les produits et quantités vont au panier, où les prix du jour sont repris.
+- **Expédition :** « Expédié par … », le numéro de suivi et le lien « Suivre l'envoi » du transporteur, d'après le
+  dernier bon de livraison de la facture, sinon la facture, sinon la commande (FLOW-VENTES §2.8).
 
 ### 4.5 Factures
 
@@ -208,7 +210,7 @@ Les routes de l'API gardent le préfixe `portail` : il n'apparaît dans aucune a
 | GET | `/espace-client/catalogue` | Catalogue au prix du client (`recherche`, `categorie`, `page`) |
 | POST | `/espace-client/prix` | Prix du panier |
 | GET, POST | `/espace-client/commandes` | Historique ; nouvelle commande |
-| GET | `/espace-client/commandes/{id}` | Détail (lignes, facture, annulable) |
+| GET | `/espace-client/commandes/{id}` | Détail (lignes, facture, annulable, expédition) |
 | POST | `/espace-client/commandes/{id}/annuler` | Annulation |
 | GET | `/espace-client/commandes/{id}/pdf` | PDF de la commande |
 | GET | `/espace-client/factures` | Factures |

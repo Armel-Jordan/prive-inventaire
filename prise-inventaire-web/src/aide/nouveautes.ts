@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Transporteurs : « Expédié par » et le numéro de suivi sur les PDF, variables {transporteur}, {numero_suivi} et {lien_suivi} dans les courriels, et suivi de l'envoi dans l'espace client.",
+    en: 'Carriers: “Shipped by” and the tracking number on PDFs, {transporteur}, {numero_suivi} and {lien_suivi} variables in emails, and shipment tracking on the customer site.',
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-10-26',
     fr: "Transporteurs : case « Livraison facturée » (décochée, le frais de livraison du client n'est pas proposé) et « Frais de transport (achats) », proposé en ligne sur les factures des fournisseurs livrés par le transporteur.",
     en: 'Carriers: “Delivery billed” box (unticked, the customer’s delivery fee is not proposed) and “Freight (purchases)”, proposed as a line on the invoices of suppliers delivered by the carrier.',
     lien: '/referentiels',
