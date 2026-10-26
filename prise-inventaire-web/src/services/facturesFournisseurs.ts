@@ -114,7 +114,23 @@ export interface PropositionFacture {
   devise: string | null;
   taux_change: number;
   receptions: { id: number; numero: string; bon_livraison: string | null }[];
-  lignes: { produit_id: number | null; description: string; quantite: number; prix_unitaire: number; reception_ligne_id: number }[];
+  /** Lignes reçues, puis le frais de transport du transporteur (frais_transport, sans réception). */
+  lignes: { produit_id: number | null; description: string; quantite: number; prix_unitaire: number; reception_ligne_id: number | null; frais_transport?: boolean }[];
+}
+
+/** Ligne « Frais de transport » proposée sur une facture saisie à la main (transporteur du fournisseur, phase 1.11b). */
+export interface LigneFraisTransport {
+  produit_id: number;
+  description: string;
+  quantite: number;
+  prix_unitaire: number;
+  frais_transport: true;
+}
+
+export function fraisTransport(fournisseurId: number, devise: string): Promise<{ ligne: LigneFraisTransport | null }> {
+  const parametres = new URLSearchParams({ fournisseur_id: String(fournisseurId) });
+  if (devise) parametres.set('devise', devise);
+  return apiFetch(`/factures-fournisseurs/frais-transport?${parametres}`);
 }
 
 export function getFacturesFournisseurs(filtres: FiltresFacturesFournisseurs = {}): Promise<PageResultats<FactureFournisseur> & { resume: ResumeFacturesFournisseurs }> {

@@ -134,6 +134,7 @@ export default function FacturesPage() {
   const frais = useFraisAutomatiques({
     document: 'facture',
     clientId: createForm.client_id ? Number(createForm.client_id) : null,
+    transporteurId,
     lignes: createLignes,
     taux: createForm.devise ? Number(createForm.taux) || 1 : 1,
     actif: showCreateModal,

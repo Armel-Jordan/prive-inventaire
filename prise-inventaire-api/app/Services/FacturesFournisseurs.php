@@ -37,6 +37,7 @@ class FacturesFournisseurs
         private readonly TaxesDocument $taxes,
         private readonly ConditionsPaiement $conditions,
         private readonly ReceptionsFournisseur $receptions,
+        private readonly FraisTransportAchat $transport,
     ) {}
 
     /**
@@ -59,6 +60,13 @@ class FacturesFournisseurs
         $devises = $commandes->map(fn ($c) => $this->devise($c->devise))->unique()->values();
         if ($devises->count() > 1) {
             throw ValidationException::withMessages(['receptions' => __('Les réceptions choisies sont dans des devises différentes : facturez-les séparément.')]);
+        }
+
+        // Frais de transport du transporteur des commandes (sinon du fournisseur), proposé en dernière ligne.
+        $transport = $this->transport->ligne($receptions->first()->fournisseur, $commandes->pluck('transporteur_id')->filter()->first(), $devises->first(),
+            (float) $lignes->sum(fn (array $l) => $l['quantite'] * $l['prix_unitaire']));
+        if ($transport) {
+            $lignes->push($transport);
         }
 
         return [

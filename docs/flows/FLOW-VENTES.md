@@ -315,9 +315,17 @@ transporteur.
 **Référentiel :** un transporteur rattaché à un client, un fournisseur ou un document ne se supprime pas (on le
 désactive). Un transporteur désactivé n'est plus proposé, mais reste affiché sur les fiches et les documents qui l'ont.
 
-**Reste de la phase** (docs/17, §3.2) : la case « Livraison facturée » et le frais de livraison côté achats, le blocage
-du frais de livraison des ventes, les sorties (PDF « Expédié par », variables de courriel, lien dans l'espace client) et
-l'option « transporteur obligatoire ».
+**Frais** (fiche du transporteur, Paramètres → Référentiels → Transporteurs) :
+- **Livraison facturée** (cochée par défaut, colonne de la liste) : décochée, le frais de livraison du client n'est pas
+  proposé sur les devis, commandes et factures expédiés par ce transporteur (`POST /frais/calculer` reçoit
+  `transporteur_id`). Changer de transporteur pendant la saisie relance le calcul ; un document sans transporteur reçoit
+  le frais ; une ligne de frais retirée n'est pas reposée ;
+- **Frais de transport (achats)** : un frais de livraison (Paramètres → Frais additionnels), proposé en ligne « Frais de
+  transport – {transporteur} » sur les factures des fournisseurs livrés par ce transporteur (FLOW-ACHATS §12).
+  Supprimer ce frais, ou le faire changer d'application, le retire de la fiche du transporteur.
+
+**Reste de la phase** (docs/17, §3.2) : les sorties (PDF « Expédié par », variables de courriel, lien dans l'espace
+client) et l'option « transporteur obligatoire ».
 
 Code :
 - API : `App\Services\EntetesVente` (champ `transporteur_id`), `Transporteur::regle()`, `ComFourEntete::booted()`,

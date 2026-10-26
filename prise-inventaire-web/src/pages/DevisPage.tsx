@@ -96,6 +96,7 @@ export default function DevisPage() {
   const frais = useFraisAutomatiques({
     document: 'devis',
     clientId: formData.client_id ? Number(formData.client_id) : null,
+    transporteurId,
     lignes: lignes.map(l => ({ produit_id: l.produit_id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire })),
     taux: formData.devise ? Number(formData.taux) || 1 : 1,
     actif: showModal,

@@ -4480,6 +4480,8 @@ export const translations = {
         territoire_id: 'Territoire',
         taux_commission: 'Commission (%)',
         url_suivi: 'Lien de suivi',
+        frais_livraison_applicable: 'Livraison facturée',
+        frais_livraison_achat_id: 'Frais de transport (achats)',
         document: 'Document',
         couleur: 'Couleur',
         ordre: "Ordre d'affichage",
@@ -4519,6 +4521,8 @@ export const translations = {
         annuelle: 'Annuel',
       },
       trackingHint: 'Ex. https://transporteur.com/suivi/{numero} : {numero} sera remplacé par le numéro du colis',
+      deliveryBilledHint: "Décochée, le frais de livraison du client n'est pas proposé sur les devis, commandes et factures expédiés par ce transporteur.",
+      purchaseFreightHint: 'Frais de livraison proposé en ligne « Frais de transport » sur les factures des fournisseurs livrés par ce transporteur.',
     },
     // Groupes de taxes
     taxGroups: {
@@ -9214,6 +9218,8 @@ export const translations = {
         territoire_id: 'Territory',
         taux_commission: 'Commission (%)',
         url_suivi: 'Tracking link',
+        frais_livraison_applicable: 'Delivery billed',
+        frais_livraison_achat_id: 'Freight (purchases)',
         document: 'Document',
         couleur: 'Colour',
         ordre: 'Display order',
@@ -9253,6 +9259,8 @@ export const translations = {
         annuelle: 'Yearly',
       },
       trackingHint: 'E.g. https://carrier.com/track/{numero}: {numero} is replaced by the parcel number',
+      deliveryBilledHint: "Unticked, the customer's delivery fee is not proposed on quotes, orders and invoices shipped by this carrier.",
+      purchaseFreightHint: 'Delivery fee proposed as a “Freight” line on the invoices of suppliers delivered by this carrier.',
     },
     // Tax groups
     taxGroups: {

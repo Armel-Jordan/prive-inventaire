@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\Frais;
 use App\Models\ProduitTenant;
+use App\Models\Transporteur;
 use Illuminate\Support\Collection;
 
 /**
@@ -14,7 +15,8 @@ use Illuminate\Support\Collection;
  * - Seuls les frais actifs du type de document, dont le produit existe encore, sont proposés.
  * - Les lignes de marchandise déclenchent les frais ; les lignes d'un produit de frais n'en déclenchent pas d'autres.
  * - Frais « document » : dès qu'il y a une ligne ; « produits » : seulement pour les lignes de ses produits ;
- *   « livraison » : le frais de livraison choisi dans la fiche du client.
+ *   « livraison » : le frais de livraison choisi dans la fiche du client, sauf si le transporteur du document ne
+ *   facture pas la livraison (« Livraison facturée » décochée, phase 1.11b).
  * - Montant fixe (dans la devise de l'entreprise, converti dans celle du document), une fois par document ou une fois
  *   par ligne concernée ; ou pourcentage du montant HT des lignes concernées.
  * - Un frais dont le produit est déjà sur le document n'est pas proposé de nouveau (document modifié, ligne saisie à
@@ -32,7 +34,7 @@ class FraisDocuments
      * @param  float  $taux  valeur d'une unité de la devise du document dans celle de l'entreprise (1 : même devise)
      * @return list<array{frais_id: int, libelle: string, produit_id: int, produit: ?array, quantite: int, prix_unitaire_ht: float, montant_ht: float}>
      */
-    public function calculer(string $document, ?Client $client, array $lignes, float $taux = 1.0): array
+    public function calculer(string $document, ?Client $client, array $lignes, float $taux = 1.0, ?Transporteur $transporteur = null): array
     {
         $frais = Frais::with(['produit' => fn ($q) => $q->select('id', 'numero', 'description', 'actif', 'deleted_at'), 'produits:id'])
             ->where('actif', true)->where(self::DOCUMENTS[$document], true)->orderBy('libelle')->get();
@@ -57,7 +59,7 @@ class FraisDocuments
             if (! $f->produit || $f->produit->trashed() || $f->produit->actif === false || in_array($f->produit_id, $presents, true)) {
                 continue;
             }
-            $concernees = $this->lignesConcernees($f, $marchandise, $client, $dangereux);
+            $concernees = $this->lignesConcernees($f, $marchandise, $client, $dangereux, $transporteur);
             if ($concernees->isEmpty()) {
                 continue;
             }
@@ -86,12 +88,12 @@ class FraisDocuments
     }
 
     /** Lignes de marchandise qui déclenchent le frais. */
-    private function lignesConcernees(Frais $frais, Collection $marchandise, ?Client $client, array $dangereux = []): Collection
+    private function lignesConcernees(Frais $frais, Collection $marchandise, ?Client $client, array $dangereux = [], ?Transporteur $transporteur = null): Collection
     {
         return match ($frais->application) {
             Frais::PRODUITS => $marchandise->filter(fn (array $l) => $frais->produits->contains('id', (int) $l['produit_id'])
                 || ($frais->matieres_dangereuses && in_array((int) $l['produit_id'], $dangereux, true)))->values(),
-            Frais::LIVRAISON => $client && (int) $client->frais_livraison_id === $frais->id ? $marchandise : collect(),
+            Frais::LIVRAISON => $client && (int) $client->frais_livraison_id === $frais->id && ($transporteur?->frais_livraison_applicable ?? true) ? $marchandise : collect(),
             default => $marchandise,
         };
     }

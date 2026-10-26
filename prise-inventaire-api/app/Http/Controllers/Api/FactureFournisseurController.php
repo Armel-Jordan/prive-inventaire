@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FactureFournisseur;
+use App\Models\Fournisseur;
+use App\Services\DevisesVente;
 use App\Services\FacturesFournisseurs;
+use App\Services\FraisTransportAchat;
 use App\Services\TaxesDocument;
 use App\Support\TenantRule;
 use DomainException;
@@ -52,6 +55,22 @@ class FactureFournisseurController extends Controller
         $donnees = $request->validate(['receptions' => 'required|array|min:1|max:50', 'receptions.*' => 'integer']);
 
         return response()->json($this->factures->proposition(array_map('intval', $donnees['receptions'])));
+    }
+
+    /**
+     * Frais de transport proposé sur une facture saisie à la main pour ce fournisseur (phase 1.11b) : la ligne, ou null.
+     */
+    public function fraisTransport(Request $request, FraisTransportAchat $transport): JsonResponse
+    {
+        $donnees = $request->validate([
+            'fournisseur_id' => ['required', 'integer', TenantRule::exists('fournisseurs')],
+            'devise' => ['nullable', 'string', 'max:10'],
+        ]);
+        $fournisseur = Fournisseur::findOrFail($donnees['fournisseur_id']);
+        $devise = strtoupper(trim((string) ($donnees['devise'] ?? '')));
+        $devise = $devise === '' || $devise === app(DevisesVente::class)->reference() ? null : $devise;
+
+        return response()->json(['ligne' => $transport->ligne($fournisseur, null, $devise)]);
     }
 
     public function store(Request $request): JsonResponse

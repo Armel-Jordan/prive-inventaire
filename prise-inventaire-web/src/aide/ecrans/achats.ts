@@ -236,6 +236,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Filtrez la liste avec « À payer » pour voir tout ce qui reste dû (impayé, payé en partie ou en retard).",
       ],
       astuces: [
+        "Si le transporteur du fournisseur a un « Frais de transport (achats) » (Paramètres → Référentiels → Transporteurs), une ligne « Frais de transport » est proposée ; modifiez-la ou retirez-la comme les autres.",
         "Une même facture du fournisseur (même numéro chez lui) ne s'enregistre pas deux fois.",
         "Une facture qui a reçu un paiement ne se modifie plus et ne s'annule pas : annulez d'abord ses paiements. Annulée, elle libère ses réceptions, qui redeviennent à facturer.",
         "Pour payer plusieurs factures d'un fournisseur en une fois, ou profiter d'un escompte, passez par « Déboursés » ou « Paiements dus ».",
@@ -254,6 +255,7 @@ export const AIDES_ACHATS: AidesEcrans = {
         "Filter the list with “To pay” to see everything still due (unpaid, partly paid or overdue).",
       ],
       astuces: [
+        "If the supplier's carrier has a “Freight (purchases)” fee (Settings → Reference data → Carriers), a “Freight” line is proposed; edit or remove it like any other.",
         "The same supplier invoice (same supplier invoice number) cannot be recorded twice.",
         "An invoice that has received a payment can no longer be edited or cancelled: cancel its payments first. Once cancelled, it releases its receipts, which are to invoice again.",
         "To pay several invoices of a supplier at once, or to take an early-payment discount, use “Disbursements” or “Payments due”.",
