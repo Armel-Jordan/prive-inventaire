@@ -778,6 +778,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}', [FactureController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);
         Route::post('/', [FactureController::class, 'store']);
+        // Un brouillon seulement, verrouillé pendant sa modification.
+        Route::put('/{id}', [FactureController::class, 'update'])->whereNumber('id')->middleware('verrou:facture,id');
         Route::post('/commande/{commandeId}', [FactureController::class, 'creerDepuisCommande']);
         Route::post('/{id}/emettre', [FactureController::class, 'emettre']);
         Route::post('/{id}/paiement', [FactureController::class, 'enregistrerPaiement']);
@@ -787,7 +789,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}/escompte', [FactureController::class, 'escompte']);
         Route::get('/{id}/relances', [RelanceController::class, 'deFacture']);
         Route::post('/{id}/relances', [RelanceController::class, 'store']);
-        Route::delete('/{id}', [FactureController::class, 'destroy']);
+        Route::delete('/{id}', [FactureController::class, 'destroy'])->middleware('verrou:facture,id');
     });
 
     // Notes de crédit (avoirs) : créditer une facture émise, imputer ou rembourser le crédit disponible.

@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
 use App\Models\Devis;
+use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Models\Verrou;
@@ -31,6 +32,7 @@ class Verrous
         'devis' => ['devis', Devis::class],
         'commande_client' => ['commandes_client', ComClientEntete::class],
         'commande_fournisseur' => ['commandes_fournisseur', ComFourEntete::class],
+        'facture' => ['factures', Facture::class],
     ];
 
     /** Durée d'un verrou qui n'est plus renouvelé (fenêtre fermée sans le lever, navigateur coupé…). */

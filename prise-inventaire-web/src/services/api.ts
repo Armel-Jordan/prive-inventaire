@@ -1255,6 +1255,7 @@ export interface Facture extends CoordonneesPassage, EnteteCommerciale {
   facture_mere_id?: number;
   date_facture: string;
   date_echeance?: string;
+  notes?: string | null;
   statut: 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'creditee' | 'annulee';
   montant_ht: number;
   montant_tva: number;
@@ -1716,7 +1717,7 @@ export async function creerBonLivraison(factureId: number): Promise<BonLivraison
   return fetchApi(`/factures/${factureId}/creer-bl`, { method: 'POST' });
 }
 
-export async function createFacture(data: {
+export type SaisieFacture = {
   client_id: number;
   date_facture: string;
   condition_paiement_id?: number | null;
@@ -1724,10 +1725,17 @@ export async function createFacture(data: {
   taux_change?: number;
   date_echeance?: string;
   notes?: string;
-  lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number }[];
+  lignes: { produit_id: number; quantite: number; prix_unitaire_ht: number; taux_tva?: number; remise_ligne?: number; unite?: string | null }[];
   representant_id?: number | null;
-} & CoordonneesPassage): Promise<Facture> {
+} & CoordonneesPassage;
+
+export async function createFacture(data: SaisieFacture): Promise<Facture> {
   return fetchApi('/factures', { method: 'POST', body: JSON.stringify(data) });
+}
+
+/** Modifie une facture brouillon : en-tête et toutes ses lignes, comme à la création. */
+export async function updateFacture(id: number, data: SaisieFacture): Promise<Facture> {
+  return fetchApi(`/factures/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
 export async function deleteFacture(id: number): Promise<void> {

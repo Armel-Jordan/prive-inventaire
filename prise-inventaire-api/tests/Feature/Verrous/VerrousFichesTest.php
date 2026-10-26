@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ComClientEntete;
 use App\Models\ComFourEntete;
 use App\Models\Devis;
+use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\ProduitTenant;
 use App\Models\Tenant;
@@ -37,6 +38,7 @@ class VerrousFichesTest extends TestCase
         'devis' => '/api/devis/%d',
         'commande_client' => '/api/commandes-client/%d',
         'commande_fournisseur' => '/api/commandes-fournisseur/%d',
+        'facture' => '/api/factures/%d',
     ];
 
     private Tenant $tenant;
@@ -70,6 +72,10 @@ class VerrousFichesTest extends TestCase
                 'commande_fournisseur' => ComFourEntete::create([
                     'numero' => 'BC-0001', 'fournisseur_id' => $fournisseur->id, 'date_commande' => '2026-10-15',
                     'statut' => ComFourEntete::STATUT_BROUILLON, 'taux_change' => 1, 'created_by' => $this->paul->id,
+                ])->id,
+                'facture' => Facture::create([
+                    'numero' => 'FAC-0001', 'client_id' => $client->id, 'date_facture' => '2026-10-15', 'statut' => 'brouillon',
+                    'montant_ht' => 0, 'montant_tva' => 0, 'montant_ttc' => 0, 'reste_a_payer' => 0,
                 ])->id,
             ];
         });
@@ -148,7 +154,7 @@ class VerrousFichesTest extends TestCase
         $this->assertSame('Quincaillerie Mballa SARL', $this->chez(fn () => Client::findOrFail($this->ids['client'])->raison_sociale));
     }
 
-    public function test_les_six_fiches_refusent_l_enregistrement_et_la_suppression_d_un_autre_compte(): void
+    public function test_les_fiches_verrouillables_refusent_l_enregistrement_et_la_suppression_d_un_autre_compte(): void
     {
         foreach (array_keys(self::ADRESSES) as $entite) {
             $this->agir($this->paul);
@@ -280,7 +286,7 @@ class VerrousFichesTest extends TestCase
         $this->poser('produit')->assertForbidden()->assertJsonPath('message', "Vous n'avez pas le droit de modifier cette fiche.");
         $this->poser('client')->assertOk();
 
-        $this->postJson('/api/verrous', ['entite' => 'facture', 'entite_id' => 1])->assertUnprocessable()->assertJsonValidationErrors(['entite']);
+        $this->postJson('/api/verrous', ['entite' => 'bon_livraison', 'entite_id' => 1])->assertUnprocessable()->assertJsonValidationErrors(['entite']);
         $this->postJson('/api/verrous', ['entite' => 'client'])->assertUnprocessable()->assertJsonValidationErrors(['entite_id']);
         $this->postJson('/api/verrous', ['entite' => 'client', 'entite_id' => 999999])->assertNotFound();
 

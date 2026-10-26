@@ -306,7 +306,7 @@ revue dans le code.
 | # | Anomalie | Où | Effet | Correction proposée |
 |---|---|---|---|---|
 | A1 | La facture du **reste** d'une livraison partielle ne reprenait ni la devise, ni le taux de change, ni la condition de paiement — **sans objet depuis le 26/10** | `BonLivraisonController::genererFactureReste` (supprimée) | — | Cette facture n'est plus créée (voir A10). |
-| A2 | Une **facture brouillon ne se modifie pas** : il n'y a pas de `PUT /factures/{id}` | `routes/api.php`, `FactureController` | Une erreur de saisie oblige à supprimer puis recréer la facture, ce qui consomme un numéro | F1 de [03](./reste-a-faire/03-inventaire-ventes-achats.md) §3.9 : `PUT /factures/{id}` réservé aux brouillons, mêmes règles que `store`, verrou `verrou:facture,id`, bouton « Modifier » |
+| A2 | Une **facture brouillon ne se modifiait pas** — **corrigé le 26/10** | `PUT /factures/{id}`, `FacturesVente::modifier` | Il fallait supprimer puis recréer la facture | Fait : crayon sur un brouillon (droit Factures → Modifier), formulaire prérempli, verrou pendant la modification, taxes et totaux recalculés ; refusé pour une facture issue d'un abonnement, d'un contrat, de reliquats ou d'une consignation (03, F1). |
 | A3 | Le **statut des arrêts d'une tournée** n'est jamais mis à jour | `tournee_bons.statut` (`en_attente`, `livre`, `echec`), `TourneesPage` | L'avancement d'une tournée ne se voit pas arrêt par arrêt | Passer l'arrêt à « livré » quand son BL est livré (« échec » si la livraison échoue) et afficher l'état par arrêt |
 | A4 | Les **notifications** sont partagées par toute l'entreprise | table `notifications` (sans compte destinataire), cloche | Tout le monde voit tout, et « lu » vaut pour tous | `admin_user_id` (null = pour tous) et lecture par compte ; filtrer selon les droits du module concerné. Prérequis du CRM (06 §6.9a). |
 | A5 | Le **prix convenu avec le fournisseur** ne pré-remplit pas les lignes de commande fournisseur | `CommandesFournisseurPage`, `produit_fournisseur` | Le prix est ressaisi à chaque commande | CF1 de [03](./reste-a-faire/03-inventaire-ventes-achats.md) §4.5 : proposer le prix du fournisseur (dans l'unité d'achat, converti au taux) au choix du produit, sans écraser un prix saisi |
@@ -473,7 +473,7 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
 1. **Correctifs**, en petites PR indépendantes, chacune avec son test :
    1. A12 : fait en partie le 26/10 ; reste la délégation des écrans réservés à l'administrateur (01, T1) ;
    2. A10 et A1 : faits le 26/10 ; A11 : numéro de facture à l'émission (03, F2) ;
-   3. A2 : facture brouillon modifiable (03, F1) ;
+   3. A2 : fait le 26/10 ;
    4. A5 : prix proposé sur la commande fournisseur (03, CF1) ;
    5. A13, A14 et A15 : livreur d'une tournée, `tenant_id` des tables filles, suppression des référentiels utilisés ;
    6. A3, A6 et A4 : statut des arrêts, date de la commande, notifications par compte ;

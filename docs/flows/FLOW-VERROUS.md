@@ -16,6 +16,7 @@ Fiches verrouillées :
 | Devis | Devis | `PUT` / `DELETE /devis/{id}` |
 | Commande client | Commandes clients | `PUT` / `DELETE /commandes-client/{id}` |
 | Commande fournisseur | (pas de fenêtre de modification à l'écran) | `PUT` / `DELETE /commandes-fournisseur/{id}` |
+| Facture (brouillon) | Factures | `PUT` / `DELETE /factures/{id}` |
 
 Les listes attachées à une fiche (contacts, adresses, remarques, codes-barres, unités…) ne sont pas verrouillées :
 plusieurs personnes peuvent y travailler en même temps.

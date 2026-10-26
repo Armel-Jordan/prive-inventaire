@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link } from 'react-router-dom';
-import { ArchiveRestore, Eye, CreditCard, FileText, ReceiptText, Send, Trash2, Plus, X, Search } from 'lucide-react';
+import { ArchiveRestore, Eye, CreditCard, FileText, Pencil, ReceiptText, Send, Trash2, Plus, X, Search } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -16,6 +16,7 @@ import {
   creerBonLivraison,
   deleteFacture,
   createFacture,
+  updateFacture,
   getClientsActifs,
   getProduits,
   getReferentiel,
@@ -28,7 +29,7 @@ import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
-import { aujourdhui, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
+import { aujourdhui, dateSaisie, formatDateDocument, tauxPropose, useCodeDevise, useMontantDocument } from '@/lib/documents';
 import ChampDevise from '@/components/ChampDevise';
 import EditeurNoteCredit from '@/components/avoirs/EditeurNoteCredit';
 import { appliquerAcompte, getAcomptes, type Acompte } from '@/services/acomptes';
@@ -43,7 +44,9 @@ import { appliquerPrix, changerUnite, choisirProduit, dansLaDevise, saisirPrix, 
 import { annexesALaVente, prixUnite, quantiteAvecUnite, uniteParDefaut } from '@/lib/unitesVente';
 import ChoixUnite from '@/components/ChoixUnite';
 import ChampsClientDePassage, { BoutonClientDePassage, DetailClientDePassage, PastilleClientDePassage } from '@/components/ClientDePassage';
-import { PASSAGE_VIDE, avecClient, nomClient } from '@/lib/clientDePassage';
+import { PASSAGE_VIDE, avecClient, nomClient, saisiePassage } from '@/lib/clientDePassage';
+import { useVerrou } from '@/hooks/useVerrou';
+import BandeauVerrou from '@/components/BandeauVerrou';
 import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
@@ -91,6 +94,9 @@ export default function FacturesPage() {
     carte_cadeau: '',
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  // Facture brouillon en modification (null : nouvelle facture), verrouillée tant que le formulaire est ouvert.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const verrou = useVerrou('facture', showCreateModal ? editingId : null);
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [createForm, setCreateForm] = useState({
@@ -227,11 +233,50 @@ export default function FacturesPage() {
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
 
+  const fermerFormulaire = () => {
+    frais.reinitialiser();
+    setShowCreateModal(false);
+    setEditingId(null);
+    setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
+    setPassage(PASSAGE_VIDE);
+    setRepresentantId(null);
+    setCreateLignes([]);
+  };
+
+  // Brouillon à corriger : le formulaire de création, rempli avec la facture (ses lignes de frais comprises : un frais
+  // déjà sur le document n'est pas proposé de nouveau).
+  const ouvrirModification = async (id: number) => {
+    try {
+      const facture = await getFacture(id);
+      setEditingId(facture.id);
+      setCreateForm({
+        client_id: String(facture.client_id),
+        date_facture: dateSaisie(facture.date_facture),
+        date_echeance: dateSaisie(facture.date_echeance ?? ''),
+        notes: facture.notes ?? '',
+        condition_paiement_id: facture.condition_paiement_id ? String(facture.condition_paiement_id) : '',
+        devise: facture.devise ?? '',
+        taux: String(facture.taux_change ?? 1),
+      });
+      setPassage(saisiePassage(facture));
+      setRepresentantId(facture.representant_id ?? null);
+      setCreateLignes((facture.lignes ?? []).map(l => ({
+        produit_id: l.produit_id,
+        quantite: l.quantite,
+        prix_unitaire_ht: Number(l.prix_unitaire_ht),
+        unite: l.unite ?? null,
+      })));
+      setShowCreateModal(true);
+    } catch (error) {
+      signaler(error, t.invoiceEdit.loadError);
+    }
+  };
+
   const handleCreateFacture = async (e: React.FormEvent) => {
     e.preventDefault();
     if (createLignes.length === 0) { alert('Ajoutez au moins une ligne'); return; }
     try {
-      await createFacture({
+      const saisie = {
         client_id: parseInt(createForm.client_id),
         date_facture: createForm.date_facture,
         date_echeance: createForm.date_echeance || undefined,
@@ -247,16 +292,13 @@ export default function FacturesPage() {
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
         representant_id: representantId,
-      });
-      frais.reinitialiser();
-      setShowCreateModal(false);
-      setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
-      setPassage(PASSAGE_VIDE);
-      setRepresentantId(null);
-      setCreateLignes([]);
+      };
+      if (editingId) await updateFacture(editingId, saisie);
+      else await createFacture(saisie);
+      fermerFormulaire();
       loadFactures();
     } catch (error) {
-      signaler(error, 'Erreur lors de la création de la facture');
+      signaler(error, editingId ? t.invoiceEdit.saveError : 'Erreur lors de la création de la facture');
     }
   };
 
@@ -435,6 +477,16 @@ export default function FacturesPage() {
                       <BoutonCourriel type="facture" documentId={facture.id} />
                       {facture.statut === 'brouillon' && (
                         <>
+                          {peut('factures', 'modifier') && (
+                            <button
+                              onClick={() => ouvrirModification(facture.id)}
+                              className="p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded"
+                              title={t.invoiceEdit.edit}
+                              aria-label={`${t.invoiceEdit.edit} — ${facture.numero}`}
+                            >
+                              <Pencil size={18} />
+                            </button>
+                          )}
                           {peut('factures', 'emettre') && (
                             <button
                               onClick={() => handleEmettre(facture.id)}
@@ -697,9 +749,10 @@ export default function FacturesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold dark:text-white">Nouvelle facture</h2>
-              <button onClick={() => setShowCreateModal(false)}><X size={20} className="text-gray-500" /></button>
+              <h2 className="text-xl font-bold dark:text-white">{editingId ? t.invoiceEdit.title : 'Nouvelle facture'}</h2>
+              <button onClick={fermerFormulaire}><X size={20} className="text-gray-500" /></button>
             </div>
+            <BandeauVerrou verrou={verrou} />
             <form onSubmit={handleCreateFacture} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -815,12 +868,13 @@ export default function FacturesPage() {
                 )}
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setShowCreateModal(false)}
+                <button type="button" onClick={fermerFormulaire}
                   className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white">
                   Annuler
                 </button>
-                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  Créer
+                <button type="submit" disabled={verrou.bloque}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  {editingId ? t.invoiceEdit.save : 'Créer'}
                 </button>
               </div>
             </form>

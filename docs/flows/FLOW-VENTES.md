@@ -595,6 +595,17 @@ En plus de la création depuis une commande, on peut créer une facture directem
 
 La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal : émettre → paiement → BL.
 
+**Modifier un brouillon** (`PUT /factures/{id}`, droit Factures → Modifier) : le crayon de la ligne rouvre le formulaire
+rempli avec la facture. En-tête et lignes sont renvoyés en entier, comme à la création ; taxes, totaux et échéance (de la
+condition de paiement, sauf échéance saisie) sont recalculés, et le numéro ne change pas.
+- La facture est verrouillée pendant sa modification (`verrou:facture`) : un autre compte voit qui la modifie et ne peut
+  ni l'enregistrer ni la supprimer.
+- Refusé (422) pour une facture émise : elle se corrige par une note de crédit.
+- Refusé pour une facture créée par un abonnement, un contrat de location, des reliquats clients ou une consignation :
+  ses lignes y sont rattachées ; elle se corrige à sa source, ou se supprime et se refait.
+- Le client d'une facture tirée d'une commande ne se change pas.
+- Un nouveau représentant fige son propre taux de commission.
+
 ### 5.4 Flow de la facture
 
 ```
