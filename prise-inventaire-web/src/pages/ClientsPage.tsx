@@ -77,6 +77,8 @@ export default function ClientsPage() {
   // Transporteur du client, repris par ses documents de vente (phase 1.11b) ; champ masqué sans transporteur actif.
   const transporteurs = useTransporteurs();
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Exige son numéro de commande sur ses commandes et factures (socle S4.1).
+  const [exigeNumeroCommande, setExigeNumeroCommande] = useState(false);
   // Conditions de paiement et devises du référentiel, frais de livraison.
   const [fraisLivraison, setFraisLivraison] = useState<Frais[]>([]);
   // Routes de livraison (référentiel des itinéraires).
@@ -139,6 +141,7 @@ export default function ClientsPage() {
         sequence_livraison: formData.sequence_livraison === '' ? null : Number(formData.sequence_livraison),
         representant_id: representantId,
         transporteur_id: transporteurId,
+        commande_client_obligatoire: exigeNumeroCommande,
       };
 
       if (editingClient) {
@@ -178,6 +181,7 @@ export default function ClientsPage() {
     });
     setRepresentantId(client.representant_id ?? null);
     setTransporteurId(client.transporteur_id ?? null);
+    setExigeNumeroCommande(client.commande_client_obligatoire === true);
     setShowModal(true);
   };
 
@@ -215,6 +219,7 @@ export default function ClientsPage() {
     });
     setRepresentantId(null);
     setTransporteurId(null);
+    setExigeNumeroCommande(false);
   };
 
   return (
@@ -558,6 +563,13 @@ export default function ClientsPage() {
                     <span className="text-xs text-gray-500">{t.carriers.clientHint}</span>
                   </div>
                 )}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium dark:text-gray-300 mt-6">
+                    <input type="checkbox" checked={exigeNumeroCommande} onChange={e => setExigeNumeroCommande(e.target.checked)} />
+                    {t.customerPo.clientRequires}
+                  </label>
+                  <span className="text-xs text-gray-500">{t.customerPo.clientRequiresHint}</span>
+                </div>
               </div>
               {editingClient && (
                 // Un client qui a des documents ne se supprime pas : on le rend inactif.

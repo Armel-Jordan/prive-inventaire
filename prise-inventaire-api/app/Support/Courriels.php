@@ -25,14 +25,14 @@ final class Courriels
         // lien_reponse : page où le client accepte ou refuse le devis (vide si la réponse en ligne n'est pas possible).
         'devis' => ['numero', 'date', 'date_validite', 'client_nom', 'client_code', 'contact_nom', 'montant_total', 'lien_reponse'],
         // transporteur, numero_suivi, lien_suivi : expédition du document (phase 1.11b ; vides sans transporteur ni numéro).
-        'commande_client' => ['numero', 'date', 'date_livraison_souhaitee', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'transporteur', 'numero_suivi', 'lien_suivi'],
-        'facture' => ['numero', 'date', 'date_echeance', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'montant_paye', 'reste_a_payer', 'transporteur', 'numero_suivi', 'lien_suivi'],
+        'commande_client' => ['numero', 'date', 'date_livraison_souhaitee', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'transporteur', 'numero_suivi', 'lien_suivi', 'numero_commande_client'],
+        'facture' => ['numero', 'date', 'date_echeance', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'montant_paye', 'reste_a_payer', 'transporteur', 'numero_suivi', 'lien_suivi', 'numero_commande_client'],
         'avoir' => ['numero', 'date', 'numero_facture', 'motif', 'client_nom', 'client_code', 'contact_nom', 'montant_ht', 'montant_ttc', 'credit_disponible'],
         'demande_acompte' => ['numero', 'date', 'client_nom', 'client_code', 'contact_nom', 'montant', 'description'],
         'relance' => ['numero', 'date', 'date_echeance', 'jours_retard', 'niveau', 'client_nom', 'client_code', 'contact_nom', 'montant_ttc', 'montant_paye', 'reste_a_payer'],
         // Relance d'un devis resté sans réponse (PDF du devis joint, carte de réponse en ligne).
         'relance_devis' => ['numero', 'date', 'date_validite', 'jours_restants', 'niveau', 'client_nom', 'client_code', 'contact_nom', 'montant_total', 'lien_reponse'],
-        'bon_livraison' => ['numero', 'date_livraison', 'numero_facture', 'client_nom', 'client_code', 'contact_nom', 'transporteur', 'numero_suivi', 'lien_suivi'],
+        'bon_livraison' => ['numero', 'date_livraison', 'numero_facture', 'client_nom', 'client_code', 'contact_nom', 'transporteur', 'numero_suivi', 'lien_suivi', 'numero_commande_client'],
         'commande_fournisseur' => ['numero', 'date', 'date_livraison_prevue', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant_total'],
         'retour_fournisseur' => ['numero', 'date', 'type_retour', 'numero_rma', 'fournisseur_nom', 'fournisseur_code', 'contact_nom', 'montant'],
         // Rapport de la bibliothèque joint (PDF, Excel ou CSV) : son titre, sa période, ses paramètres, sa date.

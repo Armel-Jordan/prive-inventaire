@@ -50,6 +50,8 @@ export interface MoiPortail {
     adresse_facturation: string | null;
     code_postal: string | null;
     ville: string | null;
+    /** Le client doit donner son numéro de commande (sa référence) à chaque commande. */
+    commande_client_obligatoire?: boolean;
     adresses: AdressePortail[];
   };
   entreprise: { nom: string; devise: string | null; telephone: string | null; email: string | null };
@@ -123,6 +125,8 @@ export interface DetailCommande {
     notes: string | null;
     montant_tva: string;
     annulable: boolean;
+    /** Numéro de commande du client (sa référence). */
+    numero_commande_client?: string | null;
     /** Expédition : transporteur, numéro de suivi et lien de suivi (du bon de livraison, sinon de la facture ou de la commande). */
     expedition: { transporteur: string | null; numero_suivi: string | null; lien_suivi: string | null } | null;
     lignes: {

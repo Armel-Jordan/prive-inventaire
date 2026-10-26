@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Numéro de commande du client : sur les commandes et factures (exigé si la fiche client coche « Exige un numéro de commande »), repris jusqu'au bon de livraison, imprimé, cherché dans les listes et saisi par le client dans l'espace client.",
+    en: 'Customer PO number: on orders and invoices (required when the customer record ticks “Requires a PO number”), carried to the delivery note, printed, searchable in the lists and entered by the customer on the customer site.',
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-10-26',
     fr: "Produits : « Nature et options » (service, stocké, acheté, vendu, valorisé, commissionnable, visible dans l'espace client, garde ses reliquats), avec leurs effets dans les ventes, les achats, la valorisation et les commissions.",
     en: 'Products: “Nature and options” (service, stocked, purchased, sold, valued, commissionable, visible on the customer site, keeps back orders), with their effects in sales, purchasing, valuation and commissions.',
     lien: '/produits',

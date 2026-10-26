@@ -197,6 +197,7 @@ return [
         'client_id' => 'client',
         'fournisseur_id' => 'fournisseur',
         'transporteur_id' => 'transporteur',
+        'numero_commande_client' => 'numéro de commande du client',
         'produit_id' => 'produit',
         'secteur_id' => 'secteur',
         'lignes' => 'lignes',

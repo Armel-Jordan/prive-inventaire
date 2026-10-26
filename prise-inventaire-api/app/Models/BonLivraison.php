@@ -23,6 +23,8 @@ class BonLivraison extends Model
         'signataire_nom', 'signe_le',
         // Transporteur et numéro de suivi, repris de la facture (ne servent pas au retrait par le client).
         'transporteur_id', 'numero_suivi',
+        // Numéro de commande du client (sa référence, socle S4.1).
+        'numero_commande_client',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
     ];

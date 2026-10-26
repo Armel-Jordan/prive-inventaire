@@ -26,6 +26,8 @@ class Facture extends Model
         'representant_id', 'taux_commission',
         // Transporteur (voir App\Services\EntetesVente) et numéro de suivi de l'envoi, repris par le bon de livraison.
         'transporteur_id', 'numero_suivi',
+        // Numéro de commande du client (sa référence, socle S4.1).
+        'numero_commande_client',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
     ];

@@ -23,6 +23,7 @@ use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
+use App\Support\NumeroCommandeClient;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,7 +57,7 @@ class FactureController extends Controller
         // Numéro de facture, nom ou code du client, nom noté pour un client de passage.
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
-            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)->orWhere('numero_commande_client', 'like', $motif)
                 ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif)));
         }
         if ($request->has('client_id')) {
@@ -172,6 +173,7 @@ class FactureController extends Controller
             ...ClientsDePassage::regles(),
             // Représentant et transporteur : par défaut, ceux du client ; ceux de la facture restent acceptés s'ils ont été retirés.
             ...EntetesVente::regles($facture),
+            ...NumeroCommandeClient::regles($facture),
         ];
     }
 
@@ -225,6 +227,7 @@ class FactureController extends Controller
                 'date_facture' => $date,
                 'condition_paiement_id' => $condition?->id,
                 'numero_suivi' => $commande->numero_suivi,
+                'numero_commande_client' => $commande->numero_commande_client,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
                 'montant_tva' => $commande->montant_tva,
@@ -425,6 +428,7 @@ class FactureController extends Controller
                 // Transporteur et numéro de suivi de la facture.
                 'transporteur_id' => $facture->transporteur_id,
                 'numero_suivi' => $facture->numero_suivi,
+                'numero_commande_client' => $facture->numero_commande_client,
                 'statut' => 'cree',
             ]);
 

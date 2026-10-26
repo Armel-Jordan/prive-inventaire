@@ -97,6 +97,7 @@ class VariablesCourriel
                 'date_livraison_souhaitee' => $date($d->date_livraison_souhaitee),
                 'montant_ht' => $montant($d->montant_ht),
                 'montant_ttc' => $montant($d->montant_ttc),
+                'numero_commande_client' => $d->numero_commande_client,
             ] + (Expedition::de($d) ?? []) + $this->client($d->client, $d),
             'facture' => [
                 'numero' => $d->numero,
@@ -106,6 +107,7 @@ class VariablesCourriel
                 'montant_ttc' => $montant($d->montant_ttc),
                 'montant_paye' => $montant($d->montant_paye),
                 'reste_a_payer' => $montant($d->reste_a_payer),
+                'numero_commande_client' => $d->numero_commande_client,
             ] + (Expedition::de($d) ?? []) + $this->client($d->client, $d),
             'avoir' => [
                 'numero' => $d->numero,
@@ -137,6 +139,7 @@ class VariablesCourriel
                 'numero' => $d->numero,
                 'date_livraison' => $date($d->date_livraison),
                 'numero_facture' => $d->facture?->numero,
+                'numero_commande_client' => $d->numero_commande_client,
             ] + (Expedition::de($d) ?? []) + $this->client($d->facture?->client, $d->facture),
             'commande_fournisseur' => [
                 'numero' => $d->numero,
@@ -200,6 +203,7 @@ class VariablesCourriel
             'date_livraison' => $this->date($jour, $langue),
             'numero_facture' => 'FAC-00001',
             'transporteur' => 'DHL Express',
+            'numero_commande_client' => 'PO-4512',
             'numero_suivi' => '1234567890',
             'lien_suivi' => 'https://www.dhl.com/suivi?numero=1234567890',
             'client_nom' => $en ? 'Sample customer' : 'Client exemple',

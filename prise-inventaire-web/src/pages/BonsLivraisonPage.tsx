@@ -440,6 +440,12 @@ export default function BonsLivraisonPage() {
                     {selectedBon.mode_livraison === 'entreprise' ? 'Livraison entreprise' : 'Retrait client'}
                   </p>
                 </div>
+                {selectedBon.numero_commande_client && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.customerPo.label} :</span>
+                    <p className="dark:text-white">{selectedBon.numero_commande_client}</p>
+                  </div>
+                )}
                 <div>
                   <span className="text-sm text-gray-500">Date livraison:</span>
                   <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>

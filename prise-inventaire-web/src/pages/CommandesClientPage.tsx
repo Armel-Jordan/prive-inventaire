@@ -84,6 +84,8 @@ export default function CommandesClientPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
+  // Numéro de commande du client (socle S4.1), exigé si sa fiche l'exige.
+  const [numeroCommandeClient, setNumeroCommandeClient] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, reliquats, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -122,6 +124,7 @@ export default function CommandesClientPage() {
   const [lignes, setLignes] = useState<(LignePrix & { prix_unitaire_ht: number })[]>([]);
   // Frais additionnels et de livraison proposés pour la commande en cours de saisie (ceux déjà sur un brouillon
   // modifié ne sont pas proposés de nouveau).
+  const numeroClientExige = clients.find(c => c.id === Number(formData.client_id))?.commande_client_obligatoire === true;
   const frais = useFraisAutomatiques({
     document: 'commande',
     clientId: formData.client_id ? Number(formData.client_id) : null,
@@ -193,6 +196,7 @@ export default function CommandesClientPage() {
       representant_id: representantId,
       transporteur_id: transporteurId,
       numero_suivi: numeroSuivi.trim() || null,
+      numero_commande_client: numeroCommandeClient.trim() || null,
     };
     try {
       if (editingId) {
@@ -225,6 +229,7 @@ export default function CommandesClientPage() {
     setRepresentantId(cmd.representant_id ?? null);
     setTransporteurId(cmd.transporteur_id ?? null);
     setNumeroSuivi(cmd.numero_suivi ?? '');
+    setNumeroCommandeClient(cmd.numero_commande_client ?? '');
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -347,6 +352,7 @@ export default function CommandesClientPage() {
     setRepresentantId(null);
     setTransporteurId(null);
     setNumeroSuivi('');
+    setNumeroCommandeClient('');
     setLignes([]);
   };
 
@@ -652,6 +658,12 @@ export default function CommandesClientPage() {
                   <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                 </div>
               )}
+              <div>
+                <label htmlFor="commande-numero-client" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.customerPo.label}{numeroClientExige ? ' *' : ''}</label>
+                <input id="commande-numero-client" type="text" maxLength={30} value={numeroCommandeClient} required={numeroClientExige} onChange={e => setNumeroCommandeClient(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                <p className="text-xs text-gray-500 mt-1">{numeroClientExige ? t.customerPo.required : t.customerPo.hint}</p>
+              </div>
               {(transporteursActifs(transporteurs) || transporteurId !== null || numeroSuivi !== '') && (
                 <div>
                   <label htmlFor="commande-suivi" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.tracking}</label>
@@ -765,6 +777,12 @@ export default function CommandesClientPage() {
                   <span className="text-sm text-gray-500">Date livraison souhaitée:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_livraison_souhaitee)}</p>
                 </div>
+                {selectedCommande.numero_commande_client && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.customerPo.label} :</span>
+                    <p className="dark:text-white">{selectedCommande.numero_commande_client}</p>
+                  </div>
+                )}
                 {selectedCommande.transporteur && (
                   <div>
                     <span className="text-sm text-gray-500">{t.carriers.label} :</span>

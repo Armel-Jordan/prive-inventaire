@@ -23,6 +23,8 @@ class ComClientEntete extends Model
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
         // Représentant commercial et transporteur (voir App\Services\EntetesVente), numéro de suivi de l'envoi.
         'representant_id', 'transporteur_id', 'numero_suivi',
+        // Numéro de commande du client (sa référence, socle S4.1).
+        'numero_commande_client',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
     ];

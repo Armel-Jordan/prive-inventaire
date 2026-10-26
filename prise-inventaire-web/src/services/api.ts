@@ -1239,6 +1239,10 @@ export async function poserStatutPersonnalise(document: DocumentStatut, id: numb
 }
 
 export interface EnteteCommerciale {
+  /** Numéro de commande du client (sa référence, socle S4.1) : commandes, factures. */
+  numero_commande_client?: string | null;
+  /** Fiche client : exige ce numéro sur ses commandes et factures. */
+  commande_client_obligatoire?: boolean;
   representant_id?: number | null;
   representant?: { id: number; nom: string } | null;
   /** Transporteur (phase 1.11b) : celui du client par défaut, suit les conversions. */
@@ -1395,6 +1399,8 @@ export interface BonLivraison extends AvecStatutPersonnalise {
   a_signature?: boolean;
   /** Nombre de colis du bon (dans les listes). */
   colis_count?: number;
+  /** Numéro de commande du client, repris de la facture (socle S4.1). */
+  numero_commande_client?: string | null;
   /** Transporteur et numéro de suivi (phase 1.11b), repris de la facture ; aucun pour un retrait par le client. */
   transporteur_id?: number | null;
   transporteur?: { id: number; nom: string; url_suivi?: string | null } | null;
@@ -1701,6 +1707,7 @@ export async function createCommandeClient(data: {
   representant_id?: number | null;
   transporteur_id?: number | null;
   numero_suivi?: string | null;
+  numero_commande_client?: string | null;
 } & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -1801,6 +1808,7 @@ export type SaisieFacture = {
   representant_id?: number | null;
   transporteur_id?: number | null;
   numero_suivi?: string | null;
+  numero_commande_client?: string | null;
 } & CoordonneesPassage;
 
 export async function createFacture(data: SaisieFacture): Promise<Facture> {

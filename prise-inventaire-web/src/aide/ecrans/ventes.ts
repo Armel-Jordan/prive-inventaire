@@ -13,6 +13,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Joignez des documents à la fiche avec le trombone « Pièces jointes ».",
       ],
       astuces: [
+        "« Exige un numéro de commande » : ses commandes et factures demandent alors sa référence (son bon de commande), aussi dans l'espace client.",
         "Un client qui a des devis, des commandes ou des factures ne peut pas être supprimé : décochez « Client actif » dans sa modification, il ne sera plus proposé.",
         "L'encours passe en rouge au-delà de 80 % de l'encours maximum ; une commande qui le ferait dépasser ne peut pas être acceptée. Laissé vide, l'encours maximum est illimité.",
         "La devise du client est reprise par ses devis, commandes et factures, où ses frais de livraison sont aussi proposés. Sa condition de paiement fixe l'échéance de ses factures.",
@@ -32,6 +33,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Attach documents to the record with the paper clip “Attachments” button.",
       ],
       astuces: [
+        "“Requires a PO number”: their orders and invoices then ask for their reference (their purchase order), also on the customer site.",
         "A customer with quotes, orders or invoices cannot be deleted: untick “Client actif” when editing it, and it will no longer be offered.",
         "The outstanding balance turns red above 80% of the credit limit; an order that would exceed the limit cannot be accepted. Left empty, the credit limit is unlimited.",
         "The customer's currency carries over to their quotes, orders and invoices, where their delivery fee is also suggested. Their payment terms set the due date of their invoices.",
@@ -173,6 +175,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Commande acceptée : « Créer facture » prépare une facture brouillon, à émettre dans « Factures ».",
       ],
       astuces: [
+        "« N° de commande du client » : sa référence, reprise jusqu'au bon de livraison et imprimée ; la recherche de la liste la trouve aussi.",
         "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Seul un brouillon se modifie ou se supprime. Pendant sa modification, la commande est verrouillée : un autre compte voit qui la modifie et ne peut pas l'enregistrer.",
         "L'acceptation est refusée si la commande fait dépasser l'encours maximum du client. Si le stock manque, l'écran propose de noter les quantités en reliquat.",
@@ -193,6 +196,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Accepted order: “Créer facture” prepares a draft invoice, to be issued in “Factures”.",
       ],
       astuces: [
+        "“Customer PO number”: their reference, carried to the delivery note and printed; the list search finds it too.",
         "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "Only a draft can be edited or deleted. While being edited, the order is locked: other accounts see who is editing it and cannot save it.",
         "Acceptance is refused if the order would take the customer over their credit limit. If stock is short, the screen offers to record the quantities as back orders.",
@@ -286,6 +290,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Au besoin : « Créditer » (note de crédit), « Retour de marchandise » ou « Créer bon de livraison ».",
       ],
       astuces: [
+        "« N° de commande du client » : sa référence, reprise jusqu'au bon de livraison et imprimée ; la recherche de la liste la trouve aussi.",
         "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Seul un brouillon s'émet, se modifie (crayon) ou se supprime. Une facture émise se corrige par une note de crédit (« Créditer »).",
         "Le crayon d'un brouillon rouvre le formulaire : changez client, dates, lignes ou représentant, puis « Enregistrer » ; les totaux se recalculent et le numéro reste le même. Une facture créée par un abonnement, un contrat, des reliquats ou une consignation se corrige à sa source.",
@@ -308,6 +313,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "If needed: “Credit” (credit note), “Return goods” or “Créer bon de livraison” (delivery note).",
       ],
       astuces: [
+        "“Customer PO number”: their reference, carried to the delivery note and printed; the list search finds it too.",
         "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "Only a draft can be issued, edited (pencil) or deleted. An issued invoice is corrected with a credit note (“Credit”).",
         "The pencil of a draft reopens the form: change the customer, dates, lines or sales rep, then “Save”; totals are recomputed and the number stays the same. An invoice created by a subscription, a contract, back orders or a consignment is corrected at its source.",

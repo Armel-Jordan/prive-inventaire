@@ -7,6 +7,7 @@ use App\Models\Configuration;
 use App\Models\Facture;
 use App\Models\FactureLigne;
 use App\Models\TenantParametres;
+use App\Support\NumeroCommandeClient;
 use App\Support\TauxTaxe;
 use Illuminate\Support\Facades\DB;
 
@@ -65,6 +66,7 @@ class FacturesVente
                 'reste_a_payer' => $montantTtc,
                 'notes' => $donnees['notes'] ?? null,
                 'numero_suivi' => $donnees['numero_suivi'] ?? null,
+                'numero_commande_client' => NumeroCommandeClient::valeur($donnees['numero_commande_client'] ?? null),
             ]);
 
             $this->creerLignes($facture, $lignesCalculees);
@@ -110,6 +112,8 @@ class FacturesVente
                 'notes' => $donnees['notes'] ?? null,
                 // Non renvoyé, le numéro de suivi reste.
                 'numero_suivi' => array_key_exists('numero_suivi', $donnees) ? $donnees['numero_suivi'] : $facture->numero_suivi,
+                'numero_commande_client' => array_key_exists('numero_commande_client', $donnees)
+                    ? NumeroCommandeClient::valeur($donnees['numero_commande_client']) : $facture->numero_commande_client,
             ]);
 
             return $facture->refresh();

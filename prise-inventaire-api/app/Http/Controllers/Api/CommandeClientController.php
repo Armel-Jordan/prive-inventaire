@@ -16,6 +16,7 @@ use App\Services\EntetesVente;
 use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
+use App\Support\NumeroCommandeClient;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +50,7 @@ class CommandeClientController extends Controller
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
-            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)
+            $query->where(fn ($q) => $q->where('numero', 'like', $motif)->orWhere('passage_nom', 'like', $motif)->orWhere('numero_commande_client', 'like', $motif)
                 ->orWhereHas('client', fn ($c) => $c->where('raison_sociale', 'like', $motif)->orWhere('code', 'like', $motif)));
         }
         if ($request->has('date_debut')) {
@@ -97,6 +98,7 @@ class CommandeClientController extends Controller
             ...DevisesVente::regles(),
             ...ClientsDePassage::regles(),
             ...EntetesVente::regles(),
+            ...NumeroCommandeClient::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
@@ -121,6 +123,7 @@ class CommandeClientController extends Controller
                 'remise_globale' => $validated['remise_globale'] ?? 0,
                 'notes' => $validated['notes'] ?? null,
                 'numero_suivi' => $validated['numero_suivi'] ?? null,
+                'numero_commande_client' => NumeroCommandeClient::valeur($validated['numero_commande_client'] ?? null),
                 'statut' => 'brouillon',
                 'created_by' => $request->user()?->id,
             ]);
@@ -175,6 +178,7 @@ class CommandeClientController extends Controller
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
             ...EntetesVente::regles($commande),
+            ...NumeroCommandeClient::regles($commande),
         ]);
         if (isset($validated['lignes'])) {
             $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
@@ -192,6 +196,8 @@ class CommandeClientController extends Controller
                 'remise_globale' => $validated['remise_globale'] ?? $commande->remise_globale,
                 'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $commande->notes,
                 'numero_suivi' => array_key_exists('numero_suivi', $validated) ? $validated['numero_suivi'] : $commande->numero_suivi,
+                'numero_commande_client' => array_key_exists('numero_commande_client', $validated)
+                    ? NumeroCommandeClient::valeur($validated['numero_commande_client']) : $commande->numero_commande_client,
             ]);
 
             if (isset($validated['lignes'])) {

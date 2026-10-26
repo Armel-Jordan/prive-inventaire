@@ -363,6 +363,21 @@ Code : service `App\Services\StatutsPersonnalises` (types, règle, pose), `Statu
 route par type de document, le type en valeur par défaut), migration `2026_10_26_100096_statuts_personnalises_documents` ;
 web : `hooks/useStatutsPersonnalises`, composants `StatutPersonnalise` (pastille, filtre, choix).
 
+### 2.10 Numéro de commande du client
+
+Socle S4.1 du plan de parité fripv2. La référence que le client donne à sa commande (son bon de commande, 30
+caractères) :
+- saisie sur la **commande** et la **facture** (champ « N° de commande du client »), reprise de la commande à la facture
+  puis au **bon de livraison** ;
+- **exigée** quand la fiche du client coche « Exige un numéro de commande » (`clients.commande_client_obligatoire`) : à la
+  saisie d'une commande ou d'une facture, pas d'un devis ni d'une note de crédit ; transmise vide à la modification, elle
+  est refusée (`App\Support\NumeroCommandeClient`) ;
+- cherchée par la recherche des listes de commandes et de factures ;
+- imprimée (« N° commande client ») et disponible en variable de courriel `{numero_commande_client}` (commandes, factures,
+  bons de livraison) ;
+- donnée par le client dans l'espace client au moment de commander (obligatoire si sa fiche l'exige), et rappelée dans le
+  détail de sa commande.
+
 ---
 
 ## 3. Devis
