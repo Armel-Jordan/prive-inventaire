@@ -631,6 +631,24 @@ Dans l'écran, les référentiels sont groupés par famille : Produits, Paiement
 
 Chaque fiche peut être désactivée (`actif`) plutôt que supprimée, pour garder l'historique.
 
+**Suppression refusée d'une fiche utilisée** (422, « … : désactivez-la plutôt ») : la suppression douce la retirait en
+silence des listes alors que des fiches la portaient encore.
+
+| Fiche | Utilisée par |
+|---|---|
+| Unité | une conversion, la mesure d'un produit, une unité de vente d'un produit |
+| Fabricant | un produit |
+| Condition de paiement | un client, une facture, une facture fournisseur |
+| Compte bancaire | une transaction bancaire, un relevé, un rapprochement, un lot de virements |
+| Devise | un client, un fournisseur, un compte bancaire, un devis, une commande, une facture, une commande ou une facture fournisseur |
+| Entrepôt | un secteur, une commande fournisseur |
+| Itinéraire | un client, une tournée |
+| Type de location | un contrat de location |
+| Raison | une ligne de retour client ou fournisseur |
+| Caisse, catégorie, territoire, représentant | voir le tableau ci-dessus |
+
+Une fiche portée seulement par des fiches supprimées se supprime.
+
 ### 11.2 API
 
 Une seule API générique :

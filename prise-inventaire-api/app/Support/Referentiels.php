@@ -7,24 +7,38 @@ use App\Models\CaisseSession;
 use App\Models\Categorie;
 use App\Models\Client;
 use App\Models\ComClientEntete;
+use App\Models\ComFourEntete;
 use App\Models\CompteBancaire;
 use App\Models\ConditionPaiement;
+use App\Models\ContratLocation;
 use App\Models\Devis;
 use App\Models\Devise;
 use App\Models\DeviseTaux;
 use App\Models\Entrepot;
 use App\Models\Fabricant;
 use App\Models\Facture;
+use App\Models\FactureFournisseur;
+use App\Models\Fournisseur;
 use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\ProduitTenant;
+use App\Models\ProduitUnite;
 use App\Models\Raison;
+use App\Models\RapprochementBancaire;
+use App\Models\ReleveBancaire;
 use App\Models\Representant;
+use App\Models\RetourClientLigne;
+use App\Models\RetourFournisseurLigne;
+use App\Models\Secteur;
 use App\Models\StatutPersonnalise;
 use App\Models\Territoire;
+use App\Models\Tournee;
+use App\Models\TransactionBancaire;
 use App\Models\Transporteur;
 use App\Models\TypeLocation;
 use App\Models\Unite;
 use App\Models\UniteConversion;
+use App\Models\VirementLot;
 use App\Services\AbonnementsClients;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
@@ -52,6 +66,24 @@ final class Referentiels
         return array_keys(self::definitions());
     }
 
+    /**
+     * La fiche est-elle encore portée par l'une de ces données ? [modèle, colonne, valeur] ; les modèles de l'entreprise
+     * ne voient que ses données (et pas les fiches supprimées). Une fiche utilisée se désactive au lieu d'être supprimée :
+     * la suppression douce la retirait en silence des listes alors que des fiches la portaient encore.
+     *
+     * @param  list<array{class-string<Model>, string, mixed}>  $references
+     */
+    private static function utilisee(array $references): bool
+    {
+        foreach ($references as [$modele, $colonne, $valeur]) {
+            if ($valeur !== null && $modele::query()->where($colonne, $valeur)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function definition(string $type): array
     {
         return self::definitions()[$type];
@@ -70,9 +102,13 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => ['code', 'asc'],
-                'suppression' => fn (Model $unite) => UniteConversion::where(
-                    fn ($q) => $q->where('unite_source_id', $unite->getKey())->orWhere('unite_cible_id', $unite->getKey())
-                )->exists() ? __('Cette unité est utilisée dans une conversion.') : null,
+                'suppression' => fn (Model $unite) => match (true) {
+                    UniteConversion::where(
+                        fn ($q) => $q->where('unite_source_id', $unite->getKey())->orWhere('unite_cible_id', $unite->getKey())
+                    )->exists() => __('Cette unité est utilisée dans une conversion.'),
+                    self::utilisee([[ProduitUnite::class, 'unite_id', $unite->getKey()], [ProduitTenant::class, 'mesure', $unite->code]]) => __('Cette unité est utilisée par des produits : désactivez-la plutôt.'),
+                    default => null,
+                },
             ],
 
             'unite_conversions' => [
@@ -118,6 +154,8 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => ['nom', 'asc'],
+                'suppression' => fn (Model $fabricant) => self::utilisee([[ProduitTenant::class, 'fabricant_id', $fabricant->getKey()]])
+                    ? __('Ce fabricant est rattaché à des produits : désactivez-le plutôt.') : null,
             ],
 
             'modes_paiement' => [
@@ -159,6 +197,11 @@ final class Referentiels
                 ],
                 'ordre' => ['delai_jours', 'asc'],
                 'unique_par_defaut' => true,
+                'suppression' => fn (Model $condition) => self::utilisee([
+                    [Client::class, 'condition_paiement_id', $condition->getKey()],
+                    [Facture::class, 'condition_paiement_id', $condition->getKey()],
+                    [FactureFournisseur::class, 'condition_paiement_id', $condition->getKey()],
+                ]) ? __('Cette condition de paiement est utilisée par des clients ou des factures : désactivez-la plutôt.') : null,
             ],
 
             'comptes_bancaires' => [
@@ -179,6 +222,12 @@ final class Referentiels
                 'ordre' => ['nom', 'asc'],
                 'majuscules' => ['iban', 'bic', 'devise_code'],
                 'unique_par_defaut' => true,
+                'suppression' => fn (Model $compte) => self::utilisee([
+                    [TransactionBancaire::class, 'compte_bancaire_id', $compte->getKey()],
+                    [ReleveBancaire::class, 'compte_bancaire_id', $compte->getKey()],
+                    [RapprochementBancaire::class, 'compte_bancaire_id', $compte->getKey()],
+                    [VirementLot::class, 'compte_bancaire_id', $compte->getKey()],
+                ]) ? __('Ce compte bancaire a des transactions, des relevés ou des virements : désactivez-le plutôt.') : null,
             ],
 
             'devises' => [
@@ -193,6 +242,17 @@ final class Referentiels
                 ],
                 'ordre' => ['code', 'asc'],
                 'majuscules' => ['code'],
+                // Devise d'un tiers, d'un compte bancaire ou d'un document : sans elle, son taux ne se retrouve plus.
+                'suppression' => fn (Model $devise) => self::utilisee([
+                    [Client::class, 'devise', $devise->code],
+                    [Fournisseur::class, 'devise', $devise->code],
+                    [CompteBancaire::class, 'devise_code', $devise->code],
+                    [Devis::class, 'devise', $devise->code],
+                    [ComClientEntete::class, 'devise', $devise->code],
+                    [Facture::class, 'devise', $devise->code],
+                    [ComFourEntete::class, 'devise', $devise->code],
+                    [FactureFournisseur::class, 'devise', $devise->code],
+                ]) ? __('Cette devise est utilisée par des clients, des fournisseurs, des comptes bancaires ou des documents : désactivez-la plutôt.') : null,
                 // Chaque nouveau taux est historisé (création ou changement de taux).
                 'apres' => function (Model $devise): void {
                     if ($devise->wasRecentlyCreated || $devise->wasChanged('taux')) {
@@ -224,6 +284,10 @@ final class Referentiels
                 ],
                 'ordre' => ['code', 'asc'],
                 'unique_par_defaut' => true,
+                'suppression' => fn (Model $entrepot) => self::utilisee([
+                    [Secteur::class, 'entrepot_id', $entrepot->getKey()],
+                    [ComFourEntete::class, 'entrepot_id', $entrepot->getKey()],
+                ]) ? __('Cet entrepôt est utilisé par des secteurs ou des commandes fournisseur : désactivez-le plutôt.') : null,
             ],
 
             'territoires' => [
@@ -251,6 +315,10 @@ final class Referentiels
                 ],
                 'ordre' => ['code', 'asc'],
                 'avec' => ['territoire:id,code,nom'],
+                'suppression' => fn (Model $itineraire) => self::utilisee([
+                    [Client::class, 'itineraire_id', $itineraire->getKey()],
+                    [Tournee::class, 'itineraire_id', $itineraire->getKey()],
+                ]) ? __('Cet itinéraire est utilisé par des clients ou des tournées : désactivez-le plutôt.') : null,
             ],
 
             // Modèles de contrats de location : durée, rythme et jour des loyers, à l'avance ou après coup.
@@ -267,6 +335,8 @@ final class Referentiels
                 ],
                 'ordre' => ['code', 'asc'],
                 'majuscules' => ['code'],
+                'suppression' => fn (Model $type) => self::utilisee([[ContratLocation::class, 'type_location_id', $type->getKey()]])
+                    ? __('Ce type de location est utilisé par des contrats : désactivez-le plutôt.') : null,
             ],
 
             'representants' => [
@@ -315,6 +385,10 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => [['type', 'asc'], ['code', 'asc']],
+                'suppression' => fn (Model $raison) => self::utilisee([
+                    [RetourClientLigne::class, 'raison_id', $raison->getKey()],
+                    [RetourFournisseurLigne::class, 'raison_id', $raison->getKey()],
+                ]) ? __('Cette raison est utilisée par des retours : désactivez-la plutôt.') : null,
                 // Le code est unique par type de raison : le même code peut servir à deux types.
                 'controle' => fn (array $d, ?Model $fiche) => Raison::where('type', $d['type'])
                     ->where('code', $d['code'])
