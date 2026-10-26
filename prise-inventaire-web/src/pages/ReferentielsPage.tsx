@@ -16,6 +16,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
+import OptionTransporteurObligatoire from '@/components/OptionTransporteurObligatoire';
 
 type TypeChamp = 'texte' | 'nombre' | 'booleen' | 'liste' | 'zone' | 'reference' | 'couleur';
 
@@ -528,6 +529,9 @@ export default function ReferentielsPage() {
               )}
             </div>
           </div>
+
+          {/* Transporteurs : option « transporteur obligatoire » de l'entreprise (phase 1.11b). */}
+          {onglet.type === 'transporteurs' && <OptionTransporteurObligatoire />}
 
           {/* Tableau */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">

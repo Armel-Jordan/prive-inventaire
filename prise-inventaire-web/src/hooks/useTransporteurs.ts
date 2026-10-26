@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getReferentiel } from '@/services/api';
+import { getParametres, getReferentiel } from '@/services/api';
 import { getAuthHeaders } from '@/services/http';
 
 /** Transporteur du référentiel, tel que proposé dans les fiches et les documents. */
@@ -46,6 +46,41 @@ export function useTransporteurs(): Transporteur[] {
   }, []);
 
   return transporteurs;
+}
+
+/** Option « transporteur obligatoire » de l'entreprise, lue une fois par minute et par connexion. */
+let cacheObligatoire: { connexion: string; expire: number; valeur: Promise<boolean> } | null = null;
+
+function chargerObligatoire(): Promise<boolean> {
+  const connexion = getAuthHeaders().Authorization ?? '';
+  if (!cacheObligatoire || cacheObligatoire.connexion !== connexion || cacheObligatoire.expire < Date.now()) {
+    const valeur = getParametres().then(p => Boolean(p.transporteur_obligatoire));
+    const entree = { connexion, expire: Date.now() + DUREE_CACHE_MS, valeur };
+    cacheObligatoire = entree;
+    valeur.catch(() => { if (cacheObligatoire === entree) cacheObligatoire = null; });
+  }
+  return cacheObligatoire.valeur;
+}
+
+/** L'option vient de changer : les écrans la relisent. */
+export function oublierTransporteurObligatoire(): void {
+  cacheObligatoire = null;
+}
+
+/**
+ * Transporteur exigé sur un document saisi : l'option de l'entreprise est active et elle a un transporteur actif
+ * (comme l'API, qui n'exige rien tant qu'il n'y a rien à choisir).
+ */
+export function useTransporteurRequis(transporteurs: Transporteur[]): boolean {
+  const [obligatoire, setObligatoire] = useState(false);
+
+  useEffect(() => {
+    let actif = true;
+    chargerObligatoire().then(v => { if (actif) setObligatoire(v); }, () => {});
+    return () => { actif = false; };
+  }, []);
+
+  return obligatoire && transporteursActifs(transporteurs);
 }
 
 /** Vrai quand l'entreprise a au moins un transporteur actif : sinon les champs « Transporteur » restent masqués. */

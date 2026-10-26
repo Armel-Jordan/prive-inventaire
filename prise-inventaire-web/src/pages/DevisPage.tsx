@@ -36,7 +36,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
-import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
+import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 
 export default function DevisPage() {
   // Boutons d'action selon les permissions (rôles et permissions).
@@ -60,6 +60,7 @@ export default function DevisPage() {
   const [representantId, setRepresentantId] = useState<number | null>(null);
   // Transporteur (phase 1.11b) : celui du client par défaut ; champs masqués sans transporteur actif.
   const transporteurs = useTransporteurs();
+  const transporteurRequis = useTransporteurRequis(transporteurs);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, autres écrans).
@@ -534,8 +535,8 @@ export default function DevisPage() {
                 </div>
                 {(transporteursActifs(transporteurs) || transporteurId !== null) && (
                   <div>
-                    <label htmlFor="devis-transporteur" className="block text-sm font-medium mb-1">{t.carriers.label}</label>
-                    <ChoixTransporteur id="devis-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
+                    <label htmlFor="devis-transporteur" className="block text-sm font-medium mb-1">{t.carriers.label}{transporteurRequis ? ' *' : ''}</label>
+                    <ChoixTransporteur id="devis-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} requis={transporteurRequis} />
                     <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                   </div>
                 )}

@@ -10,6 +10,8 @@ interface Props {
   libelleVide?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  /** Transporteur exigé (option « transporteur obligatoire ») : pas de choix vide, champ requis. */
+  requis?: boolean;
   className?: string;
 }
 
@@ -17,16 +19,16 @@ interface Props {
  * Choix du transporteur (phase 1.11b) : les transporteurs actifs, plus celui déjà retenu s'il a été désactivé depuis
  * (il reste affiché, marqué « inactif »).
  */
-export default function ChoixTransporteur({ id, value, onChange, transporteurs, libelleVide, ariaLabel, disabled, className }: Props) {
+export default function ChoixTransporteur({ id, value, onChange, transporteurs, libelleVide, ariaLabel, disabled, requis, className }: Props) {
   const { t } = useLanguage();
   const tr = t.carriers;
   const proposes = transporteurs.filter(c => c.actif || c.id === value);
 
   return (
-    <select id={id} value={value ?? ''} disabled={disabled} aria-label={ariaLabel}
+    <select id={id} value={value ?? ''} disabled={disabled} aria-label={ariaLabel} required={requis}
       onChange={e => onChange(e.target.value ? Number(e.target.value) : null)}
       className={className ?? 'w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white'}>
-      <option value="">{libelleVide ?? tr.none}</option>
+      <option value="">{requis ? tr.choose : libelleVide ?? tr.none}</option>
       {proposes.map(c => <option key={c.id} value={c.id}>{c.nom}{c.actif ? '' : ` (${tr.inactive})`}</option>)}
     </select>
   );

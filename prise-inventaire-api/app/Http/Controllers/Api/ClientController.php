@@ -96,7 +96,7 @@ class ClientController extends Controller
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
             // Représentant commercial et transporteur : repris par ses documents de vente.
-            ...EntetesVente::regles(),
+            ...EntetesVente::regles(tiers: true),
         ]);
         $validated['devise'] = $this->devise($validated['devise'] ?? null);
 
@@ -138,7 +138,7 @@ class ClientController extends Controller
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'actif' => 'sometimes|boolean',
-            ...EntetesVente::regles($client),
+            ...EntetesVente::regles($client, tiers: true),
         ]);
         if (array_key_exists('devise', $validated)) {
             $validated['devise'] = $this->devise($validated['devise']);

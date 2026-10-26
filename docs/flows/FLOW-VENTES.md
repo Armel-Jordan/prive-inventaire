@@ -332,7 +332,12 @@ désactive). Un transporteur désactivé n'est plus proposé, mais reste affich�
 - **espace client** : le détail d'une commande montre « Expédié par … », le numéro de suivi et « Suivre l'envoi »,
   d'après le dernier bon de livraison de sa facture, sinon la facture, sinon la commande.
 
-**Reste de la phase** (docs/17, §3.2) : l'option « transporteur obligatoire ».
+**Option « Transporteur obligatoire »** (onglet Transporteurs des référentiels, `tenant_parametres.transporteur_obligatoire`,
+inactive par défaut, réglée avec le droit de modifier la configuration) : un devis, une commande, une facture ou une
+commande fournisseur saisis doivent avoir un transporteur. Non transmis à la création, celui du client (ou du fournisseur)
+compte ; transmis, il ne peut pas être vide ; à la modification, non transmis, celui du document reste. Sans transporteur
+actif, rien n'est exigé. Les documents créés par l'application (conversions, abonnements, comptoir…) et la fiche d'un
+client n'y sont pas soumis (`Transporteur::exige`).
 
 Code :
 - API : `App\Services\EntetesVente` (champ `transporteur_id`), `Transporteur::regle()`, `ComFourEntete::booted()`,

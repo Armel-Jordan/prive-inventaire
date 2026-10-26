@@ -15,7 +15,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
-import { lienSuivi, transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
+import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
 import { ajouterRemarque } from '@/lib/utils';
@@ -76,6 +76,7 @@ export default function CommandesClientPage() {
   const [representantId, setRepresentantId] = useState<number | null>(null);
   // Transporteur (phase 1.11b) : celui du client par défaut ; champs masqués sans transporteur actif.
   const transporteurs = useTransporteurs();
+  const transporteurRequis = useTransporteurRequis(transporteurs);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
@@ -648,8 +649,8 @@ export default function CommandesClientPage() {
               </div>
               {(transporteursActifs(transporteurs) || transporteurId !== null) && (
                 <div>
-                  <label htmlFor="commande-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}</label>
-                  <ChoixTransporteur id="commande-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
+                  <label htmlFor="commande-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}{transporteurRequis ? ' *' : ''}</label>
+                  <ChoixTransporteur id="commande-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} requis={transporteurRequis} />
                   <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                 </div>
               )}

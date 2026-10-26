@@ -7,6 +7,8 @@ use App\Support\TenantRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\RequiredIf;
 
 class Transporteur extends Model
 {
@@ -31,6 +33,26 @@ class Transporteur extends Model
     public function fraisAchat(): BelongsTo
     {
         return $this->belongsTo(Frais::class, 'frais_livraison_achat_id');
+    }
+
+    /**
+     * Option « transporteur obligatoire » de l'entreprise ; sans effet tant qu'elle n'a aucun transporteur actif (on ne
+     * bloque pas une saisie qui n'a rien à choisir).
+     */
+    public static function obligatoire(): bool
+    {
+        return (bool) TenantParametres::query()->value('transporteur_obligatoire') && self::query()->where('actif', true)->exists();
+    }
+
+    /**
+     * Règle « exigé » de l'option, pour un document saisi : à la création, sauf si le défaut du tiers en donne un (non
+     * transmis, le transporteur du client ou du fournisseur est repris) ; transmis, il ne peut pas être vide.
+     *
+     * @param  callable(): mixed  $defaut  transporteur par défaut du tiers du document
+     */
+    public static function exige(?Model $document, callable $defaut): RequiredIf
+    {
+        return Rule::requiredIf(fn () => self::obligatoire() && (request()->exists('transporteur_id') || (! $document && ! $defaut())));
     }
 
     /** Règle d'un champ transporteur : un transporteur de l'entreprise, non retiré (sauf la valeur actuelle de la fiche). */

@@ -236,15 +236,16 @@ devis.
   - à la copie d'un document à l'autre : devis → commande → facture, et reste à facturer.
 - `EntetesVente::regles()` accepte la valeur actuelle même si la fiche est désactivée.
 
-### 3.2 Transporteurs (phase 1.11b) — en cours
+### 3.2 Transporteurs (phase 1.11b) — fait le 26/10
 
 **Fait le 26/10** (FLOW-VENTES §2.8) : `transporteur_id` sur les clients, fournisseurs, devis, commandes, factures, bons
 de livraison et commandes fournisseur ; `numero_suivi` sur les commandes, factures, bons et colis ; report d'un document
 à l'autre (`EntetesVente`), défaut du fournisseur sur ses commandes, expédition du bon, filtres des listes, suppression
 refusée si utilisé, champs masqués sans transporteur actif. Puis les frais : case « Livraison facturée » (blocage du
 frais de livraison des ventes) et frais de transport d'achat proposé sur les factures fournisseurs. Puis les sorties :
-PDF, variables de courriel `{transporteur}`, `{numero_suivi}`, `{lien_suivi}`, suivi dans l'espace client. **Reste** :
-option `transporteur_obligatoire`.
+PDF, variables de courriel `{transporteur}`, `{numero_suivi}`, `{lien_suivi}`, suivi dans l'espace client ; enfin l'option
+« Transporteur obligatoire ». La suite (proposer une date de livraison d'après les jours livrables et l'heure de tombée,
+option 15) reste une idée, au-delà de fripv2.
 
 
 Le référentiel `transporteurs` existe (code, nom, téléphone, courriel, lien de suivi avec `{numero}`, numéro de compte,

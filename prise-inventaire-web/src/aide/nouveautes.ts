@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Transporteurs : option « Transporteur obligatoire » (Paramètres → Référentiels → Transporteurs) : les devis, commandes, factures et commandes fournisseur saisis doivent en avoir un.",
+    en: 'Carriers: “Carrier required” option (Settings → Reference data → Carriers): quotes, orders, invoices and purchase orders entered must have one.',
+    lien: '/referentiels',
+  },
+  {
+    date: '2026-10-26',
     fr: "Transporteurs : « Expédié par » et le numéro de suivi sur les PDF, variables {transporteur}, {numero_suivi} et {lien_suivi} dans les courriels, et suivi de l'envoi dans l'espace client.",
     en: 'Carriers: “Shipped by” and the tracking number on PDFs, {transporteur}, {numero_suivi} and {lien_suivi} variables in emails, and shipment tracking on the customer site.',
     lien: '/commandes-client',

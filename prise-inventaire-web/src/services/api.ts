@@ -2239,6 +2239,8 @@ export interface TenantParametres {
   md_declaration?: string | null;
   /** Numéro de facture attribué à l'émission : un brouillon porte un numéro provisoire « BR-… ». */
   numero_facture_a_l_emission?: boolean;
+  /** Transporteur exigé sur les devis, commandes, factures et commandes fournisseur saisis (s'il y en a un d'actif). */
+  transporteur_obligatoire?: boolean;
 }
 
 export interface TenantTaxe {
