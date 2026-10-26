@@ -46,7 +46,7 @@ class SuggestionsAchat
 
             if ($inventaire) {
                 $dejaProposes = $ouvertes->where('source', '!=', 'reliquat')->pluck('produit_id')->unique()->all();
-                $produits = ProduitTenant::where('actif', true)->where('seuil_alerte', '>', 0)
+                $produits = ProduitTenant::where('actif', true)->where('seuil_alerte', '>', 0)->where('achete', true)->where('stocke', true)
                     ->when($produitId, fn ($q) => $q->whereKey($produitId))
                     ->whereNotIn('id', $dejaProposes)->get(['id', 'numero', 'seuil_alerte', 'stock_maximum']);
                 $disponibles = $this->disponibilites->calculer($produits->pluck('id')->all())->keyBy('produit_id');

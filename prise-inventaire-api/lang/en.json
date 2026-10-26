@@ -152,6 +152,8 @@
     "Ce transporteur est rattaché à des clients, des fournisseurs ou des documents : désactivez-le plutôt.": "This carrier is linked to customers, suppliers or documents: deactivate it instead.",
     "Ce statut est posé sur des documents : désactivez-le plutôt.": "This status is set on documents: deactivate it instead.",
     "Ce statut de document n'existe pas.": "This document status does not exist.",
+    "Un service n'est pas suivi par lot ni par numéro de série : retirez d'abord le suivi.": "A service is not tracked by lot or serial number: remove the tracking first.",
+    "Ce produit ne garde pas de reliquats (fiche produit).": "This product does not keep back orders (product record).",
     "Frais de transport – :transporteur": "Freight \u2013 :transporteur",
     "L'expédition d'un bon livré ou annulé ne se modifie plus.": "The shipment of a delivered or cancelled note can no longer be changed.",
     "Un bon retiré par le client ne passe pas par un transporteur.": "A note picked up by the customer does not go through a carrier.",

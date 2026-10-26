@@ -893,3 +893,29 @@ Code : `LotsSeries` (`retourClient`, `retourFournisseur`, `exemplaires`, `dernie
 `RetoursClients::traiter` et `RetoursFournisseurs::expedier` ; web `lots/ExemplairesRetour` dans les deux éditeurs de
 retour ; migration `2026_10_17_100080_lots_retours` (colonnes `lot_id` et `numeros_serie` des lignes de retour,
 lignes de retour dans `lot_mouvements`).
+
+## 21. Nature et options du produit (Paramètres → Produits)
+
+Plan de parité fripv2, socle S2 (docs/reste-a-faire/03), première partie. Cases de la fiche produit (« Nature et
+options »), avec des valeurs par défaut qui reproduisent l'existant :
+
+| Case | Défaut | Effet |
+|---|---|---|
+| Produit de service | non | Ni stocké, ni suivi par lot ou numéro de série (refusé tant qu'un suivi est posé), ni gardé en reliquat |
+| Stocké (inventorié) | oui | Décoché : hors de la valeur de l'inventaire et des suggestions d'achat |
+| Acheté | oui | Décoché : plus proposé dans les commandes fournisseur ni les suggestions d'achat |
+| Vendu | oui | Décoché : plus proposé dans les devis, commandes et factures, ni dans l'espace client |
+| Compté dans la valeur de l'inventaire | oui | Décoché : hors de la valorisation |
+| Commissionnable | oui | Décoché : ses lignes, facturées puis créditées, sortent de la commission (rapport « Ventes par représentant ») |
+| Visible dans l'espace client | oui | Décoché : absent du catalogue de l'espace client |
+| Garde ses reliquats | oui | Décoché : un reliquat de ce produit est refusé |
+
+Un produit déjà sur une ligne reste proposé sur cette ligne. Droits : ceux des produits.
+
+**Reste** (docs/reste-a-faire/03, S2) : taxes applicables par produit et groupes de taxes de vente et d'achat, frais de
+portée achat, location de matériel ou de contenant, département, popularité et format de matière dangereuse (référentiels
+à créer), quantité maximale affichée dans l'espace client.
+
+Code : `ProduitTenant::NATURE`, `ProduitTenantController::nature`, filtres dans `CommandesPortail::produitsProposes`,
+`ValorisationInventaire::calculer`, `SuggestionsAchat`, `ReliquatsClients::creer`, `VentesParRepresentant` ; migration
+`2026_10_26_100098_nature_produits`.

@@ -66,11 +66,29 @@ class VentesParRepresentant extends RapportVentes
                 SUM(avoirs.montant_ht * avoirs.taux_change * COALESCE(factures.taux_commission, 0) / 100) AS commission')
             ->get()->keyBy(fn ($l) => (int) $l->representant_id);
 
+        // Produits non commissionnables (socle S2) : leurs lignes, facturées puis créditées, sortent de la commission.
+        $horsVentes = $this->factures($valeurs)
+            ->join('facture_lignes', 'facture_lignes.facture_id', '=', 'factures.id')
+            ->join('produits', 'produits.id', '=', 'facture_lignes.produit_id')->where('produits.commissionnable', false)
+            ->when($representant, fn ($q, $id) => $q->where('factures.representant_id', $id))
+            ->groupBy('factures.representant_id')
+            ->selectRaw('factures.representant_id AS representant_id, SUM(facture_lignes.montant_ht * factures.taux_change * COALESCE(factures.taux_commission, 0) / 100) AS commission')
+            ->pluck('commission', 'representant_id');
+        $horsCredits = Avoir::query()->whereIn('avoirs.statut', Avoir::EMISES)
+            ->whereDate('avoirs.date_avoir', '>=', $valeurs['du'])->whereDate('avoirs.date_avoir', '<=', $valeurs['au'])
+            ->join('factures', 'factures.id', '=', 'avoirs.facture_id')
+            ->join('avoir_lignes', 'avoir_lignes.avoir_id', '=', 'avoirs.id')
+            ->join('produits', 'produits.id', '=', 'avoir_lignes.produit_id')->where('produits.commissionnable', false)
+            ->when($representant, fn ($q, $id) => $q->where('factures.representant_id', $id))
+            ->groupBy('factures.representant_id')
+            ->selectRaw('factures.representant_id AS representant_id, SUM(avoir_lignes.montant_ht * avoirs.taux_change * COALESCE(factures.taux_commission, 0) / 100) AS commission')
+            ->pluck('commission', 'representant_id');
+
         $ids = $ventes->keys()->merge($credits->keys())->unique();
         $noms = Representant::withTrashed()->whereIn('id', $ids->filter()->all())->pluck('nom', 'id');
         $sansRepresentant = $this->texte(['fr' => '(Sans représentant)', 'en' => '(No sales rep)']);
 
-        return $ids->map(function (int $id) use ($ventes, $credits, $noms, $sansRepresentant) {
+        return $ids->map(function (int $id) use ($ventes, $credits, $noms, $sansRepresentant, $horsVentes, $horsCredits) {
             $vente = $ventes->get($id);
             $credit = $credits->get($id);
             $ventesHt = (float) ($vente->ventes_ht ?? 0);
@@ -82,7 +100,8 @@ class VentesParRepresentant extends RapportVentes
                 'ventes_ht' => $this->argent($ventesHt),
                 'credits_ht' => $this->argent($creditsHt),
                 'ventes_nettes' => $this->argent($ventesHt - $creditsHt),
-                'commission' => $this->argent((float) ($vente->commission ?? 0) - (float) ($credit->commission ?? 0)),
+                'commission' => $this->argent((float) ($vente->commission ?? 0) - (float) ($credit->commission ?? 0)
+                    - (float) ($horsVentes[$id] ?? 0) + (float) ($horsCredits[$id] ?? 0)),
             ];
         })
             // Les représentants par ventes nettes, la ligne « sans représentant » à la fin.

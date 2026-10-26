@@ -560,7 +560,7 @@ export default function DevisPage() {
                       <div key={idx} className="flex gap-2 items-center">
                         <select value={ligne.produit_id} onChange={(e) => updateLigne(idx, 'produit_id', parseInt(e.target.value))} className="flex-1 px-2 py-1 border rounded text-sm">
                           <option value={0}>Produit...</option>
-                          {produits.map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
+                          {produits.filter(p => p.vendu !== false || p.id === ligne.produit_id).map(p => <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>)}
                         </select>
                         <input type="number" min="1" value={ligne.quantite} onChange={(e) => updateLigne(idx, 'quantite', parseInt(e.target.value) || 1)} className="w-20 px-2 py-1 border rounded text-sm" placeholder="Qté" />
                         <ChoixUnite produit={produits.find(p => p.id === ligne.produit_id)} valeur={ligne.unite} onChange={u => changerUniteLigne(idx, u)}

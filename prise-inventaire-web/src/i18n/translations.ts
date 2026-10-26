@@ -3410,6 +3410,21 @@ export const translations = {
       documentHint: 'Celui du client par défaut.',
       commission: 'Commission {taux} %',
     },
+    // Nature et options du produit (socle S2).
+    productNature: {
+      title: 'Nature et options',
+      help: "Un service n'est ni stocké, ni suivi par lot, ni gardé en reliquat. Un produit non vendu n'est pas proposé dans les ventes ni l'espace client ; non acheté, ni dans les commandes fournisseur ni les suggestions d'achat ; non valorisé, hors de la valeur de l'inventaire ; non commissionnable, hors de la commission.",
+      cases: {
+        service: 'Produit de service',
+        stocke: 'Stocké (inventorié)',
+        achete: 'Acheté',
+        vendu: 'Vendu',
+        valorise: "Compté dans la valeur de l'inventaire",
+        commissionnable: 'Commissionnable',
+        visible_portail: "Visible dans l'espace client",
+        conserve_reliquat: 'Garde ses reliquats',
+      },
+    },
     // Statuts des documents : libellés et couleurs des statuts système (« Statuts transactions » de fripv2).
     documentStatuses: {
       title: 'Statuts des documents',
@@ -8183,6 +8198,21 @@ export const translations = {
       clientHint: 'Carried over to their quotes, orders and invoices.',
       documentHint: "The customer's by default.",
       commission: 'Commission {taux}%',
+    },
+    // Product nature and options (socket S2).
+    productNature: {
+      title: 'Nature and options',
+      help: 'A service is not stocked, not tracked by lot and keeps no back orders. A product not sold is not offered in sales or on the customer site; not purchased, neither in purchase orders nor purchase suggestions; not valued, outside the inventory value; not commissionable, outside the commission.',
+      cases: {
+        service: 'Service product',
+        stocke: 'Stocked (inventoried)',
+        achete: 'Purchased',
+        vendu: 'Sold',
+        valorise: 'Counted in inventory value',
+        commissionnable: 'Commissionable',
+        visible_portail: 'Visible on the customer site',
+        conserve_reliquat: 'Keeps back orders',
+      },
     },
     // Document statuses: labels and colours of system statuses (fripv2 "transaction statuses").
     documentStatuses: {

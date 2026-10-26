@@ -36,6 +36,8 @@ class CommandesPortail
         $categories = PortailParametres::courants()->categories;
 
         return ProduitTenant::query()->where('actif', true)
+            // Nature du produit (socle S2) : vendu et visible dans l'espace client.
+            ->where('vendu', true)->where('visible_portail', true)
             ->when($categories, fn (Builder $q) => $q->whereIn('categorie', $categories));
     }
 

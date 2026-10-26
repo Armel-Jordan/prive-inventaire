@@ -53,6 +53,15 @@ class ProduitTenant extends Model
         // Suivi des exemplaires (phase 2.8) : vide, « lot » ou « serie » ; péremption exigée pour un lot.
         'suivi',
         'peremption',
+        // Nature et options (socle S2) : service, stocké, acheté, vendu, valorisé, commissionnable, visible dans l'espace
+        // client, garde ses reliquats. Par défaut, tout produit est stocké, acheté, vendu… (voir NATURE).
+        'service', 'stocke', 'achete', 'vendu', 'valorise', 'commissionnable', 'visible_portail', 'conserve_reliquat',
+    ];
+
+    /** Cases de nature et d'options du produit => valeur par défaut. */
+    public const NATURE = [
+        'service' => false, 'stocke' => true, 'achete' => true, 'vendu' => true,
+        'valorise' => true, 'commissionnable' => true, 'visible_portail' => true, 'conserve_reliquat' => true,
     ];
 
     protected function casts(): array
@@ -66,6 +75,14 @@ class ProduitTenant extends Model
             'poids_kg' => 'decimal:4',
             'volume_m3' => 'decimal:6',
             'peremption' => 'boolean',
+            'service' => 'boolean',
+            'stocke' => 'boolean',
+            'achete' => 'boolean',
+            'vendu' => 'boolean',
+            'valorise' => 'boolean',
+            'commissionnable' => 'boolean',
+            'visible_portail' => 'boolean',
+            'conserve_reliquat' => 'boolean',
         ];
     }
 

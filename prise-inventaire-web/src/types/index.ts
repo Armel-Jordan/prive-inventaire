@@ -53,6 +53,15 @@ export interface Produit {
   traductions?: TraductionProduit[];
   /** Suivi des exemplaires : par lot ou par numéro de série ; vide, aucun suivi. */
   suivi?: 'lot' | 'serie' | null;
+  /** Nature et options (socle S2) ; non renvoyées par une ancienne fiche : par défaut, stocké, acheté, vendu… */
+  service?: boolean;
+  stocke?: boolean;
+  achete?: boolean;
+  vendu?: boolean;
+  valorise?: boolean;
+  commissionnable?: boolean;
+  visible_portail?: boolean;
+  conserve_reliquat?: boolean;
   /** Lot : la date de péremption est exigée à la réception. */
   peremption?: boolean;
 }

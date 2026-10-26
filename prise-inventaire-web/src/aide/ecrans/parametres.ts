@@ -227,6 +227,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Imprimez les étiquettes d'un produit avec son bouton « Étiquettes », ou celles des produits affichés avec le bouton du haut.",
       ],
       astuces: [
+        "« Nature et options » : décochez « Vendu », « Acheté », « Commissionnable »… selon le produit ; un « Produit de service » n'est ni stocké, ni suivi, ni gardé en reliquat.",
         "La corbeille désactive le produit : il quitte les listes de choix et l'application mobile, son historique reste ; le filtre « Désactivés » permet de le réactiver.",
         "Le prix de base se saisit dans le champ « Prix de vente » du produit, ou pour plusieurs produits dans « Tarifs & Prix », onglet « Grille de prix ».",
         "Le suivi par lot ou par numéro de série ne change plus dès que des lots ou des numéros sont enregistrés.",
@@ -244,6 +245,7 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Print the labels of one product with its “Labels” button, or those of the products shown with the button at the top.",
       ],
       astuces: [
+        "“Nature and options”: untick “Sold”, “Purchased”, “Commissionable”… as needed; a “Service product” is not stocked, not tracked and keeps no back orders.",
         "The bin icon deactivates the product: it leaves pick lists and the mobile app but keeps its history; the “Désactivés” filter lets you reactivate it.",
         "The base price is entered in the product’s “Prix de vente” field, or for several products in “Tarifs & Prix”, “Price grid” tab.",
         "Lot or serial number tracking can no longer change once lots or numbers are recorded.",

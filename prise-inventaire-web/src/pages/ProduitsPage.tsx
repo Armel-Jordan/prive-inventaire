@@ -54,13 +54,26 @@ interface ProduitForm extends ValeursFiche {
   // Suivi des exemplaires : par lot ou par numéro de série ; péremption exigée pour un lot.
   suivi: '' | 'lot' | 'serie';
   peremption: boolean;
+  // Nature et options (socle S2).
+  service: boolean;
+  stocke: boolean;
+  achete: boolean;
+  vendu: boolean;
+  valorise: boolean;
+  commissionnable: boolean;
+  visible_portail: boolean;
+  conserve_reliquat: boolean;
 }
+
+/** Cases de nature et d'options, dans l'ordre de l'écran. */
+const CASES_NATURE = ['service', 'stocke', 'achete', 'vendu', 'valorise', 'commissionnable', 'visible_portail', 'conserve_reliquat'] as const;
 
 const emptyForm: ProduitForm = {
   numero: '', description: '', mesure: 'UN', unite_achat: '', qte_par_unite_achat: 1, type: '', secteur_id: '', prix_unitaire: '',
   numero_onu: '', classe_danger: '', groupe_emballage: '', poids_kg: '', volume_m3: '',
   fabricant_id: '', reference_fabricant: '', description_longue: '', traductions: {}, image_id: null,
   suivi: '', peremption: false,
+  service: false, stocke: true, achete: true, vendu: true, valorise: true, commissionnable: true, visible_portail: true, conserve_reliquat: true,
 };
 
 /** Matière dangereuse : numéro ONU ou classe renseignés (et pas seulement des zéros), comme côté API. */
@@ -190,6 +203,14 @@ export default function ProduitsPage() {
       image_id: produit.image_id ?? null,
       suivi: produit.suivi ?? '',
       peremption: !!produit.peremption,
+      service: produit.service === true,
+      stocke: produit.stocke !== false,
+      achete: produit.achete !== false,
+      vendu: produit.vendu !== false,
+      valorise: produit.valorise !== false,
+      commissionnable: produit.commissionnable !== false,
+      visible_portail: produit.visible_portail !== false,
+      conserve_reliquat: produit.conserve_reliquat !== false,
     });
     setEditingId(produit.id!);
     setShowModal(true);
@@ -605,6 +626,23 @@ export default function ProduitsPage() {
                   )}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{tl.trackingHelp}</p>
+              </div>
+              {/* Nature et options (socle S2) : un service n'est ni stocké, ni suivi, ni gardé en reliquat. */}
+              <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t.productNature.title}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {CASES_NATURE.map(cle => {
+                    const imposee = form.service && (cle === 'stocke' || cle === 'conserve_reliquat');
+                    return (
+                      <label key={cle} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" checked={imposee ? false : form[cle]} disabled={imposee || (cle === 'service' && form.suivi !== '')}
+                          onChange={e => setForm({ ...form, [cle]: e.target.checked, ...(cle === 'service' && e.target.checked ? { stocke: false, conserve_reliquat: false } : {}) })} />
+                        {t.productNature.cases[cle]}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t.productNature.help}</p>
               </div>
               <div className="border dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conditionnement fournisseur</p>

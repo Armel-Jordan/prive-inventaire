@@ -70,7 +70,33 @@ class ProduitTenantController extends Controller
             'traductions.*.description_longue' => ['nullable', 'string', 'max:10000'],
             'suivi' => ['nullable', Rule::in(ProduitTenant::SUIVIS)],
             'peremption' => ['sometimes', 'boolean'],
+            ...array_map(fn () => ['sometimes', 'boolean'], ProduitTenant::NATURE),
         ];
+    }
+
+    /**
+     * Nature et options (socle S2) : les cases transmises. Un service n'est ni stocké, ni suivi par lot ou numéro de
+     * série, et ne garde pas de reliquats (comme dans fripv2, qui décoche ces cases).
+     */
+    private function nature(Request $request, ?ProduitTenant $produit): array
+    {
+        $valeurs = [];
+        foreach (array_keys(ProduitTenant::NATURE) as $case) {
+            if ($request->has($case)) {
+                $valeurs[$case] = $request->boolean($case);
+            }
+        }
+        $service = $valeurs['service'] ?? (bool) $produit?->service;
+        if ($service) {
+            $suivi = $request->has('suivi') ? ($request->input('suivi') ?: null) : $produit?->suivi;
+            if ($suivi) {
+                throw ValidationException::withMessages(['service' => __("Un service n'est pas suivi par lot ni par numéro de série : retirez d'abord le suivi.")]);
+            }
+            $valeurs['stocke'] = false;
+            $valeurs['conserve_reliquat'] = false;
+        }
+
+        return $valeurs;
     }
 
     /** Valeurs de la fiche enrichie transmises ; l'image principale doit être une image jointe à ce produit. */
@@ -199,7 +225,7 @@ class ProduitTenantController extends Controller
             'secteur_id' => $request->secteur_id,
             'categorie' => $request->categorie,
             'prix_unitaire' => $request->prix_unitaire,
-        ] + $this->transport($request) + $this->fiche($request, null) + $this->suivi($request, null));
+        ] + $this->transport($request) + $this->fiche($request, null) + $this->suivi($request, null) + $this->nature($request, null));
         $this->enregistrerTraductions($produit, $request);
 
         $produit->load(['secteur', 'fabricant:id,nom', 'traductions']);
@@ -242,6 +268,7 @@ class ProduitTenantController extends Controller
             $this->transport($request),
             $this->fiche($request, $produit),
             $this->suivi($request, $produit),
+            $this->nature($request, $produit),
         ));
         $produit->save();
         $this->enregistrerTraductions($produit, $request);

@@ -680,7 +680,7 @@ export default function CommandesClientPage() {
                           className="flex-1 px-2 py-1 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         >
                           <option value={0}>Produit...</option>
-                          {produits.map(p => (
+                          {produits.filter(p => p.vendu !== false || p.id === ligne.produit_id).map(p => (
                             <option key={p.id} value={p.id}>{p.description}{avecReference(p.id)}</option>
                           ))}
                         </select>
