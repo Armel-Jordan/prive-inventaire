@@ -14,6 +14,7 @@ use App\Models\PortailParametres;
 use App\Models\ProduitTenant;
 use App\Models\TenantParametres;
 use App\Services\CalculPrix;
+use App\Services\ConditionsPaiement;
 use App\Services\EntetesVente;
 use App\Services\LivraisonDocuments;
 use App\Services\TaxesDocument;
@@ -151,7 +152,7 @@ class CommandesPortail
             // Le représentant du client suit sa commande.
             // Contact principal du client et l'adresse choisie (sinon sa principale), recopiée sur la commande.
             $livraison = app(LivraisonDocuments::class)->pourCreation(empty($donnees['adresse_livraison_id']) ? [] : ['adresse_livraison_id' => $donnees['adresse_livraison_id']], $client);
-            $commande = ComClientEntete::create(app(EntetesVente::class)->pourCreation([], $client) + $livraison + [
+            $commande = ComClientEntete::create(app(EntetesVente::class)->pourCreation([], $client) + $livraison + app(ConditionsPaiement::class)->pourCreation([], $client) + [
                 'tenant_id' => $tenantId,
                 'numero' => Configuration::consommerNumero('commande', $tenantId),
                 'client_id' => $client->id,

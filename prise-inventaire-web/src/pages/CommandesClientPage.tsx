@@ -15,6 +15,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixConditionPaiement from '@/components/ChoixConditionPaiement';
 import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
@@ -87,6 +88,8 @@ export default function CommandesClientPage() {
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
+  // Condition de paiement (socle S4.1) : vide, celle du client (sinon celle par défaut) ; reprise par la facture.
+  const [conditionId, setConditionId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
   // Numéro de commande du client (socle S4.1), exigé si sa fiche l'exige.
   const [numeroCommandeClient, setNumeroCommandeClient] = useState('');
@@ -202,6 +205,7 @@ export default function CommandesClientPage() {
       numero_suivi: numeroSuivi.trim() || null,
       numero_commande_client: numeroCommandeClient.trim() || null,
       ...saisieLivraison(livraison),
+      condition_paiement_id: conditionId,
     };
     try {
       if (editingId) {
@@ -236,6 +240,7 @@ export default function CommandesClientPage() {
     setNumeroSuivi(cmd.numero_suivi ?? '');
     setNumeroCommandeClient(cmd.numero_commande_client ?? '');
     setLivraison(livraisonDuDocument(cmd));
+    setConditionId(cmd.condition_paiement_id ?? null);
     setLignes(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cmd.lignes ?? []).map((l: any) => ({
@@ -360,6 +365,7 @@ export default function CommandesClientPage() {
     setNumeroSuivi('');
     setNumeroCommandeClient('');
     setLivraison({});
+    setConditionId(null);
     setLignes([]);
   };
 
@@ -369,6 +375,7 @@ export default function CommandesClientPage() {
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
     setLivraison({});
+    setConditionId(null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -666,6 +673,12 @@ export default function CommandesClientPage() {
                   <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                 </div>
               )}
+              <div>
+                <label htmlFor="commande-condition" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.documentTerms.label}</label>
+                <ChoixConditionPaiement id="commande-condition" value={conditionId} onChange={setConditionId}
+                  actuelle={editingId ? commandes.find(c => c.id === editingId)?.condition_paiement : null} />
+                <p className="text-xs text-gray-500 mt-1">{t.documentTerms.hint}</p>
+              </div>
               <ChoixLivraison idPrefixe="commande" clientId={formData.client_id ? Number(formData.client_id) : null} valeur={livraison} onChange={setLivraison} />
               <div>
                 <label htmlFor="commande-numero-client" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.customerPo.label}{numeroClientExige ? ' *' : ''}</label>
@@ -809,6 +822,12 @@ export default function CommandesClientPage() {
                   <div>
                     <span className="text-sm text-gray-500">{t.salesReps.label} :</span>
                     <p className="dark:text-white">{selectedCommande.representant.nom}</p>
+                  </div>
+                )}
+                {selectedCommande.condition_paiement && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.documentTerms.label} :</span>
+                    <p className="dark:text-white">{selectedCommande.condition_paiement.libelle}</p>
                   </div>
                 )}
                 <DetailLivraison document={selectedCommande} />

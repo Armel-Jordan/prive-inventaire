@@ -10,6 +10,7 @@ use App\Models\Configuration;
 use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
 use App\Services\ClientsDePassage;
+use App\Services\ConditionsPaiement;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\EntetesVente;
@@ -31,7 +32,7 @@ class CommandeClientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
+        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -68,7 +69,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', StatutsPersonnalises::COLONNES])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
@@ -101,12 +102,14 @@ class CommandeClientController extends Controller
             ...EntetesVente::regles(),
             ...NumeroCommandeClient::regles(),
             ...LivraisonDocuments::regles(),
+            'condition_paiement_id' => ConditionsPaiement::regle(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
         $client = Client::find($validated['client_id']);
         $devise = app(DevisesVente::class)->pourDocument($validated['devise'] ?? null, $validated['taux_change'] ?? null, $client)
-            + app(EntetesVente::class)->pourCreation($validated, $client) + app(LivraisonDocuments::class)->pourCreation($validated, $client);
+            + app(EntetesVente::class)->pourCreation($validated, $client) + app(LivraisonDocuments::class)->pourCreation($validated, $client)
+            + app(ConditionsPaiement::class)->pourCreation($validated, $client);
 
         $tenantId = $request->attributes->get('tenant')->id;
         $config = Configuration::pourEntite('commande', $tenantId);
@@ -182,6 +185,7 @@ class CommandeClientController extends Controller
             ...EntetesVente::regles($commande),
             ...NumeroCommandeClient::regles($commande),
             ...LivraisonDocuments::regles($commande),
+            'condition_paiement_id' => ConditionsPaiement::regle($commande),
         ]);
         if (isset($validated['lignes'])) {
             $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
@@ -190,7 +194,8 @@ class CommandeClientController extends Controller
         DB::transaction(function () use ($commande, $validated) {
             // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
             $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id))
-                + app(EntetesVente::class)->pourModification($validated) + app(LivraisonDocuments::class)->pourModification($validated, $commande));
+                + app(EntetesVente::class)->pourModification($validated) + app(LivraisonDocuments::class)->pourModification($validated, $commande)
+                + app(ConditionsPaiement::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id)));
             // Client et date se modifient aussi ; une note vidée est effacée (elle était conservée).
             $commande->update([
                 'client_id' => $validated['client_id'] ?? $commande->client_id,

@@ -504,8 +504,8 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
      des documents (01, section 19) faits.
    - Socles de 03 : S3 (quantités décimales), S2 (nature du produit : cases et effets faits le 26/10, FLOW-INVENTAIRE §21 ;
      reste taxes par produit, location, référentiels), puis S4.1 à S4.7 (S4.1 : transporteur, n° de suivi, statut
-     personnalisé, n° de commande du client, contact et « Livrer à » faits le 26/10, FLOW-VENTES §2.10 et §2.11 ; reste
-     condition de paiement, groupe de taxe, date requise, prioritaire) (en-tête, lignes, copie, notes de
+     personnalisé, n° de commande du client, contact, « Livrer à » et condition de paiement faits le 26/10, FLOW-VENTES
+     §2.10 à §2.12 ; reste groupe de taxe, date requise, prioritaire) (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
    - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.
 3. **Référentiels, tiers et paramètres**

@@ -1278,6 +1278,9 @@ export interface RecapitulatifTaxe {
 }
 
 export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
+  /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la facture. */
+  condition_paiement_id?: number | null;
+  condition_paiement?: { id: number; libelle: string } | null;
   /** Numéro de suivi de l'envoi (connaissement), repris par la facture puis le bon de livraison. */
   numero_suivi?: string | null;
   recapitulatif_taxes?: RecapitulatifTaxe[];
@@ -1720,6 +1723,7 @@ export async function createCommandeClient(data: {
   numero_commande_client?: string | null;
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
+  condition_paiement_id?: number | null;
 } & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2664,6 +2668,9 @@ export interface DevisLigne {
 }
 
 export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
+  /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la commande et la facture. */
+  condition_paiement_id?: number | null;
+  condition_paiement?: { id: number; libelle: string } | null;
   id: number;
   numero: string;
   client_id: number;
@@ -2717,6 +2724,7 @@ export async function createDevis(data: {
   transporteur_id?: number | null;
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
+  condition_paiement_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2731,6 +2739,7 @@ export async function updateDevis(id: number, data: {
   transporteur_id?: number | null;
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
+  condition_paiement_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

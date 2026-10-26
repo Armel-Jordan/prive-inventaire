@@ -38,6 +38,8 @@ class Devis extends Model
         'representant_id', 'transporteur_id',
         // Contact et « Livrer à » (copie de l'adresse et ses instructions), voir App\Services\LivraisonDocuments.
         'contact_id', 'adresse_livraison_id', 'livraison_adresse', 'instructions_livraison',
+        // Condition de paiement : celle du client par défaut, reprise par la facture (voir App\Services\ConditionsPaiement).
+        'condition_paiement_id',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
     ];
@@ -82,6 +84,12 @@ class Devis extends Model
     public function contact(): BelongsTo
     {
         return $this->belongsTo(ClientContact::class, 'contact_id');
+    }
+
+    /** Condition de paiement (socle S4.1), reprise par la facture. */
+    public function conditionPaiement(): BelongsTo
+    {
+        return $this->belongsTo(ConditionPaiement::class)->withTrashed();
     }
 
     /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */

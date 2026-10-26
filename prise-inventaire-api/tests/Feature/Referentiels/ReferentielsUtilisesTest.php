@@ -81,7 +81,7 @@ class ReferentielsUtilisesTest extends TestCase
         });
 
         $this->deleteJson("/api/referentiels/conditions_paiement/{$condition->id}")->assertStatus(422)
-            ->assertJsonPath('message', 'Cette condition de paiement est utilisée par des clients ou des factures : désactivez-la plutôt.');
+            ->assertJsonPath('message', 'Cette condition de paiement est utilisée par des clients ou des documents de vente : désactivez-la plutôt.');
         $this->deleteJson("/api/referentiels/devises/{$devise->id}")->assertStatus(422);
         $this->deleteJson("/api/referentiels/itineraires/{$itineraire->id}")->assertStatus(422)
             ->assertJsonPath('message', 'Cet itinéraire est utilisé par des clients ou des tournées : désactivez-le plutôt.');

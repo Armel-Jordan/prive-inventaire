@@ -401,6 +401,22 @@ Code : service `App\Services\LivraisonDocuments` (règles, valeurs par défaut, 
 `2026_10_26_100100_livraison_contact_documents` ; web : composant `ChoixLivraison` (listes du formulaire) et
 `DetailLivraison` (détail des documents).
 
+### 2.12 Condition de paiement des devis et des commandes
+
+Socle S4.1 du plan de parité fripv2. La condition de paiement (référentiel « Conditions de paiement ») se choisit aussi
+sur les devis et les commandes :
+- **Par défaut** : celle du client, sinon celle par défaut de l'entreprise, comme sur la facture. Vidée à la
+  modification, celle du client revient.
+- **Suite** : elle passe du devis à la commande (conversion), à la copie et à la facture faite directement depuis le
+  devis ; puis de la commande à sa facture, qui en calcule l'échéance (et l'escompte éventuel). Une commande d'avant,
+  sans condition, donne toujours celle du client à sa facture.
+- **Impression** : « Conditions de paiement » sur le devis et la commande.
+- **Espace client** : la commande passée par le client prend la condition de sa fiche.
+- **Référentiel** : une condition portée par un devis ou une commande ne se supprime pas (on la désactive).
+
+Code : `App\Services\ConditionsPaiement` (`regle`, `pourCreation`, `pourModification`), migration
+`2026_10_26_100101_conditions_paiement_documents` ; web : composant `ChoixConditionPaiement`.
+
 ---
 
 ## 3. Devis

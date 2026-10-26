@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Condition de paiement sur les devis et les commandes : celle du client par défaut, imprimée, reprise par la commande puis par la facture, qui en calcule l'échéance.",
+    en: "Payment terms on quotes and orders: the customer's by default, printed, carried to the order and then to the invoice, which computes its due date from them.",
+    lien: '/devis',
+  },
+  {
+    date: '2026-10-26',
     fr: "Contact et « Livrer à » sur les devis, commandes, factures et bons de livraison : le contact principal et l'adresse de livraison principale du client sont proposés ; l'adresse et ses instructions sont recopiées sur le document, imprimées et reprises d'un document à l'autre.",
     en: "Contact and “Deliver to” on quotes, orders, invoices and delivery notes: the customer's main contact and main delivery address are proposed; the address and its instructions are copied onto the document, printed and carried from one document to the next.",
     lien: '/commandes-client',

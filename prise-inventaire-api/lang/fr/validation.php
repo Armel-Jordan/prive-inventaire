@@ -200,6 +200,7 @@ return [
         'numero_commande_client' => 'numéro de commande du client',
         'contact_id' => 'contact',
         'adresse_livraison_id' => 'adresse de livraison',
+        'condition_paiement_id' => 'condition de paiement',
         'produit_id' => 'produit',
         'secteur_id' => 'secteur',
         'lignes' => 'lignes',

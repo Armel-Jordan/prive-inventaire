@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\ConditionPaiement;
 use App\Models\Facture;
+use App\Support\TenantRule;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
@@ -14,6 +16,9 @@ use Illuminate\Support\Carbon;
  * - l'escompte pour paiement rapide (« 2/10 Net 30 ») : proposé, comme dans fripv2, au premier paiement de la
  *   facture fait au plus tard à sa date plus les jours d'escompte ; il porte sur tout ce qui reste dû (notes de crédit
  *   déduites) et n'est accordé que si le paiement règle ce reste.
+ *
+ * Les devis et les commandes portent aussi leur condition (socle S4.1) : celle choisie, sinon celle du client, sinon
+ * celle par défaut ; elle passe du devis à la commande, puis à la facture, qui en calcule l'échéance.
  */
 class ConditionsPaiement
 {
@@ -26,6 +31,32 @@ class ConditionsPaiement
         $condition = $id ? ConditionPaiement::where('actif', true)->find($id) : null;
 
         return $condition ?? ConditionPaiement::where('actif', true)->where('par_defaut', true)->first();
+    }
+
+    /** Règle d'un devis ou d'une commande : une condition du référentiel ; celle du document reste acceptée si elle a été retirée. */
+    public static function regle(?Model $document = null): array
+    {
+        return ['nullable', 'integer', TenantRule::exists('conditions_paiement')->where(fn ($q) => $q->whereNull('deleted_at')
+            ->when($document?->getAttribute('condition_paiement_id'), fn ($q, $actuel) => $q->orWhere('id', $actuel)))];
+    }
+
+    /** Condition d'un nouveau devis ou d'une nouvelle commande : celle choisie, sinon celle du client, sinon celle par défaut. */
+    public function pourCreation(array $donnees, ?Client $client): array
+    {
+        $choisie = ! empty($donnees['condition_paiement_id']) ? (int) $donnees['condition_paiement_id'] : null;
+
+        return ['condition_paiement_id' => $this->pourFacture($choisie, $client)?->id];
+    }
+
+    /** À la modification : seulement si elle est envoyée et change (vide : celle du client, sinon celle par défaut). */
+    public function pourModification(array $donnees, Model $document, ?Client $client): array
+    {
+        if (! array_key_exists('condition_paiement_id', $donnees)
+            || (int) $donnees['condition_paiement_id'] === (int) $document->getAttribute('condition_paiement_id')) {
+            return [];
+        }
+
+        return $this->pourCreation($donnees, $client);
     }
 
     public function echeance(ConditionPaiement $condition, Carbon|string $date): Carbon
