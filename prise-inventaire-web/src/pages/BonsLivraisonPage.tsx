@@ -11,6 +11,7 @@ import { DetailLivraison } from '@/components/ChoixLivraison';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
+import { EtoilePrioritaire, FiltrePrioritaires } from '@/components/Prioritaire';
 import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
@@ -59,6 +60,8 @@ export default function BonsLivraisonPage() {
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
+  // Prioritaires seulement (l'étoile, socle S4.1).
+  const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   // Recherche par numéro du bon ou de sa facture, ou par client, pré-remplie par « ?recherche= » (recherche globale).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -88,7 +91,7 @@ export default function BonsLivraisonPage() {
   const loadBons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page });
+      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page });
       setBons(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -96,7 +99,7 @@ export default function BonsLivraisonPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterTransporteur, filterStatutPerso, page]);
+  }, [filterStatut, recherche, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
 
   useEffect(() => {
     loadBons();
@@ -271,6 +274,7 @@ export default function BonsLivraisonPage() {
           )}
           <FiltreStatutPersonnalise document="bon_livraison" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
         </div>
       </div>
 
@@ -296,6 +300,8 @@ export default function BonsLivraisonPage() {
                 <tr key={bon.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
                     {bon.numero}
+                    <EtoilePrioritaire document="bon_livraison" documentId={bon.id} valeur={bon.prioritaire} modifiable={peut('bons_livraison', 'modifier')}
+                      onChange={p => setBons(ls => ls.map(d => (d.id === bon.id ? { ...d, prioritaire: p } : d)))} />
                     <BalisesFiche entite="bon_livraison" entiteId={bon.id} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{bon.facture?.numero}</td>

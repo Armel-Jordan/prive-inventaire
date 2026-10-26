@@ -55,6 +55,7 @@ import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
+import { EtoilePrioritaire, FiltrePrioritaires } from '@/components/Prioritaire';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
@@ -91,6 +92,8 @@ export default function FacturesPage() {
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
+  // Prioritaires seulement (l'étoile, socle S4.1).
+  const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
@@ -187,7 +190,7 @@ export default function FacturesPage() {
   const loadFactures = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page });
+      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page });
       setFactures(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -195,7 +198,7 @@ export default function FacturesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
 
   useEffect(() => {
     loadFactures();
@@ -453,6 +456,7 @@ export default function FacturesPage() {
           )}
           <FiltreStatutPersonnalise document="facture" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
         </div>
       </div>
 
@@ -479,6 +483,8 @@ export default function FacturesPage() {
                 <tr key={facture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">
                     {facture.numero}
+                    <EtoilePrioritaire document="facture" documentId={facture.id} valeur={facture.prioritaire} modifiable={peut('factures', 'modifier')}
+                      onChange={p => setFactures(ls => ls.map(d => (d.id === facture.id ? { ...d, prioritaire: p } : d)))} />
                     <BalisesFiche entite="facture" entiteId={facture.id} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{nomClient(facture)}<PastilleClientDePassage client={facture.client} /></td>

@@ -3418,6 +3418,14 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Documents prioritaires (l'étoile, socle S4.1).
+    priority: {
+      label: 'Prioritaire',
+      mark: 'Marquer prioritaire',
+      remove: 'Retirer la priorité',
+      filter: 'Prioritaires',
+      error: 'Impossible de changer la priorité de ce document.',
+    },
     // Condition de paiement des devis et des commandes (socle S4.1).
     documentTerms: {
       label: 'Condition de paiement',
@@ -8230,6 +8238,14 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Priority documents (the star, socket S4.1).
+    priority: {
+      label: 'Priority',
+      mark: 'Mark as priority',
+      remove: 'Remove priority',
+      filter: 'Priority only',
+      error: 'Could not change the priority of this document.',
     },
     // Payment terms on quotes and orders (socket S4.1).
     documentTerms: {

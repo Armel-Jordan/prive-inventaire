@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Documents prioritaires : une étoile dans les listes des devis, commandes, factures et bons de livraison (même clos), un filtre « Prioritaires », et la marque reprise d'un document à l'autre.",
+    en: 'Priority documents: a star in the lists of quotes, orders, invoices and delivery notes (even when closed), a “Priority only” filter, and the mark carried from one document to the next.',
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-10-26',
     fr: "Condition de paiement sur les devis et les commandes : celle du client par défaut, imprimée, reprise par la commande puis par la facture, qui en calcule l'échéance.",
     en: "Payment terms on quotes and orders: the customer's by default, printed, carried to the order and then to the invoice, which computes its due date from them.",
     lien: '/devis',

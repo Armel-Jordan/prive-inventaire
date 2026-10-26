@@ -73,6 +73,10 @@ class FactureController extends Controller
         if ($request->filled('statut_personnalise_id')) {
             $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
+        // Prioritaires seulement (l'étoile, socle S4.1).
+        if ($request->boolean('prioritaire')) {
+            $query->where('prioritaire', true);
+        }
         if ($request->has('date_debut')) {
             $query->whereDate('date_facture', '>=', $request->date_debut);
         }
@@ -232,6 +236,7 @@ class FactureController extends Controller
                 'condition_paiement_id' => $condition?->id,
                 'numero_suivi' => $commande->numero_suivi,
                 'numero_commande_client' => $commande->numero_commande_client,
+                'prioritaire' => (bool) $commande->prioritaire,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
                 'montant_tva' => $commande->montant_tva,
@@ -433,6 +438,7 @@ class FactureController extends Controller
                 'transporteur_id' => $facture->transporteur_id,
                 'numero_suivi' => $facture->numero_suivi,
                 'numero_commande_client' => $facture->numero_commande_client,
+                'prioritaire' => (bool) $facture->prioritaire,
             ] + app(LivraisonDocuments::class)->copier($facture) + [
                 'statut' => 'cree',
             ]);

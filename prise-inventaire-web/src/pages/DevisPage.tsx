@@ -41,6 +41,7 @@ import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
+import { EtoilePrioritaire, FiltrePrioritaires } from '@/components/Prioritaire';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 
 export default function DevisPage() {
@@ -69,6 +70,8 @@ export default function DevisPage() {
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
+  // Prioritaires seulement (l'étoile, socle S4.1).
+  const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
@@ -133,7 +136,7 @@ export default function DevisPage() {
     try {
       setLoading(true);
       const [devisRes, clientsRes, produitsRes, config] = await Promise.all([
-        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page }),
+        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page }),
         getClientsActifs(),
         getProduits(),
         getConfiguration('devis').catch(() => null),
@@ -148,7 +151,7 @@ export default function DevisPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
 
   useEffect(() => {
     loadData();
@@ -416,6 +419,7 @@ export default function DevisPage() {
           )}
           <FiltreStatutPersonnalise document="devis" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg" />
+          <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -441,6 +445,8 @@ export default function DevisPage() {
                 <tr key={devis.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-sm">
                     {devis.numero}
+                    <EtoilePrioritaire document="devis" documentId={devis.id} valeur={devis.prioritaire} modifiable={peut('devis', 'modifier')}
+                      onChange={p => setDevisList(ls => ls.map(d => (d.id === devis.id ? { ...d, prioritaire: p } : d)))} />
                     <BalisesFiche entite="devis" entiteId={devis.id} />
                   </td>
                   <td className="px-4 py-3 text-sm">{nomClient(devis)}<PastilleClientDePassage client={devis.client} /></td>

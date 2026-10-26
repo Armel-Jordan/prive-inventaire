@@ -1238,6 +1238,18 @@ export async function poserStatutPersonnalise(document: DocumentStatut, id: numb
   return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/statut-personnalise`, { method: 'PUT', body: JSON.stringify({ statut_personnalise_id: statutId }) });
 }
 
+/** Document prioritaire (l'étoile, socle S4.1) : devis, commandes, factures, bons de livraison. */
+export interface AvecPriorite {
+  prioritaire?: boolean;
+}
+
+export type DocumentPrioritaire = 'devis' | 'commande_client' | 'facture' | 'bon_livraison';
+
+/** Marque (ou démarque) un document prioritaire, même clos. */
+export async function poserPrioritaire(document: DocumentPrioritaire, id: number, prioritaire: boolean): Promise<{ prioritaire: boolean }> {
+  return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/prioritaire`, { method: 'PUT', body: JSON.stringify({ prioritaire }) });
+}
+
 export interface EnteteCommerciale {
   /** Numéro de commande du client (sa référence, socle S4.1) : commandes, factures. */
   numero_commande_client?: string | null;
@@ -1277,7 +1289,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
+export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
   /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la facture. */
   condition_paiement_id?: number | null;
   condition_paiement?: { id: number; libelle: string } | null;
@@ -1318,7 +1330,7 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
+export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
   /** Numéro de suivi de l'envoi (connaissement), repris par le bon de livraison. */
   numero_suivi?: string | null;
   /** Taux de commission du représentant, figé à la création de la facture (%). */
@@ -1393,7 +1405,7 @@ export interface FactureEcheance {
   ordre: number;
 }
 
-export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise {
+export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
   id: number;
   numero: string;
   facture_id: number;
@@ -1694,8 +1706,9 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; page?: number }): Promise<PageResultats<ComClientEntete>> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
+  if (params?.prioritaire) queryParams.append('prioritaire', '1');
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -1749,8 +1762,9 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
+export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
+  if (params?.prioritaire) queryParams.append('prioritaire', '1');
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -1843,8 +1857,9 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; statut_personnalise_id?: number; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
+export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
+  if (params?.prioritaire) queryParams.append('prioritaire', '1');
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -2667,7 +2682,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
+export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
   /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la commande et la facture. */
   condition_paiement_id?: number | null;
   condition_paiement?: { id: number; libelle: string } | null;
@@ -2701,8 +2716,9 @@ export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, Livr
   derniere_relance_le?: string | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; page?: number }): Promise<PageResultats<DevisRecord>> {
+export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
+  if (params?.prioritaire) qs.append('prioritaire', '1');
   if (params?.representant_id) qs.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) qs.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) qs.append('statut_personnalise_id', String(params.statut_personnalise_id));

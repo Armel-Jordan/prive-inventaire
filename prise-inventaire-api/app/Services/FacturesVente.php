@@ -71,6 +71,8 @@ class FacturesVente
                 'notes' => $donnees['notes'] ?? null,
                 'numero_suivi' => $donnees['numero_suivi'] ?? null,
                 'numero_commande_client' => NumeroCommandeClient::valeur($donnees['numero_commande_client'] ?? null),
+                // Prioritaire : celui du document d'origine (devis facturé).
+                'prioritaire' => ! empty($donnees['prioritaire']),
             ]);
 
             $this->creerLignes($facture, $lignesCalculees);

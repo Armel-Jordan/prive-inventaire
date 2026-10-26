@@ -31,9 +31,12 @@ class ComClientEntete extends Model
         'condition_paiement_id',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
+        // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
+        'prioritaire',
     ];
 
     protected $casts = [
+        'prioritaire' => 'boolean',
         'date_commande' => 'date',
         'date_livraison_souhaitee' => 'date',
         'remise_globale' => 'decimal:2',

@@ -417,6 +417,19 @@ sur les devis et les commandes :
 Code : `App\Services\ConditionsPaiement` (`regle`, `pourCreation`, `pourModification`), migration
 `2026_10_26_100101_conditions_paiement_documents` ; web : composant `ChoixConditionPaiement`.
 
+### 2.13 Documents prioritaires
+
+Socle S4.1 du plan de parité fripv2 (l'étoile). Un devis, une commande, une facture ou un bon de livraison se marque
+prioritaire :
+- **Pose** : l'étoile de la liste, enregistrée tout de suite, **même sur un document clos**, avec le droit de
+  **modifier** le document (`PUT /{documents}/{id}/prioritaire`, `prioritaire` vrai ou faux).
+- **Suite** : la marque passe du devis à sa commande (ou à sa facture directe), de la commande à sa facture, puis de la
+  facture à son bon de livraison. Retirée sur l'un, elle reste sur les autres.
+- **Listes** : filtre « Prioritaires » (`?prioritaire=1`) ; l'ordre des listes ne change pas.
+
+Code : `PrioriteDocumentController` (une route par type de document, le type en valeur par défaut), migration
+`2026_10_26_100102_documents_prioritaires` ; web : composants `EtoilePrioritaire` et `FiltrePrioritaires`.
+
 ---
 
 ## 3. Devis

@@ -29,9 +29,12 @@ class BonLivraison extends Model
         'contact_id', 'adresse_livraison_id', 'livraison_adresse', 'instructions_livraison',
         // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
         'statut_personnalise_id',
+        // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
+        'prioritaire',
     ];
 
     protected $casts = [
+        'prioritaire' => 'boolean',
         'date_preparation' => 'datetime',
         'date_pret' => 'datetime',
         'date_livraison' => 'datetime',
