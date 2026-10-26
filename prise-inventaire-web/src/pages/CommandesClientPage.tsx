@@ -768,10 +768,10 @@ export default function CommandesClientPage() {
                     <span className="text-sm text-gray-500">{t.carriers.label} :</span>
                     <p className="dark:text-white">
                       {selectedCommande.transporteur.nom}
-                      {selectedCommande.numero_suivi && <span className="ml-2 text-xs text-gray-500">{t.carriers.tracking} : {selectedCommande.numero_suivi}</span>}
+                      {selectedCommande.numero_suivi && <span className="block text-xs text-gray-500">{t.carriers.tracking} : {selectedCommande.numero_suivi}</span>}
                       {lienSuivi(selectedCommande.transporteur.url_suivi, selectedCommande.numero_suivi) && (
                         <a href={lienSuivi(selectedCommande.transporteur.url_suivi, selectedCommande.numero_suivi) ?? undefined} target="_blank" rel="noopener noreferrer"
-                          className="ml-2 text-xs text-blue-600 hover:underline">{t.carriers.track}</a>
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap">{t.carriers.track}</a>
                       )}
                     </p>
                   </div>

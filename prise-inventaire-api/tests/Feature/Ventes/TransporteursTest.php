@@ -136,6 +136,8 @@ class TransporteursTest extends TestCase
         $gozem = $this->transporteur('Gozem');
         $fournisseur = $this->postJson('/api/fournisseurs', ['code' => 'F-1', 'raison_sociale' => 'Cimencam', 'devise' => 'XAF', 'transporteur_id' => $dhl])
             ->assertCreated()->assertJsonPath('transporteur_id', $dhl)->json('id');
+        // La liste du formulaire de commande le donne, pour le proposer.
+        $this->getJson('/api/fournisseurs/actifs')->assertOk()->assertJsonPath('0.transporteur_id', $dhl);
         $commande = fn (array $en_plus = []) => $this->postJson('/api/commandes-fournisseur', $en_plus + ['fournisseur_id' => $fournisseur, 'date_commande' => '2026-10-16',
             'lignes' => [['produit_id' => $this->produitId, 'quantite_commandee' => 5, 'prix_unitaire' => 80]]])->assertCreated()->json('id');
 

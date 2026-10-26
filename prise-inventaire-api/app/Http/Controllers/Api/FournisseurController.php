@@ -120,7 +120,8 @@ class FournisseurController extends Controller
             ->orderBy('raison_sociale')
             // La devise sert au formulaire de commande : sans elle, toute commande partait dans la devise de
             // l'entreprise, sans taux de change, même chez un fournisseur qui facture en dollars.
-            ->get(['id', 'code', 'raison_sociale', 'devise']);
+            // Le transporteur aussi : proposé sur la commande (phase 1.11b).
+            ->get(['id', 'code', 'raison_sociale', 'devise', 'transporteur_id']);
 
         return response()->json($fournisseurs);
     }

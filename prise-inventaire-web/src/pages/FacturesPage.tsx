@@ -615,10 +615,10 @@ export default function FacturesPage() {
                     <span className="text-sm text-gray-500">{t.carriers.label} :</span>
                     <p className="dark:text-white">
                       {selectedFacture.transporteur.nom}
-                      {selectedFacture.numero_suivi && <span className="ml-2 text-xs text-gray-500">{t.carriers.tracking} : {selectedFacture.numero_suivi}</span>}
+                      {selectedFacture.numero_suivi && <span className="block text-xs text-gray-500">{t.carriers.tracking} : {selectedFacture.numero_suivi}</span>}
                       {lienSuivi(selectedFacture.transporteur.url_suivi, selectedFacture.numero_suivi) && (
                         <a href={lienSuivi(selectedFacture.transporteur.url_suivi, selectedFacture.numero_suivi) ?? undefined} target="_blank" rel="noopener noreferrer"
-                          className="ml-2 text-xs text-blue-600 hover:underline">{t.carriers.track}</a>
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap">{t.carriers.track}</a>
                       )}
                     </p>
                   </div>
