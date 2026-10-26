@@ -122,7 +122,9 @@ class FraisController extends Controller
                 'actif' => $donnees['actif'] ?? true,
                 'matieres_dangereuses' => $donnees['application'] === Frais::PRODUITS && ($donnees['matieres_dangereuses'] ?? false),
             ])->save();
-            $frais->produits()->sync($donnees['application'] === Frais::PRODUITS ? ($donnees['produits'] ?? []) : []);
+            // Chaque ligne du pivot porte l'entreprise du frais (anomalie A14).
+            $produits = $donnees['application'] === Frais::PRODUITS ? ($donnees['produits'] ?? []) : [];
+            $frais->produits()->sync(collect($produits)->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $frais->tenant_id]])->all());
             // Un frais qui n'est plus de livraison quitte les fiches clients.
             if ($donnees['application'] !== Frais::LIVRAISON) {
                 Client::where('frais_livraison_id', $frais->id)->update(['frais_livraison_id' => null]);

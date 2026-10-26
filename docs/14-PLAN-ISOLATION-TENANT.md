@@ -122,6 +122,10 @@ Le §8 de la spec est **inapplicable en l'état** : `phpunit.xml` force SQLite `
 ## 8. Risques résiduels connus (hors périmètre immédiat, à tracer)
 
 - Lignes enfants sans `tenant_id` : sécurité dépend du scoping du parent (couvert par C2 pour les cas d'update trouvés ; audit contrôleur-par-contrôleur en suivi).
+  Le 26/10/2026, les sept tables filles des achats, de la banque et de la comptabilité qui n'en avaient pas l'ont reçu
+  (`recurrence_echeances`, `facture_fournisseur_lignes`, `transaction_bancaire_lignes`, `encaissement_lignes`,
+  `debourse_lignes`, `releve_bancaire_liens`, `frais_produits`) : colonne remplie depuis le parent (migration 100092),
+  puis posée par `BelongsToTenant` (et, pour le pivot des frais, par le `sync()` du contrôleur).
 - Connexion `tenant` legacy de `TenantService` (multi-DB jamais utilisée) : à déprécier dans un chantier séparé.
 - Modèle `User` (table Laravel) exempté : à traiter si des users applicatifs multi-tenant existent réellement.
 

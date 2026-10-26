@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** Date planifiée d'une récurrence, et l'écriture créée quand elle est convertie. */
 class RecurrenceEcheance extends Model
 {
+    // tenant_id posé à la création, comme pour la fiche parente (anomalie A14).
+    use BelongsToTenant;
+
     protected $table = 'recurrence_echeances';
 
     protected $fillable = ['recurrence_id', 'date_prevue', 'ecriture_id'];
