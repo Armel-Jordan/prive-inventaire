@@ -918,6 +918,21 @@ export async function getCommandeFournisseur(id: number): Promise<ComFourEntete>
   return fetchApi(`/commandes-fournisseur/${id}`);
 }
 
+/** Prix proposé pour un produit : dernier prix payé au fournisseur, sinon prix convenu de son catalogue (A5). */
+export interface PrixAchatPropose {
+  prix: number | null;
+  origine: 'dernier_paye' | 'convenu' | null;
+  /** Numéro de la commande du dernier prix payé. */
+  document: string | null;
+}
+
+/** Prix proposés des produits, dans l'unité d'achat chez ce fournisseur et dans la devise de la commande. */
+export async function getPrixAchatProposes(fournisseurId: number, produits: number[], devise: string, tauxChange: number): Promise<Record<string, PrixAchatPropose>> {
+  const parametres = new URLSearchParams({ fournisseur_id: String(fournisseurId), devise, taux_change: String(tauxChange) });
+  produits.forEach(id => parametres.append('produits[]', String(id)));
+  return fetchApi(`/commandes-fournisseur/prix-proposes?${parametres}`);
+}
+
 export async function createCommandeFournisseur(data: {
   fournisseur_id: number;
   date_commande: string;

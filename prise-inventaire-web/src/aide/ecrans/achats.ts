@@ -117,7 +117,7 @@ export const AIDES_ACHATS: AidesEcrans = {
       resume: "Les bons de commande envoyés aux fournisseurs, du brouillon à la réception complète. Créez une commande, validez-la et envoyez-la, suivez son statut, puis annulez-la ou clôturez son reste au besoin.",
       etapes: [
         "Cliquez sur « Nouvelle commande », puis choisissez le « Fournisseur », la « Date commande » et, si vous la connaissez, la « Date livraison prévue ».",
-        "Ajoutez les produits avec « + Ajouter une ligne » : quantité (dans l'unité d'achat du fournisseur) et prix unitaire, puis cliquez sur « Créer (Brouillon) ».",
+        "Ajoutez les produits avec « + Ajouter une ligne » : quantité (dans l'unité d'achat du fournisseur) et prix unitaire, puis cliquez sur « Créer (Brouillon) ». Le prix se propose seul : le dernier prix payé à ce fournisseur, sinon son prix convenu, dans l'unité d'achat et la devise de la commande ; un prix tapé reste le vôtre.",
         "Ouvrez la commande avec l'œil « Voir détails », vérifiez-la, puis cliquez sur « Valider et envoyer » : elle passe au statut « Envoyée ».",
         "Transmettez le bon au fournisseur avec l'enveloppe « Envoyer par courriel », ou ouvrez-le avec « Ouvrir le PDF » pour l'imprimer.",
         "Suivez vos commandes avec la recherche (numéro ou fournisseur) et le filtre de statut ; « Mes filtres » garde vos filtres habituels.",
@@ -134,7 +134,7 @@ export const AIDES_ACHATS: AidesEcrans = {
       resume: "Purchase orders sent to suppliers, from draft to fully received. Create an order, confirm and send it, track its status, then cancel it or close its remainder if needed.",
       etapes: [
         "Click “Nouvelle commande”, then choose the “Fournisseur” (supplier), the “Date commande” (order date) and, if known, the “Date livraison prévue” (expected delivery).",
-        "Add products with “+ Ajouter une ligne”: quantity (in the supplier's purchase unit) and unit price, then click “Créer (Brouillon)” to save a draft.",
+        "Add products with “+ Ajouter une ligne”: quantity (in the supplier's purchase unit) and unit price, then click “Créer (Brouillon)” to save a draft. The price is proposed automatically: the last price paid to this supplier, otherwise their agreed price, in the purchase unit and currency of the order; a price you type stays yours.",
         "Open the order with the eye icon (“Voir détails”), check it, then click “Valider et envoyer”: its status becomes “Envoyée” (sent).",
         "Send the order to the supplier with the envelope icon (“Send by email”), or open it with “Open PDF” to print it.",
         "Track your orders with the search box (number or supplier) and the status filter; “My filters” keeps your usual filters.",

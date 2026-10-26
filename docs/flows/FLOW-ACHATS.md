@@ -82,7 +82,15 @@ Un fournisseur peut fournir plusieurs produits. Pour chaque produit qu'il fourni
 | `delai_livraison` | Délai en jours |
 | `fournisseur_principal` | Est-ce le fournisseur principal pour ce produit ? |
 
-Ce catalogue se gère dans l'onglet **Produits fournis** de la fiche fournisseur (un seul fournisseur principal par produit). Le formulaire de commande ne s'en sert pas encore pour pré-remplir le prix.
+Ce catalogue se gère dans l'onglet **Produits fournis** de la fiche fournisseur (un seul fournisseur principal par produit).
+
+**Prix proposé sur une ligne de commande** (`GET /commandes-fournisseur/prix-proposes?fournisseur_id=&produits[]=&devise=&taux_change=`, service `PrixAchatProposes`) :
+1. le **dernier prix payé** à ce fournisseur pour ce produit : sa dernière commande envoyée, reçue en partie ou reçue (ni brouillon, ni annulée) ;
+2. sinon le **prix convenu** de son catalogue (`prix_achat`, dans la devise du fournisseur) ;
+3. sinon rien : le prix se saisit.
+
+Le prix est ramené à l'unité d'achat actuelle du produit chez ce fournisseur (payé 100 l'unité, livré maintenant par caisses de 12 : 1 200) et à la devise de la commande, par la devise de l'entreprise (taux de l'ancienne commande, référentiel des devises pour le prix convenu, taux de la nouvelle commande). Sans taux connu, rien n'est proposé.
+À l'écran, la proposition arrive au choix du produit, du fournisseur, de la devise ou du taux, avec son origine sous le prix (« Dernier prix payé (BC-…) », « Prix convenu ») ; un prix tapé n'est jamais remplacé.
 
 ### 2.4 Fiche fournisseur
 
@@ -151,7 +159,7 @@ Une **Commande Fournisseur** (appelée aussi "bon de commande" ou "PO — Purcha
 Étape 4 : Ajouter les lignes de produits
           → Chercher le produit par numéro ou description
           → Saisir la quantité désirée
-          → Saisir le prix (le prix convenu du catalogue fournisseur ne pré-remplit pas encore la ligne, §2.3)
+          → Le prix se propose seul (dernier prix payé, sinon prix convenu : §2.3) ; il reste modifiable
 Étape 5 : Vérifier le total calculé
 Étape 6 : Sauvegarder en brouillon
 ```
