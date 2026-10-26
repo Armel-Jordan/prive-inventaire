@@ -597,6 +597,14 @@ En plus de la création depuis une commande, on peut créer une facture directem
 
 La facture est créée en statut `brouillon`. Elle suit ensuite le flow normal : émettre → paiement → BL.
 
+**Numéro attribué à l'émission** (réglage de l'entreprise, Configuration → Numérotation → Factures,
+`tenant_parametres.numero_facture_a_l_emission`, inactif par défaut) :
+- inactif : le brouillon prend le numéro suivant de la séquence dès sa création (comportement d'origine) ;
+- actif : le brouillon porte un numéro provisoire `BR-{id}` et ne consomme la séquence qu'à son émission
+  (`FacturesVente::emettre`), si bien qu'un brouillon supprimé ne laisse plus de trou. Cela vaut pour toutes les
+  factures créées par l'application (saisie, devis, commande, reliquats, abonnements, loyers, consignation, comptoir) ;
+- un brouillon numéroté `BR-…` reçoit son vrai numéro à l'émission même si le réglage a été désactivé entre-temps.
+
 **Modifier un brouillon** (`PUT /factures/{id}`, droit Factures → Modifier) : le crayon de la ligne rouvre le formulaire
 rempli avec la facture. En-tête et lignes sont renvoyés en entier, comme à la création ; taxes, totaux et échéance (de la
 condition de paiement, sauf échéance saisie) sont recalculés, et le numéro ne change pas.

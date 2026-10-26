@@ -2204,6 +2204,8 @@ export interface TenantParametres {
   /** Document de transport des matières dangereuses : téléphone d'urgence et déclaration de l'expéditeur. */
   md_telephone_urgence?: string | null;
   md_declaration?: string | null;
+  /** Numéro de facture attribué à l'émission : un brouillon porte un numéro provisoire « BR-… ». */
+  numero_facture_a_l_emission?: boolean;
 }
 
 export interface TenantTaxe {

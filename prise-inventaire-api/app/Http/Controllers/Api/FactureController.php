@@ -200,7 +200,8 @@ class FactureController extends Controller
         $entete = app(EntetesVente::class)->copier($commande);
         $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id']);
         $facture = DB::transaction(function () use ($commande, $tenantId, $condition, $entete, $date) {
-            $numeroFacture = Configuration::consommerNumero('facture', $tenantId);
+            // Numéro de la séquence, ou provisoire si l'entreprise numérote à l'émission.
+            $numeroFacture = $this->factures->numeroBrouillon($tenantId);
 
             $facture = Facture::create(app(ClientsDePassage::class)->copier($commande) + $entete + [
                 'tenant_id' => $tenantId,
@@ -218,6 +219,7 @@ class FactureController extends Controller
                 'montant_ttc' => $commande->montant_ttc,
                 'reste_a_payer' => $commande->montant_ttc,
             ]);
+            $this->factures->numeroterBrouillon($facture);
 
             foreach ($commande->lignes as $ligne) {
                 $ligneFacture = FactureLigne::create([
