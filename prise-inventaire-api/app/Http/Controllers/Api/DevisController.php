@@ -15,6 +15,7 @@ use App\Services\EntetesVente;
 use App\Services\FacturesVente;
 use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
+use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
@@ -35,7 +36,7 @@ class DevisController extends Controller
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
         Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
             ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -49,6 +50,9 @@ class DevisController extends Controller
         }
         if ($request->filled('transporteur_id')) {
             $query->where('transporteur_id', $request->integer('transporteur_id'));
+        }
+        if ($request->filled('statut_personnalise_id')) {
+            $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
 
         if ($request->has('search') && $request->search) {
@@ -129,7 +133,7 @@ class DevisController extends Controller
 
     public function show(Devis $devis): JsonResponse
     {
-        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom']);
+        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES]);
 
         return response()->json($devis);
     }

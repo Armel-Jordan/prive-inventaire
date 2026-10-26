@@ -237,6 +237,8 @@ const ONGLETS: Onglet[] = [
       { cle: 'code', type: 'texte', requis: true, colonne: true, longueurMax: 20 },
       { cle: 'libelle', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
       { cle: 'couleur', type: 'couleur', colonne: true, defaut: '#6b7280' },
+      // Couleur du texte de l'étiquette sur les documents (phase 1.11c).
+      { cle: 'couleur_texte', type: 'couleur', colonne: true, defaut: '#ffffff' },
       { cle: 'ordre', type: 'nombre', colonne: true, min: 0, max: 999, defaut: 0 },
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],

@@ -36,6 +36,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 
 export default function DevisPage() {
@@ -62,6 +63,8 @@ export default function DevisPage() {
   const transporteurs = useTransporteurs();
   const transporteurRequis = useTransporteurRequis(transporteurs);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  // Statut personnalisé (étiquette de repérage, phase 1.11c).
+  const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
@@ -122,7 +125,7 @@ export default function DevisPage() {
     try {
       setLoading(true);
       const [devisRes, clientsRes, produitsRes, config] = await Promise.all([
-        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, page }),
+        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
         getConfiguration('devis').catch(() => null),
@@ -137,7 +140,7 @@ export default function DevisPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
 
   useEffect(() => {
     loadData();
@@ -401,6 +404,8 @@ export default function DevisPage() {
             <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
               libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg" />
           )}
+          <FiltreStatutPersonnalise document="devis" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
+            className="px-3 py-2 border rounded-lg" />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -434,6 +439,7 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total, devis.devise)}</td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(devis.statut)}
+                    {devis.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={devis.statut_personnalise} /></span>}
                     {devis.reponse_en_ligne && <span className="block mt-1 text-xs text-gray-500">{tr.online}</span>}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
                     {devis.facture && <span className="block mt-1 text-xs text-gray-500" title={t.quoteActions.invoicedAs}>→ {devis.facture.numero}</span>}
@@ -622,6 +628,8 @@ export default function DevisPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-gray-500">Client:</span><p className="font-medium">{nomClient(selectedDevis)}<PastilleClientDePassage client={selectedDevis.client} /></p><DetailClientDePassage document={selectedDevis} /></div>
                 <div><span className="text-gray-500">Statut:</span><p className="mt-1">{getStatutBadge(selectedDevis.statut)}</p></div>
+                <ChoixStatutPersonnalise document="devis" documentId={selectedDevis.id} statut={selectedDevis.statut_personnalise} modifiable={peut('devis', 'modifier')}
+                  onChange={statut => { setSelectedDevis(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
                 <div><span className="text-gray-500">Date:</span><p>{fmtDate(selectedDevis.date_devis)}</p></div>
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
                 {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}

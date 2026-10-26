@@ -130,6 +130,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Devis accepté : « Convertir en commande », ou « Facturer » pour créer directement une facture brouillon.",
       ],
       astuces: [
+        "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Seul un brouillon se modifie ou se supprime. « Copier » reprend n'importe quel devis en nouveau brouillon daté du jour.",
         "Un devis envoyé dont la date de validité est passée devient « Expiré » et ne peut plus être accepté.",
         "Un devis ne se convertit qu'une fois, en commande ou en facture ; le numéro du document créé s'affiche sous son statut.",
@@ -150,6 +151,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Accepted quote: “Convertir en commande”, or “Invoice” to create a draft invoice directly.",
       ],
       astuces: [
+        "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "Only a draft can be edited or deleted. “Copy” turns any quote into a new draft dated today.",
         "A sent quote whose validity date has passed becomes “Expiré” and can no longer be accepted.",
         "A quote is converted only once, into an order or an invoice; the number of the document created shows under its status.",
@@ -171,6 +173,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Commande acceptée : « Créer facture » prépare une facture brouillon, à émettre dans « Factures ».",
       ],
       astuces: [
+        "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Seul un brouillon se modifie ou se supprime. Pendant sa modification, la commande est verrouillée : un autre compte voit qui la modifie et ne peut pas l'enregistrer.",
         "L'acceptation est refusée si la commande fait dépasser l'encours maximum du client. Si le stock manque, l'écran propose de noter les quantités en reliquat.",
         "« Nouvel acompte » (portefeuille) enregistre un acompte réservé à la commande : il s'applique de lui-même à l'émission de sa facture.",
@@ -190,6 +193,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Accepted order: “Créer facture” prepares a draft invoice, to be issued in “Factures”.",
       ],
       astuces: [
+        "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "Only a draft can be edited or deleted. While being edited, the order is locked: other accounts see who is editing it and cannot save it.",
         "Acceptance is refused if the order would take the customer over their credit limit. If stock is short, the screen offers to record the quantities as back orders.",
         "“New deposit” (wallet) records a deposit reserved for the order: it is applied automatically when its invoice is issued.",
@@ -282,6 +286,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "Au besoin : « Créditer » (note de crédit), « Retour de marchandise » ou « Créer bon de livraison ».",
       ],
       astuces: [
+        "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
         "Seul un brouillon s'émet, se modifie (crayon) ou se supprime. Une facture émise se corrige par une note de crédit (« Créditer »).",
         "Le crayon d'un brouillon rouvre le formulaire : changez client, dates, lignes ou représentant, puis « Enregistrer » ; les totaux se recalculent et le numéro reste le même. Une facture créée par un abonnement, un contrat, des reliquats ou une consignation se corrige à sa source.",
         "Sans date d'échéance saisie, elle se calcule selon la condition de paiement : celle choisie, sinon celle du client, sinon celle par défaut.",
@@ -303,6 +308,7 @@ export const AIDES_VENTES: AidesEcrans = {
         "If needed: “Credit” (credit note), “Return goods” or “Créer bon de livraison” (delivery note).",
       ],
       astuces: [
+        "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
         "Only a draft can be issued, edited (pencil) or deleted. An issued invoice is corrected with a credit note (“Credit”).",
         "The pencil of a draft reopens the form: change the customer, dates, lines or sales rep, then “Save”; totals are recomputed and the number stays the same. An invoice created by a subscription, a contract, back orders or a consignment is corrected at its source.",
         "With no due date entered, it is computed from the payment terms: those chosen, otherwise the customer's, otherwise the default ones.",

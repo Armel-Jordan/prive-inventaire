@@ -10,6 +10,7 @@ use App\Models\ReceptionArrivagesLigne;
 use App\Models\ReceptionFrais;
 use App\Services\ReceptionPdf;
 use App\Services\ReceptionsFournisseur;
+use App\Services\StatutsPersonnalises;
 use App\Support\TenantRule;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -180,6 +181,8 @@ class ReceptionController extends Controller
             'statut' => ['nullable', Rule::in([Reception::ENREGISTREE, Reception::ANNULEE])],
             // Réceptions facturées (1) ou à facturer (0) par une facture fournisseur.
             'facturee' => 'nullable|boolean',
+            // Statut personnalisé (étiquette, phase 1.11c).
+            'statut_personnalise_id' => 'nullable|integer',
             'date_debut' => 'nullable|date',
             'date_fin' => 'nullable|date',
             'per_page' => 'nullable|integer|between:1,100',
@@ -187,7 +190,7 @@ class ReceptionController extends Controller
         $recherche = trim($filtres['recherche'] ?? '');
 
         $receptions = Reception::query()
-            ->with(['fournisseur:id,code,raison_sociale', 'auteur:id,nom', 'frais', 'factureFournisseur:id,numero', 'lignes.ligneCommande.commande:id,numero,devise,taux_change'])
+            ->with(['fournisseur:id,code,raison_sociale', 'auteur:id,nom', 'frais', 'factureFournisseur:id,numero', 'lignes.ligneCommande.commande:id,numero,devise,taux_change', StatutsPersonnalises::COLONNES])
             ->withCount('lignes')
             ->when($recherche !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('numero', 'like', "%{$recherche}%")
@@ -196,6 +199,7 @@ class ReceptionController extends Controller
                 ->orWhereHas('fournisseur', fn ($f) => $f->where('raison_sociale', 'like', "%{$recherche}%")->orWhere('code', 'like', "%{$recherche}%"))
                 ->orWhereHas('lignes.ligneCommande.commande', fn ($c) => $c->where('numero', 'like', "%{$recherche}%"))))
             ->when($filtres['fournisseur_id'] ?? null, fn ($q, $id) => $q->where('fournisseur_id', $id))
+            ->when($filtres['statut_personnalise_id'] ?? null, fn ($q, $id) => $q->where('statut_personnalise_id', $id))
             ->when($filtres['commande_id'] ?? null, fn ($q, $id) => $q->whereHas('lignes.ligneCommande', fn ($l) => $l->where('com_four_entete_id', $id)))
             ->when($filtres['produit_id'] ?? null, fn ($q, $id) => $q->whereHas('lignes.ligneCommande', fn ($l) => $l->where('produit_id', $id)))
             ->when($filtres['statut'] ?? null, fn ($q, $statut) => $q->where('statut', $statut))

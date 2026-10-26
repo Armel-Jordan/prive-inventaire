@@ -344,6 +344,25 @@ Code :
   `BonLivraisonController::expedition`, migration `2026_10_26_100093_transporteurs_documents` ;
 - web : `hooks/useTransporteurs` (`lienSuivi`), composants `ChoixTransporteur` et `livraison/ExpeditionBon`.
 
+### 2.9 Statuts personnalisés (étiquettes des documents)
+
+Plan de parité fripv2, phase 1.11c. Les statuts personnalisés (Paramètres → Référentiels → Statuts personnalisés :
+type de document, code, libellé, couleur du fond et du texte, ordre, actif) sont des **étiquettes libres de repérage**,
+sans effet sur le cycle du document (« À relancer », « Litige », « Urgent »…).
+
+- **Une étiquette par document** : devis, commande client, facture, bon de livraison, commande fournisseur (et réception,
+  par l'API). On choisit parmi celles de son type de document ou celles du type « autre » (tous les documents).
+- **Pose** : dans le détail du document, liste « Statut personnalisé », enregistrée tout de suite, **même sur un document
+  clos** (livré, payé, annulé…), avec le droit de **modifier** le document (`PUT /{documents}/{id}/statut-personnalise`,
+  `statut_personnalise_id` ou null pour la retirer).
+- **Listes** : pastille en couleur sous le statut, filtre « Tous les statuts personnalisés » (`?statut_personnalise_id=`).
+- **Référentiel** : une étiquette désactivée n'est plus proposée mais reste sur les documents qui la portent ; posée sur
+  un document, elle ne se supprime pas (on la désactive).
+
+Code : service `App\Services\StatutsPersonnalises` (types, règle, pose), `StatutPersonnaliseDocumentController` (une
+route par type de document, le type en valeur par défaut), migration `2026_10_26_100096_statuts_personnalises_documents` ;
+web : `hooks/useStatutsPersonnalises`, composants `StatutPersonnalise` (pastille, filtre, choix).
+
 ---
 
 ## 3. Devis

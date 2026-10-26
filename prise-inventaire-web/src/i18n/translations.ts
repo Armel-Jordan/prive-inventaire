@@ -3410,6 +3410,14 @@ export const translations = {
       documentHint: 'Celui du client par défaut.',
       commission: 'Commission {taux} %',
     },
+    // Statuts personnalisés des documents (phase 1.11c).
+    customStatuses: {
+      label: 'Statut personnalisé',
+      all: 'Tous les statuts personnalisés',
+      none: 'Aucun',
+      inactive: 'inactif',
+      error: "Le statut personnalisé n'a pas pu être enregistré.",
+    },
     // Transporteurs sur les tiers et les documents (phase 1.11b).
     carriers: {
       label: 'Transporteur',
@@ -4487,6 +4495,7 @@ export const translations = {
         frais_livraison_achat_id: 'Frais de transport (achats)',
         document: 'Document',
         couleur: 'Couleur',
+        couleur_texte: 'Couleur du texte',
         ordre: "Ordre d'affichage",
         duree_mois: 'Durée (mois)',
         frequence: 'Rythme des loyers',
@@ -8154,6 +8163,14 @@ export const translations = {
       documentHint: "The customer's by default.",
       commission: 'Commission {taux}%',
     },
+    // Custom statuses of documents (phase 1.11c).
+    customStatuses: {
+      label: 'Custom status',
+      all: 'All custom statuses',
+      none: 'None',
+      inactive: 'inactive',
+      error: 'The custom status could not be saved.',
+    },
     // Carriers on customers, suppliers and documents (phase 1.11b).
     carriers: {
       label: 'Carrier',
@@ -9231,6 +9248,7 @@ export const translations = {
         frais_livraison_achat_id: 'Freight (purchases)',
         document: 'Document',
         couleur: 'Colour',
+        couleur_texte: 'Text colour',
         ordre: 'Display order',
         duree_mois: 'Duration (months)',
         frequence: 'Rent frequency',

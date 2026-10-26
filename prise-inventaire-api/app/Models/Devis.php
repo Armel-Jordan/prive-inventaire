@@ -36,6 +36,8 @@ class Devis extends Model
         'relances', 'derniere_relance_le',
         // Représentant commercial et transporteur (voir App\Services\EntetesVente).
         'representant_id', 'transporteur_id',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
@@ -72,6 +74,12 @@ class Devis extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     /** Transporteur (même retiré du référentiel depuis). */

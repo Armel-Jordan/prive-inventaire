@@ -8,6 +8,7 @@ import PadSignature from '@/components/PadSignature';
 import ColisBon from '@/components/livraison/ColisBon';
 import ExpeditionBon from '@/components/livraison/ExpeditionBon';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
@@ -54,6 +55,8 @@ export default function BonsLivraisonPage() {
   // Bons d'un transporteur (phase 1.11b) ; filtre masqué sans transporteur actif.
   const transporteurs = useTransporteurs();
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  // Statut personnalisé (étiquette de repérage, phase 1.11c).
+  const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   // Recherche par numéro du bon ou de sa facture, ou par client, pré-remplie par « ?recherche= » (recherche globale).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -83,7 +86,7 @@ export default function BonsLivraisonPage() {
   const loadBons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, page });
+      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page });
       setBons(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -91,7 +94,7 @@ export default function BonsLivraisonPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterTransporteur, page]);
+  }, [filterStatut, recherche, filterTransporteur, filterStatutPerso, page]);
 
   useEffect(() => {
     loadBons();
@@ -276,6 +279,8 @@ export default function BonsLivraisonPage() {
             <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
               libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           )}
+          <FiltreStatutPersonnalise document="bon_livraison" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
+            className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
         </div>
       </div>
 
@@ -310,6 +315,7 @@ export default function BonsLivraisonPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(bon.statut)}
+                    {bon.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={bon.statut_personnalise} /></span>}
                     {bon.a_signature && <PenLine size={14} className="inline ml-1 text-green-600" aria-label={t.deliverySignature.signed}><title>{t.deliverySignature.signed}</title></PenLine>}
                   </td>
                   <td className="px-4 py-3">
@@ -437,6 +443,8 @@ export default function BonsLivraisonPage() {
                   <span className="text-sm text-gray-500">Statut:</span>
                   <p>{getStatutBadge(selectedBon.statut)}</p>
                 </div>
+                <ChoixStatutPersonnalise document="bon_livraison" documentId={selectedBon.id} statut={selectedBon.statut_personnalise} modifiable={peut('bons_livraison', 'modifier')}
+                  onChange={statut => { setSelectedBon(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadBons(); }} />
                 <div>
                   <span className="text-sm text-gray-500">Mode:</span>
                   <p className="dark:text-white">

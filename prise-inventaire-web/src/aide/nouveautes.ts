@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Statuts personnalisés : une étiquette en couleur sur les devis, commandes, factures, bons de livraison et commandes fournisseur, posée depuis leur détail (même clos), avec un filtre dans les listes.",
+    en: 'Custom statuses: a coloured label on quotes, orders, invoices, delivery notes and purchase orders, set from their details (even when closed), with a filter in the lists.',
+    lien: '/referentiels',
+  },
+  {
+    date: '2026-10-26',
     fr: "Transporteurs : option « Transporteur obligatoire » (Paramètres → Référentiels → Transporteurs) : les devis, commandes, factures et commandes fournisseur saisis doivent en avoir un.",
     en: 'Carriers: “Carrier required” option (Settings → Reference data → Carriers): quotes, orders, invoices and purchase orders entered must have one.',
     lien: '/referentiels',

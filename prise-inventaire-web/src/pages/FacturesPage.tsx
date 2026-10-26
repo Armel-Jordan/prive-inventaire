@@ -51,6 +51,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
@@ -85,6 +86,8 @@ export default function FacturesPage() {
   const transporteurs = useTransporteurs();
   const transporteurRequis = useTransporteurRequis(transporteurs);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  // Statut personnalisé (étiquette de repérage, phase 1.11c).
+  const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, abonnements, autres écrans).
@@ -176,7 +179,7 @@ export default function FacturesPage() {
   const loadFactures = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, page });
+      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page });
       setFactures(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -184,7 +187,7 @@ export default function FacturesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
 
   useEffect(() => {
     loadFactures();
@@ -444,6 +447,8 @@ export default function FacturesPage() {
             <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
               libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           )}
+          <FiltreStatutPersonnalise document="facture" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
+            className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
         </div>
       </div>
 
@@ -482,7 +487,10 @@ export default function FacturesPage() {
                       {montant(Number(facture.reste_a_payer ?? 0), facture.devise)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatutBadge(facture.statut)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {getStatutBadge(facture.statut)}
+                    {facture.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={facture.statut_personnalise} /></span>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="facture" entiteId={facture.id} titre={facture.numero} />
@@ -604,6 +612,8 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Statut:</span>
                   <p>{getStatutBadge(selectedFacture.statut)}</p>
                 </div>
+                <ChoixStatutPersonnalise document="facture" documentId={selectedFacture.id} statut={selectedFacture.statut_personnalise} modifiable={peut('factures', 'modifier')}
+                  onChange={statut => { setSelectedFacture(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadFactures(); }} />
                 <div>
                   <span className="text-sm text-gray-500">Date facture:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_facture)}</p>

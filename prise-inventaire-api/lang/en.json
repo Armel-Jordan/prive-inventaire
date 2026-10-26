@@ -150,6 +150,7 @@
     "Ce relevé est déjà facturé.": "This reading is already invoiced.",
     "Ce représentant est rattaché à des clients ou à des documents de vente : désactivez-le plutôt.": "This sales rep is linked to customers or sales documents: deactivate them instead.",
     "Ce transporteur est rattaché à des clients, des fournisseurs ou des documents : désactivez-le plutôt.": "This carrier is linked to customers, suppliers or documents: deactivate it instead.",
+    "Ce statut est posé sur des documents : désactivez-le plutôt.": "This status is set on documents: deactivate it instead.",
     "Frais de transport – :transporteur": "Freight \u2013 :transporteur",
     "L'expédition d'un bon livré ou annulé ne se modifie plus.": "The shipment of a delivered or cancelled note can no longer be changed.",
     "Un bon retiré par le client ne passe pas par un transporteur.": "A note picked up by the customer does not go through a carrier.",

@@ -32,6 +32,8 @@ class ComFourEntete extends Model
         'entrepot_id',
         // Transporteur ; à la création, celui du fournisseur s'il n'est pas donné (voir booted()).
         'transporteur_id',
+        // Statut personnalisé : étiquette de repérage, sans effet sur le cycle (phase 1.11c).
+        'statut_personnalise_id',
     ];
 
     protected $casts = [
@@ -68,6 +70,12 @@ class ComFourEntete extends Model
     public function fournisseur(): BelongsTo
     {
         return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
+    }
+
+    /** Statut personnalisé (étiquette de repérage, phase 1.11c ; même retiré du référentiel depuis). */
+    public function statutPersonnalise(): BelongsTo
+    {
+        return $this->belongsTo(StatutPersonnalise::class)->withTrashed();
     }
 
     /** Transporteur (même retiré du référentiel depuis). */

@@ -15,6 +15,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -78,6 +79,8 @@ export default function CommandesClientPage() {
   const transporteurs = useTransporteurs();
   const transporteurRequis = useTransporteurRequis(transporteurs);
   const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  // Statut personnalisé (étiquette de repérage, phase 1.11c).
+  const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   const [numeroSuivi, setNumeroSuivi] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, reliquats, autres écrans).
@@ -146,7 +149,7 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -159,7 +162,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, page]);
 
   useEffect(() => {
     loadData();
@@ -426,6 +429,8 @@ export default function CommandesClientPage() {
             <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
               libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           )}
+          <FiltreStatutPersonnalise document="commande_client" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
+            className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
         </div>
       </div>
 
@@ -458,7 +463,10 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
                     {montant(Number(cmd.montant_ttc ?? 0), cmd.devise)}
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatutBadge(cmd.statut)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {getStatutBadge(cmd.statut)}
+                    {cmd.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={cmd.statut_personnalise} /></span>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
@@ -757,6 +765,8 @@ export default function CommandesClientPage() {
                   <span className="text-sm text-gray-500">Statut:</span>
                   <p>{getStatutBadge(selectedCommande.statut)}</p>
                 </div>
+                <ChoixStatutPersonnalise document="commande_client" documentId={selectedCommande.id} statut={selectedCommande.statut_personnalise} modifiable={peut('commandes_client', 'modifier')}
+                  onChange={statut => { setSelectedCommande(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
                 <div>
                   <span className="text-sm text-gray-500">Date commande:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_commande)}</p>

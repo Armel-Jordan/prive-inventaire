@@ -12,6 +12,7 @@ use App\Models\Transporteur;
 use App\Services\CommandesFournisseur;
 use App\Services\PrixAchatProposes;
 use App\Services\ReliquatsClients;
+use App\Services\StatutsPersonnalises;
 use App\Services\UnitesAchat;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,7 @@ class CommandeFournisseurController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComFourEntete::with(['fournisseur', 'createdBy', 'entrepot:id,code,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
+        $query = ComFourEntete::with(['fournisseur', 'createdBy', 'entrepot:id,code,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -35,6 +36,9 @@ class CommandeFournisseurController extends Controller
 
         if ($request->filled('transporteur_id')) {
             $query->where('transporteur_id', $request->integer('transporteur_id'));
+        }
+        if ($request->filled('statut_personnalise_id')) {
+            $query->where('statut_personnalise_id', $request->integer('statut_personnalise_id'));
         }
 
         if ($request->has('date_debut')) {
@@ -154,7 +158,7 @@ class CommandeFournisseurController extends Controller
 
     public function show(ComFourEntete $commande): JsonResponse
     {
-        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions' => fn ($q) => $q->where('annulee', false)->with('reception:id,numero'), 'createdBy', 'auteurEnvoi:id,nom', 'entrepot', 'transporteur:id,nom,url_suivi']);
+        $commande->load(['fournisseur', 'lignes.produit', 'lignes.receptions' => fn ($q) => $q->where('annulee', false)->with('reception:id,numero'), 'createdBy', 'auteurEnvoi:id,nom', 'entrepot', 'transporteur:id,nom,url_suivi', StatutsPersonnalises::COLONNES]);
 
         return response()->json($commande);
     }
