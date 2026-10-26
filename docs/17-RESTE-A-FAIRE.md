@@ -477,7 +477,8 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
    4. A5 : fait le 26/10 ;
    5. A13 et A15 : faits le 26/10 ; A14 : `tenant_id` des tables filles ;
    6. A3, A6 et A4 : statut des arrêts, date de la commande, notifications par compte ;
-   7. limitation des tentatives de connexion (06, §6.1).
+   7. limitation des tentatives de connexion : faite le 26/10 (30 par minute et par adresse, compte bloqué 15 minutes après
+      10 échecs) ; le reste de 06, §6.1 (journal des connexions, politique de mot de passe, 2FA exigible) reste à faire.
 2. **Fin de la phase 1.11 (documents de vente)**
    - Représentants à vérifier à l'écran (§3.1), transporteurs (§3.2), statuts personnalisés (§3.3), puis statuts des
      documents (01, section 19).

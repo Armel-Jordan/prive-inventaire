@@ -20,6 +20,17 @@ Rien ne change pour un compte qui n'active pas la double authentification : la c
 administrateur, l'accès d'un employé, les administrateurs d'une entreprise réglés par le super-administrateur, la
 réinitialisation et le changement de mot de passe. Avant, 6 caractères suffisaient à la création d'un compte.
 
+### Tentatives de connexion
+
+- **Par adresse IP** : 30 tentatives de connexion par minute au plus (`POST /auth/login`, et de même
+  `POST /super-admin/login`) ; au-delà, 429 jusqu'à la minute suivante.
+- **Par compte** : après **10 mots de passe faux en 15 minutes**, le compte est bloqué (429, « Trop de tentatives de
+  connexion échouées : réessayez dans N minute(s). ») jusqu'à la fin de ces 15 minutes, même avec le bon mot de
+  passe. Le compte est celui du code entreprise et du courriel saisis, sans tenir compte des majuscules.
+- Une connexion réussie remet le compte à zéro. Les autres comptes ne sont pas touchés.
+- Le blocage reste court : il freine la recherche d'un mot de passe sans fermer longtemps le compte de quelqu'un
+  d'autre. Code : `App\Support\EchecsConnexion`.
+
 ### Fin de session
 
 - **Déconnexion** : le jeton de connexion est révoqué par l'API (`POST /auth/logout`). Il restait auparavant
@@ -99,7 +110,7 @@ réinitialisation et le changement de mot de passe. Avant, 6 caractères suffisa
 |---|---|---|
 | `POST /auth/mot-de-passe-oublie` | Public, 5 par minute | `tenant_slug`, `email`, `origine`, `langue`. Réponse identique dans tous les cas |
 | `POST /auth/reinitialiser-mot-de-passe` | Public, 10 par minute | `jeton`, `password`, `password_confirmation` |
-| `POST /auth/login` | Public | Inchangé sans double authentification. Avec : **403** `{deux_facteurs: true, defi}`, sans jeton |
+| `POST /auth/login` | Public, 30 par minute ; compte bloqué 15 minutes après 10 échecs | Inchangé sans double authentification. Avec : **403** `{deux_facteurs: true, defi}`, sans jeton |
 | `POST /auth/login/deux-facteurs` | Public, 10 par minute | `defi`, `code` (application ou secours). Même réponse que la connexion. `defi_expire: true` s'il faut ressaisir le mot de passe |
 | `PUT /auth/mot-de-passe` | Connecté | `mot_de_passe_actuel`, `password`, `password_confirmation` |
 | `GET /auth/deux-facteurs` | Connecté | `active`, `active_le`, `codes_secours_restants` |
@@ -131,4 +142,5 @@ réinitialisation et le changement de mot de passe. Avant, 6 caractères suffisa
 
 - **Envoi des courriels** : `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`. Avec `MAIL_MAILER=log`, le lien n'est écrit que dans le journal.
 - **Adresse du site** : `FRONTEND_URL` (ex. `https://app.mondomaine.com`), ou `CORS_ALLOWED_ORIGINS` avec l'adresse exacte du site.
-- La connexion du **super administrateur** (`/super-admin/login`) n'est pas concernée par cette phase.
+- La connexion du **super administrateur** (`/super-admin/login`) suit les mêmes limites de tentatives ; sa double
+  authentification reste à faire (06, §6.1).

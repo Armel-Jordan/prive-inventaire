@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminUser;
 use App\Models\SuperAdmin;
 use App\Models\Tenant;
+use App\Support\EchecsConnexion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,17 +19,24 @@ class SuperAdminController extends Controller
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
+        $cle = EchecsConnexion::cle('super-admin', (string) $request->email);
+        if ($refus = EchecsConnexion::refus($cle)) {
+            return $refus;
+        }
 
         $user = SuperAdmin::where('email', $request->email)
             ->where('actif', true)
             ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            EchecsConnexion::echec($cle);
+
             return response()->json([
                 'success' => false,
                 'message' => __('Identifiants invalides ou accès non autorisé'),
             ], 401);
         }
+        EchecsConnexion::reussite($cle);
 
         $user->derniere_connexion = now();
         $user->save();

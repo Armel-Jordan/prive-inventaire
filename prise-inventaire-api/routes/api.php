@@ -157,8 +157,9 @@ use Illuminate\Support\Facades\Route;
 // ============================================
 // Routes publiques (sans authentification)
 // ============================================
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/super-admin/login', [SuperAdminController::class, 'login']);
+// Connexion : 30 tentatives par minute et par adresse IP ; un compte se bloque 15 minutes après 10 échecs (EchecsConnexion).
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:30,1,connexion');
+Route::post('/super-admin/login', [SuperAdminController::class, 'login'])->middleware('throttle:30,1,connexion-super-admin');
 
 // Sécurité des comptes : mot de passe oublié et seconde étape de connexion (double authentification).
 // Chaque limite a son préfixe : sans lui, toutes les routes limitées partagent un même compteur par IP.

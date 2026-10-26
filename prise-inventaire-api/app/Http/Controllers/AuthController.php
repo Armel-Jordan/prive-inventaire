@@ -7,6 +7,7 @@ use App\Models\EmployeTenant;
 use App\Models\Tenant;
 use App\Services\DeuxFacteurs;
 use App\Services\TenantService;
+use App\Support\EchecsConnexion;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,11 @@ class AuthController extends Controller
             'password' => 'required|string',
             'tenant_slug' => 'required|string',
         ]);
+        // Compte bloqué un moment après trop de mots de passe faux (voir EchecsConnexion).
+        $cle = EchecsConnexion::cle('back-office', (string) $request->tenant_slug, (string) $request->email);
+        if ($refus = EchecsConnexion::refus($cle)) {
+            return $refus;
+        }
 
         $tenant = Tenant::where('slug', $request->tenant_slug)
             ->where('actif', true)
@@ -49,11 +55,14 @@ class AuthController extends Controller
             ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            EchecsConnexion::echec($cle);
+
             return response()->json([
                 'success' => false,
                 'message' => __('Identifiants invalides'),
             ], 401);
         }
+        EchecsConnexion::reussite($cle);
 
         // Double authentification : le mot de passe ne suffit pas, un code est demandé avant de délivrer
         // le jeton. Le site web et l'application mobile passent à l'écran du code ; une ancienne version

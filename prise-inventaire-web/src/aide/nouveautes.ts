@@ -10,6 +10,11 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: 'Connexion : après 10 mots de passe faux en 15 minutes, le compte est bloqué jusqu\'à la fin de ces 15 minutes ; 30 tentatives par minute au plus depuis une même adresse.',
+    en: 'Sign-in: after 10 wrong passwords within 15 minutes, the account is blocked until those 15 minutes are over; at most 30 attempts per minute from the same address.',
+  },
+  {
+    date: '2026-10-26',
     fr: "Commandes fournisseur : le prix de chaque ligne se propose seul (dernier prix payé à ce fournisseur, sinon son prix convenu), dans l'unité d'achat et la devise de la commande.",
     en: 'Purchase orders: each line price is proposed automatically (last price paid to this supplier, otherwise their agreed price), in the purchase unit and currency of the order.',
     lien: '/commandes-fournisseur',
