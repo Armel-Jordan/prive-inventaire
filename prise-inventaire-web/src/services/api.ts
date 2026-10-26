@@ -1250,6 +1250,16 @@ export interface EnteteCommerciale {
   transporteur?: { id: number; nom: string; url_suivi?: string | null } | null;
 }
 
+/** « Livrer à » et contact (socle S4.1) : devis, commandes, factures et bons de livraison. */
+export interface LivraisonDocument {
+  contact_id?: number | null;
+  contact?: { id: number; nom: string; telephone?: string | null; email?: string | null } | null;
+  adresse_livraison_id?: number | null;
+  /** Copie de l'adresse au jour du choix (libellé, adresse, ville, pays : une ligne chacun). */
+  livraison_adresse?: string | null;
+  instructions_livraison?: string | null;
+}
+
 export interface ConditionPaiement {
   id: number;
   client_id: number;
@@ -1267,7 +1277,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
+export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
   /** Numéro de suivi de l'envoi (connaissement), repris par la facture puis le bon de livraison. */
   numero_suivi?: string | null;
   recapitulatif_taxes?: RecapitulatifTaxe[];
@@ -1305,7 +1315,7 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
+export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
   /** Numéro de suivi de l'envoi (connaissement), repris par le bon de livraison. */
   numero_suivi?: string | null;
   /** Taux de commission du représentant, figé à la création de la facture (%). */
@@ -1380,7 +1390,7 @@ export interface FactureEcheance {
   ordre: number;
 }
 
-export interface BonLivraison extends AvecStatutPersonnalise {
+export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise {
   id: number;
   numero: string;
   facture_id: number;
@@ -1708,6 +1718,8 @@ export async function createCommandeClient(data: {
   transporteur_id?: number | null;
   numero_suivi?: string | null;
   numero_commande_client?: string | null;
+  contact_id?: number | null;
+  adresse_livraison_id?: number | null;
 } & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -1809,6 +1821,8 @@ export type SaisieFacture = {
   transporteur_id?: number | null;
   numero_suivi?: string | null;
   numero_commande_client?: string | null;
+  contact_id?: number | null;
+  adresse_livraison_id?: number | null;
 } & CoordonneesPassage;
 
 export async function createFacture(data: SaisieFacture): Promise<Facture> {
@@ -2649,7 +2663,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, AvecStatutPersonnalise {
+export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise {
   id: number;
   numero: string;
   client_id: number;
@@ -2701,6 +2715,8 @@ export async function createDevis(data: {
   lignes: { produit_id: number; quantite: number; prix_unitaire: number }[];
   representant_id?: number | null;
   transporteur_id?: number | null;
+  contact_id?: number | null;
+  adresse_livraison_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2713,6 +2729,8 @@ export async function updateDevis(id: number, data: {
   lignes: { id?: number; produit_id: number; quantite: number; prix_unitaire: number }[];
   representant_id?: number | null;
   transporteur_id?: number | null;
+  contact_id?: number | null;
+  adresse_livraison_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

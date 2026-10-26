@@ -3418,6 +3418,16 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // « Livrer à » et contact des documents de vente (socle S4.1).
+    deliveryContact: {
+      contact: 'Contact',
+      noContact: 'Aucun contact',
+      deliverTo: 'Livrer à',
+      clientFileAddress: 'Adresse de la fiche client',
+      instructions: 'Instructions de livraison',
+      hint: "L'adresse est recopiée sur le document : la modifier ensuite dans la fiche client ne change pas ce document.",
+      inactive: 'inactif',
+    },
     // Nature et options du produit (socle S2).
     productNature: {
       title: 'Nature et options',
@@ -8214,6 +8224,16 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Deliver-to and contact on sales documents (socket S4.1).
+    deliveryContact: {
+      contact: 'Contact',
+      noContact: 'No contact',
+      deliverTo: 'Deliver to',
+      clientFileAddress: "Address from the customer's file",
+      instructions: 'Delivery instructions',
+      hint: 'The address is copied onto the document: changing it later in the customer file does not change this document.',
+      inactive: 'inactive',
     },
     // Product nature and options (socket S2).
     productNature: {

@@ -36,6 +36,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixLivraison, { DetailLivraison, livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/components/ChoixLivraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
@@ -67,6 +68,8 @@ export default function DevisPage() {
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
+  const [livraison, setLivraison] = useState<ValeurLivraison>({});
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -169,6 +172,7 @@ export default function DevisPage() {
         ...passage,
         representant_id: representantId,
         transporteur_id: transporteurId,
+        ...saisieLivraison(livraison),
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -281,6 +285,7 @@ export default function DevisPage() {
     setPassage(saisiePassage(devis));
     setRepresentantId(devis.representant_id ?? null);
     setTransporteurId(devis.transporteur_id ?? null);
+    setLivraison(livraisonDuDocument(devis));
     setLignes(devis.lignes.map(l => ({
       id: l.id,
       produit_id: l.produit_id,
@@ -329,6 +334,7 @@ export default function DevisPage() {
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
     setTransporteurId(null);
+    setLivraison({});
     setLignes([]);
   };
 
@@ -337,6 +343,7 @@ export default function DevisPage() {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
+    setLivraison({});
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -541,6 +548,7 @@ export default function DevisPage() {
                     <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                   </div>
                 )}
+                <ChoixLivraison idPrefixe="devis" clientId={formData.client_id ? Number(formData.client_id) : null} valeur={livraison} onChange={setLivraison} />
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               {editingId ? (formData.devise && <p className="text-sm text-gray-500">{t.currency.label} : {formData.devise} (1 {formData.devise} = {formData.taux} {deviseEntreprise})</p>) : (
@@ -629,6 +637,7 @@ export default function DevisPage() {
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
                 {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}
                 {selectedDevis.transporteur && <div><span className="text-gray-500">{t.carriers.label} :</span><p>{selectedDevis.transporteur.nom}</p></div>}
+                <DetailLivraison document={selectedDevis} />
               </div>
               {selectedDevis.lignes?.length > 0 && (
                 <div className="border-t pt-3">

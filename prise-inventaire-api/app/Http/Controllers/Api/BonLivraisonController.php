@@ -54,7 +54,7 @@ class BonLivraisonController extends Controller
     public function show(int $id): JsonResponse
     {
         $bon = BonLivraison::with([
-            'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi', StatutsPersonnalises::COLONNES,
+            'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', StatutsPersonnalises::COLONNES,
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
         ])->findOrFail($id);
 

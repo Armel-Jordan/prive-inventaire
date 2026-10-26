@@ -51,6 +51,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixLivraison, { DetailLivraison, livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/components/ChoixLivraison';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
@@ -90,6 +91,8 @@ export default function FacturesPage() {
   // Statut personnalisé (étiquette de repérage, phase 1.11c).
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
+  const [livraison, setLivraison] = useState<ValeurLivraison>({});
   const [numeroSuivi, setNumeroSuivi] = useState('');
   // Numéro de commande du client (socle S4.1), exigé si sa fiche l'exige.
   const [numeroCommandeClient, setNumeroCommandeClient] = useState('');
@@ -246,6 +249,7 @@ export default function FacturesPage() {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
+    setLivraison({});
     setCreateForm(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -260,6 +264,7 @@ export default function FacturesPage() {
     setTransporteurId(null);
     setNumeroSuivi('');
     setNumeroCommandeClient('');
+    setLivraison({});
     setCreateLignes([]);
   };
 
@@ -283,6 +288,7 @@ export default function FacturesPage() {
       setTransporteurId(facture.transporteur_id ?? null);
       setNumeroSuivi(facture.numero_suivi ?? '');
       setNumeroCommandeClient(facture.numero_commande_client ?? '');
+      setLivraison(livraisonDuDocument(facture));
       setCreateLignes((facture.lignes ?? []).map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
@@ -318,6 +324,7 @@ export default function FacturesPage() {
         transporteur_id: transporteurId,
         numero_suivi: numeroSuivi.trim() || null,
         numero_commande_client: numeroCommandeClient.trim() || null,
+        ...saisieLivraison(livraison),
       };
       if (editingId) await updateFacture(editingId, saisie);
       else await createFacture(saisie);
@@ -654,6 +661,7 @@ export default function FacturesPage() {
                     <p className="dark:text-white">{selectedFacture.condition_paiement.libelle}</p>
                   </div>
                 )}
+                <DetailLivraison document={selectedFacture} />
               </div>
 
               {selectedFacture.lignes && selectedFacture.lignes.length > 0 && (
@@ -870,6 +878,7 @@ export default function FacturesPage() {
                     <span className="text-xs text-gray-500">{t.carriers.trackingHint}</span>
                   </div>
                 )}
+                <ChoixLivraison idPrefixe="facture" clientId={createForm.client_id ? Number(createForm.client_id) : null} valeur={livraison} onChange={setLivraison} />
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               <div>

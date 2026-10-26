@@ -44,6 +44,10 @@ class FacturesVente
         // Représentant : celui demandé (ou du document d'origine), sinon celui du client ; son taux de commission est figé.
         $entete = app(EntetesVente::class)->pourCreation($donnees, $client);
         $passage += $entete + ['taux_commission' => app(EntetesVente::class)->commission($entete['representant_id'])];
+        // Contact et « Livrer à » : ceux du document d'origine (copie comprise), sinon les principaux du client.
+        $passage += array_key_exists('livraison_adresse', $donnees)
+            ? array_intersect_key($donnees, array_flip(LivraisonDocuments::COLONNES))
+            : app(LivraisonDocuments::class)->pourCreation($donnees, $client);
 
         return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise, $passage) {
             $numero = $this->numeroBrouillon($tenantId);
@@ -88,7 +92,7 @@ class FacturesVente
         $condition = $this->conditions->pourFacture($donnees['condition_paiement_id'] ?? null, $client);
         $devise = $this->devises->pourDocument($donnees['devise'] ?? null, $donnees['taux_change'] ?? null, $client);
         $passage = app(ClientsDePassage::class)->coordonnees($donnees, $client);
-        $entete = app(EntetesVente::class)->pourModification($donnees);
+        $entete = app(EntetesVente::class)->pourModification($donnees) + app(LivraisonDocuments::class)->pourModification($donnees, $facture);
         if (array_key_exists('representant_id', $entete) && $entete['representant_id'] !== $facture->representant_id) {
             $entete['taux_commission'] = app(EntetesVente::class)->commission($entete['representant_id']);
         }

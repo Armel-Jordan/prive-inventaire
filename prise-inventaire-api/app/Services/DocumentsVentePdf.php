@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Avoir;
 use App\Models\BonLivraison;
+use App\Models\ClientContact;
 use App\Models\ClientProduit;
 use App\Models\ComClientEntete;
 use App\Models\DemandeAcompte;
@@ -159,7 +160,10 @@ class DocumentsVentePdf
             'Mode de livraison' => self::MODES_LIVRAISON[$bon->mode_livraison] ?? $bon->mode_livraison,
             'Date de livraison' => $this->date($bon->date_livraison),
         ]), [
-            'destinataire' => $this->client($bon->facture?->client, true, $bon->facture),
+            // L'adresse « Livrer à » du bon (copiée de la facture), sinon celle de la fiche du client.
+            'destinataire' => filled($bon->livraison_adresse) && ! ($bon->facture?->client?->de_passage)
+                ? ['nom' => $bon->facture?->client?->raison_sociale ?? '-', 'lignes' => explode("\n", (string) $bon->livraison_adresse)]
+                : $this->client($bon->facture?->client, true, $bon->facture),
             'colonnes' => 'livraison',
             'lignes' => $bon->lignes->map(fn ($l) => [
                 'reference' => $l->produit?->numero ?? '-',
@@ -191,6 +195,16 @@ class DocumentsVentePdf
         // Numéro de commande du client (socle S4.1).
         if (filled($document->getAttribute('numero_commande_client'))) {
             $infos['N° commande client'] = $document->getAttribute('numero_commande_client');
+        }
+        // Contact du client et « Livrer à » (socle S4.1) ; le bon de livraison met l'adresse en destinataire.
+        if ($document->getAttribute('contact_id') && ($contact = ClientContact::query()->find($document->getAttribute('contact_id')))) {
+            $infos['Contact'] = implode(' — ', array_filter([$contact->nom, $contact->telephone]));
+        }
+        if (filled($document->getAttribute('livraison_adresse')) && ! $document instanceof BonLivraison) {
+            $infos['Livrer à'] = str_replace("\n", ', ', (string) $document->getAttribute('livraison_adresse'));
+        }
+        if (filled($document->getAttribute('instructions_livraison'))) {
+            $infos['Instructions de livraison'] = $document->getAttribute('instructions_livraison');
         }
         // Transporteur et numéro de suivi (phase 1.11b) : « Expédié par » sur le bon de livraison.
         if ($expedition = Expedition::de($document)) {

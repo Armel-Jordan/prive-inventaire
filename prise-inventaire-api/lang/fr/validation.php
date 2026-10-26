@@ -198,6 +198,8 @@ return [
         'fournisseur_id' => 'fournisseur',
         'transporteur_id' => 'transporteur',
         'numero_commande_client' => 'numéro de commande du client',
+        'contact_id' => 'contact',
+        'adresse_livraison_id' => 'adresse de livraison',
         'produit_id' => 'produit',
         'secteur_id' => 'secteur',
         'lignes' => 'lignes',
