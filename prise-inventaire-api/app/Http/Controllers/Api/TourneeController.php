@@ -124,7 +124,8 @@ class TourneeController extends Controller
             'date_tournee' => 'required|date',
             // Camion de l'entreprise : celui d'une autre était accepté (et la réponse révélait son existence).
             'camion_id' => ['required', TenantRule::exists('camions')],
-            'livreur_id' => 'nullable|integer',
+            // Livreur : un employé de l'entreprise (un identifiant quelconque était accepté).
+            'livreur_id' => ['nullable', 'integer', TenantRule::exists('employes')->whereNull('deleted_at')],
             'zone' => 'nullable|string|max:100',
             'heure_depart' => 'nullable|date_format:H:i',
             // Route suivie : ses bons prêts s'ajoutent d'un coup, dans l'ordre de passage des clients.

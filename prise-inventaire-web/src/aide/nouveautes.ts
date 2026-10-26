@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-10-26',
+    fr: "Référentiels : une unité, un fabricant, une condition de paiement, un compte bancaire, une devise, un entrepôt, un itinéraire, un type de location ou une raison encore utilisés ne se suppriment plus : désactivez-les.",
+    en: 'Reference lists: a unit, manufacturer, payment terms, bank account, currency, warehouse, route, rental type or reason still in use can no longer be deleted: deactivate it.',
+    lien: '/referentiels',
+  },
+  {
+    date: '2026-10-26',
     fr: "Factures : un brouillon se modifie (crayon de la ligne) au lieu d'être supprimé puis refait ; il est verrouillé pendant sa modification.",
     en: 'Invoices: a draft can be edited (pencil on the row) instead of being deleted and recreated; it is locked while being edited.',
     lien: '/factures',
