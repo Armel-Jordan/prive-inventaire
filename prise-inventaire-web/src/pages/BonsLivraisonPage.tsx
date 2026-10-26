@@ -8,6 +8,7 @@ import PadSignature from '@/components/PadSignature';
 import ColisBon from '@/components/livraison/ColisBon';
 import ExpeditionBon from '@/components/livraison/ExpeditionBon';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -216,16 +217,8 @@ export default function BonsLivraisonPage() {
     }
   };
 
+  // Libellé et couleurs du statut : ceux de l'entreprise (Paramètres → Statuts des documents) ; ces libellés en attendant.
   const getStatutBadge = (statut: string) => {
-    const styles: Record<string, string> = {
-      cree: 'bg-gray-100 text-gray-800',
-      en_preparation: 'bg-yellow-100 text-yellow-800',
-      pret: 'bg-blue-100 text-blue-800',
-      en_livraison: 'bg-purple-100 text-purple-800',
-      livre_complet: 'bg-green-100 text-green-800',
-      livre_partiel: 'bg-orange-100 text-orange-800',
-      annule: 'bg-red-100 text-red-800',
-    };
     const labels: Record<string, string> = {
       cree: 'Créé',
       en_preparation: 'En préparation',
@@ -235,11 +228,7 @@ export default function BonsLivraisonPage() {
       livre_partiel: 'Partiel',
       annule: 'Annulé',
     };
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${styles[statut] || 'bg-gray-100'}`}>
-        {labels[statut] || statut}
-      </span>
-    );
+    return <BadgeStatut document="bon_livraison" statut={statut} libelleDefaut={labels[statut]} />;
   };
 
   return (

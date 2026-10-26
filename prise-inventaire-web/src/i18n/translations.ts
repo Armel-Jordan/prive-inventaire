@@ -3410,6 +3410,27 @@ export const translations = {
       documentHint: 'Celui du client par défaut.',
       commission: 'Commission {taux} %',
     },
+    // Statuts des documents : libellés et couleurs des statuts système (« Statuts transactions » de fripv2).
+    documentStatuses: {
+      title: 'Statuts des documents',
+      subtitle: "Libellés et couleurs des statuts des devis, commandes, factures, bons de livraison et commandes fournisseur, partout dans l'application. Les étiquettes libres sont les statuts personnalisés (Référentiels).",
+      readOnly: 'Consultation seule : le réglage demande le droit de modifier la configuration.',
+      code: 'Code',
+      labelFr: 'Libellé (français)',
+      labelEn: 'Libellé (anglais)',
+      background: 'Fond',
+      text: 'Texte',
+      preview: 'Aperçu',
+      reset: 'Revenir au défaut',
+      error: "Le statut n'a pas pu être enregistré.",
+      documents: {
+        devis: 'Devis',
+        commande_client: 'Commandes client',
+        facture: 'Factures',
+        bon_livraison: 'Bons de livraison',
+        commande_fournisseur: 'Commandes fournisseur',
+      },
+    },
     // Statuts personnalisés des documents (phase 1.11c).
     customStatuses: {
       label: 'Statut personnalisé',
@@ -8162,6 +8183,27 @@ export const translations = {
       clientHint: 'Carried over to their quotes, orders and invoices.',
       documentHint: "The customer's by default.",
       commission: 'Commission {taux}%',
+    },
+    // Document statuses: labels and colours of system statuses (fripv2 "transaction statuses").
+    documentStatuses: {
+      title: 'Document statuses',
+      subtitle: 'Labels and colours of the statuses of quotes, orders, invoices, delivery notes and purchase orders, everywhere in the application. Free labels are the custom statuses (Reference data).',
+      readOnly: 'Read only: changing them requires the right to edit the configuration.',
+      code: 'Code',
+      labelFr: 'Label (French)',
+      labelEn: 'Label (English)',
+      background: 'Background',
+      text: 'Text',
+      preview: 'Preview',
+      reset: 'Back to default',
+      error: 'The status could not be saved.',
+      documents: {
+        devis: 'Quotes',
+        commande_client: 'Customer orders',
+        facture: 'Invoices',
+        bon_livraison: 'Delivery notes',
+        commande_fournisseur: 'Purchase orders',
+      },
     },
     // Custom statuses of documents (phase 1.11c).
     customStatuses: {

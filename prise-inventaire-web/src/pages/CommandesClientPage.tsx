@@ -15,6 +15,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { lienSuivi, transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import BalisesFiche from '@/components/BalisesFiche';
@@ -358,15 +359,8 @@ export default function CommandesClientPage() {
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
 
+  // Libellé et couleurs du statut : ceux de l'entreprise (Paramètres → Statuts des documents) ; ces libellés en attendant.
   const getStatutBadge = (statut: string) => {
-    const styles: Record<string, string> = {
-      brouillon: 'bg-gray-100 text-gray-800',
-      en_attente: 'bg-yellow-100 text-yellow-800',
-      acceptee: 'bg-green-100 text-green-800',
-      refusee: 'bg-red-100 text-red-800',
-      facturee: 'bg-blue-100 text-blue-800',
-      annulee: 'bg-gray-100 text-gray-500',
-    };
     const labels: Record<string, string> = {
       brouillon: 'Brouillon',
       en_attente: 'En attente',
@@ -375,11 +369,7 @@ export default function CommandesClientPage() {
       facturee: 'Facturée',
       annulee: 'Annulée',
     };
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${styles[statut] || 'bg-gray-100'}`}>
-        {labels[statut] || statut}
-      </span>
-    );
+    return <BadgeStatut document="commande_client" statut={statut} libelleDefaut={labels[statut]} />;
   };
 
   const totalLignes = lignes.reduce((sum, l) => sum + l.quantite * l.prix_unitaire_ht, 0);

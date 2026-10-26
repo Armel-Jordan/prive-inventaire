@@ -16,6 +16,7 @@ import { signaler } from '@/lib/erreurs';
 import { aujourdhui, formatDateDocument, formatMontantIso } from '@/lib/documents';
 import { chargerEntrepots, libelleEntrepot, type EntrepotChoix } from '@/lib/entrepots';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 import {
@@ -421,9 +422,7 @@ export default function CommandesFournisseurPage() {
                       {montantCommande(commande.montant_total, commande.devise)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${statutLabels[commande.statut]?.color}`}>
-                        {statutLabels[commande.statut]?.label}
-                      </span>
+                      <BadgeStatut document="commande_fournisseur" statut={commande.statut} libelleDefaut={statutLabels[commande.statut]?.label} />
                       {commande.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={commande.statut_personnalise} /></span>}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -750,9 +749,7 @@ export default function CommandesFournisseurPage() {
             <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <div>
                 <h2 className="text-lg font-semibold">Commande {selectedCommande.numero}</h2>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${statutLabels[selectedCommande.statut]?.color}`}>
-                  {statutLabels[selectedCommande.statut]?.label}
-                </span>
+                <BadgeStatut document="commande_fournisseur" statut={selectedCommande.statut} libelleDefaut={statutLabels[selectedCommande.statut]?.label} />
                 {/* Envoyer un brouillon par courriel le valide : l'écran se met à jour à la fermeture de la fenêtre. */}
                 <BoutonCourriel type="commande_fournisseur" documentId={selectedCommande.id} taille={16} className="ml-2 align-middle"
                   onFerme={() => { loadData(); openDetail(selectedCommande); }} />

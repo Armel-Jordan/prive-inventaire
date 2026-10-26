@@ -91,6 +91,8 @@ class Droits
         'balises' => 'configuration',
         // Remarques rapides : la liste se gère avec les balises ; la lire (pour insérer une remarque) reste libre.
         'remarques-rapides' => 'configuration',
+        // Libellés et couleurs des statuts des documents : réglés avec la configuration, lus par tous les écrans.
+        'statuts-documents' => 'configuration',
         'courriels' => 'configuration',
         'referentiels' => 'referentiels',
         'taches-planifiees' => 'taches_planifiees',

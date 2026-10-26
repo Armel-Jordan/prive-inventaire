@@ -83,6 +83,7 @@ use App\Http\Controllers\Api\ReliquatClientController;
 use App\Http\Controllers\Api\RemarqueRapideController;
 use App\Http\Controllers\Api\RetourClientController;
 use App\Http\Controllers\Api\RetourFournisseurController;
+use App\Http\Controllers\Api\StatutDocumentController;
 use App\Http\Controllers\Api\StatutPersonnaliseDocumentController;
 use App\Http\Controllers\Api\SuggestionAchatController;
 use App\Http\Controllers\Api\TauxChangeController;
@@ -510,6 +511,13 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::put('/{id}', [BaliseController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [BaliseController::class, 'destroy'])->whereNumber('id');
         Route::post('/{id}/items', [BaliseController::class, 'ajouterItem'])->whereNumber('id');
+    });
+
+    // Statuts des documents : libellés et couleurs des statuts système (lecture libre, réglage avec la configuration).
+    Route::prefix('statuts-documents')->group(function () {
+        Route::get('/', [StatutDocumentController::class, 'index']);
+        Route::put('/{document}/{code}', [StatutDocumentController::class, 'update'])->where(['document' => '[a-z_]+', 'code' => '[a-z_]+']);
+        Route::delete('/{document}/{code}', [StatutDocumentController::class, 'destroy'])->where(['document' => '[a-z_]+', 'code' => '[a-z_]+']);
     });
 
     // Remarques rapides : textes réutilisables pour les notes.

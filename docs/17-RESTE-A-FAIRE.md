@@ -287,8 +287,10 @@ ainsi que les options 15 et 16 pour les frais. En bref :
 **Fait** (FLOW-VENTES §2.9) : `couleur_texte`, `statut_personnalise_id` sur les devis, commandes, factures, bons de
 livraison, commandes fournisseur et réceptions ; `PUT /{documents}/{id}/statut-personnalise` (même clos, droit de
 modifier le document) ; filtre et pastille dans les listes ; choix dans le détail ; suppression refusée si posée.
-**Reste** : l'écran des réceptions (l'API est prête), la recopie de l'étiquette à la conversion (règle facultative), puis
-« Statuts des documents » (section 19, ci-dessous).
+**Reste** : l'écran des réceptions (l'API est prête), la recopie de l'étiquette à la conversion (règle facultative).
+« Statuts des documents » (section 19) : fait le 26/10 pour les devis, commandes, factures, bons de livraison et commandes
+fournisseur (FLOW-PARAMETRES §14) ; reste les autres familles de fripv2 (reliquats, réceptions, demandes d'acompte, cartes
+cadeaux, comptes clients et fournisseurs).
 
 
 Le référentiel `statuts_personnalises` existe (document, code, libellé, couleur, ordre, actif), **mais aucun document

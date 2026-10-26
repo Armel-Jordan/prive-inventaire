@@ -36,6 +36,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
 import { transporteursActifs, useTransporteurRequis, useTransporteurs } from '@/hooks/useTransporteurs';
 
@@ -340,18 +341,12 @@ export default function DevisPage() {
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
 
+  // Libellé et couleurs du statut : ceux de l'entreprise (Paramètres → Statuts des documents) ; ces libellés en attendant.
   const getStatutBadge = (statut: string) => {
-    const styles: Record<string, string> = {
-      brouillon: 'bg-gray-100 text-gray-800',
-      envoye: 'bg-blue-100 text-blue-800',
-      accepte: 'bg-green-100 text-green-800',
-      refuse: 'bg-red-100 text-red-800',
-      expire: 'bg-yellow-100 text-yellow-800',
-    };
     const labels: Record<string, string> = {
       brouillon: 'Brouillon', envoye: 'Envoyé', accepte: 'Accepté', refuse: 'Refusé', expire: 'Expiré',
     };
-    return <span className={`px-2 py-1 text-xs rounded-full ${styles[statut] || 'bg-gray-100'}`}>{labels[statut] || statut}</span>;
+    return <BadgeStatut document="devis" statut={statut} libelleDefaut={labels[statut]} />;
   };
 
   const fmtDate = (d: string) => formatDateDocument(d);
