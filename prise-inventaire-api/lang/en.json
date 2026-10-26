@@ -384,6 +384,7 @@
     "Groupe de taxes introuvable.": "Tax group not found.",
     "Groupe de taxes supprimé.": "Tax group deleted.",
     "Identifiants invalides": "Invalid credentials",
+    "Trop de tentatives de connexion échouées : réessayez dans :minutes minute(s).": "Too many failed sign-in attempts: try again in :minutes minute(s).",
     "Identifiants invalides ou accès non autorisé": "Invalid credentials or unauthorized access",
     "Il ne reste que :reste du lot :lot.": "Only :reste left in lot :lot.",
     "Il ne reste rien de l'acompte du :date.": "Nothing is left of the deposit of :date.",

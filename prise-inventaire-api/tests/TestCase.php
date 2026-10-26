@@ -18,6 +18,9 @@ abstract class TestCase extends BaseTestCase
         // Les requêtes de test annoncent « en-us » par défaut ; les écrans envoient la langue choisie, le français par
         // défaut. Les tests parlent donc français, sauf ceux qui donnent leur propre en-tête (LangueMessagesTest).
         $this->withHeader('Accept-Language', 'fr');
+        // La CI garde le magasin de cache « file » de .env.example : sans ce nettoyage, les compteurs des limites de débit
+        // (connexion, envois…) passeraient d'un test à l'autre. En local, le magasin « array » est déjà vide.
+        $this->app['cache']->store()->flush();
     }
 
     /** Retire les en-têtes posés (compte, entreprise…) ; la langue reste le français. */
