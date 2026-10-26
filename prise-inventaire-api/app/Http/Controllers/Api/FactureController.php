@@ -209,7 +209,8 @@ class FactureController extends Controller
         if (! $configFacture || ! $configFacture->auto_increment) {
             return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
-        $condition = $this->conditions->pourFacture(null, $commande->client);
+        // Condition de la commande (socle S4.1), sinon celle du client, sinon celle par défaut.
+        $condition = $this->conditions->pourFacture($commande->condition_paiement_id, $commande->client);
         // Date de la facture : celle de l'usager (envoyée par l'écran), sinon le jour de l'entreprise.
         $date = DateDuJour::demandee($request);
         // Représentant de la commande, avec son taux de commission du jour.

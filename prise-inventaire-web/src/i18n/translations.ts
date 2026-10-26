@@ -3418,6 +3418,12 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Condition de paiement des devis et des commandes (socle S4.1).
+    documentTerms: {
+      label: 'Condition de paiement',
+      clientDefault: 'Celle du client (ou par défaut)',
+      hint: "Reprise par la commande puis par la facture, qui en calcule l'échéance.",
+    },
     // « Livrer à » et contact des documents de vente (socle S4.1).
     deliveryContact: {
       contact: 'Contact',
@@ -8224,6 +8230,12 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Payment terms on quotes and orders (socket S4.1).
+    documentTerms: {
+      label: 'Payment terms',
+      clientDefault: "The customer's (or the default)",
+      hint: 'Carried to the order, then to the invoice, which computes its due date from them.',
     },
     // Deliver-to and contact on sales documents (socket S4.1).
     deliveryContact: {

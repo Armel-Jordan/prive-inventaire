@@ -51,11 +51,12 @@ class DocumentsVentePdf
 
     public function devis(Devis $devis): array
     {
-        $devis->loadMissing(['client', 'lignes.produit']);
+        $devis->loadMissing(['client', 'lignes.produit', 'conditionPaiement']);
 
         return $this->document('DEVIS', $devis, [
             'Date du devis' => $this->date($devis->date_devis),
             'Valable jusqu\'au' => $this->date($devis->date_validite),
+            'Conditions de paiement' => $devis->conditionPaiement?->libelle,
         ], [
             'destinataire' => $this->client($devis->client, false, $devis),
             'lignes' => $this->lignesPrix($devis->client_id, $devis->lignes, fn ($l) => [$l->prix_unitaire, 0, $l->montant_ligne]),
@@ -69,11 +70,12 @@ class DocumentsVentePdf
 
     public function commande(ComClientEntete $commande): array
     {
-        $commande->loadMissing(['client', 'lignes.produit']);
+        $commande->loadMissing(['client', 'lignes.produit', 'conditionPaiement']);
 
         return $this->document('COMMANDE', $commande, [
             'Date de commande' => $this->date($commande->date_commande),
             'Livraison souhaitée' => $this->date($commande->date_livraison_souhaitee),
+            'Conditions de paiement' => $commande->conditionPaiement?->libelle,
         ], [
             'destinataire' => $this->client($commande->client, false, $commande),
             'lignes' => $this->lignesPrix($commande->client_id, $commande->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),

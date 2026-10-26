@@ -36,6 +36,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixConditionPaiement from '@/components/ChoixConditionPaiement';
 import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
@@ -71,6 +72,8 @@ export default function DevisPage() {
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
+  // Condition de paiement (socle S4.1) : vide, celle du client (sinon celle par défaut) ; reprise par la facture.
+  const [conditionId, setConditionId] = useState<number | null>(null);
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -174,6 +177,7 @@ export default function DevisPage() {
         representant_id: representantId,
         transporteur_id: transporteurId,
         ...saisieLivraison(livraison),
+        condition_paiement_id: conditionId,
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -287,6 +291,7 @@ export default function DevisPage() {
     setRepresentantId(devis.representant_id ?? null);
     setTransporteurId(devis.transporteur_id ?? null);
     setLivraison(livraisonDuDocument(devis));
+    setConditionId(devis.condition_paiement_id ?? null);
     setLignes(devis.lignes.map(l => ({
       id: l.id,
       produit_id: l.produit_id,
@@ -336,6 +341,7 @@ export default function DevisPage() {
     setRepresentantId(null);
     setTransporteurId(null);
     setLivraison({});
+    setConditionId(null);
     setLignes([]);
   };
 
@@ -345,6 +351,7 @@ export default function DevisPage() {
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
     setLivraison({});
+    setConditionId(null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setFormData(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -549,6 +556,12 @@ export default function DevisPage() {
                     <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                   </div>
                 )}
+                <div>
+                  <label htmlFor="devis-condition" className="block text-sm font-medium mb-1">{t.documentTerms.label}</label>
+                  <ChoixConditionPaiement id="devis-condition" value={conditionId} onChange={setConditionId}
+                    actuelle={editingId ? devisList.find(d => d.id === editingId)?.condition_paiement : null} />
+                  <p className="text-xs text-gray-500 mt-1">{t.documentTerms.hint}</p>
+                </div>
                 <ChoixLivraison idPrefixe="devis" clientId={formData.client_id ? Number(formData.client_id) : null} valeur={livraison} onChange={setLivraison} />
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
@@ -638,6 +651,7 @@ export default function DevisPage() {
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
                 {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}
                 {selectedDevis.transporteur && <div><span className="text-gray-500">{t.carriers.label} :</span><p>{selectedDevis.transporteur.nom}</p></div>}
+                {selectedDevis.condition_paiement && <div><span className="text-gray-500">{t.documentTerms.label} :</span><p>{selectedDevis.condition_paiement.libelle}</p></div>}
                 <DetailLivraison document={selectedDevis} />
               </div>
               {selectedDevis.lignes?.length > 0 && (

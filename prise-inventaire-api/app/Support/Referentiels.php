@@ -202,8 +202,10 @@ final class Referentiels
                 'suppression' => fn (Model $condition) => self::utilisee([
                     [Client::class, 'condition_paiement_id', $condition->getKey()],
                     [Facture::class, 'condition_paiement_id', $condition->getKey()],
+                    [Devis::class, 'condition_paiement_id', $condition->getKey()],
+                    [ComClientEntete::class, 'condition_paiement_id', $condition->getKey()],
                     [FactureFournisseur::class, 'condition_paiement_id', $condition->getKey()],
-                ]) ? __('Cette condition de paiement est utilisée par des clients ou des factures : désactivez-la plutôt.') : null,
+                ]) ? __('Cette condition de paiement est utilisée par des clients ou des documents de vente : désactivez-la plutôt.') : null,
             ],
 
             'comptes_bancaires' => [
