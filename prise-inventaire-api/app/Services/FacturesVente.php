@@ -64,6 +64,7 @@ class FacturesVente
                 'montant_ttc' => $montantTtc,
                 'reste_a_payer' => $montantTtc,
                 'notes' => $donnees['notes'] ?? null,
+                'numero_suivi' => $donnees['numero_suivi'] ?? null,
             ]);
 
             $this->creerLignes($facture, $lignesCalculees);
@@ -107,6 +108,8 @@ class FacturesVente
                 'montant_ttc' => $calcul['montant_ttc'],
                 'reste_a_payer' => $calcul['montant_ttc'],
                 'notes' => $donnees['notes'] ?? null,
+                // Non renvoyé, le numéro de suivi reste.
+                'numero_suivi' => array_key_exists('numero_suivi', $donnees) ? $donnees['numero_suivi'] : $facture->numero_suivi,
             ]);
 
             return $facture->refresh();

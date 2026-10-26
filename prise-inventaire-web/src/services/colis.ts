@@ -9,6 +9,8 @@ export interface Colis {
   numero: string;
   poids_kg: string | null;
   notes: string | null;
+  /** Numéro de suivi du colis chez le transporteur du bon (phase 1.11b). */
+  numero_suivi?: string | null;
   charge_le: string | null;
   lignes: LigneColis[];
 }
@@ -25,6 +27,7 @@ export interface SaisieColis {
   lignes: { bon_livraison_ligne_id: number; quantite: number }[];
   poids_kg?: number | null;
   notes?: string | null;
+  numero_suivi?: string | null;
 }
 
 export const getColis = (bonId: number) => apiFetch<ColisDuBon>(`/bons-livraison/${bonId}/colis`);

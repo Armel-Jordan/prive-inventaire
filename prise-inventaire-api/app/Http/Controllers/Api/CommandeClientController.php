@@ -28,7 +28,7 @@ class CommandeClientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom'])->where('tenant_id', $tenantId);
+        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -38,6 +38,9 @@ class CommandeClientController extends Controller
         }
         if ($request->filled('representant_id')) {
             $query->where('representant_id', $request->integer('representant_id'));
+        }
+        if ($request->filled('transporteur_id')) {
+            $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
@@ -59,7 +62,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom'])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi'])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
@@ -74,6 +77,8 @@ class CommandeClientController extends Controller
             'date_livraison_souhaitee' => 'nullable|date|after_or_equal:date_commande',
             'remise_globale' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
+            // Numéro de suivi de l'envoi (connaissement), repris par la facture puis le bon de livraison.
+            'numero_suivi' => 'nullable|string|max:60',
             'lignes' => 'required|array|min:1',
             // Produit de l'entreprise (un id quelconque, ou celui d'une autre entreprise, était accepté).
             'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
@@ -111,6 +116,7 @@ class CommandeClientController extends Controller
                 'date_livraison_souhaitee' => $validated['date_livraison_souhaitee'] ?? null,
                 'remise_globale' => $validated['remise_globale'] ?? 0,
                 'notes' => $validated['notes'] ?? null,
+                'numero_suivi' => $validated['numero_suivi'] ?? null,
                 'statut' => 'brouillon',
                 'created_by' => $request->user()?->id,
             ]);
@@ -154,6 +160,7 @@ class CommandeClientController extends Controller
             'date_livraison_souhaitee' => 'nullable|date',
             'remise_globale' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
+            'numero_suivi' => 'nullable|string|max:60',
             'lignes' => 'sometimes|array|min:1',
             'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
             'lignes.*.quantite' => 'required|integer|min:1',
@@ -180,6 +187,7 @@ class CommandeClientController extends Controller
                 'date_livraison_souhaitee' => array_key_exists('date_livraison_souhaitee', $validated) ? $validated['date_livraison_souhaitee'] : $commande->date_livraison_souhaitee,
                 'remise_globale' => $validated['remise_globale'] ?? $commande->remise_globale,
                 'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $commande->notes,
+                'numero_suivi' => array_key_exists('numero_suivi', $validated) ? $validated['numero_suivi'] : $commande->numero_suivi,
             ]);
 
             if (isset($validated['lignes'])) {

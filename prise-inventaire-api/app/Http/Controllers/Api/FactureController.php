@@ -43,7 +43,7 @@ class FactureController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
-        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom'])->where('tenant_id', $tenantId);
+        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom', 'transporteur:id,nom'])->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -63,6 +63,9 @@ class FactureController extends Controller
         }
         if ($request->filled('representant_id')) {
             $query->where('representant_id', $request->integer('representant_id'));
+        }
+        if ($request->filled('transporteur_id')) {
+            $query->where('transporteur_id', $request->integer('transporteur_id'));
         }
         if ($request->has('date_debut')) {
             $query->whereDate('date_facture', '>=', $request->date_debut);
@@ -84,6 +87,7 @@ class FactureController extends Controller
         $facture = Facture::with([
             'client', 'commande', 'lignes', 'echeances', 'paiements', 'bonLivraison', 'conditionPaiement:id,code,libelle,delai_jours,fin_de_mois,escompte_pourcentage,escompte_jours',
             'representant:id,nom',
+            'transporteur:id,nom,url_suivi',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
@@ -148,6 +152,8 @@ class FactureController extends Controller
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             ...DevisesVente::regles(),
             'notes' => 'nullable|string',
+            // Numéro de suivi de l'envoi (connaissement), repris par le bon de livraison.
+            'numero_suivi' => 'nullable|string|max:60',
             'lignes' => 'required|array|min:1',
             // Produit de l'entreprise : un id quelconque (0, ou celui d'une autre entreprise) était accepté.
             'lignes.*.produit_id' => ['required', 'integer', TenantRule::exists('produits')],
@@ -159,7 +165,7 @@ class FactureController extends Controller
             // Unité de vente du produit (la caisse de 12…) ; vide : son unité de stock.
             'lignes.*.unite' => 'nullable|string|max:20',
             ...ClientsDePassage::regles(),
-            // Représentant : par défaut, celui du client ; celui de la facture reste accepté s'il a été retiré.
+            // Représentant et transporteur : par défaut, ceux du client ; ceux de la facture restent acceptés s'ils ont été retirés.
             ...EntetesVente::regles($facture),
         ];
     }
@@ -213,6 +219,7 @@ class FactureController extends Controller
                 'taux_change' => $commande->taux_change ?? 1,
                 'date_facture' => $date,
                 'condition_paiement_id' => $condition?->id,
+                'numero_suivi' => $commande->numero_suivi,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
                 'montant_tva' => $commande->montant_tva,
@@ -410,6 +417,9 @@ class FactureController extends Controller
                 'numero' => $numeroBon,
                 'facture_id' => $facture->id,
                 'mode_livraison' => 'entreprise',
+                // Transporteur et numéro de suivi de la facture.
+                'transporteur_id' => $facture->transporteur_id,
+                'numero_suivi' => $facture->numero_suivi,
                 'statut' => 'cree',
             ]);
 

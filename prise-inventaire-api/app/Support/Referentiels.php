@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\BonLivraison;
 use App\Models\Caisse;
 use App\Models\CaisseSession;
 use App\Models\Categorie;
@@ -374,6 +375,15 @@ final class Referentiels
                     'actif' => ['boolean'],
                 ],
                 'ordre' => ['nom', 'asc'],
+                // Rattaché à un tiers ou à un document (phase 1.11b) : l'envoi garde son transporteur.
+                'suppression' => function (Model $transporteur) {
+                    $id = $transporteur->getKey();
+                    $references = array_map(fn (string $modele) => [$modele, 'transporteur_id', $id],
+                        [Client::class, Fournisseur::class, Devis::class, ComClientEntete::class, Facture::class, BonLivraison::class, ComFourEntete::class]);
+
+                    return self::utilisee($references)
+                        ? __('Ce transporteur est rattaché à des clients, des fournisseurs ou des documents : désactivez-le plutôt.') : null;
+                },
             ],
 
             'raisons' => [

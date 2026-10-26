@@ -21,6 +21,8 @@ class BonLivraison extends Model
         'preparateur_id', 'signature_client', 'notes_livraison',
         // Signataire et moment de la signature électronique.
         'signataire_nom', 'signe_le',
+        // Transporteur et numéro de suivi, repris de la facture (ne servent pas au retrait par le client).
+        'transporteur_id', 'numero_suivi',
     ];
 
     protected $casts = [
@@ -38,6 +40,12 @@ class BonLivraison extends Model
     public function getASignatureAttribute(): bool
     {
         return filled($this->attributes['signature_client'] ?? null);
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public static function generateNumero(): string

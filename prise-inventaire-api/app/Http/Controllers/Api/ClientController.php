@@ -41,7 +41,9 @@ class ClientController extends Controller
             ->when($request->boolean('favoris'), fn ($q) => $q->whereHas('favoris', fn ($f) => $f->where('user_id', $utilisateur)))
             // Clients d'un représentant (phase 1.11a).
             ->when($request->filled('representant_id'), fn ($q) => $q->where('representant_id', $request->integer('representant_id')))
-            ->with(['categorie:id,nom', 'representant:id,nom'])
+            // Clients d'un transporteur (phase 1.11b).
+            ->when($request->filled('transporteur_id'), fn ($q) => $q->where('transporteur_id', $request->integer('transporteur_id')))
+            ->with(['categorie:id,nom', 'representant:id,nom', 'transporteur:id,nom'])
             ->withExists(['favoris as favori' => fn ($f) => $f->where('user_id', $utilisateur)]);
 
         $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
@@ -93,7 +95,7 @@ class ClientController extends Controller
             // Route de livraison et rang de passage (ordre des arrêts des tournées).
             'itineraire_id' => ['nullable', 'integer', TenantRule::exists('itineraires')->whereNull('deleted_at')],
             'sequence_livraison' => ['nullable', 'integer', 'min:0', 'max:999999'],
-            // Représentant commercial : repris par ses devis, commandes et factures.
+            // Représentant commercial et transporteur : repris par ses documents de vente.
             ...EntetesVente::regles(),
         ]);
         $validated['devise'] = $this->devise($validated['devise'] ?? null);

@@ -43,6 +43,8 @@ class Client extends Model
         'categorie_id',
         // Représentant commercial, repris par ses devis, commandes et factures.
         'representant_id',
+        // Transporteur, repris par ses devis, commandes, factures et bons de livraison.
+        'transporteur_id',
     ];
 
     protected $casts = [
@@ -53,6 +55,7 @@ class Client extends Model
         'de_passage' => 'boolean',
         'sequence_livraison' => 'integer',
         'representant_id' => 'integer',
+        'transporteur_id' => 'integer',
     ];
 
     /** Route de livraison du client (itinéraire du référentiel logistique). */
@@ -65,6 +68,12 @@ class Client extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public static function generateCode(): string

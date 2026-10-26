@@ -21,8 +21,8 @@ class ComClientEntete extends Model
         'notes', 'motif_refus', 'validee_par', 'created_by', 'devise', 'taux_change',
         // Coordonnées du client de passage (voir App\Services\ClientsDePassage).
         'passage_nom', 'passage_telephone', 'passage_courriel', 'passage_adresse',
-        // Représentant commercial (voir App\Services\EntetesVente).
-        'representant_id',
+        // Représentant commercial et transporteur (voir App\Services\EntetesVente), numéro de suivi de l'envoi.
+        'representant_id', 'transporteur_id', 'numero_suivi',
     ];
 
     protected $casts = [
@@ -52,6 +52,12 @@ class ComClientEntete extends Model
     public function representant(): BelongsTo
     {
         return $this->belongsTo(Representant::class)->withTrashed();
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public function lignes(): HasMany

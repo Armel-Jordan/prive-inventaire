@@ -30,6 +30,8 @@ class ComFourEntete extends Model
         'created_by',
         // Entrepôt où livrer (« Livrer à ») ; vide : l'adresse de l'entreprise.
         'entrepot_id',
+        // Transporteur ; à la création, celui du fournisseur s'il n'est pas donné (voir booted()).
+        'transporteur_id',
     ];
 
     protected $casts = [
@@ -50,9 +52,28 @@ class ComFourEntete extends Model
 
     const STATUT_ANNULEE = 'annulee';
 
+    /**
+     * Transporteur par défaut (phase 1.11b) : celui du fournisseur, quelle que soit la façon dont la commande est
+     * créée (saisie, reliquats, suggestions). Une valeur donnée, même vide, est gardée.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $commande) {
+            if (! array_key_exists('transporteur_id', $commande->getAttributes()) && $commande->fournisseur_id) {
+                $commande->transporteur_id = Fournisseur::whereKey($commande->fournisseur_id)->value('transporteur_id');
+            }
+        });
+    }
+
     public function fournisseur(): BelongsTo
     {
         return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
+    }
+
+    /** Transporteur (même retiré du référentiel depuis). */
+    public function transporteur(): BelongsTo
+    {
+        return $this->belongsTo(Transporteur::class)->withTrashed();
     }
 
     public function lignes(): HasMany

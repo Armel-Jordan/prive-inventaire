@@ -111,6 +111,8 @@ class VentesComptoir
                 'client_id' => $client->id,
                 'date_facture' => $donnees['date'],
                 'notes' => $donnees['notes'] ?? null,
+                // Vendu au comptoir, emporté : pas de transporteur.
+                'transporteur_id' => null,
                 'lignes' => array_map(fn (array $l) => array_intersect_key($l, array_flip(['produit_id', 'quantite', 'prix_unitaire_ht'])), $lignes),
             ], $tenantId);
             $this->factures->emettre($facture, $auteur);

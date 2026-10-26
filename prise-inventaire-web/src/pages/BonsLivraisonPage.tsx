@@ -6,6 +6,9 @@ import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Eye, Package, CheckCircle, Truck, XCircle, PenLine, Boxes, Search } from 'lucide-react';
 import PadSignature from '@/components/PadSignature';
 import ColisBon from '@/components/livraison/ColisBon';
+import ExpeditionBon from '@/components/livraison/ExpeditionBon';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useLanguage } from '@/i18n/useLanguage';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -48,6 +51,9 @@ export default function BonsLivraisonPage() {
   const [bons, setBons] = useState<BonLivraison[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
+  // Bons d'un transporteur (phase 1.11b) ; filtre masqué sans transporteur actif.
+  const transporteurs = useTransporteurs();
+  const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
   // Recherche par numéro du bon ou de sa facture, ou par client, pré-remplie par « ?recherche= » (recherche globale).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -77,7 +83,7 @@ export default function BonsLivraisonPage() {
   const loadBons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, page });
+      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, page });
       setBons(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -85,7 +91,7 @@ export default function BonsLivraisonPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, page]);
+  }, [filterStatut, recherche, filterTransporteur, page]);
 
   useEffect(() => {
     loadBons();
@@ -266,6 +272,10 @@ export default function BonsLivraisonPage() {
             <option value="livre_complet">Livré complet</option>
             <option value="livre_partiel">Livré partiel</option>
           </select>
+          {transporteursActifs(transporteurs) && (
+            <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
+              libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          )}
         </div>
       </div>
 
@@ -438,6 +448,9 @@ export default function BonsLivraisonPage() {
                   <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>
                 </div>
               </div>
+
+              <ExpeditionBon key={selectedBon.id} bon={selectedBon} modifiable={peut('bons_livraison', 'modifier')}
+                onChange={bon => { setSelectedBon(bon); loadBons(); }} />
 
               {selectedBon.signature_client && (
                 <div className="border-t pt-4 dark:border-gray-700">

@@ -50,6 +50,8 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
+import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { lienSuivi, transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { useEncaissementCaisse } from '@/hooks/useEncaissementCaisse';
 import CaisseDuPoste from '@/components/caisse/CaisseDuPoste';
 import ChampCarteCadeau from '@/components/cartesCadeaux/ChampCarteCadeau';
@@ -79,6 +81,11 @@ export default function FacturesPage() {
   const representants = useRepresentants();
   const [filterRepresentant, setFilterRepresentant] = useState<number | null>(null);
   const [representantId, setRepresentantId] = useState<number | null>(null);
+  // Transporteur (phase 1.11b) : celui du client par défaut ; champs masqués sans transporteur actif.
+  const transporteurs = useTransporteurs();
+  const [filterTransporteur, setFilterTransporteur] = useState<number | null>(null);
+  const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  const [numeroSuivi, setNumeroSuivi] = useState('');
   // Recherche par numéro ou client, pré-remplie par « ?recherche= » (recherche globale, abonnements, autres écrans).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -167,7 +174,7 @@ export default function FacturesPage() {
   const loadFactures = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, page });
+      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, page });
       setFactures(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -175,7 +182,7 @@ export default function FacturesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, page]);
 
   useEffect(() => {
     loadFactures();
@@ -229,6 +236,7 @@ export default function FacturesPage() {
   const choisirClient = (id: string, liste: Client[] = clients) => {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
+    setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
     setCreateForm(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
   };
@@ -240,6 +248,8 @@ export default function FacturesPage() {
     setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
+    setTransporteurId(null);
+    setNumeroSuivi('');
     setCreateLignes([]);
   };
 
@@ -260,6 +270,8 @@ export default function FacturesPage() {
       });
       setPassage(saisiePassage(facture));
       setRepresentantId(facture.representant_id ?? null);
+      setTransporteurId(facture.transporteur_id ?? null);
+      setNumeroSuivi(facture.numero_suivi ?? '');
       setCreateLignes((facture.lignes ?? []).map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
@@ -292,6 +304,8 @@ export default function FacturesPage() {
         // Retenues par l'API pour le client de passage seulement.
         ...passage,
         representant_id: representantId,
+        transporteur_id: transporteurId,
+        numero_suivi: numeroSuivi.trim() || null,
       };
       if (editingId) await updateFacture(editingId, saisie);
       else await createFacture(saisie);
@@ -424,6 +438,10 @@ export default function FacturesPage() {
           </select>
           <ChoixRepresentant value={filterRepresentant} onChange={id => { setFilterRepresentant(id); setPage(1); }} representants={representants}
             libelleVide={t.salesReps.all} ariaLabel={t.salesReps.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          {transporteursActifs(transporteurs) && (
+            <ChoixTransporteur value={filterTransporteur} onChange={id => { setFilterTransporteur(id); setPage(1); }} transporteurs={transporteurs}
+              libelleVide={t.carriers.all} ariaLabel={t.carriers.label} className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+          )}
         </div>
       </div>
 
@@ -592,6 +610,19 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Date échéance:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_echeance)}</p>
                 </div>
+                {selectedFacture.transporteur && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.carriers.label} :</span>
+                    <p className="dark:text-white">
+                      {selectedFacture.transporteur.nom}
+                      {selectedFacture.numero_suivi && <span className="ml-2 text-xs text-gray-500">{t.carriers.tracking} : {selectedFacture.numero_suivi}</span>}
+                      {lienSuivi(selectedFacture.transporteur.url_suivi, selectedFacture.numero_suivi) && (
+                        <a href={lienSuivi(selectedFacture.transporteur.url_suivi, selectedFacture.numero_suivi) ?? undefined} target="_blank" rel="noopener noreferrer"
+                          className="ml-2 text-xs text-blue-600 hover:underline">{t.carriers.track}</a>
+                      )}
+                    </p>
+                  </div>
+                )}
                 {selectedFacture.representant && (
                   <div>
                     <span className="text-sm text-gray-500">{t.salesReps.label} :</span>
@@ -804,6 +835,21 @@ export default function FacturesPage() {
                   <ChoixRepresentant id="facture-representant" value={representantId} onChange={setRepresentantId} representants={representants} />
                   <span className="text-xs text-gray-500">{t.salesReps.documentHint}</span>
                 </div>
+                {(transporteursActifs(transporteurs) || transporteurId !== null) && (
+                  <div>
+                    <label htmlFor="facture-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}</label>
+                    <ChoixTransporteur id="facture-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
+                    <span className="text-xs text-gray-500">{t.carriers.documentHint}</span>
+                  </div>
+                )}
+                {(transporteursActifs(transporteurs) || transporteurId !== null || numeroSuivi !== '') && (
+                  <div>
+                    <label htmlFor="facture-suivi" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.tracking}</label>
+                    <input id="facture-suivi" type="text" maxLength={60} value={numeroSuivi} onChange={e => setNumeroSuivi(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                    <span className="text-xs text-gray-500">{t.carriers.trackingHint}</span>
+                  </div>
+                )}
               </div>
               {clientDePassage && <ChampsClientDePassage valeur={passage} onChange={setPassage} />}
               <div>
