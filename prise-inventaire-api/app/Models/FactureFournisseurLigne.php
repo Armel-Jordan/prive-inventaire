@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** Ligne d'une facture fournisseur, rattachée au besoin à la ligne de réception qu'elle facture. */
 class FactureFournisseurLigne extends Model
 {
+    // tenant_id posé à la création, comme pour la fiche parente (anomalie A14).
+    use BelongsToTenant;
+
     protected $table = 'facture_fournisseur_lignes';
 
     protected $fillable = [
