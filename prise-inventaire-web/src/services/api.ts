@@ -1471,7 +1471,6 @@ export async function getClients(params?: { search?: string; actif?: boolean; ca
   const queryParams = new URLSearchParams();
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
-  if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
   if (params?.search) queryParams.append('search', params.search);
   if (params?.actif !== undefined) queryParams.append('actif', String(params.actif));
   if (params?.categorie_id) queryParams.append('categorie_id', String(params.categorie_id));
