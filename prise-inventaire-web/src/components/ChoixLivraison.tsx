@@ -1,24 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getListeFiche, type AdresseClient, type ContactClient, type LivraisonDocument } from '@/services/api';
 import { useLanguage } from '@/i18n/useLanguage';
-
-/** Contact et « Livrer à » choisis ; non définis : pas encore choisis (les principaux du client sont alors proposés). */
-export interface ValeurLivraison {
-  contact_id?: number | null;
-  adresse_livraison_id?: number | null;
-  /** Document modifié : l'adresse qu'il porte et ses instructions recopiées, montrées tant qu'elle reste choisie. */
-  copie?: { adresse_livraison_id: number | null; instructions_livraison: string | null };
-}
-
-/** Valeur d'un document ouvert en modification : ce qu'il porte, sans rien proposer. */
-export const livraisonDuDocument = (document: LivraisonDocument): ValeurLivraison => ({
-  contact_id: document.contact_id ?? null,
-  adresse_livraison_id: document.adresse_livraison_id ?? null,
-  copie: { adresse_livraison_id: document.adresse_livraison_id ?? null, instructions_livraison: document.instructions_livraison ?? null },
-});
-
-/** Champs envoyés à l'API ; non choisis, ils sont omis et l'API prend les principaux du client. */
-export const saisieLivraison = (valeur: ValeurLivraison) => ({ contact_id: valeur.contact_id, adresse_livraison_id: valeur.adresse_livraison_id });
+import type { ValeurLivraison } from '@/lib/livraison';
 
 interface Props {
   /** Préfixe des identifiants des champs, ex. « devis » : devis-contact, devis-livrer-a. */
