@@ -1,5 +1,6 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -497,6 +498,7 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
+                      <BoutonHistorique entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                       <button
                         onClick={() => {
                           setSelectedCommande(cmd);

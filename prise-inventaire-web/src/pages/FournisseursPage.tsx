@@ -1,4 +1,5 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useEffect, useState } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail, FileUp } from 'lucide-react';
@@ -245,6 +246,7 @@ export default function FournisseursPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" />
+                      <BoutonHistorique entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" />
                       <button
                         onClick={() => openEdit(fournisseur)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-2"

@@ -463,6 +463,21 @@ Socle S4.1 du plan de parité fripv2 (date requise, poids approximatif) :
 Code : `App\Support\PoidsDocuments` (`estime`, `lisible`), migration `2026_11_12_100104_date_requise_documents` ; web :
 composant `PoidsEstime`.
 
+### 2.16 Historique d'une fiche ou d'un document
+
+Socle S4.6 du plan de parité fripv2 (bouton « Historique »). Une horloge, à côté du trombone des pièces jointes, ouvre
+l'historique d'un client, d'un fournisseur, d'un produit, d'un devis, d'une commande, d'une facture, d'un bon de
+livraison ou d'une commande fournisseur : création, modifications et suppression, les plus récentes d'abord, avec
+l'auteur et l'heure ; pour chaque modification, les champs changés (libellé lisible, avant → après, le nom de la fiche
+désignée pour un représentant, un transporteur, une condition de paiement…).
+- **Source** : le journal des modifications (`JournalModifications`), déjà tenu pour ces fiches et documents.
+- **Droits** : voir l'historique (module « Historique ») **et** voir la fiche ou le document ; sinon 403. Le bouton
+  n'apparaît qu'avec le premier droit.
+- **API** : `GET /audit/entite/{entite}/{id}` (`client`, `fournisseur`, `produit`, `devis`, `commande_client`,
+  `facture`, `bon_livraison`, `commande_fournisseur`), 200 entrées au plus.
+
+Code : `AuditLogController::entite` ; web : composant `BoutonHistorique`. Reste de S4.6 : les commentaires.
+
 ---
 
 ## 3. Devis

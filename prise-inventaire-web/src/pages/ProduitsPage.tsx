@@ -1,4 +1,5 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useEffect, useState, useRef } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -486,6 +487,7 @@ export default function ProduitsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
+                      <BoutonHistorique entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
                       {produit.actif !== false && peut('suggestions_achat', 'suggerer') && (
                         <button onClick={() => setASuggerer(produit)} className="p-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded mr-2"
                           title={t.purchaseSuggestions.suggestTitle} aria-label={`${t.purchaseSuggestions.suggestTitle} — ${produit.numero}`}>

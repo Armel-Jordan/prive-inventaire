@@ -3418,6 +3418,19 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Historique d'une fiche ou d'un document (socle S4.6).
+    changeHistory: {
+      button: 'Historique',
+      title: 'Historique des modifications',
+      loading: 'Chargement…',
+      empty: 'Aucune modification enregistrée.',
+      error: "Impossible de charger l'historique.",
+      by: 'par {auteur}',
+      actions: { create: 'Création', update: 'Modification', delete: 'Suppression' } as Record<string, string>,
+      yes: 'Oui',
+      no: 'Non',
+      close: 'Fermer',
+    },
     // Date requise et poids estimé des documents de vente (socle S4.1).
     requiredDate: {
       label: 'Date requise',
@@ -8252,6 +8265,19 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // History of a record or a document (socket S4.6).
+    changeHistory: {
+      button: 'History',
+      title: 'Change history',
+      loading: 'Loading…',
+      empty: 'No change recorded.',
+      error: 'Could not load the history.',
+      by: 'by {auteur}',
+      actions: { create: 'Created', update: 'Changed', delete: 'Deleted' } as Record<string, string>,
+      yes: 'Yes',
+      no: 'No',
+      close: 'Close',
     },
     // Required date and estimated weight of sales documents (socket S4.1).
     requiredDate: {

@@ -1,5 +1,6 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -519,6 +520,7 @@ export default function FacturesPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="facture" entiteId={facture.id} titre={facture.numero} />
+                      <BoutonHistorique entite="facture" entiteId={facture.id} titre={facture.numero} />
                       <button
                         onClick={() => handleVoirDetail(facture.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"
