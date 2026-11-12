@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Listes des documents : filtre par produit (devis, commandes, factures, bons de livraison), statut de livraison calculé et son filtre (commandes, factures), âge des factures dues et jours de retard.",
+    en: 'Document lists: filter by product (quotes, orders, invoices, delivery notes), computed delivery status and its filter (orders, invoices), age of invoices due and days overdue.',
+    lien: '/factures',
+  },
+  {
+    date: '2026-11-12',
     fr: "Copier vers : depuis le détail d'un devis, d'une commande ou d'une facture, « Copier vers » ouvre un nouveau devis, une nouvelle commande ou une nouvelle facture prérempli (client, en-tête, lignes et prix), enregistré seulement à « Créer ».",
     en: 'Copy to: from the details of a quote, order or invoice, “Copy to” opens a new quote, order or invoice pre-filled (customer, header, lines and prices), saved only on “Create”.',
     lien: '/factures',

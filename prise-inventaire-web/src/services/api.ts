@@ -1362,6 +1362,8 @@ export interface RecapitulatifTaxe {
 }
 
 export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Statut de livraison calculé dans les listes (socle S4.7). */
+  statut_livraison?: string | null;
   /** Poids estimé des produits (socle S4.1). */
   poids_estime_kg?: number | null;
   /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la facture. */
@@ -1405,6 +1407,9 @@ export interface ComClientLigne {
 }
 
 export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Statut de livraison et jours de retard d'une facture due, calculés dans les listes (socle S4.7). */
+  statut_livraison?: string | null;
+  jours_retard?: number | null;
   /** Date requise par le client et poids estimé des produits (socle S4.1). */
   date_requise?: string | null;
   poids_estime_kg?: number | null;
@@ -1786,9 +1791,11 @@ export async function supprimerCategorieClient(id: number): Promise<void> {
 }
 
 // Commandes Clients API
-export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number }): Promise<PageResultats<ComClientEntete>> {
+export async function getCommandesClient(params?: { statut?: string; client_id?: number; recherche?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; produit_id?: number; statut_livraison?: string; page?: number }): Promise<PageResultats<ComClientEntete>> {
   const queryParams = new URLSearchParams();
   if (params?.prioritaire) queryParams.append('prioritaire', '1');
+  if (params?.produit_id) queryParams.append('produit_id', String(params.produit_id));
+  if (params?.statut_livraison) queryParams.append('statut_livraison', params.statut_livraison);
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -1843,9 +1850,12 @@ export async function deleteCommandeClient(id: number): Promise<void> {
 }
 
 // Factures API
-export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
+export async function getFactures(params?: { statut?: string; statuts?: string; recherche?: string; client_id?: number; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; produit_id?: number; statut_livraison?: string; age?: string; date_debut?: string; date_fin?: string; page?: number; per_page?: number }): Promise<PageResultats<Facture>> {
   const queryParams = new URLSearchParams();
   if (params?.prioritaire) queryParams.append('prioritaire', '1');
+  if (params?.produit_id) queryParams.append('produit_id', String(params.produit_id));
+  if (params?.statut_livraison) queryParams.append('statut_livraison', params.statut_livraison);
+  if (params?.age) queryParams.append('age', params.age);
   if (params?.representant_id) queryParams.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -1940,9 +1950,10 @@ export async function deleteFacture(id: number): Promise<void> {
 }
 
 // Bons de Livraison API
-export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
+export async function getBonsLivraison(params?: { statut?: string; recherche?: string; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; produit_id?: number; page?: number; per_page?: number; sans_tournee?: boolean }): Promise<PageResultats<BonLivraison>> {
   const queryParams = new URLSearchParams();
   if (params?.prioritaire) queryParams.append('prioritaire', '1');
+  if (params?.produit_id) queryParams.append('produit_id', String(params.produit_id));
   if (params?.statut) queryParams.append('statut', params.statut);
   if (params?.transporteur_id) queryParams.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) queryParams.append('statut_personnalise_id', String(params.statut_personnalise_id));
@@ -2802,9 +2813,10 @@ export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, Livr
   derniere_relance_le?: string | null;
 }
 
-export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; page?: number }): Promise<PageResultats<DevisRecord>> {
+export async function getDevis(params?: { statut?: string; search?: string; representant_id?: number; transporteur_id?: number; statut_personnalise_id?: number; prioritaire?: boolean; produit_id?: number; page?: number }): Promise<PageResultats<DevisRecord>> {
   const qs = new URLSearchParams();
   if (params?.prioritaire) qs.append('prioritaire', '1');
+  if (params?.produit_id) qs.append('produit_id', String(params.produit_id));
   if (params?.representant_id) qs.append('representant_id', String(params.representant_id));
   if (params?.transporteur_id) qs.append('transporteur_id', String(params.transporteur_id));
   if (params?.statut_personnalise_id) qs.append('statut_personnalise_id', String(params.statut_personnalise_id));

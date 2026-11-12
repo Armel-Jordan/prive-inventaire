@@ -1,6 +1,7 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
+import { FiltreAgeFacture, FiltreProduit, FiltreStatutLivraison, PastilleLivraison, type AgeFacture, type StatutLivraison } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
@@ -105,6 +106,10 @@ export default function FacturesPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
+  // Filtres des statuts calculés et du produit (socle S4.7).
+  const [filtreProduit, setFiltreProduit] = useState<number | null>(null);
+  const [filtreLivraison, setFiltreLivraison] = useState<StatutLivraison | ''>('');
+  const [filtreAge, setFiltreAge] = useState<AgeFacture | ''>('');
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
   const groupesTaxes = useGroupesTaxes();
@@ -206,7 +211,7 @@ export default function FacturesPage() {
   const loadFactures = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page });
+      const response = await getFactures({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, statut_livraison: filtreLivraison || undefined, age: filtreAge || undefined, page });
       setFactures(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -214,7 +219,7 @@ export default function FacturesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, filtreProduit, filtreLivraison, filtreAge, page]);
 
   useEffect(() => {
     loadFactures();
@@ -502,7 +507,10 @@ export default function FacturesPage() {
           <FiltreStatutPersonnalise document="facture" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
-          <BoutonExportExcel chemin="/factures" fichier="factures" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined }} />
+          <FiltreProduit value={filtreProduit} onChange={id => { setFiltreProduit(id); setPage(1); }} />
+          <FiltreStatutLivraison value={filtreLivraison} onChange={s => { setFiltreLivraison(s); setPage(1); }} />
+          <FiltreAgeFacture value={filtreAge} onChange={a => { setFiltreAge(a); setPage(1); }} />
+          <BoutonExportExcel chemin="/factures" fichier="factures" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, statut_livraison: filtreLivraison || undefined, age: filtreAge || undefined }} />
         </div>
       </div>
 
@@ -546,6 +554,8 @@ export default function FacturesPage() {
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(facture.statut)}
                     {facture.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={facture.statut_personnalise} /></span>}
+                    <PastilleLivraison statut={facture.statut_livraison} />
+                    {(facture.jours_retard ?? 0) > 0 && <span className="block mt-1 text-xs text-red-600 dark:text-red-400">{t.listStatus.late.replace('{n}', String(facture.jours_retard))}</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">

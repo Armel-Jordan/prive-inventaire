@@ -27,6 +27,7 @@ use App\Support\DateDuJour;
 use App\Support\ExportListe;
 use App\Support\NumeroCommandeClient;
 use App\Support\PoidsDocuments;
+use App\Support\StatutsListes;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,9 @@ class FactureController extends Controller
     {
         $tenantId = auth()->user()->tenant_id;
         // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
-        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
+        $query = Facture::with(['client', 'commande', 'bonLivraison:id,facture_id,numero,statut', 'representant:id,nom', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])
+            // Statut de livraison calculé (socle S4.7) : y a-t-il des produits à livrer ?
+            ->withExists(StatutsListes::aLivrer())->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -80,6 +83,11 @@ class FactureController extends Controller
         if ($request->boolean('prioritaire')) {
             $query->where('prioritaire', true);
         }
+        // Documents qui contiennent ce produit (socle S4.7).
+        StatutsListes::filtrerProduit($query, $request);
+        StatutsListes::filtrerLivraison($query, $request->query('statut_livraison'), 'bonLivraison');
+        // Âge des factures dues : courantes, échues depuis 1 à 30, 31 à 60, 61 à 90 ou plus de 90 jours.
+        StatutsListes::filtrerAge($query, $request->query('age'));
         if ($request->has('date_debut')) {
             $query->whereDate('date_facture', '>=', $request->date_debut);
         }
@@ -109,6 +117,8 @@ class FactureController extends Controller
             ]);
         }
         $factures = $query->paginate($request->get('per_page', 20));
+        $factures->getCollection()->each(fn (Facture $f) => $f->setAttribute('statut_livraison', StatutsListes::livraison($f->bonLivraison, (bool) $f->a_livrer))
+            ->setAttribute('jours_retard', StatutsListes::joursRetard((string) $f->statut, $f->date_echeance)));
 
         return response()->json($factures);
     }

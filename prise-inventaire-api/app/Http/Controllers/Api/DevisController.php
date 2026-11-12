@@ -24,6 +24,7 @@ use App\Support\DateDuJour;
 use App\Support\Droits;
 use App\Support\ExportListe;
 use App\Support\PoidsDocuments;
+use App\Support\StatutsListes;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,8 @@ class DevisController extends Controller
         if ($request->boolean('prioritaire')) {
             $query->where('prioritaire', true);
         }
+        // Documents qui contiennent ce produit (socle S4.7).
+        StatutsListes::filtrerProduit($query, $request);
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;

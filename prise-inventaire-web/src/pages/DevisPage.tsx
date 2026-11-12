@@ -4,6 +4,7 @@ import MenuCopierVers from '@/components/MenuCopierVers';
 import { preparerCopie, type DocumentCopiable } from '@/services/api';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
+import { FiltreProduit } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
@@ -83,6 +84,8 @@ export default function DevisPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
+  // Filtres des statuts calculés et du produit (socle S4.7).
+  const [filtreProduit, setFiltreProduit] = useState<number | null>(null);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
   const groupesTaxes = useGroupesTaxes();
@@ -152,7 +155,7 @@ export default function DevisPage() {
     try {
       setLoading(true);
       const [devisRes, clientsRes, produitsRes, config] = await Promise.all([
-        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page }),
+        getDevis({ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, page }),
         getClientsActifs(),
         getProduits(),
         getConfiguration('devis').catch(() => null),
@@ -167,7 +170,7 @@ export default function DevisPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, filtreProduit, page]);
 
   useEffect(() => {
     loadData();
@@ -462,7 +465,8 @@ export default function DevisPage() {
           <FiltreStatutPersonnalise document="devis" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg" />
           <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
-          <BoutonExportExcel chemin="/devis" fichier="devis" parametres={{ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined }} />
+          <FiltreProduit value={filtreProduit} onChange={id => { setFiltreProduit(id); setPage(1); }} />
+          <BoutonExportExcel chemin="/devis" fichier="devis" parametres={{ statut: filterStatut || undefined, search: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined }} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
