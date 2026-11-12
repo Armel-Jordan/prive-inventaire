@@ -6,6 +6,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreProduit } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import ChoixNoteBasPage from '@/components/ChoixNoteBasPage';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback, useEffectEvent } from 'react';
@@ -714,6 +715,8 @@ export default function DevisPage() {
                 <div><span className="text-gray-500">Statut:</span><p className="mt-1">{getStatutBadge(selectedDevis.statut)}</p></div>
                 <ChoixStatutPersonnalise document="devis" documentId={selectedDevis.id} statut={selectedDevis.statut_personnalise} modifiable={peut('devis', 'modifier')}
                   onChange={statut => { setSelectedDevis(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
+                <ChoixNoteBasPage document="devis" documentId={selectedDevis.id} valeur={selectedDevis.note_bas_page_id} fige={!!selectedDevis.identite_figee}
+                  modifiable={peut('devis', 'modifier')} onChange={id => setSelectedDevis(d => (d ? { ...d, note_bas_page_id: id } : d))} />
                 <div><span className="text-gray-500">Date:</span><p>{fmtDate(selectedDevis.date_devis)}</p></div>
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
                 {selectedDevis.date_requise && <div><span className="text-gray-500">{t.requiredDate.label} :</span><p>{fmtDate(selectedDevis.date_requise)}</p></div>}

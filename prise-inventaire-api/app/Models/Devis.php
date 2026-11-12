@@ -52,6 +52,8 @@ class Devis extends Model
     protected $hidden = ['reponse_jeton', 'reponse_jeton_hash'];
 
     protected $casts = [
+        // Note de bas de page choisie (socle S4.4) : vide, celle par défaut ; 0, aucune.
+        'note_bas_page_id' => 'integer',
         // Identité figée à la sortie du brouillon (socle S4.5), voir App\Services\IdentitesFigees.
         'identite_figee' => 'array',
         'prioritaire' => 'boolean',

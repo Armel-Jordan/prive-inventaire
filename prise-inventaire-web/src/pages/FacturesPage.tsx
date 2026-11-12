@@ -3,6 +3,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreAgeFacture, FiltreProduit, FiltreStatutLivraison, PastilleLivraison, type AgeFacture, type StatutLivraison } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import ChoixNoteBasPage from '@/components/ChoixNoteBasPage';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback, useEffectEvent } from 'react';
@@ -682,6 +683,8 @@ export default function FacturesPage() {
                 </div>
                 <ChoixStatutPersonnalise document="facture" documentId={selectedFacture.id} statut={selectedFacture.statut_personnalise} modifiable={peut('factures', 'modifier')}
                   onChange={statut => { setSelectedFacture(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadFactures(); }} />
+                <ChoixNoteBasPage document="facture" documentId={selectedFacture.id} valeur={selectedFacture.note_bas_page_id} fige={!!selectedFacture.identite_figee}
+                  modifiable={peut('factures', 'modifier')} onChange={id => setSelectedFacture(d => (d ? { ...d, note_bas_page_id: id } : d))} />
                 <div>
                   <span className="text-sm text-gray-500">Date facture:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_facture)}</p>

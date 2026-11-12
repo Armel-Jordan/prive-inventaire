@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Pencil, Trash2, History, X, Search,
   Ruler, ArrowLeftRight, FolderTree, Factory, Wallet, CalendarClock, Landmark, Coins,
-  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags, KeyRound, Store,
+  Warehouse, MapIcon, Route, UserRound, Truck, ListChecks, Tags, KeyRound, Store, StickyNote,
 } from 'lucide-react';
 import {
   getReferentiel, createReferentiel, updateReferentiel, deleteReferentiel, getHistoriqueDevise,
@@ -44,6 +44,8 @@ interface Champ {
   max?: number;
   pas?: string;
   defaut?: string | number | boolean;
+  /** Liste facultative : libellé (clé des traductions du référentiel) du choix vide, proposé en premier. */
+  vide?: 'none' | 'allLanguages';
 }
 
 type GroupeReferentiel = 'produits' | 'paiement' | 'logistique' | 'commercial' | 'suivi';
@@ -243,6 +245,17 @@ const ONGLETS: Onglet[] = [
       { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
     ],
   },
+  {
+    // Notes de bas de page des documents de vente (socle S4.4), par type de document et par langue.
+    type: 'notes_bas_page', groupe: 'commercial', icone: StickyNote, champs: [
+      { cle: 'nom', type: 'texte', requis: true, colonne: true, longueurMax: 100 },
+      { cle: 'document', type: 'liste', options: ['devis', 'commande_client', 'facture', 'bon_livraison'], requis: true, colonne: true, defaut: 'facture' },
+      { cle: 'langue', type: 'liste', options: ['fr', 'en'], colonne: true, vide: 'allLanguages' },
+      { cle: 'contenu', type: 'zone', requis: true },
+      { cle: 'par_defaut', type: 'booleen', colonne: true, defaut: false },
+      { cle: 'actif', type: 'booleen', colonne: true, defaut: true },
+    ],
+  },
 ];
 
 type Valeurs = Record<string, string | boolean>;
@@ -428,6 +441,7 @@ export default function ReferentielsPage() {
     if (champ.type === 'liste') {
       saisie = (
         <select value={String(valeur)} onChange={e => modifierValeur(champ, e.target.value)} className={classeChamp} required={champ.requis}>
+          {champ.vide && <option value="">{tr[champ.vide]}</option>}
           {champ.options?.map(o => <option key={o} value={o}>{libelleOption(o)}</option>)}
         </select>
       );

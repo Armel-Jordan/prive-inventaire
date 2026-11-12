@@ -1,4 +1,7 @@
 {
+    "Cette note de bas de page ne convient pas à ce document.": "This footer note does not fit this document.",
+    "La note de ce document est figée depuis son envoi ou son émission.": "This document's note is frozen since it was sent or issued.",
+    "Cette note de bas de page est retenue par des documents : désactivez-la plutôt.": "This footer note is used by documents: deactivate it instead.",
     "Seul son auteur peut retirer ce commentaire.": "Only its author can remove this comment.",
     "Commentaire retiré.": "Comment removed.",
     ":cloturees ligne(s) clôturée(s).": ":cloturees line(s) closed.",

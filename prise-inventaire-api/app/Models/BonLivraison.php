@@ -36,6 +36,8 @@ class BonLivraison extends Model
     ];
 
     protected $casts = [
+        // Note de bas de page choisie (socle S4.4) : vide, celle par défaut ; 0, aucune.
+        'note_bas_page_id' => 'integer',
         'prioritaire' => 'boolean',
         'date_preparation' => 'datetime',
         'date_pret' => 'datetime',

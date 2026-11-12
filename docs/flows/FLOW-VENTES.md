@@ -549,6 +549,22 @@ Socle S4.7 du plan de parité fripv2 (en partie) :
 Code : `App\Support\StatutsListes` ; web : `components/FiltresStatutsListes`. Reste de S4.7 : statut de facturation,
 aperçu des lignes dans la liste, page unifiée.
 
+### 2.21 Notes de bas de page
+
+Socle S4.4 du plan de parité fripv2.
+- **Référentiel** « Notes de bas de page » (Paramètres → Référentiels, droit de configurer) : nom, type de document
+  (devis, commande, facture, bon de livraison), langue (français, anglais ou toutes), texte, par défaut, actif.
+- **Document** : celle par défaut de son type (en français, sinon pour toutes les langues), une autre choisie dans son
+  détail, ou « Aucune » (`PUT /{documents}/{id}/note-bas-page`, `note_bas_page_id` vide, 0 ou l'identifiant ; droit de
+  modifier le document).
+- **Figée** avec l'identité du document à son envoi ou à son émission (socle S4.5) : une réimpression ressort le même
+  texte, même modifié ou retiré depuis ; le choix ne se change plus.
+- **PDF** : le texte en fin de document, au-dessus du pied de page.
+- Une note retenue par un document ne se supprime pas (on la désactive).
+
+Code : `App\Services\NotesBasPage`, `NoteBasPageDocumentController`, migration `2026_11_12_100107_notes_bas_page` ; web :
+composant `ChoixNoteBasPage`. Pas encore : le choix dans la fenêtre du courriel, la langue du client.
+
 ---
 
 ## 3. Devis

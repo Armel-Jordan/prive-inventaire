@@ -3,6 +3,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreProduit, FiltreStatutLivraison, PastilleLivraison, type StatutLivraison } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import ChoixNoteBasPage from '@/components/ChoixNoteBasPage';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback, useEffectEvent } from 'react';
@@ -852,6 +853,8 @@ export default function CommandesClientPage() {
                 </div>
                 <ChoixStatutPersonnalise document="commande_client" documentId={selectedCommande.id} statut={selectedCommande.statut_personnalise} modifiable={peut('commandes_client', 'modifier')}
                   onChange={statut => { setSelectedCommande(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
+                <ChoixNoteBasPage document="commande_client" documentId={selectedCommande.id} valeur={selectedCommande.note_bas_page_id} fige={!!selectedCommande.identite_figee}
+                  modifiable={peut('commandes_client', 'modifier')} onChange={id => setSelectedCommande(d => (d ? { ...d, note_bas_page_id: id } : d))} />
                 <div>
                   <span className="text-sm text-gray-500">Date commande:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_commande)}</p>

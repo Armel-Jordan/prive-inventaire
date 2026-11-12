@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Notes de bas de page : des textes par type de document et par langue (Paramètres → Référentiels), imprimés en fin de devis, commande, facture ou bon de livraison ; celle par défaut s'applique, une autre se choisit dans le détail, et le texte se fige à l'envoi ou à l'émission.",
+    en: 'Footer notes: texts per document type and language (Settings → Reference data), printed at the end of quotes, orders, invoices or delivery notes; the default one applies, another can be chosen in the details, and the text is frozen when sent or issued.',
+    lien: '/referentiels',
+  },
+  {
+    date: '2026-11-12',
     fr: "Listes des documents : filtre par produit (devis, commandes, factures, bons de livraison), statut de livraison calculé et son filtre (commandes, factures), âge des factures dues et jours de retard.",
     en: 'Document lists: filter by product (quotes, orders, invoices, delivery notes), computed delivery status and its filter (orders, invoices), age of invoices due and days overdue.',
     lien: '/factures',
