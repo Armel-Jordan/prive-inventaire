@@ -2,6 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -60,6 +62,8 @@ export default function DevisPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [devisList, setDevisList] = useState<DevisRecord[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('devis', devisList.map(d => d.id));
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -481,6 +485,7 @@ export default function DevisPage() {
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
                       <BoutonHistorique entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} />
+                      <BoutonCommentaires entite="devis" entiteId={devis.id} titre={devis.numero} taille={16} compteur={compteursCommentaires.compteurs[devis.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button onClick={() => { setSelectedDevis(devis); setShowDetailModal(true); }} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Voir"><Eye size={16} /></button>
                       <BoutonPdf chemin={`/devis/${devis.id}/pdf`} nomFichier={`devis-${devis.numero}.pdf`} taille={16} />
                       <BoutonCourriel type="devis" documentId={devis.id} taille={16} />

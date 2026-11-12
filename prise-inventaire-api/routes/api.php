@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\ClientFicheRemarqueController;
 use App\Http\Controllers\Api\ColisLivraisonController;
 use App\Http\Controllers\Api\CommandeClientController;
 use App\Http\Controllers\Api\CommandeFournisseurController;
+use App\Http\Controllers\Api\CommentaireController;
 use App\Http\Controllers\Api\CompteClientController;
 use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
@@ -382,6 +383,14 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::get('/{id}/fichier', [PieceJointeController::class, 'fichier'])->whereNumber('id');
         Route::put('/{id}', [PieceJointeController::class, 'update'])->whereNumber('id');
         Route::delete('/{id}', [PieceJointeController::class, 'destroy'])->whereNumber('id');
+    });
+
+    // Commentaires des fiches et des documents (socle S4.6) : droits contrôlés par le contrôleur (voir la fiche).
+    Route::prefix('commentaires')->group(function () {
+        Route::get('/', [CommentaireController::class, 'index']);
+        Route::get('/compteurs', [CommentaireController::class, 'compteurs']);
+        Route::post('/', [CommentaireController::class, 'store'])->middleware('throttle:60,1,commentaires-ajout');
+        Route::delete('/{id}', [CommentaireController::class, 'destroy'])->whereNumber('id');
     });
 
     // Transferts planifiés

@@ -1,4 +1,6 @@
 {
+    "Seul son auteur peut retirer ce commentaire.": "Only its author can remove this comment.",
+    "Commentaire retiré.": "Comment removed.",
     ":cloturees ligne(s) clôturée(s).": ":cloturees line(s) closed.",
     ":document : son mouvement est pointé dans le rapprochement bancaire du :date ; retirez-le d'abord du rapprochement.": ":document: its movement is ticked in the bank reconciliation of :date; remove it from the reconciliation first.",
     ":ignorees montant(s) hors des dates de l'exercice ignoré(s).": ":ignorees amount(s) outside the fiscal year dates ignored.",

@@ -476,7 +476,20 @@ désignée pour un représentant, un transporteur, une condition de paiement…)
 - **API** : `GET /audit/entite/{entite}/{id}` (`client`, `fournisseur`, `produit`, `devis`, `commande_client`,
   `facture`, `bon_livraison`, `commande_fournisseur`), 200 entrées au plus.
 
-Code : `AuditLogController::entite` ; web : composant `BoutonHistorique`. Reste de S4.6 : les commentaires.
+Code : `AuditLogController::entite` ; web : composant `BoutonHistorique`.
+
+**Commentaires** (même socle) : une bulle, à côté de l'horloge, ouvre les commentaires de la fiche ou du document.
+- Messages signés et datés, du plus ancien au plus récent ; chacun ne retire que les siens.
+- **Non-lus** par compte : la pastille de la bulle donne les non-lus (en violet), sinon le nombre de commentaires ;
+  ouvrir les commentaires les marque lus. Ses propres messages ne sont jamais « non lus ».
+- **Droits** : le droit de **voir** la fiche ou le document (module actif) suffit pour lire et écrire ; rien d'une
+  autre entreprise. Fiches : celles des pièces jointes (clients, fournisseurs, produits, documents de vente et
+  d'achat, encaissements, déboursés…), les écrans en montrent huit.
+- **API** : `GET /commentaires?entite=&entite_id=`, `POST /commentaires` (`entite`, `entite_id`, `texte` ≤ 2 000),
+  `DELETE /commentaires/{id}`, `GET /commentaires/compteurs?entite=&ids=1,2,3` (200 fiches au plus).
+
+Code : `CommentaireController`, tables `commentaires` et `commentaire_lectures` (migration
+`2026_11_12_100105_commentaires`) ; web : composant `BoutonCommentaires`, hook `useCompteursCommentaires`.
 
 ### 2.17 Export Excel des listes
 

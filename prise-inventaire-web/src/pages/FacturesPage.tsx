@@ -2,6 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -85,6 +87,8 @@ export default function FacturesPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [factures, setFactures] = useState<Facture[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('facture', factures.map(f => f.id));
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
   // Représentants commerciaux (phase 1.11a) : filtre de la liste, et celui de la facture (par défaut, celui du client).
@@ -523,6 +527,7 @@ export default function FacturesPage() {
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="facture" entiteId={facture.id} titre={facture.numero} />
                       <BoutonHistorique entite="facture" entiteId={facture.id} titre={facture.numero} />
+                      <BoutonCommentaires entite="facture" entiteId={facture.id} titre={facture.numero} compteur={compteursCommentaires.compteurs[facture.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => handleVoirDetail(facture.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"

@@ -2,6 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -77,6 +79,8 @@ export default function CommandesClientPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [commandes, setCommandes] = useState<ComClientEntete[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('commande_client', commandes.map(c => c.id));
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -501,6 +505,7 @@ export default function CommandesClientPage() {
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
                       <BoutonHistorique entite="commande_client" entiteId={cmd.id} titre={cmd.numero} />
+                      <BoutonCommentaires entite="commande_client" entiteId={cmd.id} titre={cmd.numero} compteur={compteursCommentaires.compteurs[cmd.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => {
                           setSelectedCommande(cmd);
