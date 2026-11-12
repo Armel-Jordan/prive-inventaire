@@ -205,6 +205,17 @@ export default function ConfigurationPage() {
     finally { setSaving(false); }
   };
 
+  // Expiration des devis (DE3) : réglage de l'entreprise, enregistré tout de suite.
+  const changerReglageDevis = async (reglage: Pick<TenantParametres, 'devis_expiration_bloquante' | 'devis_validite_jours'>) => {
+    setSaving(true);
+    try {
+      await updateParametres({ ...parametres, ...reglage });
+      setParametres(p => ({ ...p, ...reglage }));
+      showSuccess(t.invoiceNumbering.saved);
+    } catch { alert('Erreur lors de la sauvegarde'); }
+    finally { setSaving(false); }
+  };
+
   const handleAddTaxe = async () => {
     if (!newTaxe.nom || newTaxe.taux < 0) return;
     try {
@@ -336,6 +347,28 @@ export default function ConfigurationPage() {
                     </div>
                   </label>
                 </div>
+                {activeEntity === 'devis' && (
+                  <>
+                    <div className="md:col-span-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" checked={parametres.devis_expiration_bloquante ?? true} disabled={saving}
+                          onChange={(e) => changerReglageDevis({ devis_expiration_bloquante: e.target.checked })} className="w-5 h-5 rounded" />
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">{t.quoteExpiry.blocking}</span>
+                          <p className="text-xs text-gray-500">{t.quoteExpiry.blockingHelp}</p>
+                        </div>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="devis-validite">{t.quoteExpiry.validityDays}</label>
+                      <input id="devis-validite" type="number" min={1} max={365} defaultValue={parametres.devis_validite_jours ?? 30} disabled={saving}
+                        key={parametres.devis_validite_jours ?? 30}
+                        onBlur={(e) => { const jours = parseInt(e.target.value); if (jours >= 1 && jours <= 365 && jours !== (parametres.devis_validite_jours ?? 30)) void changerReglageDevis({ devis_validite_jours: jours }); }}
+                        className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                      <p className="text-xs text-gray-500 mt-1">{t.quoteExpiry.validityDaysHelp}</p>
+                    </div>
+                  </>
+                )}
                 {activeEntity === 'facture' && (
                   <div className="md:col-span-2">
                     <label className="flex items-center gap-3 cursor-pointer">

@@ -22,6 +22,8 @@ class TenantParametresController extends Controller
                 'delai_paiement_jours' => 30,
                 'delai_livraison_jours' => 7,
                 'stock_seuil_defaut' => 5,
+                'devis_expiration_bloquante' => true,
+                'devis_validite_jours' => 30,
             ]
         );
 
@@ -49,6 +51,9 @@ class TenantParametresController extends Controller
             'md_declaration' => 'nullable|string|max:2000',
             'numero_facture_a_l_emission' => 'sometimes|boolean',
             'transporteur_obligatoire' => 'sometimes|boolean',
+            // Devis (DE3) : expiration bloquante ou simple repère ; durée de validité proposée (jours).
+            'devis_expiration_bloquante' => 'sometimes|boolean',
+            'devis_validite_jours' => 'sometimes|integer|min:1|max:365',
         ]);
 
         $tenantId = $request->attributes->get('tenant')->id;

@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Expiration des devis au choix (Configuration → Numérotation → Devis) : bloquante comme avant, ou simple repère « Validité dépassée » (le devis s'accepte toujours, en ligne aussi) ; et la durée de validité proposée pour un nouveau devis.",
+    en: 'Quote expiry as you choose (Configuration → Numbering → Quotes): blocking as before, or just a “Validity passed” mark (the quote can still be accepted, online too); and the validity period proposed for a new quote.',
+    lien: '/configuration',
+  },
+  {
+    date: '2026-11-12',
     fr: "Devis envoyé modifiable : un devis envoyé se modifie jusqu'à la réponse du client (bouton « Modifier »), sans changer de client ; une réponse arrivée pendant la saisie fait refuser l'enregistrement.",
     en: 'Sent quotes can be changed: a sent quote can be changed until the customer answers ("Edit" button), without changing the customer; an answer received while editing makes the save refused.',
     lien: '/devis',

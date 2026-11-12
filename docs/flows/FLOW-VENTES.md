@@ -677,6 +677,8 @@ Quand on convertit un devis accepté :
 ### 3.6 Points d'attention
 
 - **Expiration.** Un devis envoyé dont la date de validité est passée devient `expire` au chargement de la liste, et on ne peut plus l'accepter (422 avec la date d'expiration).
+  - **Au choix** (DE3, réglage `devis_expiration_bloquante` de l'entreprise, Configuration → Numérotation → Devis, coché par défaut) : décoché, l'expiration n'est qu'un repère. Le devis reste envoyé, la liste affiche « Validité dépassée », il s'accepte ou se refuse toujours, en ligne aussi (la page avertit).
+  - **Validité proposée** (`devis_validite_jours`, 30 par défaut) : la date de validité préremplie d'un nouveau devis ou d'une copie.
 - Les prix dans le devis sont libres — ils ne sont pas forcément les mêmes que les prix catalogues.
 
 ### 3.7 Réponse en ligne du client
@@ -697,7 +699,7 @@ Plan de parité fripv2, phase 1.3 : comme dans fripv2, le courriel du devis port
 **La page du client :**
 - entreprise, numéro, dates, client (nom noté pour un client de passage), lignes, total hors taxes, taxes et total TTC (§2.22), notes, téléchargement du PDF ;
 - **Accepter** : nom obligatoire, commentaire facultatif ; **Refuser** : nom et raison facultatifs ;
-- un devis déjà décidé affiche sa réponse ; un devis expiré le dit, et une réponse tardive le fait passer à `expire`.
+- un devis déjà décidé affiche sa réponse ; un devis expiré le dit, et une réponse tardive le fait passer à `expire` (sauf expiration non bloquante : la page avertit « Validité dépassée » et la réponse est acceptée).
 
 **Au back-office :**
 - la liste marque « en ligne » sous le statut ; le détail montre la date d'envoi, la réponse (en ligne ou notée à la main), le nom et le commentaire du client ;

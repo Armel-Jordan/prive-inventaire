@@ -2442,6 +2442,9 @@ export interface TenantParametres {
   numero_facture_a_l_emission?: boolean;
   /** Transporteur exigé sur les devis, commandes, factures et commandes fournisseur saisis (s'il y en a un d'actif). */
   transporteur_obligatoire?: boolean;
+  /** Devis (DE3) : l'expiration bloque-t-elle la réponse ? Durée de validité proposée pour un nouveau devis (jours). */
+  devis_expiration_bloquante?: boolean;
+  devis_validite_jours?: number;
 }
 
 export interface TenantTaxe {

@@ -21,6 +21,8 @@ interface PageDevis {
     statut: StatutDevis;
     devise: string | null;
     montant_total: number;
+    /** Validité passée sans bloquer la réponse (réglage de l'entreprise) : un simple avertissement. */
+    validite_depassee?: boolean;
     /** Taxes et total TTC ; null pour un devis établi hors taxes. */
     montant_tva?: number | null;
     montant_ttc?: number | null;
@@ -155,7 +157,7 @@ export default function ReponseDevis() {
 
         <dl className="px-5 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           <div><dt className="text-gray-500">{tq.date}</dt><dd className="font-medium text-gray-900">{jour(devis.date_devis, language)}</dd></div>
-          <div><dt className="text-gray-500">{tq.validUntil}</dt><dd className="font-medium text-gray-900">{jour(devis.date_validite, language)}</dd></div>
+          <div><dt className="text-gray-500">{tq.validUntil}</dt><dd className="font-medium text-gray-900">{jour(devis.date_validite, language)}{devis.validite_depassee && <span className="block text-xs font-normal text-amber-700">{tq.pastValidity}</span>}</dd></div>
           {devis.client && <div className="col-span-2 sm:col-span-1"><dt className="text-gray-500">{tq.customer}</dt><dd className="font-medium text-gray-900 break-words">{devis.client}</dd></div>}
         </dl>
 

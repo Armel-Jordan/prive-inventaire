@@ -2,7 +2,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useSearchParams } from 'react-router-dom';
 import MenuCopierVers from '@/components/MenuCopierVers';
 import LiensCopies from '@/components/LiensCopies';
-import { origineCopie, preparerCopie, type DocumentCopiable, type OrigineCopie } from '@/services/api';
+import { getParametres, origineCopie, preparerCopie, type DocumentCopiable, type OrigineCopie } from '@/services/api';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreProduit } from '@/components/FiltresStatutsListes';
@@ -105,6 +105,14 @@ export default function DevisPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDevis, setSelectedDevis] = useState<DevisRecord | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Durée de validité proposée pour un nouveau devis (réglage de l'entreprise, DE3).
+  const [validiteJours, setValiditeJours] = useState(30);
+  useEffect(() => {
+    let actif = true;
+    getParametres().then(p => { if (actif) setValiditeJours(p.devis_validite_jours ?? 30); }, () => undefined);
+    return () => { actif = false; };
+  }, []);
+  const dansJours = (jours: number) => new Date(Date.now() + jours * 86400000).toISOString().slice(0, 10);
   // Document d'origine d'une copie (« Copier vers ») : noté à la création (« Copié de »).
   const [copieDe, setCopieDe] = useState<OrigineCopie | null>(null);
   // Statut du devis modifié : envoyé, il garde son client (DE2).
@@ -315,7 +323,7 @@ export default function DevisPage() {
     setFormData({
       client_id: String(devis.client_id),
       date_devis: copie ? aujourdhui() : dateSaisie(devis.date_devis),
-      date_validite: copie ? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) : dateSaisie(devis.date_validite),
+      date_validite: copie ? dansJours(validiteJours) : dateSaisie(devis.date_validite),
       notes: devis.notes || '',
       devise: devis.devise ?? '',
       taux: String(devis.taux_change ?? 1),
@@ -391,7 +399,7 @@ export default function DevisPage() {
     setCopieDe(null);
     setStatutEdition(null);
     frais.reinitialiser();
-    setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
+    setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: dansJours(validiteJours), notes: '', devise: '', taux: '1' });
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
     setTransporteurId(null);
@@ -512,6 +520,10 @@ export default function DevisPage() {
                   <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">{montant(devis.montant_total, devis.devise)}</td>
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(devis.statut)}
+                    {/* Expiration non bloquante (DE3) : le devis reste envoyé, avec ce repère. */}
+                    {devis.statut === 'envoye' && devis.date_validite && dateSaisie(devis.date_validite) < aujourdhui() && (
+                      <span className="block mt-1 text-xs text-amber-700">{t.quoteExpiry.pastValidity}</span>
+                    )}
                     {devis.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={devis.statut_personnalise} /></span>}
                     {devis.reponse_en_ligne && <span className="block mt-1 text-xs text-gray-500">{tr.online}</span>}
                     {devis.commande && <span className="block mt-1 text-xs text-gray-500" title="Commande issue de ce devis">→ {devis.commande.numero}</span>}
