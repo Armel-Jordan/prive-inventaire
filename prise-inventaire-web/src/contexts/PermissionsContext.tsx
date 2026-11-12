@@ -15,6 +15,8 @@ interface PermissionsData {
   permissions: Record<string, Permission>;
   /** Droits effectifs code par code (« factures.emettre »…) : groupes, actions nommées et exceptions. */
   actions?: Record<string, boolean>;
+  /** Groupes du compte (rôle personnalisé et groupes supplémentaires) : il ne peut pas les modifier lui-même. */
+  groupes?: number[];
 }
 
 interface PermissionsContextType {

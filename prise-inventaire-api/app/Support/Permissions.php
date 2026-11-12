@@ -307,7 +307,17 @@ class Permissions
         'secteurs' => ['onglet' => 'parametres', 'fr' => 'Secteurs', 'en' => 'Sectors'],
         'employes' => ['onglet' => 'parametres', 'fr' => 'Employés', 'en' => 'Employees'],
         'fiches_employes' => ['onglet' => 'parametres', 'fr' => 'Fiches employés', 'en' => 'Employee records'],
-        'roles' => ['onglet' => 'parametres', 'fr' => 'Rôles et permissions', 'en' => 'Roles and permissions', 'crud' => ['voir']],
+        // Rôles et permissions : voir les groupes et les accès des comptes ; les gérer est délégable, réservé aux
+        // administrateurs tant qu'aucun groupe ne reçoit ces actions. Un compte qui n'est pas administrateur n'accorde
+        // que des permissions qu'il a lui-même, et ne touche ni à ses propres accès ni aux administrateurs.
+        'roles' => ['onglet' => 'parametres', 'fr' => 'Rôles et permissions', 'en' => 'Roles and permissions', 'crud' => ['voir'], 'actions' => [
+            'groupes' => ['base' => 'voir', 'fr' => 'Gérer les groupes et leurs permissions', 'en' => 'Manage groups and their permissions',
+                'aide_fr' => "Créer, modifier, dupliquer, désactiver ou supprimer un groupe de l'entreprise et régler ses permissions, sauf ses propres groupes, et seulement avec des permissions que l'on a soi-même.",
+                'aide_en' => "Create, change, duplicate, deactivate or delete a company group and set its permissions, except one's own groups, and only with permissions one holds."],
+            'acces' => ['base' => 'voir', 'fr' => "Régler les accès d'un compte", 'en' => "Set an account's access",
+                'aide_fr' => "Rôle personnalisé, groupes supplémentaires et exceptions d'un compte, sauf ses propres accès et ceux d'un administrateur, et seulement avec des permissions que l'on a soi-même.",
+                'aide_en' => "An account's custom role, extra groups and exceptions, except one's own access and an administrator's, and only with permissions one holds."],
+        ]],
         'referentiels' => ['onglet' => 'parametres', 'fr' => 'Référentiels', 'en' => 'Reference lists'],
         'alertes_config' => ['onglet' => 'parametres', 'fr' => 'Réglage des alertes', 'en' => 'Alert settings', 'crud' => ['voir', 'modifier']],
         'configuration' => ['onglet' => 'parametres', 'fr' => 'Configuration', 'en' => 'Configuration'],
@@ -378,6 +388,26 @@ class Permissions
     public static function libelle(string $module, string $langue = 'fr'): string
     {
         return self::MODULES[$module][$langue] ?? self::MODULES[$module]['fr'] ?? $module;
+    }
+
+    /**
+     * Code réglable dans les écrans : un droit de base proposé pour son module (voir crud()) ou une action nommée.
+     * Les autres droits de base (« créer » des rôles, par exemple) n'ouvrent rien.
+     */
+    public static function reglable(string $code): bool
+    {
+        [$module, $action] = array_pad(explode('.', $code, 2), 2, '');
+
+        return isset(self::MODULES[$module]) && (in_array($action, self::crud($module), true) || isset(self::MODULES[$module]['actions'][$action]));
+    }
+
+    /** Libellé d'une permission dans une langue : « Module : action ». */
+    public static function libelleCode(string $code, string $langue = 'fr'): string
+    {
+        [$module, $action] = array_pad(explode('.', $code, 2), 2, '');
+        $libelleAction = self::MODULES[$module]['actions'][$action][$langue] ?? self::LIBELLES_CRUD[$action][$langue] ?? $action;
+
+        return self::libelle($module, $langue).($langue === 'en' ? ': ' : ' : ').mb_strtolower($libelleAction);
     }
 
     /**

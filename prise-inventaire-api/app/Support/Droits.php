@@ -30,7 +30,7 @@ class Droits
     /**
      * Premier segment de l'adresse (après « api/ ») => module de la matrice, pour les écritures. Les préfixes
      * absents ne sont pas contrôlés par module : données personnelles (profil, notifications), routes réservées
-     * par rôle (utilisateurs, rôles, tâches planifiées). Les pièces jointes et les envois de courriels suivent les
+     * par rôle (utilisateurs). Les groupes et les accès des comptes suivent PARTICULIERES. Les pièces jointes et les envois de courriels suivent les
      * droits de la fiche ou du document qu'ils concernent : leurs contrôleurs les vérifient (voir exiger()).
      */
     private const MODULES = [
@@ -356,6 +356,18 @@ class Droits
         'DELETE api/verrous/{id}' => ['verrous', 'liberer'],
         // Lancer une tâche planifiée tout de suite.
         'POST api/taches-planifiees/{id}/executer' => ['taches_planifiees', 'executer'],
+        // Groupes et accès des comptes : les voir ; gérer les groupes ; régler les accès d'un compte. Les contrôleurs
+        // ajoutent les garde-fous contre l'élévation de droits (voir App\Support\DelegationDroits).
+        'GET api/roles-custom' => ['roles', 'voir'],
+        'GET api/roles-custom/{id}' => ['roles', 'voir'],
+        'GET api/roles-custom/{id}/membres' => ['roles', 'voir'],
+        'POST api/roles-custom' => ['roles', 'groupes'],
+        'PUT api/roles-custom/{id}' => ['roles', 'groupes'],
+        'DELETE api/roles-custom/{id}' => ['roles', 'groupes'],
+        'POST api/roles-custom/{id}/dupliquer' => ['roles', 'groupes'],
+        'GET api/acces-comptes/{id}' => ['roles', 'voir'],
+        'PUT api/acces-comptes/{id}' => ['roles', 'acces'],
+        'POST api/users/{userId}/assign-role' => ['roles', 'acces'],
     ];
 
     /** Verbe de chaque droit de base dans le message de refus, par langue des messages. */
@@ -409,7 +421,17 @@ class Droits
     /** Droits venant des seuls groupes (sans les exceptions du compte) : code => accordé. */
     public function droitsDesGroupes(AdminUser $compte): array
     {
-        $ids = $this->groupes($compte)->pluck('id')->all();
+        return $this->droitsDesRoles($this->groupes($compte)->pluck('id')->all());
+    }
+
+    /**
+     * Droits accordés par des groupes (rôles), additionnés : droits de base de chaque module, actions nommées réglées
+     * par le groupe, sinon d'après leur droit de base. Code => accordé.
+     *
+     * @param  array<int, int>  $ids
+     */
+    public function droitsDesRoles(array $ids): array
+    {
         $droits = array_fill_keys(Permissions::codes(), false);
         $lignes = DB::table('role_permissions')->whereIn('role_id', $ids)->get()->groupBy('role_id');
         $reglees = DB::table('role_actions')->whereIn('role_id', $ids)->get()->groupBy('role_id');

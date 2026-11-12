@@ -403,9 +403,10 @@ export const AIDES_PARAMETRES: AidesEcrans = {
 
   "/acces/:compteId": {
     fr: {
-      resume: "Les droits d'un compte en détail : son rôle principal, ses groupes supplémentaires et ses exceptions, permission par permission. Réservé aux administrateurs.",
+      resume: "Les droits d'un compte en détail : son rôle principal, ses groupes supplémentaires et ses exceptions, permission par permission. Il faut le droit de consulter les rôles ; les régler est réservé aux administrateurs, sauf délégation.",
       etapes: [
         "Ouvrez l'écran depuis « Employés », avec la clé « Accès et permissions » d'un employé qui a un accès.",
+        "Choisissez au besoin son « Rôle principal » (un groupe de l'entreprise, ou son rôle système) ; il s'enregistre aussitôt.",
         "Cochez les « Groupes supplémentaires » dont le compte reçoit aussi les droits.",
         "Dans les permissions, cliquez sur la case de droite pour passer de « Hérité » à « Accordé », puis « Refusé », puis de nouveau « Hérité ».",
         "Cherchez une permission, ou choisissez « Exceptions seulement » dans « Afficher » pour vérifier vos réglages.",
@@ -413,16 +414,18 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       ],
       astuces: [
         "Les droits des groupes s'additionnent ; une exception « Refusé » l'emporte sur tous les groupes.",
-        "La colonne de gauche montre ce que donnent les groupes ; le rôle principal se règle dans la fiche de l'employé.",
+        "La colonne de gauche montre ce que donnent les groupes ; le rôle principal se règle ici ou dans la fiche de l'employé.",
+        "Délégation : sans être administrateur, vous n'accordez que les permissions que vous avez vous-même ; vos propres accès et ceux d'un administrateur restent en lecture seule.",
         "« Retirer les exceptions » ramène le compte aux droits de ses groupes ; « Tout accorder » accorde chaque permission en exception.",
         "Un administrateur a tous les droits, quels que soient ses groupes : il n'y a rien à régler.",
       ],
       motsCles: ["permissions", "droits", "exceptions", "groupes", "accès d'un utilisateur"],
     },
     en: {
-      resume: "An account's rights in detail: its main role, extra groups and exceptions, permission by permission. Administrators only.",
+      resume: "An account's rights in detail: its main role, extra groups and exceptions, permission by permission. Requires the right to view roles; setting them is for administrators, unless delegated.",
       etapes: [
         "Open this screen from “Employees”, with the “Access and permissions” key of an employee who has access.",
+        "If needed, choose its “Main role” (a company group, or its system role); it is saved at once.",
         "Tick the “Extra groups” whose rights the account also receives.",
         "In the permissions, click the right-hand box to go from “Inherited” to “Granted”, then “Refused”, then back to “Inherited”.",
         "Search for a permission, or pick “Exceptions only” in “Show” to check your settings.",
@@ -430,7 +433,8 @@ export const AIDES_PARAMETRES: AidesEcrans = {
       ],
       astuces: [
         "Group rights add up; a “Refused” exception wins over every group.",
-        "The left column shows what the groups grant; the main role is set in the employee's record.",
+        "The left column shows what the groups grant; the main role is set here or in the employee's record.",
+        "Delegation: without being an administrator, you only grant permissions you hold; your own access and an administrator's stay read-only.",
         "“Remove exceptions” brings the account back to its groups' rights; “Grant all” grants every permission as an exception.",
         "An administrator has every right, whatever their groups: there is nothing to set.",
       ],
@@ -580,9 +584,9 @@ export const AIDES_PARAMETRES: AidesEcrans = {
 
   "/roles": {
     fr: {
-      resume: "Les groupes de permissions de l'entreprise, par écran et par action : qui peut consulter, créer, modifier, supprimer ou faire une opération précise. Réservé aux administrateurs.",
+      resume: "Les groupes de permissions de l'entreprise, par écran et par action : qui peut consulter, créer, modifier, supprimer ou faire une opération précise. Il faut le droit de consulter les rôles ; les gérer est réservé aux administrateurs, sauf délégation.",
       etapes: [
-        "Choisissez un groupe à gauche pour voir ses permissions ; les rôles système (cadenas) sont en lecture seule.",
+        "Choisissez un groupe à gauche pour voir ses permissions et ses membres ; les rôles système (cadenas) sont en lecture seule.",
         "Cliquez sur « Nouveau groupe », ou sur « Dupliquer » pour partir des droits d'un groupe existant.",
         "Saisissez le « Nom du groupe » et sa description, puis cochez les permissions de chaque onglet et écran (« Tous », « Tout cocher », « Tout décocher »).",
         "Cherchez une permission par mots, sans accents (ex. « facture émettre ») ; survolez-la pour lire son aide en bas de l'écran.",
@@ -593,13 +597,14 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Décocher « Groupe actif » retire tous les droits du groupe sans le retirer des comptes.",
         "Un groupe attribué à des comptes ne se supprime pas : désactivez-le.",
         "Un administrateur a toujours tous les droits.",
+        "Délégation : accordez « Gérer les groupes et leurs permissions » ou « Régler les accès d'un compte » (Rôles et permissions) à un groupe. Ses membres n'accordent que les permissions qu'ils ont eux-mêmes, et ne modifient ni leurs propres groupes ou accès ni ceux d'un administrateur.",
       ],
-      motsCles: ["permissions", "droits", "groupes", "accès", "habilitations", "profils"],
+      motsCles: ["permissions", "droits", "groupes", "accès", "habilitations", "profils", "délégation", "membres"],
     },
     en: {
-      resume: "The company's permission groups, per screen and per action: who can view, create, edit, delete or perform a specific operation. Administrators only.",
+      resume: "The company's permission groups, per screen and per action: who can view, create, edit, delete or perform a specific operation. Requires the right to view roles; managing them is for administrators, unless delegated.",
       etapes: [
-        "Choose a group on the left to see its permissions; system roles (padlock) are read-only.",
+        "Choose a group on the left to see its permissions and members; system roles (padlock) are read-only.",
         "Click “New group”, or “Duplicate” to start from an existing group's rights.",
         "Enter the “Group name” and its description, then tick the permissions of each tab and screen (“All”, “Check all”, “Uncheck all”).",
         "Search for a permission by words, accents ignored (e.g. “invoice issue”); hover over it to read its help at the bottom.",
@@ -610,8 +615,9 @@ export const AIDES_PARAMETRES: AidesEcrans = {
         "Unticking “Group active” removes all of the group's rights without removing it from accounts.",
         "A group assigned to accounts cannot be deleted: deactivate it.",
         "An administrator always has every right.",
+        "Delegation: grant “Manage groups and their permissions” or “Set an account's access” (Roles and permissions) to a group. Its members only grant permissions they hold, and change neither their own groups or access nor an administrator's.",
       ],
-      motsCles: ["permissions", "rights", "groups", "access", "user roles", "profiles"],
+      motsCles: ["permissions", "rights", "groups", "access", "user roles", "profiles", "delegation", "members"],
     },
   },
 

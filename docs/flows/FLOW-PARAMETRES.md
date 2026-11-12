@@ -322,7 +322,6 @@ Le contrôle est fait par le middleware `droits` (`App\Support\Droits`).
 - la catégorie d'un client et les remarques des fiches.
 
 **Restent réservés aux administrateurs, par rôle :**
-- les rôles et les accès ;
 - les comptes utilisateurs ;
 - la sécurité (double authentification) ;
 - les tâches planifiées ;
@@ -335,15 +334,32 @@ Le contrôle est fait par le middleware `droits` (`App\Support\Droits`).
 
 ### 6.4 Écran « Rôles et permissions »
 
-Paramètres → Rôles et permissions (`/roles`), réservé aux administrateurs.
+Paramètres → Rôles et permissions (`/roles`).
 
-**Groupes** (`GET/POST/PUT/DELETE /roles-custom/{id}`) :
+**Droits** (module « Rôles et permissions ») :
+- **Consulter** : voir les groupes, leurs permissions et leurs membres, et les accès des comptes ;
+- **Gérer les groupes et leurs permissions** (`roles.groupes`) : créer, modifier, dupliquer, désactiver, supprimer ;
+- **Régler les accès d'un compte** (`roles.acces`) : rôle personnalisé, groupes supplémentaires, exceptions.
+
+Les deux dernières sont refusées par défaut à tous les groupes (administrateurs seulement), jusqu'à ce qu'un
+administrateur les accorde. Garde-fous pour un compte qui n'est pas administrateur (`App\Support\DelegationDroits`, 403) :
+- il n'accorde que des permissions qu'il a lui-même : celles qu'un groupe gagne (toutes s'il est réactivé ou créé),
+  celles d'un groupe ou d'un rôle donné à un compte, une exception accordée, et ce que le compte gagne au bout du
+  compte (un refus retiré, un retour au rôle système) ;
+- il ne modifie ni ses propres accès, ni ses groupes (rôle personnalisé ou groupe supplémentaire, même inactif), ni
+  les accès d'un administrateur ;
+- retirer ou refuser une permission reste toujours permis.
+
+L'écran ne laisse cocher que les permissions détenues, et passe en lecture seule sans le droit de gérer.
+
+**Groupes** (`GET/POST/PUT/DELETE /roles-custom/{id}`, `GET /roles-custom/{id}/membres`, `POST /roles-custom/{id}/dupliquer`) :
 - **Rôles système** (Administrateur, Responsable, Utilisateur, Lecture seule) : communs à toutes les entreprises, en lecture seule. **Dupliquer** en fait un groupe modifiable.
 - **Groupes de l'entreprise** :
   - nom (unique dans l'entreprise, différent des rôles système) et description ;
   - **actif / inactif** : un groupe inactif ne donne plus aucun droit et reste attribué pour l'historique ;
-  - nombre de comptes ;
+  - nombre de comptes, et la liste des **membres** (rôle principal ou groupe supplémentaire, lien vers leurs accès) ;
   - un groupe attribué ne se supprime pas (400) : le désactiver.
+- **Dupliquer** par l'API : copie « nom (copie) », numérotée si le nom est pris, avec ses permissions.
 
 **Permissions :**
 - un onglet par famille du menu, avec le nombre de permissions entre parenthèses ;
@@ -354,9 +370,11 @@ Paramètres → Rôles et permissions (`/roles`), réservé aux administrateurs.
 
 ### 6.5 Accès d'un compte
 
-Employés → bouton **Accès et permissions** (clé) d'un employé qui a un compte. L'écran est à `/acces/{compte}` et l'API à `GET/PUT /acces-comptes/{id}`, réservés aux administrateurs.
+Employés → bouton **Accès et permissions** (clé) d'un employé qui a un compte. L'écran est à `/acces/{compte}` et l'API à `GET/PUT /acces-comptes/{id}` (consulter ; régler : `roles.acces`, §6.4).
+La réponse indique `modifiable` : le compte connecté peut-il régler ces accès ?
 
-- **Rôle principal** : rappelé ; il se règle dans la fiche de l'employé (§6.6).
+- **Rôle principal** : une liste des groupes de l'entreprise et du rôle système du compte, enregistrée aussitôt
+  (`POST /users/{id}/assign-role`) ; il se règle aussi dans la fiche de l'employé (§6.6, administrateurs).
 - **Groupes supplémentaires** : cases à cocher parmi les groupes de l'entreprise.
 - **Permissions** :
   - à gauche, ce que donnent ses groupes ;

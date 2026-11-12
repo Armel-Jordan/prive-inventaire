@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
+use App\Support\DelegationDroits;
 use App\Support\Droits;
 use App\Support\Permissions;
 use App\Support\TenantContext;
@@ -21,6 +22,9 @@ use Illuminate\Validation\ValidationException;
  * actions nommées (voir App\Support\Permissions). Les rôles système (tenant_id NULL : admin, manager, user,
  * readonly) sont communs à toutes les entreprises et ne se modifient pas ici ; chaque entreprise crée, modifie,
  * désactive et supprime ses propres groupes, invisibles des autres.
+ *
+ * Droits : voir (roles.voir), gérer les groupes (roles.groupes), régler les accès d'un compte (roles.acces) ; un
+ * compte qui n'est pas administrateur suit les garde-fous de App\Support\DelegationDroits.
  */
 class RolePermissionController extends Controller
 {
@@ -169,7 +173,7 @@ class RolePermissionController extends Controller
         return response()->json($this->presenterRole($role));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, DelegationDroits $delegation): JsonResponse
     {
         $request->validate([
             'nom' => $this->reglesNom('required'),
@@ -179,7 +183,7 @@ class RolePermissionController extends Controller
             'actif' => 'sometimes|boolean',
         ]);
 
-        $roleId = DB::transaction(function () use ($request) {
+        $roleId = DB::transaction(function () use ($request, $delegation) {
             $roleId = DB::table('roles_custom')->insertGetId([
                 'tenant_id' => app(TenantContext::class)->getTenantId(),
                 'nom' => trim($request->nom),
@@ -191,6 +195,8 @@ class RolePermissionController extends Controller
             ]);
             $this->enregistrerPermissions($roleId, $request->permissions);
             $this->enregistrerActions($roleId, $request->input('actions', []));
+            // Un groupe neuf accorde toutes ses permissions (actif ou non : il peut être activé ensuite).
+            $delegation->exigerDetenues($request->user(), DelegationDroits::accordees($delegation->droitsDuGroupe($roleId)));
 
             return $roleId;
         });
@@ -202,9 +208,11 @@ class RolePermissionController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, DelegationDroits $delegation, int $id): JsonResponse
     {
         $role = $this->roleModifiable($id);
+        $delegation->exigerGroupe($request->user(), $id);
+        $avant = $delegation->droitsDuGroupe($id);
 
         $request->validate([
             'nom' => $this->reglesNom('sometimes', $id),
@@ -214,7 +222,7 @@ class RolePermissionController extends Controller
             'actif' => 'sometimes|boolean',
         ]);
 
-        DB::transaction(function () use ($request, $role, $id) {
+        DB::transaction(function () use ($request, $role, $id, $delegation, $avant) {
             DB::table('roles_custom')->where('id', $id)->update([
                 'nom' => $request->filled('nom') ? trim($request->nom) : $role->nom,
                 'description' => $request->description ?? $role->description,
@@ -227,6 +235,10 @@ class RolePermissionController extends Controller
             if ($request->has('actions')) {
                 $this->enregistrerActions($id, $request->input('actions', []));
             }
+            // Permissions gagnées par le groupe ; réactivé, il les redonne toutes à ses membres.
+            $apres = $delegation->droitsDuGroupe($id);
+            $reactive = ! ($role->actif ?? true) && $request->boolean('actif', false);
+            $delegation->exigerDetenues($request->user(), $reactive ? DelegationDroits::accordees($apres) : DelegationDroits::gagnees($avant, $apres));
         });
 
         return response()->json([
@@ -235,9 +247,10 @@ class RolePermissionController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, DelegationDroits $delegation, int $id): JsonResponse
     {
         $this->roleModifiable($id);
+        $delegation->exigerGroupe($request->user(), $id);
 
         // Comptes de l'entreprise encore rattachés à ce rôle (rôle principal ou groupe supplémentaire).
         $usersCount = $this->comptesDuRole($id);
@@ -255,6 +268,87 @@ class RolePermissionController extends Controller
             'success' => true,
             'message' => __('Rôle supprimé avec succès'),
         ]);
+    }
+
+    /**
+     * Comptes de l'entreprise rattachés au groupe : rôle principal (rôle système du compte, ou rôle personnalisé) ou
+     * groupe supplémentaire.
+     */
+    public function membres(Droits $droits, int $id): JsonResponse
+    {
+        $role = $this->rolesVisibles()->find($id);
+        abort_if(! $role, 404, __('Rôle non trouvé'));
+        $tenantId = app(TenantContext::class)->getTenantId();
+        $supplementaires = DB::table('admin_user_groupes')->where('role_id', $id)->pluck('admin_user_id')->map(fn ($c) => (int) $c)->all();
+
+        $membres = AdminUser::where('tenant_id', $tenantId)->orderBy('nom')->get(['id', 'nom', 'email', 'role', 'role_custom_id', 'actif'])
+            ->map(function (AdminUser $compte) use ($droits, $role, $supplementaires) {
+                $principal = $role->tenant_id === null ? (int) $droits->role($compte)?->id === (int) $role->id : (int) $compte->role_custom_id === (int) $role->id;
+                if (! $principal && ! in_array((int) $compte->id, $supplementaires, true)) {
+                    return null;
+                }
+
+                return ['id' => $compte->id, 'nom' => $compte->nom, 'email' => $compte->email, 'role' => $compte->role,
+                    'actif' => (bool) $compte->actif, 'principal' => $principal];
+            })
+            ->filter()->values();
+
+        return response()->json($membres);
+    }
+
+    /**
+     * Copie d'un groupe (rôle système ou groupe de l'entreprise) dans les groupes de l'entreprise, avec ses permissions
+     * et ses actions réglées. Nom par défaut : « nom (copie) », numéroté s'il est pris.
+     */
+    public function dupliquer(Request $request, DelegationDroits $delegation, int $id): JsonResponse
+    {
+        $modele = $this->rolesVisibles()->find($id);
+        abort_if(! $modele, 404, __('Rôle non trouvé'));
+        $request->validate(['nom' => $this->reglesNom('sometimes')]);
+
+        $nom = $request->filled('nom') ? trim($request->nom) : $this->nomDeCopie($modele->nom);
+        $roleId = DB::transaction(function () use ($request, $delegation, $modele, $nom) {
+            $roleId = DB::table('roles_custom')->insertGetId([
+                'tenant_id' => app(TenantContext::class)->getTenantId(),
+                'nom' => $nom,
+                'description' => $modele->description,
+                'is_system' => false,
+                'actif' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            foreach (DB::table('role_permissions')->where('role_id', $modele->id)->get() as $ligne) {
+                DB::table('role_permissions')->insert([
+                    'role_id' => $roleId, 'module' => $ligne->module, 'can_view' => $ligne->can_view, 'can_create' => $ligne->can_create,
+                    'can_edit' => $ligne->can_edit, 'can_delete' => $ligne->can_delete, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+            foreach (DB::table('role_actions')->where('role_id', $modele->id)->get() as $action) {
+                DB::table('role_actions')->insert(['role_id' => $roleId, 'permission' => $action->permission, 'accorde' => $action->accorde, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            $delegation->exigerDetenues($request->user(), DelegationDroits::accordees($delegation->droitsDuGroupe($roleId)));
+
+            return $roleId;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Groupe dupliqué : :nom.', ['nom' => $nom]),
+            'role_id' => $roleId,
+        ], 201);
+    }
+
+    /** « nom (copie) », puis « nom (copie) 2 »… : libre dans l'entreprise et parmi les rôles système. */
+    private function nomDeCopie(string $nom): string
+    {
+        $base = mb_substr(__(':nom (copie)', ['nom' => $nom]), 0, 46);
+        for ($numero = 1; ; $numero++) {
+            $candidat = $numero === 1 ? $base : "{$base} {$numero}";
+            $pris = $this->rolesVisibles()->whereRaw('LOWER(nom) = ?', [mb_strtolower($candidat)])->exists();
+            if (! $pris) {
+                return $candidat;
+            }
+        }
     }
 
     /** Libellés des modules (écran des rôles, ancien format). */
@@ -295,6 +389,9 @@ class RolePermissionController extends Controller
             'role_id' => $role?->id,
             'permissions' => $parModule,
             'actions' => $effectives,
+            // Ses groupes (rôle personnalisé et groupes supplémentaires, actifs ou non) : il ne peut pas les modifier.
+            'groupes' => DB::table('admin_user_groupes')->where('admin_user_id', $compte->id)->pluck('role_id')
+                ->push($compte->role_custom_id)->filter()->map(fn ($id) => (int) $id)->unique()->values(),
         ]);
     }
 
@@ -302,7 +399,7 @@ class RolePermissionController extends Controller
      * Rattache un compte de l'entreprise à l'un de ses rôles personnalisés (role_id null : retour au rôle système
      * du compte). L'attribution écrivait dans l'ancienne table « users » et répondait 500.
      */
-    public function assignRole(Request $request, int $userId): JsonResponse
+    public function assignRole(Request $request, Droits $droits, DelegationDroits $delegation, int $userId): JsonResponse
     {
         $tenantId = app(TenantContext::class)->getTenantId();
         $request->validate([
@@ -311,7 +408,19 @@ class RolePermissionController extends Controller
         ]);
 
         $compte = AdminUser::where('tenant_id', $tenantId)->findOrFail($userId);
-        $compte->update(['role_custom_id' => $request->role_id]);
+        $delegation->exigerCompte($request->user(), $compte);
+        $avant = $droits->effectives($compte);
+        DB::transaction(function () use ($request, $droits, $delegation, $compte, $avant) {
+            $nouveau = $request->role_id !== null && (int) $request->role_id !== (int) $compte->role_custom_id;
+            $compte->update(['role_custom_id' => $request->role_id]);
+            $droits->oublier();
+            // Le rôle donné, et ce que le compte gagne (en revenant à son rôle système, par exemple).
+            $gagnees = DelegationDroits::gagnees($avant, $droits->effectives($compte));
+            if ($nouveau) {
+                $gagnees = array_merge($gagnees, DelegationDroits::accordees($delegation->droitsDuGroupe((int) $request->role_id)));
+            }
+            $delegation->exigerDetenues($request->user(), $gagnees);
+        });
 
         return response()->json([
             'success' => true,

@@ -1,4 +1,11 @@
 {
+    "Vous ne pouvez pas modifier vos propres accès.": "You cannot change your own access.",
+    "Seul un administrateur peut modifier les accès d'un administrateur.": "Only an administrator can change an administrator's access.",
+    "Vous ne pouvez pas modifier un groupe dont vous faites partie.": "You cannot change a group you belong to.",
+    "Vous ne pouvez accorder que des permissions que vous avez vous-même : :permissions.": "You can only grant permissions you hold yourself: :permissions.",
+    "(et :nombre autres)": "(and :nombre more)",
+    "Groupe dupliqué : :nom.": "Group duplicated: :nom.",
+    ":nom (copie)": ":nom (copy)",
     "Cette note de bas de page ne convient pas à ce document.": "This footer note does not fit this document.",
     "La note de ce document est figée depuis son envoi ou son émission.": "This document's note is frozen since it was sent or issued.",
     "Cette note de bas de page est retenue par des documents : désactivez-la plutôt.": "This footer note is used by documents: deactivate it instead.",
