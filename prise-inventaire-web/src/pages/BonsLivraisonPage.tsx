@@ -3,6 +3,7 @@ import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreProduit } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import ChoixNoteBasPage from '@/components/ChoixNoteBasPage';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback } from 'react';
@@ -455,6 +456,8 @@ export default function BonsLivraisonPage() {
                 </div>
                 <ChoixStatutPersonnalise document="bon_livraison" documentId={selectedBon.id} statut={selectedBon.statut_personnalise} modifiable={peut('bons_livraison', 'modifier')}
                   onChange={statut => { setSelectedBon(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadBons(); }} />
+                <ChoixNoteBasPage document="bon_livraison" documentId={selectedBon.id} valeur={selectedBon.note_bas_page_id} fige={!!selectedBon.identite_figee}
+                  modifiable={peut('bons_livraison', 'modifier')} onChange={id => setSelectedBon(d => (d ? { ...d, note_bas_page_id: id } : d))} />
                 <div>
                   <span className="text-sm text-gray-500">Mode:</span>
                   <p className="dark:text-white">

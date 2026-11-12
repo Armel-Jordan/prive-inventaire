@@ -22,6 +22,7 @@ use App\Models\FactureFournisseur;
 use App\Models\Fournisseur;
 use App\Models\Itineraire;
 use App\Models\ModePaiement;
+use App\Models\NoteBasPage;
 use App\Models\ProduitTenant;
 use App\Models\ProduitUnite;
 use App\Models\Raison;
@@ -432,6 +433,24 @@ final class Referentiels
                 'suppression' => fn (Model $statut) => self::utilisee(array_map(fn (string $modele) => [$modele, 'statut_personnalise_id', $statut->getKey()],
                     array_values(StatutsPersonnalises::DOCUMENTS)))
                     ? __('Ce statut est posé sur des documents : désactivez-le plutôt.') : null,
+            ],
+
+            // Notes de bas de page des documents de vente (socle S4.4) : par type de document et par langue.
+            'notes_bas_page' => [
+                'modele' => NoteBasPage::class,
+                'regles' => fn (?int $id) => [
+                    'nom' => ['required', 'string', 'max:100'],
+                    'document' => ['required', Rule::in(NoteBasPage::DOCUMENTS)],
+                    'langue' => ['nullable', Rule::in(NoteBasPage::LANGUES)],
+                    'contenu' => ['required', 'string', 'max:5000'],
+                    'par_defaut' => ['boolean'],
+                    'actif' => ['boolean'],
+                ],
+                'ordre' => [['document', 'asc'], ['nom', 'asc']],
+                // Retenue par un document : on la désactive plutôt (les documents envoyés ou émis gardent leur texte).
+                'suppression' => fn (Model $note) => self::utilisee(array_map(fn (string $modele) => [$modele, 'note_bas_page_id', $note->getKey()],
+                    [Devis::class, ComClientEntete::class, Facture::class, BonLivraison::class]))
+                    ? __('Cette note de bas de page est retenue par des documents : désactivez-la plutôt.') : null,
             ],
         ];
     }

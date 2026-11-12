@@ -1305,6 +1305,18 @@ export interface AvecPriorite {
 
 export type DocumentPrioritaire = 'devis' | 'commande_client' | 'facture' | 'bon_livraison';
 
+/** Note de bas de page retenue par un document (socle S4.4) : vide, celle par défaut ; 0, aucune. */
+export interface AvecNoteBasPage {
+  note_bas_page_id?: number | null;
+  /** Identité figée à l'envoi ou à l'émission (socle S4.5) : la note ne se change plus. */
+  identite_figee?: Record<string, unknown> | null;
+}
+
+/** Choisit la note de bas de page d'un document (vide : celle par défaut ; 0 : aucune). */
+export async function poserNoteBasPage(document: DocumentPrioritaire, id: number, noteId: number | null): Promise<{ note_bas_page_id: number | null; texte: string | null }> {
+  return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/note-bas-page`, { method: 'PUT', body: JSON.stringify({ note_bas_page_id: noteId }) });
+}
+
 /** Documents qui se copient vers un autre type (« Copier vers », socle S4.3) et types cibles. */
 export type DocumentCopiable = 'devis' | 'commande_client' | 'facture';
 export type CibleCopie = 'devis' | 'commande' | 'facture';
@@ -1361,7 +1373,7 @@ export interface RecapitulatifTaxe {
   montant: number;
 }
 
-export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite, AvecNoteBasPage {
   /** Statut de livraison calculé dans les listes (socle S4.7). */
   statut_livraison?: string | null;
   /** Poids estimé des produits (socle S4.1). */
@@ -1406,7 +1418,7 @@ export interface ComClientLigne {
   montant_ttc: number;
 }
 
-export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite, AvecNoteBasPage {
   /** Statut de livraison et jours de retard d'une facture due, calculés dans les listes (socle S4.7). */
   statut_livraison?: string | null;
   jours_retard?: number | null;
@@ -1487,7 +1499,7 @@ export interface FactureEcheance {
   ordre: number;
 }
 
-export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise, AvecPriorite, AvecNoteBasPage {
   /** Date requise par le client et poids estimé des produits (socle S4.1). */
   date_requise?: string | null;
   poids_estime_kg?: number | null;
@@ -2451,7 +2463,8 @@ export type TypeReferentiel =
   | 'representants'
   | 'transporteurs'
   | 'raisons'
-  | 'statuts_personnalises';
+  | 'statuts_personnalises'
+  | 'notes_bas_page';
 
 export interface FicheReferentiel {
   id: number;
@@ -2776,7 +2789,7 @@ export interface DevisLigne {
   montant_ligne: number;
 }
 
-export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite, AvecNoteBasPage {
   /** Date requise par le client et poids estimé des produits (socle S4.1). */
   date_requise?: string | null;
   poids_estime_kg?: number | null;

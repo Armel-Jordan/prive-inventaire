@@ -67,6 +67,7 @@ class DocumentsVentePdf
             'totaux' => [['Total HT', (float) $devis->montant_total, true]],
             'mention' => 'Montants hors taxes.',
             'notes' => $devis->notes,
+            'note_bas_page' => app(NotesBasPage::class)->texte($devis),
             'signatures' => ['Bon pour accord, date et signature du client'],
         ]);
     }
@@ -85,6 +86,7 @@ class DocumentsVentePdf
             'lignes' => $this->lignesPrix($commande->client_id, $commande->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('commande_client', $commande, $commande->lignes),
             'notes' => $commande->notes,
+            'note_bas_page' => app(NotesBasPage::class)->texte($commande),
         ]);
     }
 
@@ -111,6 +113,7 @@ class DocumentsVentePdf
                 ['Reste à payer', (float) $facture->reste_a_payer],
             ])),
             'notes' => $facture->notes,
+            'note_bas_page' => app(NotesBasPage::class)->texte($facture),
         ]);
     }
 
@@ -188,6 +191,7 @@ class DocumentsVentePdf
                 'mesure' => $l->produit?->mesure,
             ])->all(),
             'notes' => $bon->notes_livraison,
+            'note_bas_page' => app(NotesBasPage::class)->texte($bon),
             // Signature électronique du client, si elle a été recueillie à la livraison.
             'signatures' => ['Livré par', filled($bon->getAttributes()['signature_client'] ?? null) ? [
                 'libelle' => 'Reçu par le client',
@@ -250,6 +254,7 @@ class DocumentsVentePdf
             'notes' => $contenu['notes'] ?? null,
             'signatures' => $contenu['signatures'] ?? [],
             'reimpression' => $contenu['reimpression'] ?? false,
+            'note_bas_page' => $contenu['note_bas_page'] ?? null,
         ];
     }
 

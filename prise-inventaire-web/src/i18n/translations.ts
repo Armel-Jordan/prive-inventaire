@@ -3433,6 +3433,14 @@ export const translations = {
       ages: { courant: 'Courantes', '1_30': 'Échues de 1 à 30 j', '31_60': 'Échues de 31 à 60 j', '61_90': 'Échues de 61 à 90 j', plus_90: 'Échues de plus de 90 j' },
       late: 'En retard de {n} j',
     },
+    // Note de bas de page d'un document (socle S4.4).
+    footerNotes: {
+      label: 'Note de bas de page',
+      default: 'Celle par défaut',
+      none: 'Aucune',
+      frozen: "Figée depuis l'envoi ou l'émission du document.",
+      error: "La note n'a pas pu être enregistrée.",
+    },
     // « Copier vers » un autre type de document (socle S4.3).
     copyTo: {
       label: 'Copier vers',
@@ -4565,6 +4573,7 @@ export const translations = {
         transporteurs: 'Transporteurs',
         raisons: 'Raisons',
         statuts_personnalises: 'Statuts personnalisés',
+        notes_bas_page: 'Notes de bas de page',
       },
       groups: {
         produits: 'Produits',
@@ -4591,6 +4600,7 @@ export const translations = {
         transporteurs: 'Transporteurs et lien de suivi des colis.',
         raisons: 'Raisons proposées lors des mouvements, ajustements, retours, annulations et refus.',
         statuts_personnalises: "Statuts de suivi propres à l'entreprise, par type de document, avec leur couleur.",
+        notes_bas_page: "Textes imprimés en fin de devis, commande, facture ou bon de livraison (conditions, mentions légales…), par langue ; celle par défaut s'applique d'office.",
       },
       fields: {
         code: 'Code',
@@ -4641,6 +4651,8 @@ export const translations = {
         frequence: 'Rythme des loyers',
         jour_facturation: 'Jour de facturation (1 à 28)',
         a_echoir: "Loyer facturé à l'avance",
+        langue: 'Langue',
+        contenu: 'Texte',
       },
       // Valeurs des listes déroulantes (modes de paiement, types d'entrepôt…).
       options: {
@@ -4671,6 +4683,8 @@ export const translations = {
         trimestrielle: 'Trimestriel',
         semestrielle: 'Semestriel',
         annuelle: 'Annuel',
+        fr: 'Français',
+        en: 'Anglais',
       },
       trackingHint: 'Ex. https://transporteur.com/suivi/{numero} : {numero} sera remplacé par le numéro du colis',
       deliveryBilledHint: "Décochée, le frais de livraison du client n'est pas proposé sur les devis, commandes et factures expédiés par ce transporteur.",
@@ -8326,6 +8340,14 @@ export const translations = {
       ages: { courant: 'Current', '1_30': 'Overdue 1–30 d', '31_60': 'Overdue 31–60 d', '61_90': 'Overdue 61–90 d', plus_90: 'Overdue 90+ d' },
       late: '{n} d overdue',
     },
+    // Footer note of a document (socket S4.4).
+    footerNotes: {
+      label: 'Footer note',
+      default: 'The default one',
+      none: 'None',
+      frozen: 'Frozen since the document was sent or issued.',
+      error: 'The note could not be saved.',
+    },
     // Copy to another document type (socket S4.3).
     copyTo: {
       label: 'Copy to',
@@ -9458,6 +9480,7 @@ export const translations = {
         transporteurs: 'Carriers',
         raisons: 'Reasons',
         statuts_personnalises: 'Custom statuses',
+        notes_bas_page: 'Footer notes',
       },
       groups: {
         produits: 'Products',
@@ -9484,6 +9507,7 @@ export const translations = {
         transporteurs: 'Carriers and their parcel tracking link.',
         raisons: 'Reasons offered for stock movements, adjustments, returns, cancellations and refusals.',
         statuts_personnalises: "The company's own tracking statuses, per document type, with their colour.",
+        notes_bas_page: 'Texts printed at the end of quotes, orders, invoices or delivery notes (terms, legal notices…), per language; the default one applies automatically.',
       },
       fields: {
         code: 'Code',
@@ -9534,6 +9558,8 @@ export const translations = {
         frequence: 'Rent frequency',
         jour_facturation: 'Billing day (1 to 28)',
         a_echoir: 'Rent billed in advance',
+        langue: 'Language',
+        contenu: 'Text',
       },
       // Drop-down values (payment methods, warehouse types…).
       options: {
@@ -9564,6 +9590,8 @@ export const translations = {
         trimestrielle: 'Quarterly',
         semestrielle: 'Half-yearly',
         annuelle: 'Yearly',
+        fr: 'French',
+        en: 'English',
       },
       trackingHint: 'E.g. https://carrier.com/track/{numero}: {numero} is replaced by the parcel number',
       deliveryBilledHint: "Unticked, the customer's delivery fee is not proposed on quotes, orders and invoices shipped by this carrier.",

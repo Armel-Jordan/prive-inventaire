@@ -508,7 +508,8 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
      groupe de taxes, date requise et poids estimé le 12/11, FLOW-VENTES §2.10 à §2.15 : S4.1 terminé ; S4.6 : bouton
      « Historique » et commentaires faits le 12/11, FLOW-VENTES §2.16 ; S4.5 identité figée et réimpression faits le
      12/11, FLOW-VENTES §2.18 ; S4.3 « Copier vers » fait le 12/11, FLOW-VENTES §2.19 ; S4.7 en partie (livraison, produit,
-     âge) le 12/11, FLOW-VENTES §2.20 ; S5 export Excel des listes de vente et
+     âge) le 12/11, FLOW-VENTES §2.20 ; S4.4 notes de bas de page le 12/11, FLOW-VENTES §2.21 ; S5 export Excel des
+     listes de vente et
      des tiers fait le 12/11, FLOW-VENTES §2.17) (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
    - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.

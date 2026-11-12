@@ -171,6 +171,11 @@
         @endif
     </div>
 
+    @if (! empty($note_bas_page))
+        {{-- Note de bas de page du document (socle S4.4). --}}
+        <div style="margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #374151;">{!! nl2br(e($note_bas_page)) !!}</div>
+    @endif
+
     <div class="footer">
         {{ $entreprise['nom'] }}@if($entreprise['mentions']) — {{ $entreprise['mentions'] }}@endif
         — Document généré le {{ now()->format('d/m/Y à H:i') }}

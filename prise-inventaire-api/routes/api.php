@@ -75,6 +75,7 @@ use App\Http\Controllers\Api\FraisController;
 use App\Http\Controllers\Api\GroupeTaxeController;
 use App\Http\Controllers\Api\ImportPrixFournisseurController;
 use App\Http\Controllers\Api\LocalisationController;
+use App\Http\Controllers\Api\NoteBasPageDocumentController;
 use App\Http\Controllers\Api\PieceJointeController;
 use App\Http\Controllers\Api\PointDeVenteController;
 use App\Http\Controllers\Api\PortailClientController;
@@ -733,6 +734,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
+        Route::put('/{id}/note-bas-page', [NoteBasPageDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
         // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
         Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'devis');
         Route::get('/', [DevisController::class, 'index']);
@@ -801,6 +803,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
+        Route::put('/{id}/note-bas-page', [NoteBasPageDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
         // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
         Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::get('/', [CommandeClientController::class, 'index']);
@@ -819,6 +822,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
+        Route::put('/{id}/note-bas-page', [NoteBasPageDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
         // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
         Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'facture');
         Route::get('/', [FactureController::class, 'index']);
@@ -1028,6 +1032,7 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
+        Route::put('/{id}/note-bas-page', [NoteBasPageDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'bon_livraison');
         Route::get('/', [BonLivraisonController::class, 'index']);
         Route::get('/{id}', [BonLivraisonController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'bonLivraison']);

@@ -78,6 +78,8 @@ class IdentitesFigees
             'transporteur' => $this->nom(Transporteur::class, $document->getAttribute('transporteur_id'), 'nom'),
             'condition_paiement' => $this->nom(ConditionPaiement::class, $document->getAttribute('condition_paiement_id'), 'libelle'),
             'contact' => $contact ? implode(' — ', array_filter([$contact->nom, $contact->telephone])) : null,
+            // Note de bas de page du jour (socle S4.4) : une réimpression ressort la même.
+            'note_bas_page' => app(NotesBasPage::class)->actuelle($document),
         ];
     }
 
