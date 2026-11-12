@@ -1,6 +1,7 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
+import { FiltreProduit } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
@@ -69,6 +70,8 @@ export default function BonsLivraisonPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
+  // Filtres des statuts calculés et du produit (socle S4.7).
+  const [filtreProduit, setFiltreProduit] = useState<number | null>(null);
   // Recherche par numéro du bon ou de sa facture, ou par client, pré-remplie par « ?recherche= » (recherche globale).
   const [search, setSearch] = useRechercheAdresse();
   const [recherche, setRecherche] = useState(() => search.trim());
@@ -98,7 +101,7 @@ export default function BonsLivraisonPage() {
   const loadBons = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page });
+      const response = await getBonsLivraison({ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, page });
       setBons(response.data || []);
       setPagination({ dernierePage: response.last_page ?? 1, total: response.total ?? 0 });
     } catch (error) {
@@ -106,7 +109,7 @@ export default function BonsLivraisonPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
+  }, [filterStatut, recherche, filterTransporteur, filterStatutPerso, filtrePrioritaires, filtreProduit, page]);
 
   useEffect(() => {
     loadBons();
@@ -282,7 +285,8 @@ export default function BonsLivraisonPage() {
           <FiltreStatutPersonnalise document="bon_livraison" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
-          <BoutonExportExcel chemin="/bons-livraison" fichier="bons-livraison" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined }} />
+          <FiltreProduit value={filtreProduit} onChange={id => { setFiltreProduit(id); setPage(1); }} />
+          <BoutonExportExcel chemin="/bons-livraison" fichier="bons-livraison" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined }} />
         </div>
       </div>
 

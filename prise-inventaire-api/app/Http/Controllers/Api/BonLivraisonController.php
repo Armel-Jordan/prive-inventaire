@@ -13,6 +13,7 @@ use App\Services\LotsSeries;
 use App\Services\StatutsPersonnalises;
 use App\Support\ExportListe;
 use App\Support\PoidsDocuments;
+use App\Support\StatutsListes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -41,6 +42,8 @@ class BonLivraisonController extends Controller
         if ($request->boolean('prioritaire')) {
             $query->where('prioritaire', true);
         }
+        // Documents qui contiennent ce produit (socle S4.7).
+        StatutsListes::filtrerProduit($query, $request);
         // Numéro du bon ou de sa facture, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';

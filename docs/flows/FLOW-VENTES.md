@@ -534,6 +534,21 @@ prérempli, rien n'étant enregistré** avant « Créer » (son enregistrement h
 
 Code : `CopieDocumentController` ; web : composant `MenuCopierVers`. Pas de lien « Copié de » enregistré pour l'instant.
 
+### 2.20 Statuts calculés et filtres des listes
+
+Socle S4.7 du plan de parité fripv2 (en partie) :
+- **Statut de livraison** des commandes et des factures, calculé d'après le bon de livraison en cours (celui de la
+  facture d'une commande) : non livrée, en attente de livraison (bon créé, en préparation ou prêt), en livraison,
+  livrée en partie, livrée ; « rien à livrer » quand aucune ligne n'est un produit stocké (services, produits non
+  stockés). Affiché sous le statut dans la liste, filtre `?statut_livraison=`.
+- **Produit** : `?produit_id=` ne garde que les devis, commandes, factures ou bons de livraison qui le contiennent.
+- **Âge des factures dues** (émises ou payées en partie) : `?age=courant|1_30|31_60|61_90|plus_90` d'après l'échéance ;
+  la liste donne `jours_retard` (« En retard de N j »).
+- L'export Excel reprend ces filtres.
+
+Code : `App\Support\StatutsListes` ; web : `components/FiltresStatutsListes`. Reste de S4.7 : statut de facturation,
+aperçu des lignes dans la liste, page unifiée.
+
 ---
 
 ## 3. Devis

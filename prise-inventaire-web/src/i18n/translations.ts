@@ -3418,6 +3418,21 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Statuts calculés et filtres des listes de documents (socle S4.7).
+    listStatus: {
+      product: 'Tous les produits',
+      productLabel: 'Documents qui contiennent ce produit',
+      delivery: 'Toutes les livraisons',
+      deliveryLabel: 'Statut de livraison',
+      deliveryStatuses: {
+        non_livre: 'Non livrée', en_attente: 'En attente de livraison', en_livraison: 'En livraison',
+        livre_partiel: 'Livrée en partie', livre_complet: 'Livrée', rien_a_livrer: 'Rien à livrer',
+      },
+      age: 'Tous les âges',
+      ageLabel: 'Âge des factures dues',
+      ages: { courant: 'Courantes', '1_30': 'Échues de 1 à 30 j', '31_60': 'Échues de 31 à 60 j', '61_90': 'Échues de 61 à 90 j', plus_90: 'Échues de plus de 90 j' },
+      late: 'En retard de {n} j',
+    },
     // « Copier vers » un autre type de document (socle S4.3).
     copyTo: {
       label: 'Copier vers',
@@ -8295,6 +8310,21 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Computed statuses and filters of document lists (socket S4.7).
+    listStatus: {
+      product: 'All products',
+      productLabel: 'Documents containing this product',
+      delivery: 'All deliveries',
+      deliveryLabel: 'Delivery status',
+      deliveryStatuses: {
+        non_livre: 'Not delivered', en_attente: 'Awaiting delivery', en_livraison: 'Out for delivery',
+        livre_partiel: 'Partly delivered', livre_complet: 'Delivered', rien_a_livrer: 'Nothing to deliver',
+      },
+      age: 'All ages',
+      ageLabel: 'Age of invoices due',
+      ages: { courant: 'Current', '1_30': 'Overdue 1–30 d', '31_60': 'Overdue 31–60 d', '61_90': 'Overdue 61–90 d', plus_90: 'Overdue 90+ d' },
+      late: '{n} d overdue',
     },
     // Copy to another document type (socket S4.3).
     copyTo: {

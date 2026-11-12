@@ -1,6 +1,7 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
+import { FiltreProduit, FiltreStatutLivraison, PastilleLivraison, type StatutLivraison } from '@/components/FiltresStatutsListes';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
@@ -100,6 +101,9 @@ export default function CommandesClientPage() {
   const [filterStatutPerso, setFilterStatutPerso] = useState<number | null>(null);
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
+  // Filtres des statuts calculés et du produit (socle S4.7).
+  const [filtreProduit, setFiltreProduit] = useState<number | null>(null);
+  const [filtreLivraison, setFiltreLivraison] = useState<StatutLivraison | ''>('');
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
   // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
   const groupesTaxes = useGroupesTaxes();
@@ -178,7 +182,7 @@ export default function CommandesClientPage() {
     try {
       setLoading(true);
       const [commandesRes, clientsRes, produitsRes] = await Promise.all([
-        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, page }),
+        getCommandesClient({ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, statut_livraison: filtreLivraison || undefined, page }),
         getClientsActifs(),
         getProduits(),
       ]);
@@ -191,7 +195,7 @@ export default function CommandesClientPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, page]);
+  }, [filterStatut, recherche, filterRepresentant, filterTransporteur, filterStatutPerso, filtrePrioritaires, filtreProduit, filtreLivraison, page]);
 
   useEffect(() => {
     loadData();
@@ -484,7 +488,9 @@ export default function CommandesClientPage() {
           <FiltreStatutPersonnalise document="commande_client" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
-          <BoutonExportExcel chemin="/commandes-client" fichier="commandes-client" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined }} />
+          <FiltreProduit value={filtreProduit} onChange={id => { setFiltreProduit(id); setPage(1); }} />
+          <FiltreStatutLivraison value={filtreLivraison} onChange={s => { setFiltreLivraison(s); setPage(1); }} />
+          <BoutonExportExcel chemin="/commandes-client" fichier="commandes-client" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined, produit_id: filtreProduit ?? undefined, statut_livraison: filtreLivraison || undefined }} />
         </div>
       </div>
 
@@ -522,6 +528,7 @@ export default function CommandesClientPage() {
                   <td className="px-4 py-3 text-center">
                     {getStatutBadge(cmd.statut)}
                     {cmd.statut_personnalise && <span className="block mt-1"><PastilleStatutPersonnalise statut={cmd.statut_personnalise} /></span>}
+                    <PastilleLivraison statut={cmd.statut_livraison} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">

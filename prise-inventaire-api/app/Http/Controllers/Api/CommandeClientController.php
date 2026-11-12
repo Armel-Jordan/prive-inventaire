@@ -21,6 +21,7 @@ use App\Services\UnitesProduits;
 use App\Support\ExportListe;
 use App\Support\NumeroCommandeClient;
 use App\Support\PoidsDocuments;
+use App\Support\StatutsListes;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +36,9 @@ class CommandeClientController extends Controller
     public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
-        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
+        // Statut de livraison calculé (socle S4.7) : le bon en cours de sa facture, et s'il y a des produits à livrer.
+        $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES,
+            'facture:id,commande_id,numero', 'facture.bonLivraison:id,facture_id,statut'])->withExists(StatutsListes::aLivrer())->where('tenant_id', $tenantId);
 
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
@@ -56,6 +59,9 @@ class CommandeClientController extends Controller
         if ($request->boolean('prioritaire')) {
             $query->where('prioritaire', true);
         }
+        // Documents qui contiennent ce produit (socle S4.7).
+        StatutsListes::filtrerProduit($query, $request);
+        StatutsListes::filtrerLivraison($query, $request->query('statut_livraison'), 'facture.bonLivraison');
         // Numéro de commande, nom ou code du client, nom noté pour un client de passage (liens « ?recherche= »).
         if ($request->filled('recherche')) {
             $motif = '%'.addcslashes(trim((string) $request->recherche), '%_\\').'%';
@@ -90,6 +96,7 @@ class CommandeClientController extends Controller
             ]);
         }
         $commandes = $query->paginate($request->get('per_page', 20));
+        $commandes->getCollection()->each(fn (ComClientEntete $c) => $c->setAttribute('statut_livraison', StatutsListes::livraison($c->facture?->bonLivraison, (bool) $c->a_livrer)));
 
         return response()->json($commandes);
     }
