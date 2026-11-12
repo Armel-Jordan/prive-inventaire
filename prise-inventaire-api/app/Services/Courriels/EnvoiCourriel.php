@@ -16,6 +16,7 @@ use App\Services\BonCommandePdf;
 use App\Services\CommandesFournisseur;
 use App\Services\DemandesAcompte;
 use App\Services\DocumentsVentePdf;
+use App\Services\IdentitesFigees;
 use App\Services\Relances;
 use App\Services\RelancesDevis;
 use App\Services\ReponsesDevis;
@@ -363,6 +364,10 @@ class EnvoiCourriel
             return $this->bonRetour->pdf($document)->output();
         }
 
+        // Une facture ou une note de crédit envoyée est une copie réelle (« Réimpression » à partir de la deuxième, S4.5).
+        if (in_array($type, ['facture', 'relance', 'avoir'], true)) {
+            app(IdentitesFigees::class)->compterCopie($document);
+        }
         $donnees = match ($type) {
             'devis', 'relance_devis' => $this->documents->devis($document),
             'commande_client' => $this->documents->commande($document),

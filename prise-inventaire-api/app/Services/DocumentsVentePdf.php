@@ -58,10 +58,10 @@ class DocumentsVentePdf
             'Date du devis' => $this->date($devis->date_devis),
             'Valable jusqu\'au' => $this->date($devis->date_validite),
             'Date requise' => $this->date($devis->date_requise),
-            'Conditions de paiement' => $devis->conditionPaiement?->libelle,
+            'Conditions de paiement' => $this->figee($devis, 'condition_paiement') ?? $devis->conditionPaiement?->libelle,
             'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($devis->lignes)),
         ], [
-            'destinataire' => $this->client($devis->client, false, $devis),
+            'destinataire' => $this->figee($devis, 'destinataire') ?? $this->client($devis->client, false, $devis),
             'lignes' => $this->lignesPrix($devis->client_id, $devis->lignes, fn ($l) => [$l->prix_unitaire, 0, $l->montant_ligne]),
             // Les devis sont établis hors taxes.
             'totaux' => [['Total HT', (float) $devis->montant_total, true]],
@@ -78,10 +78,10 @@ class DocumentsVentePdf
         return $this->document('COMMANDE', $commande, [
             'Date de commande' => $this->date($commande->date_commande),
             'Livraison souhaitée' => $this->date($commande->date_livraison_souhaitee),
-            'Conditions de paiement' => $commande->conditionPaiement?->libelle,
+            'Conditions de paiement' => $this->figee($commande, 'condition_paiement') ?? $commande->conditionPaiement?->libelle,
             'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($commande->lignes)),
         ], [
-            'destinataire' => $this->client($commande->client, false, $commande),
+            'destinataire' => $this->figee($commande, 'destinataire') ?? $this->client($commande->client, false, $commande),
             'lignes' => $this->lignesPrix($commande->client_id, $commande->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('commande_client', $commande, $commande->lignes),
             'notes' => $commande->notes,
@@ -96,10 +96,12 @@ class DocumentsVentePdf
             'Date de facture' => $this->date($facture->date_facture),
             'Échéance' => $this->date($facture->date_echeance),
             'Date requise' => $this->date($facture->date_requise),
-            'Conditions de paiement' => $facture->conditionPaiement?->libelle,
+            'Conditions de paiement' => $this->figee($facture, 'condition_paiement') ?? $facture->conditionPaiement?->libelle,
             'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($facture->lignes)),
         ], [
-            'destinataire' => $this->client($facture->client, false, $facture),
+            'destinataire' => $this->figee($facture, 'destinataire') ?? $this->client($facture->client, false, $facture),
+            // À partir de la deuxième copie réelle d'une facture émise (socle S4.5).
+            'reimpression' => $facture->statut !== 'brouillon' && (int) $facture->nb_impressions >= 2,
             'lignes' => $this->lignesPrix($facture->client_id, $facture->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('facture', $facture, $facture->lignes),
             'reglement' => array_values(array_filter([
@@ -121,7 +123,8 @@ class DocumentsVentePdf
             'Facture créditée' => $avoir->facture ? trim($avoir->facture->numero.' du '.$this->date($avoir->facture->date_facture)) : null,
             'Motif' => $avoir->motif,
         ], [
-            'destinataire' => $this->client($avoir->client, false, $avoir->facture),
+            'destinataire' => $this->figee($avoir, 'destinataire') ?? $this->client($avoir->client, false, $avoir->facture),
+            'reimpression' => $avoir->statut !== Avoir::BROUILLON && (int) $avoir->nb_impressions >= 2,
             'lignes' => $this->lignesPrix($avoir->client_id, $avoir->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
             'totaux' => $this->totaux('avoir', $avoir, $avoir->lignes),
             'reglement' => $avoir->statut === Avoir::BROUILLON ? [] : array_values(array_filter([
@@ -197,10 +200,12 @@ class DocumentsVentePdf
     /** Champs communs à tous les documents. */
     private function document(string $titre, Model $document, array $infos, array $contenu): array
     {
-        $entete = EntreprisePdf::entete();
+        // Coordonnées de l'entreprise : celles figées sur le document envoyé ou émis (socle S4.5), sinon les actuelles.
+        $entete = $this->figee($document, 'entreprise') ?? EntreprisePdf::entete();
         // Représentant commercial du devis, de la commande ou de la facture.
         if ($document->getAttribute('representant_id')) {
-            $infos['Représentant'] = Representant::withTrashed()->whereKey($document->getAttribute('representant_id'))->value('nom');
+            $infos['Représentant'] = $this->figee($document, 'representant')
+                ?? Representant::withTrashed()->whereKey($document->getAttribute('representant_id'))->value('nom');
         }
         // Numéro de commande du client (socle S4.1).
         if (filled($document->getAttribute('numero_commande_client'))) {
@@ -208,7 +213,7 @@ class DocumentsVentePdf
         }
         // Contact du client et « Livrer à » (socle S4.1) ; le bon de livraison met l'adresse en destinataire.
         if ($document->getAttribute('contact_id') && ($contact = ClientContact::query()->find($document->getAttribute('contact_id')))) {
-            $infos['Contact'] = implode(' — ', array_filter([$contact->nom, $contact->telephone]));
+            $infos['Contact'] = $this->figee($document, 'contact') ?? implode(' — ', array_filter([$contact->nom, $contact->telephone]));
         }
         if (filled($document->getAttribute('livraison_adresse')) && ! $document instanceof BonLivraison) {
             $infos['Livrer à'] = str_replace("\n", ', ', (string) $document->getAttribute('livraison_adresse'));
@@ -218,6 +223,7 @@ class DocumentsVentePdf
         }
         // Transporteur et numéro de suivi (phase 1.11b) : « Expédié par » sur le bon de livraison.
         if ($expedition = Expedition::de($document)) {
+            $expedition['transporteur'] = $this->figee($document, 'transporteur') ?? $expedition['transporteur'];
             $infos += array_filter([
                 ($document instanceof BonLivraison ? 'Expédié par' : 'Transporteur') => $expedition['transporteur'],
                 'N° de suivi' => $expedition['numero_suivi'],
@@ -243,7 +249,20 @@ class DocumentsVentePdf
             'mention' => $contenu['mention'] ?? null,
             'notes' => $contenu['notes'] ?? null,
             'signatures' => $contenu['signatures'] ?? [],
+            'reimpression' => $contenu['reimpression'] ?? false,
         ];
+    }
+
+    /** Valeur figée sur le document à sa sortie du brouillon (socle S4.5), ou null. */
+    private function figee(Model $document, string $cle): mixed
+    {
+        return ($document->getAttribute('identite_figee') ?? [])[$cle] ?? null;
+    }
+
+    /** Destinataire d'un document, tel que l'imprime son PDF (voir client) : sert à figer son identité. */
+    public function destinataire(?Model $client, bool $livraison = false, ?Model $document = null): array
+    {
+        return $this->client($client, $livraison, $document);
     }
 
     /**

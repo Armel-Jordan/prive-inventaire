@@ -36,6 +36,8 @@ class ComClientEntete extends Model
     ];
 
     protected $casts = [
+        // Identité figée à la sortie du brouillon (socle S4.5), voir App\Services\IdentitesFigees.
+        'identite_figee' => 'array',
         'prioritaire' => 'boolean',
         'date_commande' => 'date',
         'date_livraison_souhaitee' => 'date',

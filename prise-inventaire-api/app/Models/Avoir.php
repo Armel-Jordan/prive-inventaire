@@ -33,6 +33,9 @@ class Avoir extends Model
     ];
 
     protected $casts = [
+        // Identité figée à la sortie du brouillon (socle S4.5), voir App\Services\IdentitesFigees.
+        'identite_figee' => 'array',
+        'nb_impressions' => 'integer',
         'date_avoir' => 'date',
         'emis_le' => 'datetime',
         'montant_ht' => 'decimal:2',
