@@ -135,7 +135,7 @@ export const AIDES_VENTES: AidesEcrans = {
       ],
       astuces: [
         "Le « Statut personnalisé » (détail du document) est une étiquette de repérage en couleur, sans effet sur le cycle : elle se pose même sur un document clos, et la liste se filtre par étiquette.",
-        "Seul un brouillon se modifie ou se supprime. « Copier » reprend n'importe quel devis en nouveau brouillon daté du jour.",
+        "Un brouillon, ou un devis envoyé sans réponse (sans changer de client), se modifie ; seul un brouillon se supprime. « Copier » reprend n'importe quel devis en nouveau brouillon daté du jour.",
         "Un devis envoyé dont la date de validité est passée devient « Expiré » et ne peut plus être accepté.",
         "Un devis ne se convertit qu'une fois, en commande ou en facture ; le numéro du document créé s'affiche sous son statut.",
         "Un devis est verrouillé pendant sa modification : un autre compte voit qui le modifie et ne peut pas l'enregistrer en même temps.",
@@ -161,7 +161,7 @@ export const AIDES_VENTES: AidesEcrans = {
       ],
       astuces: [
         "The “Custom status” (document details) is a coloured tracking label with no effect on the cycle: it can be set even on a closed document, and the list can be filtered by label.",
-        "Only a draft can be edited or deleted. “Copy” turns any quote into a new draft dated today.",
+        "A draft, or a sent quote without an answer (without changing the customer), can be edited; only a draft can be deleted. “Copy” turns any quote into a new draft dated today.",
         "A sent quote whose validity date has passed becomes “Expiré” and can no longer be accepted.",
         "A quote is converted only once, into an order or an invoice; the number of the document created shows under its status.",
         "A quote is locked while someone edits it: other accounts see who is editing it and cannot save it at the same time.",

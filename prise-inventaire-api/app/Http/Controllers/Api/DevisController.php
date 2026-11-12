@@ -36,6 +36,9 @@ use Illuminate\Support\Facades\DB;
 
 class DevisController extends Controller
 {
+    /** Statuts d'un devis qui se modifie : brouillon, ou envoyé tant que le client n'a pas répondu (DE2). */
+    private const MODIFIABLES = [Devis::STATUT_BROUILLON, Devis::STATUT_ENVOYE];
+
     public function __construct(private readonly TaxesDocument $taxes) {}
 
     public function index(Request $request): JsonResponse|Response
@@ -181,10 +184,15 @@ class DevisController extends Controller
         return response()->json($devis);
     }
 
+    /**
+     * Modifie un devis brouillon, ou envoyé tant que le client n'a pas répondu (comme dans fripv2, DE2) : un devis envoyé
+     * garde son client (son identité est figée à l'envoi). Une réponse arrivée pendant la saisie fait refuser
+     * l'enregistrement.
+     */
     public function update(Request $request, Devis $devis): JsonResponse
     {
-        if ($devis->statut !== Devis::STATUT_BROUILLON) {
-            return response()->json(['message' => __('Seuls les devis en brouillon peuvent être modifiés.')], 422);
+        if (! in_array($devis->statut, self::MODIFIABLES, true)) {
+            return response()->json(['message' => __('Seuls les devis en brouillon ou envoyés sans réponse peuvent être modifiés.')], 422);
         }
 
         $validated = $request->validate([
@@ -206,8 +214,15 @@ class DevisController extends Controller
             'condition_paiement_id' => ConditionsPaiement::regle($devis),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
+        if ($devis->statut === Devis::STATUT_ENVOYE && (int) $validated['client_id'] !== (int) $devis->client_id) {
+            return response()->json(['message' => __("Le client d'un devis envoyé ne se change pas.")], 422);
+        }
 
-        DB::transaction(function () use ($validated, $devis) {
+        $refus = DB::transaction(function () use ($validated, $devis) {
+            // Réponse du client (en ligne ou notée) arrivée depuis l'ouverture : rien n'est enregistré.
+            if (! in_array(Devis::whereKey($devis->id)->lockForUpdate()->value('statut'), self::MODIFIABLES, true)) {
+                return __('Le client a répondu à ce devis pendant la modification : rien n\'a été enregistré.');
+            }
             $devis->update(app(ClientsDePassage::class)->pourModification($validated, $devis, Client::find($validated['client_id']))
                 + app(EntetesVente::class)->pourModification($validated) + app(LivraisonDocuments::class)->pourModification($validated, $devis)
                 + app(ConditionsPaiement::class)->pourModification($validated, $devis, Client::find($validated['client_id'])) + [
@@ -241,7 +256,12 @@ class DevisController extends Controller
 
             // Taxes des lignes et totaux (DE1), selon le groupe du devis du moment.
             app(TaxesDevis::class)->appliquer($devis->refresh());
+
+            return null;
         });
+        if ($refus !== null) {
+            return response()->json(['message' => $refus], 422);
+        }
 
         return response()->json($devis->fresh()->load(['client', 'lignes.produit']));
     }

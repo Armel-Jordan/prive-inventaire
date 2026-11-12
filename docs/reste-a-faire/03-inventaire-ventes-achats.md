@@ -1269,6 +1269,9 @@ Voir **S4.6**.
 
 #### DE2 — Modification jusqu'à la réponse et total figé (P)
 
+> **Fait en partie le 12/11** : un devis envoyé se modifie jusqu'à la réponse (sans changer de client), refus si une
+> réponse arrive pendant la saisie. **Reste** : l'avertissement d'écart sur un total figé.
+
 1. **fripv2** : un devis Brouillon **ou Envoyé** se modifie. Il est figé une fois accepté, refusé ou converti : prix, frais et total ne changent plus, avec un avertissement d'écart si un recalcul diffère. « Marquer comme envoyé » sans courriel.
 2. **PI** : modification en brouillon seulement. Le bouton Envoyer fait déjà « marquer envoyé ».
 3. **À faire** : permettre le `PUT` au statut `envoye`. Si une réponse en ligne arrive pendant la modification, l'enregistrement est refusé (422).

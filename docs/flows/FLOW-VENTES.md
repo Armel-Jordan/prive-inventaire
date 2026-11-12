@@ -107,7 +107,7 @@ Migration : `2026_04_10_100001_add_tenant_id_to_ventes_tables.php`
 | Action | Disponible | Condition |
 |--------|-----------|-----------|
 | Créer | ✅ | Toujours |
-| Modifier (lignes, prix) | ✅ | Statut `brouillon` |
+| Modifier (lignes, prix) | ✅ | Statut `brouillon`, ou `envoye` sans réponse (sans changer de client ; une réponse arrivée pendant la saisie fait refuser l'enregistrement, 422) |
 | Supprimer | ✅ | Statut `brouillon` |
 | Envoyer | ✅ | Statut `brouillon` |
 | Accepter | ✅ | Statut `envoye` |
