@@ -1,5 +1,6 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -318,6 +319,7 @@ export default function BonsLivraisonPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
+                      <BoutonHistorique entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                       <button
                         onClick={() => handleVoirDetail(bon.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"

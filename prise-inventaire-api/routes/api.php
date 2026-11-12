@@ -369,6 +369,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::prefix('audit')->group(function () {
         Route::get('/', [AuditLogController::class, 'index']);
         Route::get('/stats', [AuditLogController::class, 'stats']);
+        // Historique d'une fiche ou d'un document (bouton « Historique », socle S4.6).
+        Route::get('/entite/{entite}/{id}', [AuditLogController::class, 'entite'])->whereNumber('id');
         Route::get('/{modelType}/{modelId}', [AuditLogController::class, 'history']);
     });
 

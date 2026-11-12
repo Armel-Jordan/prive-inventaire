@@ -994,6 +994,32 @@ export type EntitePieceJointe =
   | 'client' | 'fournisseur' | 'produit' | 'employe'
   | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur' | 'facture_fournisseur' | 'encaissement' | 'debourse' | 'transaction_bancaire';
 
+/** Fiches et documents qui ont un bouton « Historique » (socle S4.6). */
+export type EntiteHistorique = 'client' | 'fournisseur' | 'produit' | 'devis' | 'commande_client' | 'facture' | 'bon_livraison' | 'commande_fournisseur';
+
+/** Champ changé par une modification : libellé lisible, valeurs avant et après (et le nom de la fiche désignée). */
+export interface ChangementHistorique {
+  champ: string;
+  libelle: string;
+  avant: unknown;
+  apres: unknown;
+  avant_texte: string | null;
+  apres_texte: string | null;
+}
+
+export interface EntreeHistorique {
+  id: number;
+  action: 'create' | 'update' | 'delete';
+  date: string | null;
+  auteur: string | null;
+  champs: ChangementHistorique[];
+}
+
+/** Historique d'une fiche ou d'un document, le plus récent d'abord (droit de voir l'historique et la fiche). */
+export async function getHistoriqueEntite(entite: EntiteHistorique, id: number): Promise<EntreeHistorique[]> {
+  return fetchApi(`/audit/entite/${entite}/${id}`);
+}
+
 /**
  * Droit (module, action) qui permet d'ajouter, de modifier ou de retirer les pièces de chaque type de fiche :
  * le droit de modifier la fiche (miroir de PiecesJointes::DROITS côté serveur). Les voir demande de voir la fiche.

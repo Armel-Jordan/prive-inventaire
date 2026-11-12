@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Historique : une horloge à côté du trombone ouvre l'historique d'un client, d'un fournisseur, d'un produit, d'un devis, d'une commande, d'une facture ou d'un bon de livraison (qui a changé quoi, avant → après), avec le droit « Historique ».",
+    en: 'History: a clock next to the paper clip opens the history of a customer, supplier, product, quote, order, invoice or delivery note (who changed what, before → after), with the “History” right.',
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-11-12',
     fr: "Date requise et poids estimé : la date à laquelle le client veut être livré, du devis jusqu'au bon de livraison, et le poids des produits du document, affichés et imprimés.",
     en: 'Required date and estimated weight: the date the customer wants to be delivered, from the quote down to the delivery note, and the weight of the products on the document, shown and printed.',
     lien: '/devis',

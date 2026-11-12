@@ -1,4 +1,5 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin } from 'lucide-react';
@@ -345,6 +346,7 @@ export default function ClientsPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-center gap-2">
                       <BoutonPiecesJointes entite="client" entiteId={client.id} titre={client.raison_sociale} />
+                      <BoutonHistorique entite="client" entiteId={client.id} titre={client.raison_sociale} />
                       <button
                         onClick={() => handleEdit(client)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"
