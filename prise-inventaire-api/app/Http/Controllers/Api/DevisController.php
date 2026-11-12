@@ -11,6 +11,7 @@ use App\Models\Devis;
 use App\Models\DevisLigne;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
+use App\Services\CopiesDocuments;
 use App\Services\DevisesVente;
 use App\Services\EntetesVente;
 use App\Services\FacturesVente;
@@ -118,6 +119,8 @@ class DevisController extends Controller
             ...EntetesVente::regles(),
             ...LivraisonDocuments::regles(),
             'condition_paiement_id' => ConditionsPaiement::regle(),
+            // Document d'origine (« Copier vers », socle S4.3).
+            ...CopiesDocuments::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise du devis : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
@@ -159,6 +162,7 @@ class DevisController extends Controller
             }
 
             $devis->recalculerTotal();
+            app(CopiesDocuments::class)->noter($validated['copie_de'] ?? null, 'devis', $devis, $request->user()->id);
 
             return $devis;
         });
@@ -500,6 +504,7 @@ class DevisController extends Controller
                 ]);
             }
             $copie->recalculerTotal();
+            app(CopiesDocuments::class)->noter(['type' => 'devis', 'id' => $devis->id], 'devis', $copie, $request->user()->id);
 
             return $copie;
         });

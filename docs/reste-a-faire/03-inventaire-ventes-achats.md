@@ -333,6 +333,10 @@ Sources :
 
 #### S4.3 « Copier vers » n'importe quel type de document (M)
 
+> **Fait le 12/11** (FLOW-VENTES §2.19) : copie entre devis, commandes et factures (`GET /{document}/{id}/copie`), liens
+> « Copié de » et « Copies » (`documents_copies`, `GET /copies-documents/{type}/{id}`). **Reste** : le bon de
+> livraison comme source ou cible, les champs personnalisés de même nom.
+
 **1. Ce que fait fripv2** :
 - Le menu **Copier ▾** propose Devis, Commande, Bon de livraison ou Facture, depuis n'importe quel document et à tout statut.
 - Le document cible est **un brouillon non enregistré**, prérempli tel quel : prix, escomptes, prix de liste, coûtants, taxes, taux de change, délai.

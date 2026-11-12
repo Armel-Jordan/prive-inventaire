@@ -11,6 +11,7 @@ use App\Models\MouvementVente;
 use App\Models\ProduitLocalisation;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
+use App\Services\CopiesDocuments;
 use App\Services\DevisesVente;
 use App\Services\DisponibiliteProduits;
 use App\Services\EntetesVente;
@@ -139,6 +140,8 @@ class CommandeClientController extends Controller
             ...NumeroCommandeClient::regles(),
             ...LivraisonDocuments::regles(),
             'condition_paiement_id' => ConditionsPaiement::regle(),
+            // Document d'origine (« Copier vers », socle S4.3).
+            ...CopiesDocuments::regles(),
         ]);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         // Devise de la commande : celle demandée, sinon celle du client ; prix saisis dans cette devise. Représentant : idem.
@@ -188,6 +191,7 @@ class CommandeClientController extends Controller
 
             $commande->calculerMontants();
             $commande->save();
+            app(CopiesDocuments::class)->noter($validated['copie_de'] ?? null, 'commande_client', $commande, $request->user()?->id);
 
             return $commande;
         });

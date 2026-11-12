@@ -1,7 +1,8 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useSearchParams } from 'react-router-dom';
 import MenuCopierVers from '@/components/MenuCopierVers';
-import { preparerCopie, type DocumentCopiable } from '@/services/api';
+import LiensCopies from '@/components/LiensCopies';
+import { origineCopie, preparerCopie, type DocumentCopiable, type OrigineCopie } from '@/services/api';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import { FiltreProduit } from '@/components/FiltresStatutsListes';
@@ -104,6 +105,8 @@ export default function DevisPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDevis, setSelectedDevis] = useState<DevisRecord | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Document d'origine d'une copie (« Copier vers ») : noté à la création (« Copié de »).
+  const [copieDe, setCopieDe] = useState<OrigineCopie | null>(null);
   // Devis verrouillé pendant sa modification : un autre compte voit qui le modifie.
   const verrou = useVerrou('devis', showModal ? editingId : null);
   const [configNumero, setConfigNumero] = useState<{ auto_increment: boolean; prefixe: string; separateur?: string; prochain_numero: number; longueur: number } | null>(null);
@@ -207,7 +210,7 @@ export default function DevisPage() {
       if (editingId) {
         await updateDevis(editingId, payload);
       } else {
-        await createDevis(payload);
+        await createDevis({ ...payload, copie_de: copieDe });
       }
       setShowModal(false);
       resetForm();
@@ -304,6 +307,7 @@ export default function DevisPage() {
   // copie : un nouveau devis prérempli (« Copier vers », socle S4.3), daté du jour et valable 30 jours.
   const openEdit = (devis: DevisRecord, copie = false) => {
     setEditingId(copie ? null : devis.id);
+    setCopieDe(copie ? origineCopie(devis) : null);
     // Dates au format du champ (AAAA-MM-JJ) : l'horodatage complet de l'API vidait le champ.
     setFormData({
       client_id: String(devis.client_id),
@@ -381,6 +385,7 @@ export default function DevisPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    setCopieDe(null);
     frais.reinitialiser();
     setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
     setPassage(PASSAGE_VIDE);
@@ -763,7 +768,10 @@ export default function DevisPage() {
               )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-              <MenuCopierVers source="devis" id={selectedDevis.id} />
+              <div className="flex flex-col gap-2">
+                <MenuCopierVers source="devis" id={selectedDevis.id} />
+                <LiensCopies type="devis" id={selectedDevis.id} />
+              </div>
               <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 ml-auto">Fermer</button>
             </div>
           </div>

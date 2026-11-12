@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ComClientEntete;
 use App\Models\Devis;
 use App\Models\Facture;
+use App\Services\CopiesDocuments;
+use App\Support\Droits;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +56,18 @@ class CopieDocumentController extends Controller
             'copie_de' => ['type' => (string) $request->route('document'), 'id' => $source->getKey(), 'numero' => $source->getAttribute('numero')],
             'lignes' => $source->lignes->map(fn (Model $ligne) => $this->ligne($ligne, $vers))->values(),
         ]);
+    }
+
+    /**
+     * Liens « Copié de » et « Copies » d'un document : `GET /copies-documents/{type}/{id}`, avec le droit de le voir.
+     */
+    public function liens(Request $request, Droits $droits, CopiesDocuments $copies, string $type, int $id): JsonResponse
+    {
+        $modele = CopiesDocuments::TYPES[$type] ?? abort(404);
+        $droits->exiger($request->user(), CopiesDocuments::MODULES[$type], 'voir');
+        abort_unless($modele::whereKey($id)->exists(), 404);
+
+        return response()->json($copies->liens($type, $id));
     }
 
     /**

@@ -11,7 +11,8 @@ import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Link, useSearchParams } from 'react-router-dom';
 import MenuCopierVers from '@/components/MenuCopierVers';
-import { preparerCopie, type DocumentCopiable } from '@/services/api';
+import LiensCopies from '@/components/LiensCopies';
+import { origineCopie, preparerCopie, type DocumentCopiable, type OrigineCopie } from '@/services/api';
 import { ArchiveRestore, Eye, CreditCard, FileText, Pencil, ReceiptText, Send, Trash2, Plus, X, Search } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -139,6 +140,8 @@ export default function FacturesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   // Facture brouillon en modification (null : nouvelle facture), verrouillée tant que le formulaire est ouvert.
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Document d'origine d'une copie (« Copier vers ») : noté à la création (« Copié de »).
+  const [copieDe, setCopieDe] = useState<OrigineCopie | null>(null);
   const verrou = useVerrou('facture', showCreateModal ? editingId : null);
   const [clients, setClients] = useState<Client[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -283,6 +286,7 @@ export default function FacturesPage() {
 
   const fermerFormulaire = () => {
     frais.reinitialiser();
+    setCopieDe(null);
     setShowCreateModal(false);
     setEditingId(null);
     setCreateForm({ client_id: '', date_facture: aujourdhui(), date_echeance: '', notes: '', condition_paiement_id: '', devise: '', taux: '1' });
@@ -310,6 +314,7 @@ export default function FacturesPage() {
   // Formulaire rempli avec une facture ; copie : une nouvelle facture préremplie (« Copier vers », socle S4.3), datée du jour.
   const remplirFacture = (facture: Facture, copie = false) => {
     setEditingId(copie ? null : facture.id);
+    setCopieDe(copie ? origineCopie(facture) : null);
     setCreateForm({
       client_id: String(facture.client_id),
       date_facture: copie ? aujourdhui() : dateSaisie(facture.date_facture),
@@ -382,7 +387,7 @@ export default function FacturesPage() {
         date_requise: dateRequise || null,
       };
       if (editingId) await updateFacture(editingId, saisie);
-      else await createFacture(saisie);
+      else await createFacture({ ...saisie, copie_de: copieDe });
       fermerFormulaire();
       loadFactures();
     } catch (error) {
@@ -867,7 +872,10 @@ export default function FacturesPage() {
               )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-              <MenuCopierVers source="facture" id={selectedFacture.id} />
+              <div className="flex flex-col gap-2">
+                <MenuCopierVers source="facture" id={selectedFacture.id} />
+                <LiensCopies type="facture" id={selectedFacture.id} />
+              </div>
               <button
                 onClick={() => { setShowDetailModal(false); setSelectedFacture(null); }}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white"

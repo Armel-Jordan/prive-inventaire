@@ -1326,6 +1326,28 @@ export async function preparerCopie(source: DocumentCopiable, id: number, vers: 
   return fetchApi(`/${CHEMINS_STATUT[source]}/${id}/copie?vers=${vers}`);
 }
 
+/** Document d'origine d'une copie, envoyé à sa création pour garder le lien « Copié de ». */
+export type OrigineCopie = { type: DocumentCopiable; id: number };
+export type AvecOrigineCopie = { copie_de?: OrigineCopie | null };
+
+/** Origine notée par la préparation d'une copie (`copie_de`), sinon null. */
+export function origineCopie(document: unknown): OrigineCopie | null {
+  const origine = (document as { copie_de?: { type?: string; id?: number } } | null)?.copie_de;
+  return origine?.type && origine.id ? { type: origine.type as DocumentCopiable, id: origine.id } : null;
+}
+
+export interface LienCopie {
+  type: DocumentCopiable;
+  id: number;
+  numero: string;
+  le: string | null;
+}
+
+/** Liens « Copié de » et « Copies » d'un document. */
+export async function getLiensCopies(type: DocumentCopiable, id: number): Promise<{ copie_de: LienCopie | null; copies: LienCopie[] }> {
+  return fetchApi(`/copies-documents/${type}/${id}`);
+}
+
 /** Marque (ou démarque) un document prioritaire, même clos. */
 export async function poserPrioritaire(document: DocumentPrioritaire, id: number, prioritaire: boolean): Promise<{ prioritaire: boolean }> {
   return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/prioritaire`, { method: 'PUT', body: JSON.stringify({ prioritaire }) });
@@ -1837,7 +1859,7 @@ export async function createCommandeClient(data: {
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
   groupe_taxe_id?: number | null;
-} & CoordonneesPassage): Promise<ComClientEntete> {
+} & CoordonneesPassage & AvecOrigineCopie): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
 
@@ -1948,7 +1970,7 @@ export type SaisieFacture = {
   date_requise?: string | null;
 } & CoordonneesPassage;
 
-export async function createFacture(data: SaisieFacture): Promise<Facture> {
+export async function createFacture(data: SaisieFacture & AvecOrigineCopie): Promise<Facture> {
   return fetchApi('/factures', { method: 'POST', body: JSON.stringify(data) });
 }
 
@@ -2854,7 +2876,7 @@ export async function createDevis(data: {
   condition_paiement_id?: number | null;
   groupe_taxe_id?: number | null;
   date_requise?: string | null;
-} & CoordonneesPassage): Promise<DevisRecord> {
+} & CoordonneesPassage & AvecOrigineCopie): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
 

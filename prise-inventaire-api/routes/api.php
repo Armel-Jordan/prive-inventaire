@@ -396,6 +396,10 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         Route::delete('/{id}', [CommentaireController::class, 'destroy'])->whereNumber('id');
     });
 
+    // Liens « Copié de » et « Copies » d'un document de vente (socle S4.3) : droit de voir le document (contrôleur).
+    Route::get('/copies-documents/{type}/{id}', [CopieDocumentController::class, 'liens'])
+        ->whereIn('type', ['devis', 'commande_client', 'facture'])->whereNumber('id')->middleware('module:ventes');
+
     // Transferts planifiés
     Route::prefix('transferts-planifies')->group(function () {
         Route::get('/', [TransfertPlanifieController::class, 'index']);
