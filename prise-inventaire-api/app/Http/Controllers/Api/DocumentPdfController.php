@@ -10,6 +10,7 @@ use App\Models\DemandeAcompte;
 use App\Models\Devis;
 use App\Models\Facture;
 use App\Services\DocumentsVentePdf;
+use App\Services\IdentitesFigees;
 use Illuminate\Http\Response;
 
 /**
@@ -35,6 +36,8 @@ class DocumentPdfController extends Controller
     public function facture(int $id): Response
     {
         $facture = Facture::findOrFail($id);
+        // Copie réelle d'une facture émise : à partir de la deuxième, « Réimpression » (socle S4.5).
+        app(IdentitesFigees::class)->compterCopie($facture);
 
         return $this->documents->pdf($this->documents->facture($facture))->stream("facture-{$facture->numero}.pdf");
     }
@@ -44,6 +47,7 @@ class DocumentPdfController extends Controller
         $avoir = Avoir::findOrFail($id);
         // Un brouillon n'a pas encore de numéro.
         $nom = $avoir->numero ?? 'brouillon-'.$avoir->id;
+        app(IdentitesFigees::class)->compterCopie($avoir);
 
         return $this->documents->pdf($this->documents->avoir($avoir))->stream("note-credit-{$nom}.pdf");
     }

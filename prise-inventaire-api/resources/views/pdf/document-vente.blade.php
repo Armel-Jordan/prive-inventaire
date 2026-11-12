@@ -63,6 +63,9 @@
                 <h1>{{ $titre }}</h1>
                 <div class="document-number">{{ $numero }}</div>
                 <div class="status">{{ $statut }}</div>
+                @if (! empty($reimpression))
+                    <div class="status" style="color: #991b1b; font-weight: bold;">RÉIMPRESSION</div>
+                @endif
             </div>
         </div>
 

@@ -39,6 +39,9 @@ class Facture extends Model
     ];
 
     protected $casts = [
+        // Identité figée à la sortie du brouillon (socle S4.5), voir App\Services\IdentitesFigees.
+        'identite_figee' => 'array',
+        'nb_impressions' => 'integer',
         'prioritaire' => 'boolean',
         'date_facture' => 'date',
         'date_echeance' => 'date',

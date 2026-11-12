@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Identité figée : un devis envoyé, une commande soumise, une facture ou une note de crédit émise garde à l'impression les coordonnées de l'entreprise, le client et les libellés du jour ; une facture porte « Réimpression » à partir de sa deuxième copie.",
+    en: 'Frozen identity: a sent quote, a submitted order, an issued invoice or credit note keeps, when printed, the company details, the customer and the labels of that day; an invoice shows “Reprint” from its second copy.',
+    lien: '/factures',
+  },
+  {
+    date: '2026-11-12',
     fr: "Commentaires : une bulle sur chaque ligne des devis, commandes, factures, bons de livraison, clients, fournisseurs, produits et commandes fournisseur ; des messages signés et datés, avec une pastille des non-lus.",
     en: 'Comments: a speech bubble on each row of quotes, orders, invoices, delivery notes, customers, suppliers, products and purchase orders; signed and dated messages, with a badge for unread ones.',
     lien: '/commandes-client',

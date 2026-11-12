@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\Middleware\DefinirLangue;
 use App\Observers\JournalModifications;
+use App\Services\IdentitesFigees;
 use App\Services\Planificateur;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
@@ -40,6 +41,11 @@ class AppServiceProvider extends ServiceProvider
         // Journal des modifications (écran Historique) des fiches et documents.
         foreach (array_keys(JournalModifications::MODELES) as $modele) {
             $modele::observe(JournalModifications::class);
+        }
+
+        // Identité figée des documents de vente à la sortie du brouillon (socle S4.5).
+        foreach (IdentitesFigees::DOCUMENTS as $modele) {
+            $modele::saving(fn ($document) => app(IdentitesFigees::class)->surEnregistrement($document));
         }
 
         // Tâches planifiées des entreprises : échéances vérifiées chaque minute par le planificateur

@@ -52,6 +52,8 @@ class Devis extends Model
     protected $hidden = ['reponse_jeton', 'reponse_jeton_hash'];
 
     protected $casts = [
+        // Identité figée à la sortie du brouillon (socle S4.5), voir App\Services\IdentitesFigees.
+        'identite_figee' => 'array',
         'prioritaire' => 'boolean',
         'date_devis' => 'date',
         'date_validite' => 'date',

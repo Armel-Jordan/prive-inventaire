@@ -503,6 +503,22 @@ avec ses filtres du moment et dans son ordre, 20 000 lignes au plus.
 
 Code : `App\Support\ExportListe` (avec `ClasseurXlsx`) ; web : composant `BoutonExportExcel`.
 
+### 2.18 Identité figée et réimpression
+
+Socle S4.5 du plan de parité fripv2.
+- **Identité figée** : quand un devis est envoyé, une commande soumise, une facture ou une note de crédit émise (ou
+  qu'un de ces documents naît hors brouillon), il retient une fois pour toutes (`identite_figee`) : les coordonnées de
+  l'entreprise (nom, adresse, téléphone, courriel, mentions, devise), le destinataire tel qu'imprimé, le code du client
+  et les libellés de l'en-tête (représentant, transporteur, condition de paiement, contact). Le PDF les reprend :
+  renommer le client, changer l'adresse de l'entreprise ou le nom d'un représentant ne change plus un document envoyé
+  ou émis. Un brouillon suit toujours les fiches du jour.
+- **Réimpression** : une facture ou une note de crédit émise compte ses copies réelles (`nb_impressions` : PDF ouvert
+  depuis l'application, courriel envoyé). À partir de la deuxième, le PDF porte « RÉIMPRESSION ». Les copies d'un
+  brouillon ne comptent pas ; le compteur ne passe pas par le journal des modifications.
+
+Code : `App\Services\IdentitesFigees` (accroché à l'enregistrement des quatre modèles), migration
+`2026_11_12_100106_identite_figee_documents`.
+
 ---
 
 ## 3. Devis
