@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\Fournisseur;
 use App\Models\Transporteur;
+use App\Support\ExportListe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class FournisseurController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         $query = Fournisseur::where('tenant_id', $tenantId);
@@ -30,7 +32,22 @@ class FournisseurController extends Controller
             $query->where('actif', $request->boolean('actif'));
         }
 
-        $fournisseurs = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 15));
+        $query->orderBy('raison_sociale');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'fournisseurs', 'Fournisseurs', [
+                ['Code', 'Code', fn (Fournisseur $f) => $f->code],
+                ['Raison sociale', 'Company name', fn (Fournisseur $f) => $f->raison_sociale],
+                ['Adresse', 'Address', fn (Fournisseur $f) => $f->adresse],
+                ['Téléphone', 'Phone', fn (Fournisseur $f) => $f->telephone],
+                ['Courriel', 'Email', fn (Fournisseur $f) => $f->email],
+                ['Contact', 'Contact', fn (Fournisseur $f) => $f->contact_nom],
+                ['Téléphone du contact', 'Contact phone', fn (Fournisseur $f) => $f->contact_telephone],
+                ['Devise', 'Currency', fn (Fournisseur $f) => $f->devise],
+                ['Actif', 'Active', fn (Fournisseur $f) => (bool) $f->actif],
+            ]);
+        }
+        $fournisseurs = $query->paginate($request->get('per_page', 15));
 
         return response()->json($fournisseurs);
     }

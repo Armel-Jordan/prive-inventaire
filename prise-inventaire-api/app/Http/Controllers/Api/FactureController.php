@@ -24,11 +24,13 @@ use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
+use App\Support\ExportListe;
 use App\Support\NumeroCommandeClient;
 use App\Support\PoidsDocuments;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -43,7 +45,7 @@ class FactureController extends Controller
         private readonly CartesCadeaux $cartes,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         // Le bon de livraison en cours permet à la liste de ne plus proposer d'en créer un deuxième.
@@ -85,7 +87,28 @@ class FactureController extends Controller
             $query->whereDate('date_facture', '<=', $request->date_fin);
         }
 
-        $factures = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
+        $query->orderBy('created_at', 'desc');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'factures', 'Factures', [
+                ['Numéro', 'Number', fn (Facture $d) => $d->numero],
+                ['Date', 'Date', fn (Facture $d) => $d->date_facture],
+                ['Échéance', 'Due date', fn (Facture $d) => $d->date_echeance],
+                ['Client', 'Customer', fn (Facture $d) => filled($d->passage_nom) ? $d->passage_nom : $d->client?->raison_sociale],
+                ['N° de commande du client', 'Customer PO number', fn (Facture $d) => $d->numero_commande_client],
+                ['Statut', 'Status', fn (Facture $d) => ExportListe::statut('facture', $d->statut)],
+                ['Statut personnalisé', 'Custom status', fn (Facture $d) => $d->statutPersonnalise?->libelle],
+                ['Montant HT', 'Amount excl. tax', fn (Facture $d) => $d->montant_ht, true],
+                ['Taxes', 'Taxes', fn (Facture $d) => $d->montant_tva, true],
+                ['Montant TTC', 'Total', fn (Facture $d) => $d->montant_ttc, true],
+                ['Payé', 'Paid', fn (Facture $d) => $d->montant_paye, true],
+                ['Reste à payer', 'Balance due', fn (Facture $d) => $d->reste_a_payer, true],
+                ['Devise', 'Currency', fn (Facture $d) => $d->devise],
+                ['Représentant', 'Sales rep', fn (Facture $d) => $d->representant?->nom],
+                ['Prioritaire', 'Priority', fn (Facture $d) => (bool) $d->prioritaire],
+            ]);
+        }
+        $factures = $query->paginate($request->get('per_page', 20));
 
         return response()->json($factures);
     }

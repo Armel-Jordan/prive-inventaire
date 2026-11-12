@@ -11,14 +11,16 @@ use App\Models\NumeroSerie;
 use App\Models\Transporteur;
 use App\Services\LotsSeries;
 use App\Services\StatutsPersonnalises;
+use App\Support\ExportListe;
 use App\Support\PoidsDocuments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class BonLivraisonController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         $query = BonLivraison::with(['facture.client', 'transporteur:id,nom', StatutsPersonnalises::COLONNES])->withCount('colis')->where('tenant_id', $tenantId);
@@ -51,7 +53,27 @@ class BonLivraisonController extends Controller
             $query->whereDoesntHave('tourneeBon');
         }
 
-        $bons = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
+        $query->orderBy('created_at', 'desc');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'bons-livraison', 'Bons de livraison', [
+                ['Numéro', 'Number', fn (BonLivraison $b) => $b->numero],
+                ['Facture', 'Invoice', fn (BonLivraison $b) => $b->facture?->numero],
+                ['Client', 'Customer', fn (BonLivraison $b) => filled($b->facture?->passage_nom) ? $b->facture->passage_nom : $b->facture?->client?->raison_sociale],
+                ['Mode', 'Mode', fn (BonLivraison $b) => match ($b->mode_livraison) {
+                    'entreprise' => app()->getLocale() === 'en' ? 'Company delivery' : 'Livraison entreprise', 'retrait_client' => app()->getLocale() === 'en' ? 'Customer pickup' : 'Retrait client', default => $b->mode_livraison
+                }],
+                ['Statut', 'Status', fn (BonLivraison $b) => ExportListe::statut('bon_livraison', $b->statut)],
+                ['Statut personnalisé', 'Custom status', fn (BonLivraison $b) => $b->statutPersonnalise?->libelle],
+                ['Date de livraison', 'Delivery date', fn (BonLivraison $b) => $b->date_livraison],
+                ['Date requise', 'Required date', fn (BonLivraison $b) => $b->date_requise],
+                ['Transporteur', 'Carrier', fn (BonLivraison $b) => $b->transporteur?->nom],
+                ['N° de suivi', 'Tracking number', fn (BonLivraison $b) => $b->numero_suivi],
+                ['Colis', 'Parcels', fn (BonLivraison $b) => (int) $b->colis_count],
+                ['Prioritaire', 'Priority', fn (BonLivraison $b) => (bool) $b->prioritaire],
+            ]);
+        }
+        $bons = $query->paginate($request->get('per_page', 20));
 
         return response()->json($bons);
     }

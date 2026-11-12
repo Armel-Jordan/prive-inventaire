@@ -22,18 +22,20 @@ use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
 use App\Support\Droits;
+use App\Support\ExportListe;
 use App\Support\PoidsDocuments;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class DevisController extends Controller
 {
     public function __construct(private readonly TaxesDocument $taxes) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
@@ -71,7 +73,24 @@ class DevisController extends Controller
             });
         }
 
-        $devis = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 15));
+        $query->orderBy('created_at', 'desc');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'devis', 'Devis', [
+                ['Numéro', 'Number', fn (Devis $d) => $d->numero],
+                ['Date', 'Date', fn (Devis $d) => $d->date_devis],
+                ['Validité', 'Valid until', fn (Devis $d) => $d->date_validite],
+                ['Client', 'Customer', fn (Devis $d) => filled($d->passage_nom) ? $d->passage_nom : $d->client?->raison_sociale],
+                ['Statut', 'Status', fn (Devis $d) => ExportListe::statut('devis', $d->statut)],
+                ['Statut personnalisé', 'Custom status', fn (Devis $d) => $d->statutPersonnalise?->libelle],
+                ['Montant HT', 'Amount excl. tax', fn (Devis $d) => $d->montant_total, true],
+                ['Devise', 'Currency', fn (Devis $d) => $d->devise],
+                ['Représentant', 'Sales rep', fn (Devis $d) => $d->representant?->nom],
+                ['Transporteur', 'Carrier', fn (Devis $d) => $d->transporteur?->nom],
+                ['Prioritaire', 'Priority', fn (Devis $d) => (bool) $d->prioritaire],
+            ]);
+        }
+        $devis = $query->paginate($request->get('per_page', 15));
 
         return response()->json($devis);
     }

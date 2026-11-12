@@ -1,4 +1,5 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import { useEffect, useState } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -186,6 +187,9 @@ export default function FournisseursPage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 border rounded-lg"
           />
+        </div>
+        <div className="flex justify-end mt-3">
+          <BoutonExportExcel chemin="/fournisseurs" fichier="fournisseurs" parametres={{ search: search || undefined }} />
         </div>
       </div>
 

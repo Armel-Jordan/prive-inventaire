@@ -3418,6 +3418,13 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Export Excel des listes (S5).
+    listExport: {
+      button: 'Exporter',
+      busy: 'Export…',
+      hint: 'Toutes les lignes de la liste, avec ses filtres, en classeur Excel.',
+      error: "L'export n'a pas pu être fait : réessayez.",
+    },
     // Historique d'une fiche ou d'un document (socle S4.6).
     changeHistory: {
       button: 'Historique',
@@ -8265,6 +8272,13 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Excel export of lists (S5).
+    listExport: {
+      button: 'Export',
+      busy: 'Exporting…',
+      hint: 'All the rows of the list, with its filters, as an Excel workbook.',
+      error: 'The export could not be done: try again.',
     },
     // History of a record or a document (socket S4.6).
     changeHistory: {
