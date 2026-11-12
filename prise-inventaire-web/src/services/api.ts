@@ -1305,6 +1305,15 @@ export interface AvecPriorite {
 
 export type DocumentPrioritaire = 'devis' | 'commande_client' | 'facture' | 'bon_livraison';
 
+/** Documents qui se copient vers un autre type (« Copier vers », socle S4.3) et types cibles. */
+export type DocumentCopiable = 'devis' | 'commande_client' | 'facture';
+export type CibleCopie = 'devis' | 'commande' | 'facture';
+
+/** Document du type cible prérempli avec celui-ci (rien n'est enregistré). */
+export async function preparerCopie(source: DocumentCopiable, id: number, vers: CibleCopie): Promise<Record<string, unknown>> {
+  return fetchApi(`/${CHEMINS_STATUT[source]}/${id}/copie?vers=${vers}`);
+}
+
 /** Marque (ou démarque) un document prioritaire, même clos. */
 export async function poserPrioritaire(document: DocumentPrioritaire, id: number, prioritaire: boolean): Promise<{ prioritaire: boolean }> {
   return fetchApi(`/${CHEMINS_STATUT[document]}/${id}/prioritaire`, { method: 'PUT', body: JSON.stringify({ prioritaire }) });

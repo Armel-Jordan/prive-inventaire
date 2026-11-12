@@ -4,7 +4,7 @@ import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, Check, X, FileText, Send, Trash2, Pencil, Wallet, Hourglass, Search } from 'lucide-react';
@@ -19,6 +19,9 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import { useSearchParams } from 'react-router-dom';
+import MenuCopierVers from '@/components/MenuCopierVers';
+import { preparerCopie, type DocumentCopiable } from '@/services/api';
 import PoidsEstime from '@/components/PoidsEstime';
 import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
 import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
@@ -239,11 +242,12 @@ export default function CommandesClientPage() {
     }
   };
 
-  const handleOpenEdit = (cmd: ComClientEntete) => {
-    setEditingId(cmd.id);
+  // copie : une nouvelle commande préremplie (« Copier vers », socle S4.3), datée du jour.
+  const handleOpenEdit = (cmd: ComClientEntete, copie = false) => {
+    setEditingId(copie ? null : cmd.id);
     setFormData({
       client_id: String(cmd.client_id),
-      date_commande: dateSaisie(cmd.date_commande),
+      date_commande: copie ? aujourdhui() : dateSaisie(cmd.date_commande),
       date_livraison_souhaitee: dateSaisie(cmd.date_livraison_souhaitee),
       remise_globale: String(cmd.remise_globale ?? '0'),
       notes: cmd.notes || '',
@@ -254,7 +258,7 @@ export default function CommandesClientPage() {
     setRepresentantId(cmd.representant_id ?? null);
     setTransporteurId(cmd.transporteur_id ?? null);
     setGroupeTaxeId(cmd.groupe_taxe_id ?? null);
-    setNumeroSuivi(cmd.numero_suivi ?? '');
+    setNumeroSuivi(copie ? '' : cmd.numero_suivi ?? '');
     setNumeroCommandeClient(cmd.numero_commande_client ?? '');
     setLivraison(livraisonDuDocument(cmd));
     setConditionId(cmd.condition_paiement_id ?? null);
@@ -269,6 +273,24 @@ export default function CommandesClientPage() {
     );
     setShowModal(true);
   };
+
+  // « Copier vers » (socle S4.3) : ?copie=type:id ouvre un nouveau document prérempli avec ce document.
+  const [parametresUrl, setParametresUrl] = useSearchParams();
+  const ouvrirCopie = useEffectEvent((document: ComClientEntete | null) => {
+    if (!document) { alert(t.copyTo.error); return; }
+    handleOpenEdit(document, true);
+  });
+  useEffect(() => {
+    const [source, id] = (parametresUrl.get('copie') ?? '').split(':');
+    if (!source || !id) return;
+    let actif = true;
+    preparerCopie(source as DocumentCopiable, Number(id), 'commande').then(document => {
+      if (!actif) return;
+      ouvrirCopie(document as unknown as ComClientEntete);
+      setParametresUrl(p => { p.delete('copie'); return p; }, { replace: true });
+    }, () => { if (actif) ouvrirCopie(null); });
+    return () => { actif = false; };
+  }, [parametresUrl, setParametresUrl]);
 
   const handleSoumettre = async (id: number) => {
     try {
@@ -892,7 +914,8 @@ export default function CommandesClientPage() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+              <MenuCopierVers source="commande_client" id={selectedCommande.id} />
               <button
                 onClick={() => { setShowDetailModal(false); setSelectedCommande(null); }}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white"

@@ -3418,6 +3418,12 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // « Copier vers » un autre type de document (socle S4.3).
+    copyTo: {
+      label: 'Copier vers',
+      targets: { devis: 'Devis', commande: 'Commande', facture: 'Facture' },
+      error: "Le document n'a pas pu être copié.",
+    },
     // Commentaires des fiches et des documents (socle S4.6).
     docComments: {
       button: 'Commentaires',
@@ -8289,6 +8295,12 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Copy to another document type (socket S4.3).
+    copyTo: {
+      label: 'Copy to',
+      targets: { devis: 'Quote', commande: 'Order', facture: 'Invoice' },
+      error: 'The document could not be copied.',
     },
     // Comments on records and documents (socket S4.6).
     docComments: {
