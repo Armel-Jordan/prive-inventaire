@@ -10,8 +10,8 @@ use App\Support\TenantRule;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * En-tête commercial des documents de vente (plan de parité fripv2, phase 1.11) : le représentant et le transporteur
- * d'un devis, d'une commande ou d'une facture.
+ * En-tête commercial des documents de vente (plan de parité fripv2, phase 1.11) : le représentant, le transporteur et le
+ * groupe de taxes (socle S4.1) d'un devis, d'une commande ou d'une facture.
  *
  * - À la création, la valeur demandée (même vide), sinon celle du client.
  * - D'un document à celui qu'on en tire (conversion, copie, reste à facturer), elle suit le document d'origine.
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 class EntetesVente
 {
     /** Champ de l'en-tête => colonne du client qui donne sa valeur par défaut. */
-    public const CHAMPS = ['representant_id' => 'representant_id', 'transporteur_id' => 'transporteur_id'];
+    public const CHAMPS = ['representant_id' => 'representant_id', 'transporteur_id' => 'transporteur_id', 'groupe_taxe_id' => 'groupe_taxe_id'];
 
     /**
      * Règles de validation ; la valeur actuelle du document reste acceptée si elle a été retirée du référentiel depuis.
@@ -35,6 +35,9 @@ class EntetesVente
             'representant_id' => $regle('representants', 'representant_id'),
             'transporteur_id' => [...$regle('transporteurs', 'transporteur_id'),
                 ...($tiers ? [] : [Transporteur::exige($document, fn () => Client::whereKey(request()->input('client_id', $document?->getAttribute('client_id')))->value('transporteur_id'))])],
+            // Groupe de taxes actif (celui déjà retenu reste accepté même désactivé) ; un groupe vide exonère.
+            'groupe_taxe_id' => ['nullable', 'integer', TenantRule::exists('groupes_taxes')->where(fn ($q) => $q->whereNull('deleted_at')
+                ->where(fn ($q) => $q->where('actif', true)->when($document?->getAttribute('groupe_taxe_id'), fn ($q, $actuel) => $q->orWhere('id', $actuel))))],
         ];
     }
 

@@ -38,7 +38,7 @@ class DevisController extends Controller
         // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
         Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
             ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
-        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
+        $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
             $query->where('statut', $request->statut);
@@ -142,7 +142,7 @@ class DevisController extends Controller
 
     public function show(Devis $devis): JsonResponse
     {
-        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES]);
+        $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES]);
 
         return response()->json($devis);
     }
@@ -332,7 +332,7 @@ class DevisController extends Controller
                     'facteur' => $ligne->facteur,
                 ]);
                 $ligneCommande->calculerMontants();
-                $detail = $this->taxes->appliquer($ligneCommande, $this->taxes->groupePour(['produit_id' => $ligne->produit_id]));
+                $detail = $this->taxes->appliquer($ligneCommande, $this->taxes->groupePour(['produit_id' => $ligne->produit_id], $devis->groupe_taxe_id));
                 $commande->lignes()->save($ligneCommande);
                 $this->taxes->enregistrer('commande_client', $ligneCommande->id, $detail);
             }

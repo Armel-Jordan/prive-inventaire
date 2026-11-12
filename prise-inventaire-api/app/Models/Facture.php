@@ -25,7 +25,7 @@ class Facture extends Model
         // Représentant commercial et son taux de commission, figé à la création (voir App\Services\EntetesVente).
         'representant_id', 'taux_commission',
         // Transporteur (voir App\Services\EntetesVente) et numéro de suivi de l'envoi, repris par le bon de livraison.
-        'transporteur_id', 'numero_suivi',
+        'transporteur_id', 'numero_suivi', 'groupe_taxe_id',
         // Numéro de commande du client (sa référence, socle S4.1).
         'numero_commande_client',
         // Contact et « Livrer à » (copie de l'adresse et ses instructions), voir App\Services\LivraisonDocuments.
@@ -91,6 +91,12 @@ class Facture extends Model
     public function transporteur(): BelongsTo
     {
         return $this->belongsTo(Transporteur::class)->withTrashed();
+    }
+
+    /** Groupe de taxes du document (socle S4.1) : appliqué aux lignes qui n'en ont pas. */
+    public function groupeTaxe(): BelongsTo
+    {
+        return $this->belongsTo(GroupeTaxe::class)->withTrashed();
     }
 
     public function factureMere(): BelongsTo

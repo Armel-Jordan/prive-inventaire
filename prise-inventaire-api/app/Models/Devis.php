@@ -35,7 +35,7 @@ class Devis extends Model
         // Relances envoyées et date de la dernière (voir App\Services\RelancesDevis).
         'relances', 'derniere_relance_le',
         // Représentant commercial et transporteur (voir App\Services\EntetesVente).
-        'representant_id', 'transporteur_id',
+        'representant_id', 'transporteur_id', 'groupe_taxe_id',
         // Contact et « Livrer à » (copie de l'adresse et ses instructions), voir App\Services\LivraisonDocuments.
         'contact_id', 'adresse_livraison_id', 'livraison_adresse', 'instructions_livraison',
         // Condition de paiement : celle du client par défaut, reprise par la facture (voir App\Services\ConditionsPaiement).
@@ -105,6 +105,12 @@ class Devis extends Model
     public function transporteur(): BelongsTo
     {
         return $this->belongsTo(Transporteur::class)->withTrashed();
+    }
+
+    /** Groupe de taxes du document (socle S4.1) : appliqué aux lignes qui n'en ont pas. */
+    public function groupeTaxe(): BelongsTo
+    {
+        return $this->belongsTo(GroupeTaxe::class)->withTrashed();
     }
 
     public function lignes(): HasMany

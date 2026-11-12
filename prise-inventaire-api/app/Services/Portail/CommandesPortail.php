@@ -146,7 +146,8 @@ class CommandesPortail
         // Taux de taxe par défaut de l'entreprise (paramètres), comme les autres documents de vente.
         $taux = TenantParametres::query()->value('tva_taux');
         $taux = $taux !== null ? (float) $taux : (float) ComClientLigne::TAUX_TVA_DEFAUT;
-        $groupe = $this->taxes->groupePour([]);
+        // Groupe de taxes du client (exonération, par exemple), sinon celui par défaut.
+        $groupe = $this->taxes->groupePour([], $client->groupe_taxe_id);
 
         $commande = DB::transaction(function () use ($compte, $client, $donnees, $tenantId, $lignes, $notes, $taux, $groupe) {
             // Le représentant du client suit sa commande.

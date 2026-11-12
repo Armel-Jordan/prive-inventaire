@@ -3418,6 +3418,14 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Groupe de taxes du client et des documents de vente (socle S4.1).
+    taxGroupDoc: {
+      label: 'Groupe de taxes',
+      none: "Groupe par défaut de l'entreprise",
+      documentHint: "Celui du client par défaut ; il s'applique aux lignes (un groupe vide exonère).",
+      clientHint: "Proposé sur ses devis, commandes et factures ; un groupe vide l'exonère des taxes.",
+      inactive: 'inactif',
+    },
     // Documents prioritaires (l'étoile, socle S4.1).
     priority: {
       label: 'Prioritaire',
@@ -8238,6 +8246,14 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Tax group of the customer and of sales documents (socket S4.1).
+    taxGroupDoc: {
+      label: 'Tax group',
+      none: "Company's default group",
+      documentHint: "The customer's by default; it applies to the lines (an empty group exempts).",
+      clientHint: 'Proposed on their quotes, orders and invoices; an empty group exempts them from taxes.',
+      inactive: 'inactive',
     },
     // Priority documents (the star, socket S4.1).
     priority: {

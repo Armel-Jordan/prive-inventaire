@@ -73,7 +73,7 @@ class CommandeClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->findOrFail($id);
+        $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
 
@@ -148,7 +148,8 @@ class CommandeClientController extends Controller
                     'facteur' => $ligneData['facteur'],
                 ]);
                 $ligne->calculerMontants();
-                $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
+                // Groupe de la ligne, sinon celui de la commande (celui du client par défaut), sinon celui par défaut.
+                $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData, $devise['groupe_taxe_id'] ?? null));
                 $commande->lignes()->save($ligne);
                 $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
             }
@@ -195,7 +196,8 @@ class CommandeClientController extends Controller
             $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
         }
 
-        DB::transaction(function () use ($commande, $validated) {
+        $groupeAvant = $commande->groupe_taxe_id;
+        DB::transaction(function () use ($commande, $validated, $groupeAvant) {
             // Coordonnées du client de passage : seulement pour lui (changer de client les efface ; non transmises, elles restent).
             $commande->update(app(ClientsDePassage::class)->pourModification($validated, $commande, Client::find($validated['client_id'] ?? $commande->client_id))
                 + app(EntetesVente::class)->pourModification($validated) + app(LivraisonDocuments::class)->pourModification($validated, $commande)
@@ -226,10 +228,13 @@ class CommandeClientController extends Controller
                         'facteur' => $ligneData['facteur'],
                     ]);
                     $ligne->calculerMontants();
-                    $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData));
+                    $detail = $this->taxes->appliquer($ligne, $this->taxes->groupePour($ligneData, $commande->groupe_taxe_id));
                     $commande->lignes()->save($ligne);
                     $this->taxes->enregistrer('commande_client', $ligne->id, $detail);
                 }
+            } elseif ((int) $commande->groupe_taxe_id !== (int) $groupeAvant) {
+                // Groupe de taxes changé sans renvoyer les lignes : leurs taxes sont refaites (socle S4.1).
+                $this->taxes->reappliquer('commande_client', $commande->lignes, $commande->groupe_taxe_id);
             }
 
             $commande->calculerMontants();

@@ -45,6 +45,8 @@ class Client extends Model
         'representant_id',
         // Transporteur, repris par ses devis, commandes, factures et bons de livraison.
         'transporteur_id',
+        // Groupe de taxes de ses documents (exonération, par exemple ; socle S4.1).
+        'groupe_taxe_id',
         // Exige son numéro de commande sur ses commandes et factures (socle S4.1).
         'commande_client_obligatoire',
     ];
@@ -58,6 +60,7 @@ class Client extends Model
         'sequence_livraison' => 'integer',
         'representant_id' => 'integer',
         'transporteur_id' => 'integer',
+        'groupe_taxe_id' => 'integer',
         'commande_client_obligatoire' => 'boolean',
     ];
 
@@ -77,6 +80,12 @@ class Client extends Model
     public function transporteur(): BelongsTo
     {
         return $this->belongsTo(Transporteur::class)->withTrashed();
+    }
+
+    /** Groupe de taxes proposé sur ses documents (socle S4.1). */
+    public function groupeTaxe(): BelongsTo
+    {
+        return $this->belongsTo(GroupeTaxe::class)->withTrashed();
     }
 
     public static function generateCode(): string
