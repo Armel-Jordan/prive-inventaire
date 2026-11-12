@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Devis envoyé modifiable : un devis envoyé se modifie jusqu'à la réponse du client (bouton « Modifier »), sans changer de client ; une réponse arrivée pendant la saisie fait refuser l'enregistrement.",
+    en: 'Sent quotes can be changed: a sent quote can be changed until the customer answers ("Edit" button), without changing the customer; an answer received while editing makes the save refused.',
+    lien: '/devis',
+  },
+  {
+    date: '2026-11-12',
     fr: "Taxes sur le devis : chaque ligne prend le groupe de taxes du devis (celui du client par défaut), et le devis affiche ses taxes et son total TTC, dans son détail, au PDF et sur la page de réponse en ligne.",
     en: "Taxes on quotes: each line takes the quote's tax group (the customer's by default), and the quote shows its taxes and total including taxes, in its details, on the PDF and on the online answer page.",
     lien: '/devis',

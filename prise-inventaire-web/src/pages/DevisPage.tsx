@@ -107,6 +107,8 @@ export default function DevisPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   // Document d'origine d'une copie (« Copier vers ») : noté à la création (« Copié de »).
   const [copieDe, setCopieDe] = useState<OrigineCopie | null>(null);
+  // Statut du devis modifié : envoyé, il garde son client (DE2).
+  const [statutEdition, setStatutEdition] = useState<string | null>(null);
   // Devis verrouillé pendant sa modification : un autre compte voit qui le modifie.
   const verrou = useVerrou('devis', showModal ? editingId : null);
   const [configNumero, setConfigNumero] = useState<{ auto_increment: boolean; prefixe: string; separateur?: string; prochain_numero: number; longueur: number } | null>(null);
@@ -308,6 +310,7 @@ export default function DevisPage() {
   const openEdit = (devis: DevisRecord, copie = false) => {
     setEditingId(copie ? null : devis.id);
     setCopieDe(copie ? origineCopie(devis) : null);
+    setStatutEdition(copie ? null : devis.statut);
     // Dates au format du champ (AAAA-MM-JJ) : l'horodatage complet de l'API vidait le champ.
     setFormData({
       client_id: String(devis.client_id),
@@ -386,6 +389,7 @@ export default function DevisPage() {
   const resetForm = () => {
     setEditingId(null);
     setCopieDe(null);
+    setStatutEdition(null);
     frais.reinitialiser();
     setFormData({ client_id: '', date_devis: aujourdhui(), date_validite: '', notes: '', devise: '', taux: '1' });
     setPassage(PASSAGE_VIDE);
@@ -527,9 +531,12 @@ export default function DevisPage() {
                       {devis.statut === 'envoye' && peut('devis', 'envoyer') && (
                         <BoutonCourriel type="relance_devis" documentId={devis.id} taille={16} titre={tr.remind} icone={BellRing} onFerme={loadData} />
                       )}
+                      {/* Modifiable jusqu'à la réponse du client (DE2). */}
+                      {['brouillon', 'envoye'].includes(devis.statut) && (
+                        <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>
+                      )}
                       {devis.statut === 'brouillon' && (
                         <>
-                          <button onClick={() => openEdit(devis)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><FileText size={16} /></button>
                           {peut('devis', 'envoyer') && (
                             <button onClick={() => handleEnvoyer(devis.id)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Envoyer"><Send size={16} /></button>
                           )}
@@ -586,11 +593,12 @@ export default function DevisPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Client *</label>
-                  <select required value={formData.client_id} onChange={(e) => choisirClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                  <select required value={formData.client_id} onChange={(e) => choisirClient(e.target.value)} disabled={statutEdition === 'envoye'} className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100">
                     <option value="">Sélectionner...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
                   </select>
-                  {!clientDePassage && <BoutonClientDePassage onChoisir={c => { setClients(cs => avecClient(cs, c)); choisirClient(String(c.id), [c]); }} />}
+                  {statutEdition === 'envoye' && <p className="mt-1 text-xs text-gray-500">{tr.sentEditNote}</p>}
+                  {!clientDePassage && statutEdition !== 'envoye' && <BoutonClientDePassage onChoisir={c => { setClients(cs => avecClient(cs, c)); choisirClient(String(c.id), [c]); }} />}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Date devis *</label>

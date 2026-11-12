@@ -1,4 +1,7 @@
 {
+    "Seuls les devis en brouillon ou envoyés sans réponse peuvent être modifiés.": "Only draft quotes, or sent quotes without an answer, can be changed.",
+    "Le client d'un devis envoyé ne se change pas.": "The customer of a sent quote cannot be changed.",
+    "Le client a répondu à ce devis pendant la modification : rien n'a été enregistré.": "The customer answered this quote while it was being changed: nothing was saved.",
     "Vous ne pouvez pas modifier vos propres accès.": "You cannot change your own access.",
     "Seul un administrateur peut modifier les accès d'un administrateur.": "Only an administrator can change an administrator's access.",
     "Vous ne pouvez pas modifier un groupe dont vous faites partie.": "You cannot change a group you belong to.",
