@@ -1,4 +1,5 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -257,6 +258,7 @@ export default function ClientsPage() {
         </div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <FiltresClients valeur={filtres} onChange={f => { setFiltres(f); setPage(1); }} />
+          <BoutonExportExcel chemin="/clients" fichier="clients" parametres={{ search: search || undefined, ...filtres }} className="mt-3" />
           {/* Filtres mémorisés : recherche, catégorie, favoris. */}
           <div className="mt-3">
             <FiltresMemorises ecran="clients" valeurs={{ recherche: search, categorie_id: filtres.categorie_id ?? null, favoris: filtres.favoris ?? null }}

@@ -10,14 +10,16 @@ use App\Models\Facture;
 use App\Services\ClientsDePassage;
 use App\Services\DevisesVente;
 use App\Services\EntetesVente;
+use App\Support\ExportListe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         $query = Client::where('tenant_id', $tenantId);
@@ -46,7 +48,27 @@ class ClientController extends Controller
             ->with(['categorie:id,nom', 'representant:id,nom', 'transporteur:id,nom'])
             ->withExists(['favoris as favori' => fn ($f) => $f->where('user_id', $utilisateur)]);
 
-        $clients = $query->orderBy('raison_sociale')->paginate($request->get('per_page', 20));
+        $query->orderBy('raison_sociale');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'clients', 'Clients', [
+                ['Code', 'Code', fn (Client $c) => $c->code],
+                ['Raison sociale', 'Company name', fn (Client $c) => $c->raison_sociale],
+                ['Adresse', 'Address', fn (Client $c) => $c->adresse_facturation],
+                ['Code postal', 'Postal code', fn (Client $c) => $c->code_postal],
+                ['Ville', 'City', fn (Client $c) => $c->ville],
+                ['Téléphone', 'Phone', fn (Client $c) => $c->telephone],
+                ['Courriel', 'Email', fn (Client $c) => $c->email],
+                ['Contact', 'Contact', fn (Client $c) => $c->contact_nom],
+                ['Catégorie', 'Category', fn (Client $c) => $c->categorie?->nom],
+                ['Représentant', 'Sales rep', fn (Client $c) => $c->representant?->nom],
+                ['Transporteur', 'Carrier', fn (Client $c) => $c->transporteur?->nom],
+                ['Encours maximum', 'Credit limit', fn (Client $c) => $c->encours_max, true],
+                ['Devise', 'Currency', fn (Client $c) => $c->devise],
+                ['Actif', 'Active', fn (Client $c) => (bool) $c->actif],
+            ]);
+        }
+        $clients = $query->paginate($request->get('per_page', 20));
 
         return response()->json($clients);
     }

@@ -1,5 +1,6 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
+import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
@@ -473,6 +474,7 @@ export default function FacturesPage() {
           <FiltreStatutPersonnalise document="facture" value={filterStatutPerso} onChange={id => { setFilterStatutPerso(id); setPage(1); }}
             className="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
           <FiltrePrioritaires actif={filtrePrioritaires} onChange={actif => { setFiltrePrioritaires(actif); setPage(1); }} />
+          <BoutonExportExcel chemin="/factures" fichier="factures" parametres={{ statut: filterStatut || undefined, recherche: recherche || undefined, representant_id: filterRepresentant ?? undefined, transporteur_id: filterTransporteur ?? undefined, statut_personnalise_id: filterStatutPerso ?? undefined, prioritaire: filtrePrioritaires || undefined }} />
         </div>
       </div>
 

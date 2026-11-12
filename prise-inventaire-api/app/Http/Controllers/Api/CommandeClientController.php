@@ -18,19 +18,21 @@ use App\Services\LivraisonDocuments;
 use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
+use App\Support\ExportListe;
 use App\Support\NumeroCommandeClient;
 use App\Support\PoidsDocuments;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class CommandeClientController extends Controller
 {
     public function __construct(private readonly TaxesDocument $taxes) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
         $query = ComClientEntete::with(['client', 'lignes', 'representant:id,nom', 'transporteur:id,nom', 'conditionPaiement:id,libelle', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
@@ -67,7 +69,27 @@ class CommandeClientController extends Controller
             $query->whereDate('date_commande', '<=', $request->date_fin);
         }
 
-        $commandes = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20));
+        $query->orderBy('created_at', 'desc');
+        // Export Excel de toute la liste filtrée (S5), avec les mêmes droits que sa lecture.
+        if (ExportListe::demande($request)) {
+            return ExportListe::reponse($query, 'commandes-client', 'Commandes', [
+                ['Numéro', 'Number', fn (ComClientEntete $d) => $d->numero],
+                ['Date', 'Date', fn (ComClientEntete $d) => $d->date_commande],
+                ['Livraison souhaitée', 'Requested delivery', fn (ComClientEntete $d) => $d->date_livraison_souhaitee],
+                ['Client', 'Customer', fn (ComClientEntete $d) => filled($d->passage_nom) ? $d->passage_nom : $d->client?->raison_sociale],
+                ['N° de commande du client', 'Customer PO number', fn (ComClientEntete $d) => $d->numero_commande_client],
+                ['Statut', 'Status', fn (ComClientEntete $d) => ExportListe::statut('commande_client', $d->statut)],
+                ['Statut personnalisé', 'Custom status', fn (ComClientEntete $d) => $d->statutPersonnalise?->libelle],
+                ['Montant HT', 'Amount excl. tax', fn (ComClientEntete $d) => $d->montant_ht, true],
+                ['Taxes', 'Taxes', fn (ComClientEntete $d) => $d->montant_tva, true],
+                ['Montant TTC', 'Total', fn (ComClientEntete $d) => $d->montant_ttc, true],
+                ['Devise', 'Currency', fn (ComClientEntete $d) => $d->devise],
+                ['Représentant', 'Sales rep', fn (ComClientEntete $d) => $d->representant?->nom],
+                ['Transporteur', 'Carrier', fn (ComClientEntete $d) => $d->transporteur?->nom],
+                ['Prioritaire', 'Priority', fn (ComClientEntete $d) => (bool) $d->prioritaire],
+            ]);
+        }
+        $commandes = $query->paginate($request->get('per_page', 20));
 
         return response()->json($commandes);
     }

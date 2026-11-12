@@ -478,6 +478,18 @@ désignée pour un représentant, un transporteur, une condition de paiement…)
 
 Code : `AuditLogController::entite` ; web : composant `BoutonHistorique`. Reste de S4.6 : les commentaires.
 
+### 2.17 Export Excel des listes
+
+S5 du plan de parité fripv2. Le bouton « Exporter » des listes de devis, commandes, factures, bons de livraison, clients
+et fournisseurs télécharge un classeur Excel de **toutes** les lignes de la liste (pas seulement la page affichée),
+avec ses filtres du moment et dans son ordre, 20 000 lignes au plus.
+- Colonnes : celles de la liste et plus (statut au libellé de l'entreprise, statut personnalisé, montants en nombres,
+  devise, représentant, transporteur, prioritaire…), titres dans la langue de l'écran.
+- **API** : `?format=xlsx` sur le `GET` de la liste ; mêmes droits que sa lecture, et seulement les données de
+  l'entreprise.
+
+Code : `App\Support\ExportListe` (avec `ClasseurXlsx`) ; web : composant `BoutonExportExcel`.
+
 ---
 
 ## 3. Devis

@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Export Excel des listes : le bouton « Exporter » des devis, commandes, factures, bons de livraison, clients et fournisseurs donne toutes les lignes de la liste, avec ses filtres, en classeur Excel.",
+    en: 'Excel export of lists: the “Export” button of quotes, orders, invoices, delivery notes, customers and suppliers gives all the rows of the list, with its filters, as an Excel workbook.',
+    lien: '/factures',
+  },
+  {
+    date: '2026-11-12',
     fr: "Historique : une horloge à côté du trombone ouvre l'historique d'un client, d'un fournisseur, d'un produit, d'un devis, d'une commande, d'une facture ou d'un bon de livraison (qui a changé quoi, avant → après), avec le droit « Historique ».",
     en: 'History: a clock next to the paper clip opens the history of a customer, supplier, product, quote, order, invoice or delivery note (who changed what, before → after), with the “History” right.',
     lien: '/commandes-client',
