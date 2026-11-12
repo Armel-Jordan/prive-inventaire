@@ -8,6 +8,7 @@ import PadSignature from '@/components/PadSignature';
 import ColisBon from '@/components/livraison/ColisBon';
 import ExpeditionBon from '@/components/livraison/ExpeditionBon';
 import { DetailLivraison } from '@/components/ChoixLivraison';
+import PoidsEstime from '@/components/PoidsEstime';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
 import BadgeStatut from '@/components/BadgeStatut';
 import { ChoixStatutPersonnalise, FiltreStatutPersonnalise, PastilleStatutPersonnalise } from '@/components/StatutPersonnalise';
@@ -34,7 +35,7 @@ import BoutonPdf from '@/components/BoutonPdf';
 import BoutonCourriel from '@/components/BoutonCourriel';
 import Pagination from '@/components/Pagination';
 import { signaler } from '@/lib/erreurs';
-import { formatDateHeure } from '@/lib/documents';
+import { formatDateDocument, formatDateHeure } from '@/lib/documents';
 import { quantiteAvecUnite } from '@/lib/unitesVente';
 
 /** Statuts où les colis se préparent : avant le départ en livraison. */
@@ -457,6 +458,13 @@ export default function BonsLivraisonPage() {
                   <span className="text-sm text-gray-500">Date livraison:</span>
                   <p className="dark:text-white">{formatDateHeure(selectedBon.date_livraison)}</p>
                 </div>
+                {selectedBon.date_requise && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.requiredDate.label} :</span>
+                    <p className="dark:text-white">{formatDateDocument(selectedBon.date_requise)}</p>
+                  </div>
+                )}
+                <PoidsEstime poids={selectedBon.poids_estime_kg} />
                 <DetailLivraison document={selectedBon} />
               </div>
 

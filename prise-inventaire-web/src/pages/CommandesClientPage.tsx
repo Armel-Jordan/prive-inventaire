@@ -15,6 +15,7 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import PoidsEstime from '@/components/PoidsEstime';
 import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
 import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
 import ChoixConditionPaiement from '@/components/ChoixConditionPaiement';
@@ -821,6 +822,7 @@ export default function CommandesClientPage() {
                   <span className="text-sm text-gray-500">Date livraison souhaitée:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedCommande.date_livraison_souhaitee)}</p>
                 </div>
+                <PoidsEstime poids={selectedCommande.poids_estime_kg} />
                 {selectedCommande.numero_commande_client && (
                   <div>
                     <span className="text-sm text-gray-500">{t.customerPo.label} :</span>

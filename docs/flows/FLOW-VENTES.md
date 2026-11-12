@@ -450,6 +450,19 @@ Code : `App\Services\TaxesDocument::groupePour($ligne, $groupeDocument)` et `rea
 `App\Services\EntetesVente::CHAMPS`, migration `2026_11_12_100103_groupe_taxe_documents` ; web : `hooks/useGroupesTaxes`,
 composant `ChoixGroupeTaxe`.
 
+### 2.15 Date requise et poids estimé
+
+Socle S4.1 du plan de parité fripv2 (date requise, poids approximatif) :
+- **Date requise** : la date à laquelle le client veut être livré. Saisie sur le devis et la facture ; la commande a déjà
+  sa « date de livraison souhaitée ». Elle suit : devis → commande (livraison souhaitée) ou facture directe ; commande →
+  facture (date requise) ; facture → bon de livraison. Imprimée sur le devis, la facture et le bon.
+- **Poids estimé** : quantité × facteur de l'unité × poids du produit (fiche produit, en kg), sur les lignes dont le
+  produit a un poids ; rien si aucun n'en a. Renvoyé par le détail des devis, commandes, factures et bons de livraison
+  (`poids_estime_kg`, le bon comptant ses quantités à livrer) et imprimé (« Poids estimé »).
+
+Code : `App\Support\PoidsDocuments` (`estime`, `lisible`), migration `2026_11_12_100104_date_requise_documents` ; web :
+composant `PoidsEstime`.
+
 ---
 
 ## 3. Devis

@@ -3418,6 +3418,12 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Date requise et poids estimé des documents de vente (socle S4.1).
+    requiredDate: {
+      label: 'Date requise',
+      hint: 'Date à laquelle le client veut être livré ; reprise par la commande (livraison souhaitée), la facture et le bon de livraison.',
+      weight: 'Poids estimé',
+    },
     // Groupe de taxes du client et des documents de vente (socle S4.1).
     taxGroupDoc: {
       label: 'Groupe de taxes',
@@ -8246,6 +8252,12 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Required date and estimated weight of sales documents (socket S4.1).
+    requiredDate: {
+      label: 'Required date',
+      hint: 'Date the customer wants to be delivered; carried to the order (requested delivery), the invoice and the delivery note.',
+      weight: 'Estimated weight',
     },
     // Tax group of the customer and of sales documents (socket S4.1).
     taxGroupDoc: {

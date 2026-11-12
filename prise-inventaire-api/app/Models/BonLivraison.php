@@ -31,6 +31,8 @@ class BonLivraison extends Model
         'statut_personnalise_id',
         // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
         'prioritaire',
+        // Date requise par le client (socle S4.1) : reprise d'un document à l'autre.
+        'date_requise',
     ];
 
     protected $casts = [
@@ -38,6 +40,7 @@ class BonLivraison extends Model
         'date_preparation' => 'datetime',
         'date_pret' => 'datetime',
         'date_livraison' => 'datetime',
+        'date_requise' => 'date',
         'signe_le' => 'datetime',
     ];
 

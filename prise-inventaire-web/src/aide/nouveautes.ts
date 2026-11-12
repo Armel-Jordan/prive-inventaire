@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Date requise et poids estimé : la date à laquelle le client veut être livré, du devis jusqu'au bon de livraison, et le poids des produits du document, affichés et imprimés.",
+    en: 'Required date and estimated weight: the date the customer wants to be delivered, from the quote down to the delivery note, and the weight of the products on the document, shown and printed.',
+    lien: '/devis',
+  },
+  {
+    date: '2026-11-12',
     fr: "Groupe de taxes du client et des documents : sur la fiche client (un groupe vide l'exonère), proposé sur ses devis, commandes et factures et repris de l'un à l'autre ; en changer refait les taxes des lignes.",
     en: "Customer and document tax group: on the customer record (an empty group exempts them), proposed on their quotes, orders and invoices and carried from one to the next; changing it recomputes the line taxes.",
     lien: '/clients',

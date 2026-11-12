@@ -78,6 +78,8 @@ export default function DevisPage() {
   // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
   const groupesTaxes = useGroupesTaxes();
   const [groupeTaxeId, setGroupeTaxeId] = useState<number | null>(null);
+  // Date à laquelle le client veut être livré (socle S4.1), reprise par la commande, la facture et le bon.
+  const [dateRequise, setDateRequise] = useState('');
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
   // Condition de paiement (socle S4.1) : vide, celle du client (sinon celle par défaut) ; reprise par la facture.
@@ -187,6 +189,7 @@ export default function DevisPage() {
         groupe_taxe_id: groupeTaxeId,
         ...saisieLivraison(livraison),
         condition_paiement_id: conditionId,
+        date_requise: dateRequise || null,
       };
       if (editingId) {
         await updateDevis(editingId, payload);
@@ -302,6 +305,7 @@ export default function DevisPage() {
     setGroupeTaxeId(devis.groupe_taxe_id ?? null);
     setLivraison(livraisonDuDocument(devis));
     setConditionId(devis.condition_paiement_id ?? null);
+    setDateRequise(dateSaisie(devis.date_requise ?? ''));
     setLignes(devis.lignes.map(l => ({
       id: l.id,
       produit_id: l.produit_id,
@@ -353,6 +357,7 @@ export default function DevisPage() {
     setGroupeTaxeId(null);
     setLivraison({});
     setConditionId(null);
+    setDateRequise('');
     setLignes([]);
   };
 
@@ -555,6 +560,11 @@ export default function DevisPage() {
                   <input type="date" required value={formData.date_validite} onChange={(e) => setFormData({ ...formData, date_validite: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
                 </div>
                 <div>
+                  <label htmlFor="devis-date-requise" className="block text-sm font-medium mb-1">{t.requiredDate.label}</label>
+                  <input id="devis-date-requise" type="date" value={dateRequise} onChange={e => setDateRequise(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                  <p className="text-xs text-gray-500 mt-1">{t.requiredDate.hint}</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">Notes</label>
                   <input type="text" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="Optionnel" />
                   <BoutonRemarquesRapides onInserer={texte => setFormData(f => ({ ...f, notes: ajouterRemarque(f.notes, texte, ' ') }))} />
@@ -671,6 +681,7 @@ export default function DevisPage() {
                   onChange={statut => { setSelectedDevis(d => (d ? { ...d, statut_personnalise: statut, statut_personnalise_id: statut?.id ?? null } : d)); loadData(); }} />
                 <div><span className="text-gray-500">Date:</span><p>{fmtDate(selectedDevis.date_devis)}</p></div>
                 <div><span className="text-gray-500">Validité:</span><p>{fmtDate(selectedDevis.date_validite)}</p></div>
+                {selectedDevis.date_requise && <div><span className="text-gray-500">{t.requiredDate.label} :</span><p>{fmtDate(selectedDevis.date_requise)}</p></div>}
                 {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}
                 {selectedDevis.transporteur && <div><span className="text-gray-500">{t.carriers.label} :</span><p>{selectedDevis.transporteur.nom}</p></div>}
                 {selectedDevis.condition_paiement && <div><span className="text-gray-500">{t.documentTerms.label} :</span><p>{selectedDevis.condition_paiement.libelle}</p></div>}

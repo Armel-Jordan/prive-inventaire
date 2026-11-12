@@ -51,6 +51,7 @@ import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import PoidsEstime from '@/components/PoidsEstime';
 import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
 import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
 import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
@@ -100,6 +101,8 @@ export default function FacturesPage() {
   // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
   const groupesTaxes = useGroupesTaxes();
   const [groupeTaxeId, setGroupeTaxeId] = useState<number | null>(null);
+  // Date à laquelle le client veut être livré (socle S4.1), reprise par la commande, la facture et le bon.
+  const [dateRequise, setDateRequise] = useState('');
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
   const [numeroSuivi, setNumeroSuivi] = useState('');
@@ -276,6 +279,7 @@ export default function FacturesPage() {
     setNumeroSuivi('');
     setNumeroCommandeClient('');
     setLivraison({});
+    setDateRequise('');
     setCreateLignes([]);
   };
 
@@ -301,6 +305,7 @@ export default function FacturesPage() {
       setNumeroSuivi(facture.numero_suivi ?? '');
       setNumeroCommandeClient(facture.numero_commande_client ?? '');
       setLivraison(livraisonDuDocument(facture));
+      setDateRequise(dateSaisie(facture.date_requise ?? ''));
       setCreateLignes((facture.lignes ?? []).map(l => ({
         produit_id: l.produit_id,
         quantite: l.quantite,
@@ -338,6 +343,7 @@ export default function FacturesPage() {
         numero_suivi: numeroSuivi.trim() || null,
         numero_commande_client: numeroCommandeClient.trim() || null,
         ...saisieLivraison(livraison),
+        date_requise: dateRequise || null,
       };
       if (editingId) await updateFacture(editingId, saisie);
       else await createFacture(saisie);
@@ -641,6 +647,13 @@ export default function FacturesPage() {
                   <span className="text-sm text-gray-500">Date échéance:</span>
                   <p className="dark:text-white">{formatDateDocument(selectedFacture.date_echeance)}</p>
                 </div>
+                {selectedFacture.date_requise && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.requiredDate.label} :</span>
+                    <p className="dark:text-white">{formatDateDocument(selectedFacture.date_requise)}</p>
+                  </div>
+                )}
+                <PoidsEstime poids={selectedFacture.poids_estime_kg} />
                 {selectedFacture.numero_commande_client && (
                   <div>
                     <span className="text-sm text-gray-500">{t.customerPo.label} :</span>
@@ -855,6 +868,12 @@ export default function FacturesPage() {
                     onChange={(e) => setCreateForm({ ...createForm, date_echeance: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   <span className="text-xs text-gray-500">Vide : selon la condition de paiement.</span>
+                </div>
+                <div>
+                  <label htmlFor="facture-date-requise" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.requiredDate.label}</label>
+                  <input id="facture-date-requise" type="date" value={dateRequise} onChange={e => setDateRequise(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  <span className="text-xs text-gray-500">{t.requiredDate.hint}</span>
                 </div>
                 <ChampDevise className="col-span-2" valeur={{ devise: createForm.devise, taux: createForm.taux }}
                   onChange={v => setCreateForm(f => ({ ...f, devise: v.devise, taux: v.taux }))} />

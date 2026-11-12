@@ -44,6 +44,8 @@ class Devis extends Model
         'statut_personnalise_id',
         // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
         'prioritaire',
+        // Date requise par le client (socle S4.1) : reprise d'un document à l'autre.
+        'date_requise',
     ];
 
     /** Le jeton du lien de réponse ne sort jamais de l'API : seul le lien construit est donné. */
@@ -53,6 +55,7 @@ class Devis extends Model
         'prioritaire' => 'boolean',
         'date_devis' => 'date',
         'date_validite' => 'date',
+        'date_requise' => 'date',
         'montant_total' => 'decimal:2',
         'envoye_le' => 'datetime',
         'reponse_le' => 'datetime',
