@@ -13,6 +13,7 @@ use App\Models\Facture;
 use App\Models\Representant;
 use App\Support\EntreprisePdf;
 use App\Support\Expedition;
+use App\Support\PoidsDocuments;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DocumentPdf;
 use Carbon\Carbon;
@@ -56,7 +57,9 @@ class DocumentsVentePdf
         return $this->document('DEVIS', $devis, [
             'Date du devis' => $this->date($devis->date_devis),
             'Valable jusqu\'au' => $this->date($devis->date_validite),
+            'Date requise' => $this->date($devis->date_requise),
             'Conditions de paiement' => $devis->conditionPaiement?->libelle,
+            'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($devis->lignes)),
         ], [
             'destinataire' => $this->client($devis->client, false, $devis),
             'lignes' => $this->lignesPrix($devis->client_id, $devis->lignes, fn ($l) => [$l->prix_unitaire, 0, $l->montant_ligne]),
@@ -76,6 +79,7 @@ class DocumentsVentePdf
             'Date de commande' => $this->date($commande->date_commande),
             'Livraison souhaitée' => $this->date($commande->date_livraison_souhaitee),
             'Conditions de paiement' => $commande->conditionPaiement?->libelle,
+            'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($commande->lignes)),
         ], [
             'destinataire' => $this->client($commande->client, false, $commande),
             'lignes' => $this->lignesPrix($commande->client_id, $commande->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
@@ -91,7 +95,9 @@ class DocumentsVentePdf
         return $this->document('FACTURE', $facture, [
             'Date de facture' => $this->date($facture->date_facture),
             'Échéance' => $this->date($facture->date_echeance),
+            'Date requise' => $this->date($facture->date_requise),
             'Conditions de paiement' => $facture->conditionPaiement?->libelle,
+            'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($facture->lignes)),
         ], [
             'destinataire' => $this->client($facture->client, false, $facture),
             'lignes' => $this->lignesPrix($facture->client_id, $facture->lignes, fn ($l) => [$l->prix_unitaire_ht, $l->remise_ligne, $l->montant_ht]),
@@ -161,6 +167,8 @@ class DocumentsVentePdf
             'Facture' => $bon->facture?->numero,
             'Mode de livraison' => self::MODES_LIVRAISON[$bon->mode_livraison] ?? $bon->mode_livraison,
             'Date de livraison' => $this->date($bon->date_livraison),
+            'Date requise' => $this->date($bon->date_requise),
+            'Poids estimé' => PoidsDocuments::lisible(PoidsDocuments::estime($bon->lignes, 'quantite_a_livrer')),
         ]), [
             // L'adresse « Livrer à » du bon (copiée de la facture), sinon celle de la fiche du client.
             'destinataire' => filled($bon->livraison_adresse) && ! ($bon->facture?->client?->de_passage)

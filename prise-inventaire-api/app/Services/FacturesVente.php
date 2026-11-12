@@ -74,6 +74,8 @@ class FacturesVente
                 'numero_commande_client' => NumeroCommandeClient::valeur($donnees['numero_commande_client'] ?? null),
                 // Prioritaire : celui du document d'origine (devis facturé).
                 'prioritaire' => ! empty($donnees['prioritaire']),
+                // Date requise par le client (socle S4.1) : celle saisie ou celle du document d'origine.
+                'date_requise' => $donnees['date_requise'] ?? null,
             ]);
 
             $this->creerLignes($facture, $lignesCalculees);
@@ -121,6 +123,7 @@ class FacturesVente
                 'numero_suivi' => array_key_exists('numero_suivi', $donnees) ? $donnees['numero_suivi'] : $facture->numero_suivi,
                 'numero_commande_client' => array_key_exists('numero_commande_client', $donnees)
                     ? NumeroCommandeClient::valeur($donnees['numero_commande_client']) : $facture->numero_commande_client,
+                'date_requise' => array_key_exists('date_requise', $donnees) ? $donnees['date_requise'] : $facture->date_requise,
             ]);
 
             return $facture->refresh();

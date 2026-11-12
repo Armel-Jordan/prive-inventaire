@@ -22,6 +22,7 @@ use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
 use App\Support\Droits;
+use App\Support\PoidsDocuments;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -81,6 +82,8 @@ class DevisController extends Controller
             'client_id' => ['required', TenantRule::exists('clients')],
             'date_devis' => 'required|date',
             'date_validite' => 'required|date|after_or_equal:date_devis',
+            // Date à laquelle le client veut être livré (socle S4.1), reprise par la commande.
+            'date_requise' => 'nullable|date',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => ['required', TenantRule::exists('produits')],
@@ -115,6 +118,7 @@ class DevisController extends Controller
                 'client_id' => $validated['client_id'],
                 'date_devis' => $validated['date_devis'],
                 'date_validite' => $validated['date_validite'],
+                'date_requise' => $validated['date_requise'] ?? null,
                 'notes' => $validated['notes'] ?? null,
                 'statut' => Devis::STATUT_BROUILLON,
                 'created_by' => $request->user()->id,
@@ -143,6 +147,8 @@ class DevisController extends Controller
     public function show(Devis $devis): JsonResponse
     {
         $devis->load(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES]);
+        // Poids estimé (socle S4.1) : celui des produits qui ont un poids.
+        $devis->setAttribute('poids_estime_kg', PoidsDocuments::estime($devis->lignes));
 
         return response()->json($devis);
     }
@@ -157,6 +163,8 @@ class DevisController extends Controller
             'client_id' => ['required', TenantRule::exists('clients')],
             'date_devis' => 'required|date',
             'date_validite' => 'required|date|after_or_equal:date_devis',
+            // Date à laquelle le client veut être livré (socle S4.1), reprise par la commande.
+            'date_requise' => 'nullable|date',
             'notes' => 'nullable|string',
             'lignes' => 'required|array|min:1',
             'lignes.*.id' => 'nullable|exists:devis_lignes,id',
@@ -178,6 +186,7 @@ class DevisController extends Controller
                     'client_id' => $validated['client_id'],
                     'date_devis' => $validated['date_devis'],
                     'date_validite' => $validated['date_validite'],
+                    'date_requise' => array_key_exists('date_requise', $validated) ? $validated['date_requise'] : $devis->date_requise,
                     'notes' => $validated['notes'] ?? null,
                 ]);
 
@@ -304,6 +313,8 @@ class DevisController extends Controller
             $commande = ComClientEntete::create(app(ClientsDePassage::class)->copier($devis) + app(EntetesVente::class)->copier($devis) + app(LivraisonDocuments::class)->copier($devis) + [
                 'condition_paiement_id' => $devis->condition_paiement_id,
                 'prioritaire' => (bool) $devis->prioritaire,
+                // La date requise du devis devient la livraison souhaitée de la commande.
+                'date_livraison_souhaitee' => $devis->date_requise,
                 'numero' => $numero,
                 'client_id' => $devis->client_id,
                 // La commande reste dans la devise du devis, à son taux.
@@ -402,6 +413,7 @@ class DevisController extends Controller
                 // La condition du devis (sinon celle du client, ou par défaut) ; l'échéance s'en calcule.
                 'condition_paiement_id' => $devis->condition_paiement_id,
                 'prioritaire' => (bool) $devis->prioritaire,
+                'date_requise' => $devis->date_requise?->toDateString(),
                 'client_id' => $devis->client_id,
                 'date_facture' => $date,
                 // La facture reste dans la devise du devis, à son taux : les montants acceptés ne changent pas.

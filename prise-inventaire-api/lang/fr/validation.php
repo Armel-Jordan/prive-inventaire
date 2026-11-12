@@ -202,6 +202,7 @@ return [
         'adresse_livraison_id' => 'adresse de livraison',
         'condition_paiement_id' => 'condition de paiement',
         'groupe_taxe_id' => 'groupe de taxes',
+        'date_requise' => 'date requise',
         'produit_id' => 'produit',
         'secteur_id' => 'secteur',
         'lignes' => 'lignes',

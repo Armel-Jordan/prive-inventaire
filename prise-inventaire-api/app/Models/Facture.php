@@ -34,12 +34,15 @@ class Facture extends Model
         'statut_personnalise_id',
         // Prioritaire (l'étoile, socle S4.1), repris par le document qu'on en tire.
         'prioritaire',
+        // Date requise par le client (socle S4.1) : reprise d'un document à l'autre.
+        'date_requise',
     ];
 
     protected $casts = [
         'prioritaire' => 'boolean',
         'date_facture' => 'date',
         'date_echeance' => 'date',
+        'date_requise' => 'date',
         'taux_commission' => 'decimal:2',
         'montant_ht' => 'decimal:2',
         'montant_tva' => 'decimal:2',

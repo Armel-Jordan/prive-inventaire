@@ -1293,6 +1293,8 @@ export interface RecapitulatifTaxe {
 }
 
 export interface ComClientEntete extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Poids estimé des produits (socle S4.1). */
+  poids_estime_kg?: number | null;
   /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la facture. */
   condition_paiement_id?: number | null;
   condition_paiement?: { id: number; libelle: string } | null;
@@ -1334,6 +1336,9 @@ export interface ComClientLigne {
 }
 
 export interface Facture extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Date requise par le client et poids estimé des produits (socle S4.1). */
+  date_requise?: string | null;
+  poids_estime_kg?: number | null;
   /** Numéro de suivi de l'envoi (connaissement), repris par le bon de livraison. */
   numero_suivi?: string | null;
   /** Taux de commission du représentant, figé à la création de la facture (%). */
@@ -1409,6 +1414,9 @@ export interface FactureEcheance {
 }
 
 export interface BonLivraison extends LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Date requise par le client et poids estimé des produits (socle S4.1). */
+  date_requise?: string | null;
+  poids_estime_kg?: number | null;
   id: number;
   numero: string;
   facture_id: number;
@@ -1846,6 +1854,7 @@ export type SaisieFacture = {
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
   groupe_taxe_id?: number | null;
+  date_requise?: string | null;
 } & CoordonneesPassage;
 
 export async function createFacture(data: SaisieFacture): Promise<Facture> {
@@ -2688,6 +2697,9 @@ export interface DevisLigne {
 }
 
 export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, LivraisonDocument, AvecStatutPersonnalise, AvecPriorite {
+  /** Date requise par le client et poids estimé des produits (socle S4.1). */
+  date_requise?: string | null;
+  poids_estime_kg?: number | null;
   /** Condition de paiement (socle S4.1) : celle du client par défaut, reprise par la commande et la facture. */
   condition_paiement_id?: number | null;
   condition_paiement?: { id: number; libelle: string } | null;
@@ -2747,6 +2759,7 @@ export async function createDevis(data: {
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
   groupe_taxe_id?: number | null;
+  date_requise?: string | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2763,6 +2776,7 @@ export async function updateDevis(id: number, data: {
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
   groupe_taxe_id?: number | null;
+  date_requise?: string | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

@@ -25,6 +25,7 @@ use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
 use App\Support\NumeroCommandeClient;
+use App\Support\PoidsDocuments;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,6 +110,8 @@ class FactureController extends Controller
         ])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $facture->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('facture', $facture->lignes->pluck('id')));
+        // Poids estimé (socle S4.1) : celui des produits qui ont un poids.
+        $facture->setAttribute('poids_estime_kg', PoidsDocuments::estime($facture->lignes));
 
         return response()->json($facture);
     }
@@ -161,6 +164,8 @@ class FactureController extends Controller
             'client_id' => ['required', TenantRule::exists('clients')],
             'date_facture' => 'required|date',
             'date_echeance' => 'nullable|date',
+            // Date à laquelle le client veut être livré (socle S4.1), reprise par le bon de livraison.
+            'date_requise' => 'nullable|date',
             // Condition de paiement (référentiel) ; par défaut, celle du client, sinon celle de l'entreprise.
             'condition_paiement_id' => ['nullable', 'integer', TenantRule::exists('conditions_paiement')->whereNull('deleted_at')],
             ...DevisesVente::regles(),
@@ -238,6 +243,8 @@ class FactureController extends Controller
                 'numero_suivi' => $commande->numero_suivi,
                 'numero_commande_client' => $commande->numero_commande_client,
                 'prioritaire' => (bool) $commande->prioritaire,
+                // La livraison souhaitée de la commande devient la date requise de la facture.
+                'date_requise' => $commande->date_livraison_souhaitee,
                 'statut' => 'brouillon',
                 'montant_ht' => $commande->montant_ht,
                 'montant_tva' => $commande->montant_tva,
@@ -440,6 +447,7 @@ class FactureController extends Controller
                 'numero_suivi' => $facture->numero_suivi,
                 'numero_commande_client' => $facture->numero_commande_client,
                 'prioritaire' => (bool) $facture->prioritaire,
+                'date_requise' => $facture->date_requise,
             ] + app(LivraisonDocuments::class)->copier($facture) + [
                 'statut' => 'cree',
             ]);

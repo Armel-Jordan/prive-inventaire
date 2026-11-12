@@ -11,6 +11,7 @@ use App\Models\NumeroSerie;
 use App\Models\Transporteur;
 use App\Services\LotsSeries;
 use App\Services\StatutsPersonnalises;
+use App\Support\PoidsDocuments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,6 +62,9 @@ class BonLivraisonController extends Controller
             'facture.client', 'lignes', 'tourneeBon.tournee', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', StatutsPersonnalises::COLONNES,
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
         ])->findOrFail($id);
+
+        // Poids estimé (socle S4.1) : celui des produits qui ont un poids.
+        $bon->setAttribute('poids_estime_kg', PoidsDocuments::estime($bon->lignes, 'quantite_a_livrer'));
 
         // Le détail donne l'image de la signature (les listes l'omettent).
         return response()->json($bon->makeVisible('signature_client'));

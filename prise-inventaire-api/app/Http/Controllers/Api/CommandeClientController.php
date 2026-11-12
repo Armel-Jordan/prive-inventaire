@@ -19,6 +19,7 @@ use App\Services\StatutsPersonnalises;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\NumeroCommandeClient;
+use App\Support\PoidsDocuments;
 use App\Support\TauxTaxe;
 use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
@@ -76,6 +77,8 @@ class CommandeClientController extends Controller
         $commande = ComClientEntete::with(['client', 'lignes', 'facture', 'representant:id,nom', 'transporteur:id,nom,url_suivi', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES])->findOrFail($id);
         // Détail par taxe (vide si les lignes utilisent le calcul au taux unique).
         $commande->setAttribute('recapitulatif_taxes', $this->taxes->recapitulatif('commande_client', $commande->lignes->pluck('id')));
+        // Poids estimé (socle S4.1) : celui des produits qui ont un poids.
+        $commande->setAttribute('poids_estime_kg', PoidsDocuments::estime($commande->lignes));
 
         return response()->json($commande);
     }
