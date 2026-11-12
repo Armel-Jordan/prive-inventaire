@@ -748,6 +748,19 @@ export default function DevisPage() {
                 <span>Total HT :</span>
                 <span>{montant(selectedDevis.montant_total, selectedDevis.devise)}</span>
               </div>
+              {/* Taxes du devis (DE1) ; un devis enregistré avant elles reste hors taxes. */}
+              {selectedDevis.montant_ttc != null && (
+                <>
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
+                    <span>{tr.taxes} :</span>
+                    <span>{montant(selectedDevis.montant_tva, selectedDevis.devise)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold">
+                    <span>{tr.totalTtc} :</span>
+                    <span>{montant(selectedDevis.montant_ttc, selectedDevis.devise)}</span>
+                  </div>
+                </>
+              )}
               {selectedDevis.notes && <p className="text-sm text-gray-500">Notes: {selectedDevis.notes}</p>}
               {(selectedDevis.envoye_le || selectedDevis.reponse_le || selectedDevis.derniere_relance_le) && (
                 <div className="border-t pt-3 text-sm space-y-1">

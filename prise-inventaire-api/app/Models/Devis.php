@@ -21,6 +21,8 @@ class Devis extends Model
         'date_validite',
         'statut',
         'montant_total',
+        // Totaux avec taxes (DE1) ; montant_total reste le total HT.
+        'montant_ht', 'montant_tva', 'montant_ttc',
         'notes',
         'created_by',
         'commande_id',
@@ -61,6 +63,9 @@ class Devis extends Model
         'date_validite' => 'date',
         'date_requise' => 'date',
         'montant_total' => 'decimal:2',
+        'montant_ht' => 'decimal:2',
+        'montant_tva' => 'decimal:2',
+        'montant_ttc' => 'decimal:2',
         'envoye_le' => 'datetime',
         'reponse_le' => 'datetime',
         'reponse_en_ligne' => 'boolean',
@@ -151,6 +156,12 @@ class Devis extends Model
     public function recalculerTotal(): void
     {
         $this->montant_total = $this->lignes()->sum('montant_ligne');
+        // Totaux avec taxes (DE1) : seulement quand toutes les lignes ont leurs taxes (voir App\Services\TaxesDevis).
+        $lignes = $this->lignes()->get(['montant_ligne', 'montant_tva', 'montant_ttc']);
+        $taxees = $lignes->isNotEmpty() && $lignes->every(fn (DevisLigne $l) => $l->montant_ttc !== null);
+        $this->montant_ht = $taxees ? $this->montant_total : null;
+        $this->montant_tva = $taxees ? round((float) $lignes->sum('montant_tva'), 2) : null;
+        $this->montant_ttc = $taxees ? round((float) $lignes->sum('montant_ttc'), 2) : null;
         $this->save();
     }
 }

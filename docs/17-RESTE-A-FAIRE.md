@@ -514,7 +514,7 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
      listes de vente et
      des tiers fait le 12/11, FLOW-VENTES §2.17) (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
-   - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.
+   - Ensuite : taxes du devis (DE1, faites le 12/11, FLOW-VENTES §2.22), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.
 3. **Référentiels, tiers et paramètres**
    - 02 : territoires, routes par adresse, fin des représentants, catégories reliées aux produits, popularités,
      formats ; groupes de taxes par défaut et exemptions (groupe du client et des documents fait le 12/11) ; géographie ; taux de change, devises, banques.
