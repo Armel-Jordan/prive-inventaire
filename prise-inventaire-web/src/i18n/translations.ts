@@ -3418,6 +3418,23 @@ export const translations = {
       clientRequires: 'Exige un numéro de commande',
       clientRequiresHint: 'Ses commandes et factures demandent alors son numéro de commande (pas ses devis).',
     },
+    // Commentaires des fiches et des documents (socle S4.6).
+    docComments: {
+      button: 'Commentaires',
+      title: 'Commentaires',
+      unread: '{n} non lu(s)',
+      loading: 'Chargement…',
+      empty: 'Aucun commentaire pour le moment.',
+      add: 'Nouveau commentaire',
+      send: 'Ajouter',
+      new: 'nouveau',
+      remove: 'Retirer ce commentaire',
+      confirmRemove: 'Retirer ce commentaire ?',
+      close: 'Fermer',
+      loadError: 'Impossible de charger les commentaires.',
+      saveError: "Le commentaire n'a pas pu être ajouté.",
+      removeError: "Le commentaire n'a pas pu être retiré.",
+    },
     // Export Excel des listes (S5).
     listExport: {
       button: 'Exporter',
@@ -8272,6 +8289,23 @@ export const translations = {
       required: 'This customer requires their PO number.',
       clientRequires: 'Requires a PO number',
       clientRequiresHint: 'Their orders and invoices then ask for their PO number (not their quotes).',
+    },
+    // Comments on records and documents (socket S4.6).
+    docComments: {
+      button: 'Comments',
+      title: 'Comments',
+      unread: '{n} unread',
+      loading: 'Loading…',
+      empty: 'No comment yet.',
+      add: 'New comment',
+      send: 'Add',
+      new: 'new',
+      remove: 'Remove this comment',
+      confirmRemove: 'Remove this comment?',
+      close: 'Close',
+      loadError: 'Could not load the comments.',
+      saveError: 'The comment could not be added.',
+      removeError: 'The comment could not be removed.',
     },
     // Excel export of lists (S5).
     listExport: {

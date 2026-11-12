@@ -1,6 +1,8 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Search, Edit, Trash2, Building2, Phone, Mail, MapPin } from 'lucide-react';
@@ -47,6 +49,8 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [clients, setClients] = useState<Client[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('client', clients.map(c => c.id));
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -349,6 +353,7 @@ export default function ClientsPage() {
                     <div className="flex justify-center gap-2">
                       <BoutonPiecesJointes entite="client" entiteId={client.id} titre={client.raison_sociale} />
                       <BoutonHistorique entite="client" entiteId={client.id} titre={client.raison_sociale} />
+                      <BoutonCommentaires entite="client" entiteId={client.id} titre={client.raison_sociale} compteur={compteursCommentaires.compteurs[client.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => handleEdit(client)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"

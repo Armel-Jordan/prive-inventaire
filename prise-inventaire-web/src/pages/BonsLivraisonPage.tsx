@@ -2,6 +2,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useState, useEffect, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -56,6 +58,8 @@ export default function BonsLivraisonPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ dernierePage: 1, total: 0 });
   const [bons, setBons] = useState<BonLivraison[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('bon_livraison', bons.map(b => b.id));
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('');
   // Bons d'un transporteur (phase 1.11b) ; filtre masqué sans transporteur actif.
@@ -322,6 +326,7 @@ export default function BonsLivraisonPage() {
                     <div className="flex justify-center gap-1">
                       <BoutonPiecesJointes entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
                       <BoutonHistorique entite="bon_livraison" entiteId={bon.id} titre={bon.numero} />
+                      <BoutonCommentaires entite="bon_livraison" entiteId={bon.id} titre={bon.numero} compteur={compteursCommentaires.compteurs[bon.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => handleVoirDetail(bon.id)}
                         className="p-1 text-gray-600 hover:bg-gray-100 rounded"

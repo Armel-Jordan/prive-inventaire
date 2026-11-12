@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Commentaires : une bulle sur chaque ligne des devis, commandes, factures, bons de livraison, clients, fournisseurs, produits et commandes fournisseur ; des messages signés et datés, avec une pastille des non-lus.",
+    en: 'Comments: a speech bubble on each row of quotes, orders, invoices, delivery notes, customers, suppliers, products and purchase orders; signed and dated messages, with a badge for unread ones.',
+    lien: '/commandes-client',
+  },
+  {
+    date: '2026-11-12',
     fr: "Export Excel des listes : le bouton « Exporter » des devis, commandes, factures, bons de livraison, clients et fournisseurs donne toutes les lignes de la liste, avec ses filtres, en classeur Excel.",
     en: 'Excel export of lists: the “Export” button of quotes, orders, invoices, delivery notes, customers and suppliers gives all the rows of the list, with its filters, as an Excel workbook.',
     lien: '/factures',

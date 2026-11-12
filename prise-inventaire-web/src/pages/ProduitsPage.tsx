@@ -1,5 +1,7 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useEffect, useState, useRef } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -94,6 +96,8 @@ export default function ProduitsPage() {
   const th = t.hazmat;
   const tl = t.lots;
   const [produits, setProduits] = useState<Produit[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('produit', produits.flatMap(p => (p.id ? [p.id] : [])));
   const [secteurs, setSecteurs] = useState<Secteur[]>([]);
   const [loading, setLoading] = useState(true);
   // Pré-remplie par « ?recherche= » (recherche globale, autres écrans).
@@ -488,6 +492,7 @@ export default function ProduitsPage() {
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
                       <BoutonHistorique entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" />
+                      <BoutonCommentaires entite="produit" entiteId={produit.id!} titre={produit.numero} taille={16} className="mr-2" compteur={compteursCommentaires.compteurs[produit.id!]} onFerme={compteursCommentaires.rafraichir} />
                       {produit.actif !== false && peut('suggestions_achat', 'suggerer') && (
                         <button onClick={() => setASuggerer(produit)} className="p-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded mr-2"
                           title={t.purchaseSuggestions.suggestTitle} aria-label={`${t.purchaseSuggestions.suggestTitle} — ${produit.numero}`}>

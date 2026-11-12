@@ -1015,6 +1015,40 @@ export interface EntreeHistorique {
   champs: ChangementHistorique[];
 }
 
+/** Commentaire d'une fiche ou d'un document (socle S4.6). */
+export interface Commentaire {
+  id: number;
+  texte: string;
+  auteur: string | null;
+  /** Écrit par le compte connecté (il peut le retirer). */
+  moi: boolean;
+  non_lu: boolean;
+  date: string | null;
+}
+
+export interface CompteurCommentaires {
+  total: number;
+  non_lus: number;
+}
+
+/** Commentaires d'une fiche, du plus ancien au plus récent ; les ouvrir les marque lus. */
+export async function getCommentaires(entite: EntiteHistorique, id: number): Promise<Commentaire[]> {
+  return fetchApi(`/commentaires?entite=${entite}&entite_id=${id}`);
+}
+
+export async function ajouterCommentaire(entite: EntiteHistorique, id: number, texte: string): Promise<Commentaire> {
+  return fetchApi('/commentaires', { method: 'POST', body: JSON.stringify({ entite, entite_id: id, texte }) });
+}
+
+export async function retirerCommentaire(id: number): Promise<void> {
+  await fetchApi(`/commentaires/${id}`, { method: 'DELETE' });
+}
+
+/** Nombre de commentaires et de non-lus de plusieurs fiches d'un type (« 1,2,3 ») ; les fiches sans commentaire sont omises. */
+export async function getCompteursCommentaires(entite: EntiteHistorique, ids: string): Promise<Record<number, CompteurCommentaires>> {
+  return fetchApi(`/commentaires/compteurs?entite=${entite}&ids=${ids}`);
+}
+
 /** Historique d'une fiche ou d'un document, le plus récent d'abord (droit de voir l'historique et la fiche). */
 export async function getHistoriqueEntite(entite: EntiteHistorique, id: number): Promise<EntreeHistorique[]> {
   return fetchApi(`/audit/entite/${entite}/${id}`);

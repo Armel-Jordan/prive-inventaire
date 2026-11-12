@@ -1,6 +1,8 @@
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useEffect, useState } from 'react';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Search, Plus, X, Edit2, Trash2, Building2, Phone, Mail, FileUp } from 'lucide-react';
@@ -63,6 +65,8 @@ export default function FournisseursPage() {
   const [importPrix, setImportPrix] = useState(false);
   const { t } = useLanguage();
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('fournisseur', fournisseurs.map(f => f.id));
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -251,6 +255,7 @@ export default function FournisseursPage() {
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" />
                       <BoutonHistorique entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" />
+                      <BoutonCommentaires entite="fournisseur" entiteId={fournisseur.id} titre={fournisseur.raison_sociale} taille={16} className="mr-2" compteur={compteursCommentaires.compteurs[fournisseur.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => openEdit(fournisseur)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-2"

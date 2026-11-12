@@ -1,6 +1,8 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonHistorique from '@/components/BoutonHistorique';
+import BoutonCommentaires from '@/components/BoutonCommentaires';
+import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
 import { useEffect, useState, useCallback } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
@@ -65,6 +67,8 @@ export default function CommandesFournisseurPage() {
   const { peut } = usePermissions();
   const { t } = useLanguage();
   const [commandes, setCommandes] = useState<ComFourEntete[]>([]);
+  // Commentaires des lignes (socle S4.6) : nombre et non-lus, en une demande.
+  const compteursCommentaires = useCompteursCommentaires('commande_fournisseur', commandes.map(c => c.id));
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -429,6 +433,7 @@ export default function CommandesFournisseurPage() {
                     <td className="px-4 py-3 text-right">
                       <BoutonPiecesJointes entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" />
                       <BoutonHistorique entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" />
+                      <BoutonCommentaires entite="commande_fournisseur" entiteId={commande.id} titre={commande.numero} taille={16} className="mr-1" compteur={compteursCommentaires.compteurs[commande.id]} onFerme={compteursCommentaires.rafraichir} />
                       <button
                         onClick={() => openDetail(commande)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded mr-1"
