@@ -63,9 +63,9 @@ class DocumentsVentePdf
         ], [
             'destinataire' => $this->figee($devis, 'destinataire') ?? $this->client($devis->client, false, $devis),
             'lignes' => $this->lignesPrix($devis->client_id, $devis->lignes, fn ($l) => [$l->prix_unitaire, 0, $l->montant_ligne]),
-            // Les devis sont établis hors taxes.
-            'totaux' => [['Total HT', (float) $devis->montant_total, true]],
-            'mention' => 'Montants hors taxes.',
+            // Taxes du devis (DE1) ; un devis enregistré avant elles reste établi hors taxes.
+            'totaux' => $devis->montant_ttc !== null ? $this->totaux('devis', $devis, $devis->lignes) : [['Total HT', (float) $devis->montant_total, true]],
+            'mention' => $devis->montant_ttc !== null ? null : 'Montants hors taxes.',
             'notes' => $devis->notes,
             'note_bas_page' => app(NotesBasPage::class)->texte($devis),
             'signatures' => ['Bon pour accord, date et signature du client'],

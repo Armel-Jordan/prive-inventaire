@@ -575,6 +575,23 @@ Socle S4.4 du plan de parité fripv2.
 Code : `App\Services\NotesBasPage`, `NoteBasPageDocumentController`, migration `2026_11_12_100107_notes_bas_page` ; web :
 composant `ChoixNoteBasPage`. Pas encore : le choix dans la fenêtre du courriel, la langue du client.
 
+### 2.22 Taxes sur le devis
+
+Plan de parité fripv2, DE1. Un devis porte maintenant ses taxes, calculées comme celles des commandes :
+- chaque ligne prend le **groupe de taxes du devis** (celui du client par défaut, un groupe vide exonère), sinon le
+  groupe par défaut de l'entreprise, sinon le **taux par défaut** de l'entreprise ;
+- la ligne garde son groupe, son taux effectif et ses montants HT, de taxes et TTC ; le détail par taxe va dans
+  `document_taxes` (document « devis ») ;
+- le devis a ses totaux `montant_ht`, `montant_tva` et `montant_ttc` (`montant_total` reste le total HT) ;
+- refaites à chaque enregistrement d'un brouillon (création, modification, copie) : elles suivent les lignes et le
+  groupe du moment ; une ligne retirée emporte son détail ;
+- **écrans** : le détail du devis montre les taxes et le total TTC ; la page de réponse en ligne aussi ;
+- **PDF** : sous-total HT, une ligne par taxe, total TTC ;
+- la commande ou la facture tirée du devis calcule ses taxes de la même façon (même total TTC).
+
+Un devis enregistré avant reste établi hors taxes (total HT, mention « Montants hors taxes ») jusqu'à sa prochaine
+modification. Code : `App\Services\TaxesDevis`, migration `2026_11_12_100110_taxes_devis`.
+
 ---
 
 ## 3. Devis
@@ -678,7 +695,7 @@ Plan de parité fripv2, phase 1.3 : comme dans fripv2, le courriel du devis port
 - la page fonctionne même si l'espace client de l'entreprise n'est pas ouvert. Elle ne répond plus si l'entreprise est désactivée ou n'a plus le module Ventes.
 
 **La page du client :**
-- entreprise, numéro, dates, client (nom noté pour un client de passage), lignes, total hors taxes, notes, téléchargement du PDF ;
+- entreprise, numéro, dates, client (nom noté pour un client de passage), lignes, total hors taxes, taxes et total TTC (§2.22), notes, téléchargement du PDF ;
 - **Accepter** : nom obligatoire, commentaire facultatif ; **Refuser** : nom et raison facultatifs ;
 - un devis déjà décidé affiche sa réponse ; un devis expiré le dit, et une réponse tardive le fait passer à `expire`.
 
@@ -2519,7 +2536,7 @@ Chaque document de vente a son PDF, ouvert par le bouton **PDF** de sa ligne dan
 
 | Document | Route | Contenu propre |
 |---|---|---|
-| Devis | `GET /devis/{id}/pdf` | Total HT, mention « Montants hors taxes », zone « Bon pour accord » |
+| Devis | `GET /devis/{id}/pdf` | Sous-total HT, taxes et total TTC (§2.22 ; un devis d'avant : total HT et mention « Montants hors taxes »), zone « Bon pour accord » |
 | Commande client | `GET /commandes-client/{id}/pdf` | Sous-total HT, taxes, total TTC |
 | Facture | `GET /factures/{id}/pdf` | Sous-total HT, taxes, total TTC, payé, reste à payer |
 | Note de crédit | `GET /avoirs/{id}/pdf` | Facture créditée, motif, taxes au prorata de la facture, imputé, remboursé, crédit disponible |

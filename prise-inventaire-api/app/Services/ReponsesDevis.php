@@ -108,6 +108,9 @@ class ReponsesDevis
                 // Devise du devis, sinon celle de l'entreprise.
                 'devise' => $devis->devise ?: $parametres?->devise_symbole,
                 'montant_total' => (float) $devis->montant_total,
+                // Taxes et total TTC (DE1) ; null pour un devis établi hors taxes.
+                'montant_tva' => $devis->montant_ttc !== null ? (float) $devis->montant_tva : null,
+                'montant_ttc' => $devis->montant_ttc !== null ? (float) $devis->montant_ttc : null,
                 'notes' => $devis->notes,
                 // Client de passage : le nom noté sur le devis.
                 'client' => $devis->client?->de_passage && filled($devis->passage_nom) ? $devis->passage_nom : $devis->client?->raison_sociale,

@@ -21,6 +21,9 @@ interface PageDevis {
     statut: StatutDevis;
     devise: string | null;
     montant_total: number;
+    /** Taxes et total TTC ; null pour un devis établi hors taxes. */
+    montant_tva?: number | null;
+    montant_ttc?: number | null;
     notes: string | null;
     client: string | null;
     lignes: { description: string; quantite: number; prix_unitaire: number; montant: number }[];
@@ -178,10 +181,27 @@ export default function ReponseDevis() {
               ))}
             </tbody>
           </table>
-          <div className="flex justify-between gap-4 border-t border-gray-200 py-3 font-semibold text-gray-900">
-            <span>{tq.total}</span>
-            <span className="whitespace-nowrap">{prix(devis.montant_total)}</span>
-          </div>
+          {devis.montant_ttc != null ? (
+            <div className="border-t border-gray-200 py-3 space-y-1">
+              <div className="flex justify-between gap-4 text-gray-700">
+                <span>{tq.total}</span>
+                <span className="whitespace-nowrap">{prix(devis.montant_total)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-gray-700">
+                <span>{tq.taxes}</span>
+                <span className="whitespace-nowrap">{prix(devis.montant_tva ?? 0)}</span>
+              </div>
+              <div className="flex justify-between gap-4 font-semibold text-gray-900">
+                <span>{tq.totalWithTaxes}</span>
+                <span className="whitespace-nowrap">{prix(devis.montant_ttc)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-4 border-t border-gray-200 py-3 font-semibold text-gray-900">
+              <span>{tq.total}</span>
+              <span className="whitespace-nowrap">{prix(devis.montant_total)}</span>
+            </div>
+          )}
           {devis.notes && (
             <div className="pb-4 text-sm">
               <p className="text-gray-500">{tq.notes}</p>

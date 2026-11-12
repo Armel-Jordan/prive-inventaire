@@ -19,6 +19,7 @@ use App\Services\LivraisonDocuments;
 use App\Services\Portail\AccesPortail;
 use App\Services\ReponsesDevis;
 use App\Services\StatutsPersonnalises;
+use App\Services\TaxesDevis;
 use App\Services\TaxesDocument;
 use App\Services\UnitesProduits;
 use App\Support\DateDuJour;
@@ -161,7 +162,8 @@ class DevisController extends Controller
                 ]);
             }
 
-            $devis->recalculerTotal();
+            // Taxes des lignes et totaux (DE1).
+            app(TaxesDevis::class)->appliquer($devis);
             app(CopiesDocuments::class)->noter($validated['copie_de'] ?? null, 'devis', $devis, $request->user()->id);
 
             return $devis;
@@ -217,6 +219,7 @@ class DevisController extends Controller
                 ]);
 
             $existingIds = collect($validated['lignes'])->pluck('id')->filter()->toArray();
+            app(TaxesDevis::class)->oublier($devis->lignes()->whereNotIn('id', $existingIds)->pluck('id'));
             $devis->lignes()->whereNotIn('id', $existingIds)->delete();
 
             foreach ($validated['lignes'] as $ligne) {
@@ -236,7 +239,8 @@ class DevisController extends Controller
                 }
             }
 
-            $devis->recalculerTotal();
+            // Taxes des lignes et totaux (DE1), selon le groupe du devis du moment.
+            app(TaxesDevis::class)->appliquer($devis->refresh());
         });
 
         return response()->json($devis->fresh()->load(['client', 'lignes.produit']));
@@ -503,7 +507,7 @@ class DevisController extends Controller
                     'facteur' => $ligne->facteur,
                 ]);
             }
-            $copie->recalculerTotal();
+            app(TaxesDevis::class)->appliquer($copie);
             app(CopiesDocuments::class)->noter(['type' => 'devis', 'id' => $devis->id], 'devis', $copie, $request->user()->id);
 
             return $copie;

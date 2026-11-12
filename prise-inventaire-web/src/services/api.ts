@@ -2826,6 +2826,9 @@ export interface DevisRecord extends CoordonneesPassage, EnteteCommerciale, Livr
   date_validite: string;
   statut: 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire';
   montant_total: number;
+  /** Taxes et total TTC (DE1) ; null pour un devis établi hors taxes. */
+  montant_tva?: number | string | null;
+  montant_ttc?: number | string | null;
   notes?: string;
   lignes: DevisLigne[];
   /** Commande issue de la conversion : un devis ne se convertit qu'une fois. */

@@ -1254,6 +1254,10 @@ Voir **S4.6**.
 
 #### DE1 — Taxes sur le devis (M)
 
+> **Fait le 12/11** (FLOW-VENTES §2.22) : taxes par ligne (groupe du devis, sinon par défaut, sinon taux de
+> l'entreprise), totaux HT, taxes et TTC, détail dans `document_taxes`, PDF, détail et page en ligne. **Reste** : la
+> conversion recalcule les taxes (même résultat) au lieu de les recopier.
+
 1. **fripv2** : groupe de taxe d'en-tête (obligatoire), taxes par ligne, sous-total, chaque taxe, total TTC, au PDF comme à l'écran. Taxes figées à la saisie.
 2. **PI** : « Un devis ne porte pas de taxe » (`DevisController`) : elles ne sont calculées qu'à la conversion.
 3. **À faire** :

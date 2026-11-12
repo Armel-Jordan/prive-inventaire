@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Taxes sur le devis : chaque ligne prend le groupe de taxes du devis (celui du client par défaut), et le devis affiche ses taxes et son total TTC, dans son détail, au PDF et sur la page de réponse en ligne.",
+    en: "Taxes on quotes: each line takes the quote's tax group (the customer's by default), and the quote shows its taxes and total including taxes, in its details, on the PDF and on the online answer page.",
+    lien: '/devis',
+  },
+  {
+    date: '2026-11-12',
     fr: "Copié de : un devis, une commande ou une facture créé avec « Copier vers » (ou la copie d'un devis) garde son document d'origine ; son détail affiche « Copié de » et celui de l'origine « Copies », avec un lien vers chacun.",
     en: 'Copied from: a quote, order or invoice created with "Copy to" (or a quote copy) keeps its original document; its details show "Copied from" and the original\'s show "Copies", with a link to each.',
     lien: '/devis',
