@@ -16,6 +16,7 @@ use App\Services\Caisses;
 use App\Services\CartesCadeaux;
 use App\Services\ClientsDePassage;
 use App\Services\ConditionsPaiement;
+use App\Services\CopiesDocuments;
 use App\Services\DevisesVente;
 use App\Services\EntetesVente;
 use App\Services\FacturesVente;
@@ -151,7 +152,10 @@ class FactureController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate($this->regles());
+        // Document d'origine (« Copier vers », socle S4.3) : noté avec la facture, il n'entre pas dans sa saisie.
+        $validated = $request->validate($this->regles() + CopiesDocuments::regles());
+        $copieDe = $validated['copie_de'] ?? null;
+        unset($validated['copie_de']);
         $validated['lignes'] = app(UnitesProduits::class)->completerLignes($validated['lignes']);
 
         $tenantId = $request->attributes->get('tenant')->id;
@@ -160,7 +164,12 @@ class FactureController extends Controller
             return response()->json(['success' => false, 'message' => __('Numéro requis')], 422);
         }
         // Condition de paiement, devise, taxes par ligne : voir App\Services\FacturesVente.
-        $facture = $this->factures->creer($validated, $tenantId);
+        $facture = DB::transaction(function () use ($validated, $tenantId, $copieDe, $request) {
+            $facture = $this->factures->creer($validated, $tenantId);
+            app(CopiesDocuments::class)->noter($copieDe, 'facture', $facture, $request->user()?->id);
+
+            return $facture;
+        });
 
         return response()->json($facture->load(['client', 'lignes']), 201);
     }

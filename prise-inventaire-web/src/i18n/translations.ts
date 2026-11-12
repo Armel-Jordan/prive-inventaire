@@ -3446,6 +3446,9 @@ export const translations = {
       label: 'Copier vers',
       targets: { devis: 'Devis', commande: 'Commande', facture: 'Facture' },
       error: "Le document n'a pas pu être copié.",
+      copiedFrom: 'Copié de',
+      copies: 'Copies',
+      types: { devis: 'devis', commande_client: 'commande', facture: 'facture' },
     },
     // Commentaires des fiches et des documents (socle S4.6).
     docComments: {
@@ -8364,6 +8367,9 @@ export const translations = {
       label: 'Copy to',
       targets: { devis: 'Quote', commande: 'Order', facture: 'Invoice' },
       error: 'The document could not be copied.',
+      copiedFrom: 'Copied from',
+      copies: 'Copies',
+      types: { devis: 'quote', commande_client: 'order', facture: 'invoice' },
     },
     // Comments on records and documents (socket S4.6).
     docComments: {

@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Copié de : un devis, une commande ou une facture créé avec « Copier vers » (ou la copie d'un devis) garde son document d'origine ; son détail affiche « Copié de » et celui de l'origine « Copies », avec un lien vers chacun.",
+    en: 'Copied from: a quote, order or invoice created with "Copy to" (or a quote copy) keeps its original document; its details show "Copied from" and the original\'s show "Copies", with a link to each.',
+    lien: '/devis',
+  },
+  {
+    date: '2026-11-12',
     fr: "Rôles et permissions délégables : « Gérer les groupes et leurs permissions » et « Régler les accès d'un compte » s'accordent à un groupe (administrateurs seulement par défaut). Un compte délégué n'accorde que les permissions qu'il a lui-même et ne touche ni à ses propres accès ni à un administrateur. Les membres de chaque groupe s'affichent, et le rôle principal se choisit dans l'écran des accès.",
     en: "Delegable roles and permissions: \"Manage groups and their permissions\" and \"Set an account's access\" can be granted to a group (administrators only by default). A delegated account only grants permissions it holds and touches neither its own access nor an administrator's. Each group's members are shown, and the main role can be chosen on the access screen.",
     lien: '/roles',

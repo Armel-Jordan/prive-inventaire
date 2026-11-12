@@ -532,7 +532,17 @@ prérempli, rien n'étant enregistré** avant « Créer » (son enregistrement h
 - **API** : `GET /{devis|commandes-client|factures}/{id}/copie?vers=devis|commande|facture` ; l'écran cible reçoit
   `?copie=type:id`.
 
-Code : `CopieDocumentController` ; web : composant `MenuCopierVers`. Pas de lien « Copié de » enregistré pour l'instant.
+Code : `CopieDocumentController` ; web : composant `MenuCopierVers`.
+
+**Liens « Copié de » et « Copies »** (ajoutés le 12/11) :
+- la création reçoit `copie_de: {type, id}` (devis, commande_client ou facture de l'entreprise ; un document d'une
+  autre entreprise est ignoré) et note le lien dans `documents_copies` (migration `100109`) ; la copie d'un devis
+  (`POST /devis/{id}/copier`) le note aussi ;
+- le détail de chaque document affiche « Copié de : numéro » et « Copies : numéros », avec un lien vers la liste
+  filtrée sur ce numéro ; un document supprimé disparaît des liens ;
+- **API** : `GET /copies-documents/{type}/{id}` (droit de voir le document).
+
+Code : `App\Services\CopiesDocuments` ; web : composant `LiensCopies`.
 
 ### 2.20 Statuts calculés et filtres des listes
 

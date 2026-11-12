@@ -23,7 +23,8 @@ import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
 import { useSearchParams } from 'react-router-dom';
 import MenuCopierVers from '@/components/MenuCopierVers';
-import { preparerCopie, type DocumentCopiable } from '@/services/api';
+import LiensCopies from '@/components/LiensCopies';
+import { origineCopie, preparerCopie, type DocumentCopiable, type OrigineCopie } from '@/services/api';
 import PoidsEstime from '@/components/PoidsEstime';
 import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
 import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
@@ -129,6 +130,8 @@ export default function CommandesClientPage() {
   const [showRefusModal, setShowRefusModal] = useState(false);
   const [motifRefus, setMotifRefus] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Document d'origine d'une copie (« Copier vers ») : noté à la création (« Copié de »).
+  const [copieDe, setCopieDe] = useState<OrigineCopie | null>(null);
   // Commande verrouillée pendant sa modification : un autre compte voit qui la modifie.
   const verrou = useVerrou('commande_client', showModal ? editingId : null);
 
@@ -237,7 +240,7 @@ export default function CommandesClientPage() {
         await updateCommandeClient(editingId, payload as any);
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await createCommandeClient(payload as any);
+        await createCommandeClient({ ...payload, copie_de: copieDe } as any);
       }
       setShowModal(false);
       resetForm();
@@ -250,6 +253,7 @@ export default function CommandesClientPage() {
   // copie : une nouvelle commande préremplie (« Copier vers », socle S4.3), datée du jour.
   const handleOpenEdit = (cmd: ComClientEntete, copie = false) => {
     setEditingId(copie ? null : cmd.id);
+    setCopieDe(copie ? origineCopie(cmd) : null);
     setFormData({
       client_id: String(cmd.client_id),
       date_commande: copie ? aujourdhui() : dateSaisie(cmd.date_commande),
@@ -393,6 +397,7 @@ export default function CommandesClientPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    setCopieDe(null);
     frais.reinitialiser();
     setFormData({
       client_id: '',
@@ -925,7 +930,10 @@ export default function CommandesClientPage() {
               )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-              <MenuCopierVers source="commande_client" id={selectedCommande.id} />
+              <div className="flex flex-col gap-2">
+                <MenuCopierVers source="commande_client" id={selectedCommande.id} />
+                <LiensCopies type="commande_client" id={selectedCommande.id} />
+              </div>
               <button
                 onClick={() => { setShowDetailModal(false); setSelectedCommande(null); }}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white"
