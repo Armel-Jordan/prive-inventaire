@@ -34,9 +34,13 @@ class TenantParametres extends Model
         'numero_facture_a_l_emission',
         // Transporteur exigé sur les devis, commandes, factures et commandes fournisseur saisis (phase 1.11b).
         'transporteur_obligatoire',
+        // Devis (DE3) : l'expiration bloque-t-elle la réponse ? Durée de validité proposée pour un nouveau devis.
+        'devis_expiration_bloquante', 'devis_validite_jours',
     ];
 
     protected $casts = [
+        'devis_expiration_bloquante' => 'boolean',
+        'devis_validite_jours' => 'integer',
         'tva_taux' => 'decimal:2',
         'delai_paiement_jours' => 'integer',
         'delai_livraison_jours' => 'integer',

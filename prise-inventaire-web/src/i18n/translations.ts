@@ -3396,6 +3396,14 @@ export const translations = {
       atIssueHelp: "Un brouillon porte un numéro provisoire (BR-…) et reçoit le vrai numéro quand il est émis : supprimer un brouillon ne laisse plus de trou dans la numérotation.",
       saved: 'Réglage enregistré.',
     },
+    // Expiration des devis (DE3) : réglages de l'entreprise, dans la numérotation des devis.
+    quoteExpiry: {
+      blocking: "L'expiration bloque la réponse",
+      blockingHelp: "Coché : un devis dont la validité est passée devient « Expiré » et ne s'accepte plus. Décoché : il reste envoyé et se décide toujours, avec le repère « Validité dépassée ».",
+      validityDays: 'Validité proposée (jours)',
+      validityDaysHelp: "Durée de validité d'un nouveau devis.",
+      pastValidity: 'Validité dépassée',
+    },
     invoiceDelivery: {
       create: 'Créer le bon de livraison',
       remainder: 'Livrer le reste',
@@ -8319,6 +8327,14 @@ export const translations = {
       atIssue: 'Number assigned on issue',
       atIssueHelp: 'A draft carries a provisional number (BR-…) and gets the real number when it is issued: deleting a draft no longer leaves a gap in the numbering.',
       saved: 'Setting saved.',
+    },
+    // Quote expiry (DE3): company settings, in the quote numbering.
+    quoteExpiry: {
+      blocking: 'Expiry blocks the answer',
+      blockingHelp: 'Ticked: a quote whose validity has passed becomes “Expired” and can no longer be accepted. Unticked: it stays sent and can still be decided, marked “Validity passed”.',
+      validityDays: 'Proposed validity (days)',
+      validityDaysHelp: 'Validity period of a new quote.',
+      pastValidity: 'Validity passed',
     },
     invoiceDelivery: {
       create: 'Create the delivery note',

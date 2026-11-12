@@ -153,6 +153,21 @@ class Devis extends Model
         return $this->date_validite !== null && $this->date_validite->lt(now()->startOfDay());
     }
 
+    /**
+     * Expiration bloquante (réglage de l'entreprise, vrai par défaut, DE3) : un devis dont la validité est passée passe à
+     * « Expiré » et ne s'accepte plus. Sinon « Expiré » n'est qu'un repère : le devis reste envoyé et se décide toujours.
+     */
+    public static function expirationBloquante(): bool
+    {
+        return (bool) (TenantParametres::query()->value('devis_expiration_bloquante') ?? true);
+    }
+
+    /** La validité est passée et l'expiration bloque la réponse. */
+    public function bloqueParExpiration(): bool
+    {
+        return $this->estExpire() && self::expirationBloquante();
+    }
+
     public function recalculerTotal(): void
     {
         $this->montant_total = $this->lignes()->sum('montant_ligne');

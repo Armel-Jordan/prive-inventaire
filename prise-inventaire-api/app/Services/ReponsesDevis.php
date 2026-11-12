@@ -40,7 +40,7 @@ class ReponsesDevis
     /** Le devis peut encore être accepté ou refusé (ni décidé, ni expiré). */
     public function ouvert(Devis $devis): bool
     {
-        return in_array($devis->statut, self::STATUTS_OUVERTS, true) && ! $devis->estExpire();
+        return in_array($devis->statut, self::STATUTS_OUVERTS, true) && ! $devis->bloqueParExpiration();
     }
 
     /** Lien de réponse du devis ; null si la réponse en ligne est désactivée, le devis fermé ou le site inconnu. */
@@ -91,7 +91,7 @@ class ReponsesDevis
     public function presenter(Devis $devis): array
     {
         $parametres = TenantParametres::first();
-        $expire = $devis->statut === Devis::STATUT_EXPIRE || (in_array($devis->statut, self::STATUTS_OUVERTS, true) && $devis->estExpire());
+        $expire = $devis->statut === Devis::STATUT_EXPIRE || (in_array($devis->statut, self::STATUTS_OUVERTS, true) && $devis->bloqueParExpiration());
 
         return [
             'entreprise' => [
@@ -104,6 +104,8 @@ class ReponsesDevis
                 'numero' => $devis->numero,
                 'date_devis' => $devis->date_devis?->toDateString(),
                 'date_validite' => $devis->date_validite?->toDateString(),
+                // Validité passée sans bloquer la réponse (expiration non bloquante, DE3) : un simple avertissement.
+                'validite_depassee' => ! $expire && in_array($devis->statut, self::STATUTS_OUVERTS, true) && $devis->estExpire(),
                 'statut' => $expire ? Devis::STATUT_EXPIRE : $devis->statut,
                 // Devise du devis, sinon celle de l'entreprise.
                 'devise' => $devis->devise ?: $parametres?->devise_symbole,
@@ -126,7 +128,7 @@ class ReponsesDevis
                 'en_ligne' => (bool) $devis->reponse_en_ligne,
                 'nom' => $devis->reponse_en_ligne ? $devis->reponse_nom : null,
             ] : null,
-            'peut_repondre' => $devis->statut === Devis::STATUT_ENVOYE && ! $devis->estExpire(),
+            'peut_repondre' => $devis->statut === Devis::STATUT_ENVOYE && ! $devis->bloqueParExpiration(),
         ];
     }
 
@@ -146,7 +148,7 @@ class ReponsesDevis
                     default => __('Ce devis ne peut pas recevoir de réponse pour le moment.'),
                 };
             }
-            if ($verrouille->estExpire()) {
+            if ($verrouille->bloqueParExpiration()) {
                 $verrouille->update(['statut' => Devis::STATUT_EXPIRE]);
 
                 return __('Ce devis a expiré le :date : demandez-en un nouveau.', ['date' => $verrouille->date_validite->format('d/m/Y')]);

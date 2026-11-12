@@ -1278,6 +1278,9 @@ Voir **S4.6**.
 
 #### DE3 — Expiration non bloquante, au choix (P)
 
+> **Fait le 12/11** : réglages `devis_expiration_bloquante` (vrai par défaut) et `devis_validite_jours` (30), repère
+> « Validité dépassée », réponse en ligne permise. **Reste** : l'avertissement unique à l'ouverture, « 0 = jamais ».
+
 1. **fripv2** : « Expiré » est un badge calculé ; le devis reste convertible. Un avertissement unique s'affiche à l'ouverture d'un devis envoyé resté sans réponse. Durée 0 = jamais expiré. Durée par défaut dans la fiche entreprise.
 2. **PI** : statut `expire` qui bloque l'acceptation (422).
 3. **À faire** : réglages `tenant_parametres.devis_expiration_bloquante` (vrai, comportement actuel) et `devis_validite_jours`.

@@ -44,9 +44,12 @@ class DevisController extends Controller
     public function index(Request $request): JsonResponse|Response
     {
         $tenantId = auth()->user()->tenant_id;
-        // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide).
-        Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
-            ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
+        // Un devis envoyé dont la validité est passée devient « expiré » (le filtre restait toujours vide), si l'expiration
+        // bloque (réglage de l'entreprise, DE3) ; sinon il reste envoyé, avec un repère à l'écran.
+        if (Devis::expirationBloquante()) {
+            Devis::where('tenant_id', $tenantId)->where('statut', Devis::STATUT_ENVOYE)
+                ->whereDate('date_validite', '<', now()->toDateString())->update(['statut' => Devis::STATUT_EXPIRE]);
+        }
         $query = Devis::with(['client', 'lignes.produit', 'createdBy', 'commande:id,numero', 'facture:id,numero', 'representant:id,nom', 'transporteur:id,nom', 'contact:id,nom,telephone,email', 'conditionPaiement:id,libelle', 'groupeTaxe:id,code,nom', StatutsPersonnalises::COLONNES])->where('tenant_id', $tenantId);
 
         if ($request->has('statut') && $request->statut) {
@@ -284,7 +287,7 @@ class DevisController extends Controller
         if ($devis->statut !== Devis::STATUT_ENVOYE) {
             return response()->json(['message' => __('Seuls les devis envoyés peuvent être acceptés.')], 422);
         }
-        if ($devis->estExpire()) {
+        if ($devis->bloqueParExpiration()) {
             $devis->update(['statut' => Devis::STATUT_EXPIRE]);
 
             return response()->json(['message' => __('Ce devis a expiré le :date : faites-en un nouveau.', ['date' => $devis->date_validite->format('d/m/Y')])], 422);
