@@ -430,6 +430,26 @@ prioritaire :
 Code : `PrioriteDocumentController` (une route par type de document, le type en valeur par défaut), migration
 `2026_10_26_100102_documents_prioritaires` ; web : composants `EtoilePrioritaire` et `FiltrePrioritaires`.
 
+### 2.14 Groupe de taxes du client et des documents
+
+Socle S4.1 du plan de parité fripv2, avec les groupes par défaut et les exemptions de 02. Le groupe de taxes
+(Paramètres → Taxes ; un groupe sans taxe exonère) se choisit :
+- **sur la fiche client** : proposé sur ses devis, commandes et factures (un client exonéré, une ONG, une vente à
+  l'export) ;
+- **sur le devis, la commande et la facture** : celui du client par défaut, sinon aucun (le groupe par défaut de
+  l'entreprise s'applique). Il passe du devis à la commande et à la facture directe, de la commande à sa facture.
+
+Calcul d'une ligne : son groupe, sinon (sans taux saisi) celui du document, sinon le groupe par défaut de l'entreprise,
+sinon le taux unique historique. Sans groupe sur la fiche ni sur le document, rien ne change.
+
+**Changer le groupe** d'une commande sans renvoyer ses lignes refait leurs taxes et les totaux ; une facture brouillon
+modifiée recalcule ses lignes avec le groupe envoyé. Un groupe désactivé reste sur les documents qui le portent, mais
+ne se choisit plus. L'espace client applique le groupe de la fiche.
+
+Code : `App\Services\TaxesDocument::groupePour($ligne, $groupeDocument)` et `reappliquer`, champ ajouté à
+`App\Services\EntetesVente::CHAMPS`, migration `2026_11_12_100103_groupe_taxe_documents` ; web : `hooks/useGroupesTaxes`,
+composant `ChoixGroupeTaxe`.
+
 ---
 
 ## 3. Devis

@@ -21,6 +21,8 @@ import { signaler } from '@/lib/erreurs';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
+import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
 import { transporteursActifs, useTransporteurs } from '@/hooks/useTransporteurs';
 import { formatMontant, useCodeDevise, useDevise } from '@/lib/documents';
 import { getFrais, type Frais } from '@/services/frais';
@@ -77,6 +79,9 @@ export default function ClientsPage() {
   // Transporteur du client, repris par ses documents de vente (phase 1.11b) ; champ masqué sans transporteur actif.
   const transporteurs = useTransporteurs();
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
+  const groupesTaxes = useGroupesTaxes();
+  const [groupeTaxeId, setGroupeTaxeId] = useState<number | null>(null);
   // Exige son numéro de commande sur ses commandes et factures (socle S4.1).
   const [exigeNumeroCommande, setExigeNumeroCommande] = useState(false);
   // Conditions de paiement et devises du référentiel, frais de livraison.
@@ -141,6 +146,7 @@ export default function ClientsPage() {
         sequence_livraison: formData.sequence_livraison === '' ? null : Number(formData.sequence_livraison),
         representant_id: representantId,
         transporteur_id: transporteurId,
+        groupe_taxe_id: groupeTaxeId,
         commande_client_obligatoire: exigeNumeroCommande,
       };
 
@@ -181,6 +187,7 @@ export default function ClientsPage() {
     });
     setRepresentantId(client.representant_id ?? null);
     setTransporteurId(client.transporteur_id ?? null);
+    setGroupeTaxeId(client.groupe_taxe_id ?? null);
     setExigeNumeroCommande(client.commande_client_obligatoire === true);
     setShowModal(true);
   };
@@ -219,6 +226,7 @@ export default function ClientsPage() {
     });
     setRepresentantId(null);
     setTransporteurId(null);
+    setGroupeTaxeId(null);
     setExigeNumeroCommande(false);
   };
 
@@ -561,6 +569,13 @@ export default function ClientsPage() {
                     <label htmlFor="client-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}</label>
                     <ChoixTransporteur id="client-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} />
                     <span className="text-xs text-gray-500">{t.carriers.clientHint}</span>
+                  </div>
+                )}
+                {(groupesTaxesActifs(groupesTaxes) || groupeTaxeId !== null) && (
+                  <div>
+                    <label htmlFor="client-groupe-taxe" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.taxGroupDoc.label}</label>
+                    <ChoixGroupeTaxe id="client-groupe-taxe" value={groupeTaxeId} onChange={setGroupeTaxeId} groupes={groupesTaxes} />
+                    <span className="text-xs text-gray-500">{t.taxGroupDoc.clientHint}</span>
                   </div>
                 )}
                 <div>

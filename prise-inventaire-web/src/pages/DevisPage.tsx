@@ -36,6 +36,8 @@ import BandeauVerrou from '@/components/BandeauVerrou';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
+import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
 import ChoixConditionPaiement from '@/components/ChoixConditionPaiement';
 import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
@@ -73,6 +75,9 @@ export default function DevisPage() {
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
+  const groupesTaxes = useGroupesTaxes();
+  const [groupeTaxeId, setGroupeTaxeId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
   // Condition de paiement (socle S4.1) : vide, celle du client (sinon celle par défaut) ; reprise par la facture.
@@ -179,6 +184,7 @@ export default function DevisPage() {
         ...passage,
         representant_id: representantId,
         transporteur_id: transporteurId,
+        groupe_taxe_id: groupeTaxeId,
         ...saisieLivraison(livraison),
         condition_paiement_id: conditionId,
       };
@@ -293,6 +299,7 @@ export default function DevisPage() {
     setPassage(saisiePassage(devis));
     setRepresentantId(devis.representant_id ?? null);
     setTransporteurId(devis.transporteur_id ?? null);
+    setGroupeTaxeId(devis.groupe_taxe_id ?? null);
     setLivraison(livraisonDuDocument(devis));
     setConditionId(devis.condition_paiement_id ?? null);
     setLignes(devis.lignes.map(l => ({
@@ -343,6 +350,7 @@ export default function DevisPage() {
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
     setTransporteurId(null);
+    setGroupeTaxeId(null);
     setLivraison({});
     setConditionId(null);
     setLignes([]);
@@ -353,6 +361,7 @@ export default function DevisPage() {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
+    setGroupeTaxeId(liste.find(c => c.id === Number(id))?.groupe_taxe_id ?? null);
     setLivraison({});
     setConditionId(null);
     setFormData(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
@@ -562,6 +571,13 @@ export default function DevisPage() {
                     <p className="text-xs text-gray-500 mt-1">{t.carriers.documentHint}</p>
                   </div>
                 )}
+                {(groupesTaxesActifs(groupesTaxes) || groupeTaxeId !== null) && (
+                  <div>
+                    <label htmlFor="devis-groupe-taxe" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.taxGroupDoc.label}</label>
+                    <ChoixGroupeTaxe id="devis-groupe-taxe" value={groupeTaxeId} onChange={setGroupeTaxeId} groupes={groupesTaxes} />
+                    <p className="text-xs text-gray-500 mt-1">{t.taxGroupDoc.documentHint}</p>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="devis-condition" className="block text-sm font-medium mb-1">{t.documentTerms.label}</label>
                   <ChoixConditionPaiement id="devis-condition" value={conditionId} onChange={setConditionId}
@@ -658,6 +674,7 @@ export default function DevisPage() {
                 {selectedDevis.representant && <div><span className="text-gray-500">{t.salesReps.label} :</span><p>{selectedDevis.representant.nom}</p></div>}
                 {selectedDevis.transporteur && <div><span className="text-gray-500">{t.carriers.label} :</span><p>{selectedDevis.transporteur.nom}</p></div>}
                 {selectedDevis.condition_paiement && <div><span className="text-gray-500">{t.documentTerms.label} :</span><p>{selectedDevis.condition_paiement.libelle}</p></div>}
+                {selectedDevis.groupe_taxe && <div><span className="text-gray-500">{t.taxGroupDoc.label} :</span><p>{selectedDevis.groupe_taxe.nom}</p></div>}
                 <DetailLivraison document={selectedDevis} />
               </div>
               {selectedDevis.lignes?.length > 0 && (

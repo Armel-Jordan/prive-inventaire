@@ -51,6 +51,8 @@ import { useLanguage } from '@/i18n/useLanguage';
 import ChoixRepresentant from '@/components/ChoixRepresentant';
 import { useRepresentants } from '@/hooks/useRepresentants';
 import ChoixTransporteur from '@/components/ChoixTransporteur';
+import ChoixGroupeTaxe from '@/components/ChoixGroupeTaxe';
+import { groupesTaxesActifs, useGroupesTaxes } from '@/hooks/useGroupesTaxes';
 import ChoixLivraison, { DetailLivraison } from '@/components/ChoixLivraison';
 import { livraisonDuDocument, saisieLivraison, type ValeurLivraison } from '@/lib/livraison';
 import BadgeStatut from '@/components/BadgeStatut';
@@ -95,6 +97,9 @@ export default function FacturesPage() {
   // Prioritaires seulement (l'étoile, socle S4.1).
   const [filtrePrioritaires, setFiltrePrioritaires] = useState(false);
   const [transporteurId, setTransporteurId] = useState<number | null>(null);
+  // Groupe de taxes (socle S4.1) : celui du client par défaut ; champ masqué sans groupe de taxes actif.
+  const groupesTaxes = useGroupesTaxes();
+  const [groupeTaxeId, setGroupeTaxeId] = useState<number | null>(null);
   // Contact et « Livrer à » (socle S4.1) : les principaux du client proposés, l'adresse recopiée sur le document.
   const [livraison, setLivraison] = useState<ValeurLivraison>({});
   const [numeroSuivi, setNumeroSuivi] = useState('');
@@ -253,6 +258,7 @@ export default function FacturesPage() {
     const deviseClient = liste.find(c => c.id === Number(id))?.devise ?? '';
     setRepresentantId(liste.find(c => c.id === Number(id))?.representant_id ?? null);
     setTransporteurId(liste.find(c => c.id === Number(id))?.transporteur_id ?? null);
+    setGroupeTaxeId(liste.find(c => c.id === Number(id))?.groupe_taxe_id ?? null);
     setLivraison({});
     setCreateForm(f => ({ ...f, client_id: id, devise: deviseClient, taux: deviseClient ? '' : '1' }));
     if (deviseClient) tauxPropose(deviseClient, deviseEntreprise).then(taux => setCreateForm(f => (f.devise === deviseClient ? { ...f, taux } : f)));
@@ -266,6 +272,7 @@ export default function FacturesPage() {
     setPassage(PASSAGE_VIDE);
     setRepresentantId(null);
     setTransporteurId(null);
+    setGroupeTaxeId(null);
     setNumeroSuivi('');
     setNumeroCommandeClient('');
     setLivraison({});
@@ -290,6 +297,7 @@ export default function FacturesPage() {
       setPassage(saisiePassage(facture));
       setRepresentantId(facture.representant_id ?? null);
       setTransporteurId(facture.transporteur_id ?? null);
+      setGroupeTaxeId(facture.groupe_taxe_id ?? null);
       setNumeroSuivi(facture.numero_suivi ?? '');
       setNumeroCommandeClient(facture.numero_commande_client ?? '');
       setLivraison(livraisonDuDocument(facture));
@@ -326,6 +334,7 @@ export default function FacturesPage() {
         ...passage,
         representant_id: representantId,
         transporteur_id: transporteurId,
+        groupe_taxe_id: groupeTaxeId,
         numero_suivi: numeroSuivi.trim() || null,
         numero_commande_client: numeroCommandeClient.trim() || null,
         ...saisieLivraison(livraison),
@@ -668,6 +677,12 @@ export default function FacturesPage() {
                     <p className="dark:text-white">{selectedFacture.condition_paiement.libelle}</p>
                   </div>
                 )}
+                {selectedFacture.groupe_taxe && (
+                  <div>
+                    <span className="text-sm text-gray-500">{t.taxGroupDoc.label} :</span>
+                    <p className="dark:text-white">{selectedFacture.groupe_taxe.nom}</p>
+                  </div>
+                )}
                 <DetailLivraison document={selectedFacture} />
               </div>
 
@@ -869,6 +884,13 @@ export default function FacturesPage() {
                     <label htmlFor="facture-transporteur" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.carriers.label}{transporteurRequis ? ' *' : ''}</label>
                     <ChoixTransporteur id="facture-transporteur" value={transporteurId} onChange={setTransporteurId} transporteurs={transporteurs} requis={transporteurRequis} />
                     <span className="text-xs text-gray-500">{t.carriers.documentHint}</span>
+                  </div>
+                )}
+                {(groupesTaxesActifs(groupesTaxes) || groupeTaxeId !== null) && (
+                  <div>
+                    <label htmlFor="facture-groupe-taxe" className="block text-sm font-medium mb-1 dark:text-gray-300">{t.taxGroupDoc.label}</label>
+                    <ChoixGroupeTaxe id="facture-groupe-taxe" value={groupeTaxeId} onChange={setGroupeTaxeId} groupes={groupesTaxes} />
+                    <span className="text-xs text-gray-500">{t.taxGroupDoc.documentHint}</span>
                   </div>
                 )}
                 <div>

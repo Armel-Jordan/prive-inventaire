@@ -51,7 +51,8 @@ class FacturesVente
 
         return DB::transaction(function () use ($donnees, $tenantId, $condition, $devise, $passage) {
             $numero = $this->numeroBrouillon($tenantId);
-            $calcul = $this->calculerLignes($donnees['lignes']);
+            // Groupe de taxes de la facture (celui du client par défaut) pour les lignes qui n'en ont pas.
+            $calcul = $this->calculerLignes($donnees['lignes'], $passage['groupe_taxe_id'] ?? null);
             $lignesCalculees = $calcul['lignes'];
             ['montant_ht' => $montantHt, 'montant_tva' => $montantTva, 'montant_ttc' => $montantTtc] = $calcul;
 
@@ -100,7 +101,7 @@ class FacturesVente
         }
 
         return DB::transaction(function () use ($facture, $donnees, $condition, $devise, $passage, $entete) {
-            $calcul = $this->calculerLignes($donnees['lignes']);
+            $calcul = $this->calculerLignes($donnees['lignes'], array_key_exists('groupe_taxe_id', $entete) ? $entete['groupe_taxe_id'] : $facture->groupe_taxe_id);
 
             $this->taxes->supprimer('facture', $facture->lignes()->pluck('id'));
             $facture->lignes()->delete();
@@ -156,9 +157,10 @@ class FacturesVente
      * d'une facture et l'aperçu d'une vente au comptoir calculent de la même façon.
      *
      * @param  list<array{produit_id: int, quantite: int, prix_unitaire_ht: float|string, taux_tva?: mixed, groupe_taxe_id?: ?int, remise_ligne?: mixed}>  $lignes
+     * @param  int|null  $groupeDocument  groupe de taxes du document (socle S4.1), pour les lignes sans groupe ni taux
      * @return array{lignes: list<array<string, mixed>>, montant_ht: float, montant_tva: float, montant_ttc: float}
      */
-    public function calculerLignes(array $lignes): array
+    public function calculerLignes(array $lignes, ?int $groupeDocument = null): array
     {
         $montantHt = 0;
         $montantTva = 0;
@@ -166,11 +168,11 @@ class FacturesVente
 
         // Taux par défaut de l'entreprise (paramètres) pour les lignes sans taux ni groupe de taxes.
         $tauxDefaut = TauxTaxe::parDefaut();
-        $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc, $tauxDefaut) {
+        $lignesCalculees = array_map(function ($l) use (&$montantHt, &$montantTva, &$montantTtc, $tauxDefaut, $groupeDocument) {
             $remise = $l['remise_ligne'] ?? 0;
             $ht = $l['quantite'] * $l['prix_unitaire_ht'] * (1 - $remise / 100);
             // Groupe de taxes si la ligne en a un (ou groupe par défaut sans taux saisi), sinon taux unique.
-            $groupe = $this->taxes->groupePour($l);
+            $groupe = $this->taxes->groupePour($l, $groupeDocument);
             $detail = $groupe ? $this->taxes->calculer($groupe, $ht) : null;
             $tva = $detail ? $detail['taux_effectif'] : ($l['taux_tva'] ?? $tauxDefaut);
             $tvaM = $detail ? $detail['total_taxes'] : $ht * ($tva / 100);

@@ -1260,6 +1260,9 @@ export interface EnteteCommerciale {
   /** Transporteur (phase 1.11b) : celui du client par défaut, suit les conversions. */
   transporteur_id?: number | null;
   transporteur?: { id: number; nom: string; url_suivi?: string | null } | null;
+  /** Groupe de taxes (socle S4.1) : celui de la fiche client, proposé sur ses documents ; vide, celui par défaut. */
+  groupe_taxe_id?: number | null;
+  groupe_taxe?: { id: number; code: string; nom: string } | null;
 }
 
 /** « Livrer à » et contact (socle S4.1) : devis, commandes, factures et bons de livraison. */
@@ -1737,6 +1740,7 @@ export async function createCommandeClient(data: {
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
+  groupe_taxe_id?: number | null;
 } & CoordonneesPassage): Promise<ComClientEntete> {
   return fetchApi('/commandes-client', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -1841,6 +1845,7 @@ export type SaisieFacture = {
   numero_commande_client?: string | null;
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
+  groupe_taxe_id?: number | null;
 } & CoordonneesPassage;
 
 export async function createFacture(data: SaisieFacture): Promise<Facture> {
@@ -2741,6 +2746,7 @@ export async function createDevis(data: {
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
+  groupe_taxe_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi('/devis', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -2756,6 +2762,7 @@ export async function updateDevis(id: number, data: {
   contact_id?: number | null;
   adresse_livraison_id?: number | null;
   condition_paiement_id?: number | null;
+  groupe_taxe_id?: number | null;
 } & CoordonneesPassage): Promise<DevisRecord> {
   return fetchApi(`/devis/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }

@@ -11,15 +11,19 @@ use Illuminate\Support\Collection;
  * Taxes des lignes de documents (commandes client, factures) calculées avec les groupes de taxes.
  *
  * Une ligne n'utilise un groupe que si on lui en donne un (groupe_taxe_id), ou si elle n'a pas
- * de taux explicite et que l'entreprise a défini un groupe par défaut. Sinon, le calcul
+ * de taux explicite et que son document ou l'entreprise en ont un : le groupe du document (socle S4.1,
+ * celui du client par défaut, un groupe vide exonère), sinon le groupe par défaut. Sinon, le calcul
  * historique au taux unique s'applique, inchangé. Sans état : sûr d'un tenant à l'autre.
  */
 class TaxesDocument
 {
     public function __construct(private readonly CalculTaxes $calcul) {}
 
-    /** Groupe à appliquer à une ligne saisie, ou null pour le calcul historique. */
-    public function groupePour(array $ligne): ?GroupeTaxe
+    /**
+     * Groupe à appliquer à une ligne saisie, ou null pour le calcul historique : celui de la ligne, sinon (sans taux
+     * saisi) celui du document, sinon le groupe par défaut de l'entreprise.
+     */
+    public function groupePour(array $ligne, ?int $groupeDocument = null): ?GroupeTaxe
     {
         if (! empty($ligne['groupe_taxe_id'])) {
             return GroupeTaxe::find($ligne['groupe_taxe_id']);
@@ -30,7 +34,28 @@ class TaxesDocument
             return null;
         }
 
-        return GroupeTaxe::where('par_defaut', true)->where('actif', true)->first();
+        return ($groupeDocument ? GroupeTaxe::find($groupeDocument) : null)
+            ?? GroupeTaxe::where('par_defaut', true)->where('actif', true)->first();
+    }
+
+    /**
+     * Refait les taxes des lignes enregistrées d'un document dont le groupe (en-tête) vient de changer : chaque ligne
+     * prend ce groupe, sinon le groupe par défaut ; sans l'un ni l'autre, elle garde son calcul.
+     *
+     * @param  iterable<Model>  $lignes
+     */
+    public function reappliquer(string $document, iterable $lignes, ?int $groupeDocument): void
+    {
+        $groupe = $this->groupePour([], $groupeDocument);
+        if (! $groupe) {
+            return;
+        }
+        foreach ($lignes as $ligne) {
+            $this->supprimer($document, [$ligne->getKey()]);
+            $detail = $this->appliquer($ligne, $groupe);
+            $ligne->save();
+            $this->enregistrer($document, $ligne->getKey(), $detail);
+        }
     }
 
     /** Détail des taxes d'un montant HT (voir CalculTaxes::calculer). */

@@ -100,6 +100,7 @@ class FactureController extends Controller
             'transporteur:id,nom,url_suivi',
             StatutsPersonnalises::COLONNES,
             'contact:id,nom,telephone,email',
+            'groupeTaxe:id,code,nom',
             'lignes.produit' => fn ($q) => $q->withTrashed()->select('id', 'numero', 'description', 'mesure'),
             'avoirs' => fn ($q) => $q->select('id', 'facture_id', 'numero', 'statut', 'date_avoir', 'montant_ttc', 'montant_impute', 'montant_rembourse')->orderBy('id'),
             'paiements.acompte:id,date_acompte,reference',
