@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Rôles et permissions délégables : « Gérer les groupes et leurs permissions » et « Régler les accès d'un compte » s'accordent à un groupe (administrateurs seulement par défaut). Un compte délégué n'accorde que les permissions qu'il a lui-même et ne touche ni à ses propres accès ni à un administrateur. Les membres de chaque groupe s'affichent, et le rôle principal se choisit dans l'écran des accès.",
+    en: "Delegable roles and permissions: \"Manage groups and their permissions\" and \"Set an account's access\" can be granted to a group (administrators only by default). A delegated account only grants permissions it holds and touches neither its own access nor an administrator's. Each group's members are shown, and the main role can be chosen on the access screen.",
+    lien: '/roles',
+  },
+  {
+    date: '2026-11-12',
     fr: "Notes de bas de page : des textes par type de document et par langue (Paramètres → Référentiels), imprimés en fin de devis, commande, facture ou bon de livraison ; celle par défaut s'applique, une autre se choisit dans le détail, et le texte se fige à l'envoi ou à l'émission.",
     en: 'Footer notes: texts per document type and language (Settings → Reference data), printed at the end of quotes, orders, invoices or delivery notes; the default one applies, another can be chosen in the details, and the text is frozen when sent or issued.',
     lien: '/referentiels',

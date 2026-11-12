@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import Toasts from '@/components/Toasts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { ApiError, apiFetch } from '@/services/http';
 
 function messageErreur(e: unknown, defaut: string): string {
@@ -79,6 +80,8 @@ export default function EmployesPage() {
   // Seul un administrateur attribue les rôles admin et manager et modifie l'accès de ces comptes.
   const { user } = useAuth();
   const estAdmin = user?.role === 'admin';
+  // Accès d'un compte (groupes, exceptions) : avec le droit de voir les rôles et permissions.
+  const voirAcces = usePermissions().peut('roles', 'voir');
   const { t } = useLanguage();
   const [roleInitial, setRoleInitial] = useState('');
   const accesVerrouille = !estAdmin && (roleInitial === 'admin' || roleInitial === 'manager');
@@ -351,7 +354,7 @@ export default function EmployesPage() {
                       <button onClick={() => openEdit(employe)} className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded mr-2" title="Modifier">
                         <Edit2 size={16} />
                       </button>
-                      {estAdmin && employe.admin_user && (
+                      {voirAcces && employe.admin_user && (
                         <Link to={`/acces/${employe.admin_user.id}`} className="inline-block p-1 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded mr-2 align-middle"
                           title={t.permissions.accessButton} aria-label={t.permissions.accessButton}>
                           <KeyRound size={16} />

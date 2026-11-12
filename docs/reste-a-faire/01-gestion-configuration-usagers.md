@@ -24,7 +24,7 @@ Lectures non contrôlées :
 Écritures non contrôlées :
 - `/api/remarques-rapides` et `/api/pieces-jointes` sont absents de `Droits::MODULES`. Un compte « Lecture seule » peut créer et supprimer des remarques et des pièces jointes.
 
-Écrans réservés par le middleware `role:admin` : tâches planifiées, `/users`, `/roles-custom`, `/acces-comptes`, et « Ignorer » de la configuration à compléter. Aucun groupe ne peut recevoir ces droits, alors que fripv2 a une permission pour chacun.
+Écrans réservés par le middleware `role:admin` : tâches planifiées, `/users`, `/roles-custom`, `/acces-comptes`, et « Ignorer » de la configuration à compléter. Aucun groupe ne peut recevoir ces droits, alors que fripv2 a une permission pour chacun. (Délégués depuis : les tâches planifiées le 26/10 ; `/roles-custom` et `/acces-comptes` le 12/11, voir § 33.)
 
 Proposition générale :
 - de nouveaux modules ou actions dans `App\Support\Permissions` ;
@@ -1074,7 +1074,16 @@ C'est propre aux gabarits installés sur le poste et aux imprimantes. La bibliot
 - **Tests** : la signature de l'usager prime sur la signature globale ; persistance de la langue ; filtre par groupe ; isolation.
 - **Taille** : P à M.
 
-### 33. Groupes — **Partiel**
+### 33. Groupes — **Fait en grande partie le 12/11**
+
+> **Fait le 12/11** : actions `roles.groupes` (gérer les groupes et leurs permissions) et `roles.acces` (régler les
+> accès d'un compte, son rôle personnalisé compris), base `voir`, refusées par défaut à tous les groupes sauf
+> l'administrateur (migration `100108`) ; `role:admin` remplacé par `Droits::PARTICULIERES` ; garde-fous dans
+> `App\Support\DelegationDroits` (permissions accordées détenues par l'acteur, ni ses propres accès ou groupes, ni un
+> administrateur, refus toujours permis) ; `GET /roles-custom/{id}/membres`, `POST /roles-custom/{id}/dupliquer` ;
+> écrans des rôles et des accès en lecture seule sans le droit de gérer ; `DelegationDroitsTest`. **Reste** : la
+> traduction du nom des groupes (T2), et dans « Employés » le choix du rôle personnalisé reste aux administrateurs
+> (l'écran des accès le propose aux comptes délégués).
 
 **Ce que fait fripv2**
 - Groupes : description traduisible, actif (le double-clic bascule, avec confirmation), suppression refusée s'ils sont utilisés (« il est lié à des usagers »), permissions du groupe par le bouton « Accès ». Les droits des groupes s'additionnent.
@@ -1228,7 +1237,7 @@ Facultatif : une page « Mon abonnement » en lecture seule pour l'administrateu
 | 30 | Rapport IA | Partiel | onglet Questions à l'IA, `RapportIaController`, `questions_ia` | G |
 | 31 | Rapports IA périodiques | Partiel | `rapports_programmes.question_ia`, tâche `rapports_programmes` | M |
 | 32 | Usagers | Partiel | Employés (accès), `/acces/:id`, `/users` (`role:admin`) ; pas de signature ni de langue par usager | P à M |
-| 33 | Groupes | Partiel | `/roles`, `roles_custom` (`role:admin`, pas de délégation) | M |
+| 33 | Groupes | Fait en grande partie (12/11) | `/roles`, `roles_custom`, droits `roles.groupes` et `roles.acces` délégables, `DelegationDroits`, membres, duplication ; reste la traduction du nom (T2) | P |
 | 34 | Gestion des licences | Hors périmètre | `tenants.plan`, modules, `date_expiration` (super-administrateur) | — |
 | 35 | Tablettes | Manquant | aucun registre d'appareils (jetons Sanctum par compte) | M + P |
 | 36 | Modifier mon mot de passe | Partiel (mineur) | `/securite`, `PUT /auth/mot-de-passe` (8 caractères, pas de politique) | P |

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, KeyRound, Minus, Save, Shield, X } from 'lucide-react';
+import { ArrowLeft, Check, Info, KeyRound, Minus, Save, Shield, X } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import {
-  enregistrerAccesCompte, getAccesCompte, getCatalogue, getGroupes, permissionsDu, valeurDuGroupe,
+  attribuerRole, enregistrerAccesCompte, getAccesCompte, getCatalogue, getGroupes, permissionsDu, valeurDuGroupe,
   type AccesCompte, type Groupe, type OngletCatalogue, type PermissionCatalogue,
 } from '@/services/permissions';
 import MatricePermissions from '@/components/permissions/MatricePermissions';
@@ -22,6 +22,8 @@ interface Brouillon {
  * Accès d'un compte, comme dans fripv2 : son rôle principal (réglé dans la fiche de l'employé), ses groupes
  * supplémentaires et ses exceptions permission par permission. À gauche, ce que donnent ses groupes ; à droite,
  * l'exception (héritée, accordée, refusée : le refus l'emporte).
+ * Droit de voir (roles.voir) ; de régler (roles.acces), sauf ses propres accès et ceux d'un administrateur. Un compte
+ * qui n'est pas administrateur n'accorde que des permissions qu'il a (l'API le contrôle aussi).
  */
 export default function AccesComptePage() {
   const { compteId } = useParams();
@@ -29,7 +31,9 @@ export default function AccesComptePage() {
   const { t, language } = useLanguage();
   const tp = t.permissions;
   const langue = language === 'en' ? 'en' : 'fr';
-  const { isAdmin } = usePermissions();
+  const { isAdmin, peut, permissions: miennes } = usePermissions();
+  const admin = isAdmin();
+  const detient = (code: string) => admin || Boolean(miennes?.actions?.[code]);
   const { toasts, toast, dismiss } = useToast();
   const [catalogue, setCatalogue] = useState<OngletCatalogue[] | null>(null);
   const [groupes, setGroupes] = useState<Groupe[] | null>(null);
@@ -63,21 +67,40 @@ export default function AccesComptePage() {
     return Object.fromEntries(toutes.map(p => [p.code, retenus.some(g => valeurDuGroupe(g, p))]));
   }, [groupes, acces, brouillon, toutes]);
 
-  if (!isAdmin()) {
-    return <div className="p-6"><p className="max-w-xl bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{tp.adminOnly}</p></div>;
+  if (!peut('roles', 'voir')) {
+    return <div className="p-6"><p className="max-w-xl bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{tp.noRight}</p></div>;
   }
 
+  const modifiable = Boolean(acces?.modifiable);
   const supplementaires = (groupes ?? []).filter(g => !g.is_system && g.id !== acces?.compte.role_custom_id);
 
   const cycle = (code: string) => setBrouillon(b => {
     if (!b) return b;
     const exceptions = { ...b.exceptions };
-    // Hérité -> accordé -> refusé -> hérité.
-    if (!(code in exceptions)) exceptions[code] = true;
+    // Hérité -> accordé -> refusé -> hérité ; sans détenir la permission, pas d'« accordé ».
+    if (!(code in exceptions)) exceptions[code] = detient(code);
     else if (exceptions[code]) exceptions[code] = false;
     else delete exceptions[code];
     return { ...b, exceptions };
   });
+
+  // Rôle principal : un groupe de l'entreprise, ou le rôle système du compte (vide).
+  async function changerRolePrincipal(valeur: string) {
+    if (!acces) return;
+    setOccupe(true);
+    try {
+      await attribuerRole(id, valeur === '' ? null : Number(valeur));
+      const [g, a] = await Promise.all([getGroupes(), getAccesCompte(id)]);
+      setGroupes(g);
+      setAcces(a);
+      setBrouillon({ groupes: a.groupes, exceptions: { ...a.exceptions } });
+      toast(tp.mainRoleSaved);
+    } catch (e) {
+      toast(messageErreur(e, tp.error), 'error');
+    } finally {
+      setOccupe(false);
+    }
+  }
 
   async function enregistrer() {
     if (!brouillon) return;
@@ -103,7 +126,7 @@ export default function AccesComptePage() {
       <button
         type="button"
         onClick={() => cycle(permission.code)}
-        disabled={acces?.administrateur}
+        disabled={acces?.administrateur || !modifiable}
         title={libelle}
         aria-label={`${permission[langue]} : ${libelle}`}
         className={`inline-flex items-center justify-center w-16 gap-1 px-1.5 py-0.5 rounded border text-xs font-medium ${
@@ -128,7 +151,7 @@ export default function AccesComptePage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">{acces.compte.email}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-3xl mt-1">{tp.accessSubtitle}</p>
             </div>
-            {!acces.administrateur && (
+            {!acces.administrateur && modifiable && (
               <button type="button" onClick={() => { void enregistrer(); }} disabled={occupe}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
                 <Save size={16} /> {tp.save}
@@ -136,14 +159,33 @@ export default function AccesComptePage() {
             )}
           </div>
 
+          {!modifiable && !acces.administrateur && (
+            <p className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300"><Info size={15} /> {tp.accessReadOnly}</p>
+          )}
+          {modifiable && !admin && (
+            <p className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"><Info size={15} /> {tp.delegationNote}</p>
+          )}
           {acces.administrateur ? (
             <p className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-blue-50 text-blue-800 text-sm"><Shield size={16} /> {tp.admin}</p>
           ) : (
             <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
                 <p className="text-xs uppercase text-gray-500 dark:text-gray-400">{tp.mainRole}</p>
-                <p className="font-medium text-gray-800 dark:text-white">{acces.role_principal ? (acces.role_principal.systeme ? tp.systemRoles[acces.role_principal.nom as keyof typeof tp.systemRoles] ?? acces.role_principal.nom : acces.role_principal.nom) : '—'}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{tp.mainRoleHelp}</p>
+                {modifiable ? (
+                  <select aria-label={tp.mainRole} value={acces.compte.role_custom_id ?? ''} disabled={occupe}
+                    onChange={e => { void changerRolePrincipal(e.target.value); }}
+                    className="mt-1 w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">{tp.systemRoleOption.replace('{role}', tp.systemRoles[acces.compte.role as keyof typeof tp.systemRoles] ?? acces.compte.role)}</option>
+                    {(groupes ?? []).filter(g => !g.is_system && (g.actif || g.id === acces.compte.role_custom_id)).map(g => (
+                      <option key={g.id} value={g.id}>{g.nom}{!g.actif ? ` (${tp.inactive})` : ''}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
+                    <p className="font-medium text-gray-800 dark:text-white">{acces.role_principal ? (acces.role_principal.systeme ? tp.systemRoles[acces.role_principal.nom as keyof typeof tp.systemRoles] ?? acces.role_principal.nom : acces.role_principal.nom) : '—'}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{tp.mainRoleHelp}</p>
+                  </>
+                )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
                 <p className="text-xs uppercase text-gray-500 dark:text-gray-400 mb-1">{tp.extraGroups}</p>
@@ -154,6 +196,7 @@ export default function AccesComptePage() {
                     {supplementaires.map(g => (
                       <label key={g.id} className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200">
                         <input type="checkbox" className="h-4 w-4"
+                          disabled={!modifiable}
                           checked={brouillon.groupes.includes(g.id)}
                           onChange={e => setBrouillon({ ...brouillon, groupes: e.target.checked ? [...brouillon.groupes, g.id] : brouillon.groupes.filter(x => x !== g.id) })} />
                         {g.nom}{!g.actif && <span className="text-xs text-gray-400">({tp.inactive})</span>}
@@ -183,10 +226,14 @@ export default function AccesComptePage() {
                     <option value="exceptions">{tp.showExceptions}</option>
                   </select>
                 </label>
-                <button type="button" onClick={() => setBrouillon({ ...brouillon, exceptions: Object.fromEntries(toutes.map(p => [p.code, true])) })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.grantAllExceptions}</button>
-                <button type="button" onClick={() => setBrouillon({ ...brouillon, exceptions: {} })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.clearExceptions}</button>
+                {modifiable && (
+                  <>
+                    <button type="button" onClick={() => setBrouillon({ ...brouillon, exceptions: { ...brouillon.exceptions, ...Object.fromEntries(toutes.filter(p => detient(p.code)).map(p => [p.code, true])) } })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.grantAllExceptions}</button>
+                    <button type="button" onClick={() => setBrouillon({ ...brouillon, exceptions: {} })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{tp.clearExceptions}</button>
+                  </>
+                )}
               </div>
             )}
           />

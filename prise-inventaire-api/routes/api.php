@@ -307,18 +307,19 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
     Route::get('/permissions/modules', [RolePermissionController::class, 'modules']);
     Route::get('/permissions/catalogue', [RolePermissionController::class, 'catalogue']);
 
-    // Gestion des rôles (admin uniquement) — enforcement backend
-    Route::middleware('role:admin')->group(function () {
-        Route::get('/roles-custom', [RolePermissionController::class, 'index']);
-        Route::post('/roles-custom', [RolePermissionController::class, 'store']);
-        Route::get('/roles-custom/{id}', [RolePermissionController::class, 'show']);
-        Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update']);
-        Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy']);
-        Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole']);
-        // Accès d'un compte : groupes supplémentaires et exceptions, permission par permission.
-        Route::get('/acces-comptes/{id}', [AccesCompteController::class, 'show'])->whereNumber('id');
-        Route::put('/acces-comptes/{id}', [AccesCompteController::class, 'update'])->whereNumber('id');
-    });
+    // Groupes et accès des comptes : droits du module « roles » (voir, groupes, acces), administrateurs seulement
+    // par défaut ; garde-fous contre l'élévation de droits dans les contrôleurs (App\Support\DelegationDroits).
+    Route::get('/roles-custom', [RolePermissionController::class, 'index']);
+    Route::post('/roles-custom', [RolePermissionController::class, 'store']);
+    Route::get('/roles-custom/{id}', [RolePermissionController::class, 'show'])->whereNumber('id');
+    Route::put('/roles-custom/{id}', [RolePermissionController::class, 'update'])->whereNumber('id');
+    Route::delete('/roles-custom/{id}', [RolePermissionController::class, 'destroy'])->whereNumber('id');
+    Route::get('/roles-custom/{id}/membres', [RolePermissionController::class, 'membres'])->whereNumber('id');
+    Route::post('/roles-custom/{id}/dupliquer', [RolePermissionController::class, 'dupliquer'])->whereNumber('id');
+    Route::post('/users/{userId}/assign-role', [RolePermissionController::class, 'assignRole'])->whereNumber('userId');
+    // Accès d'un compte : groupes supplémentaires et exceptions, permission par permission.
+    Route::get('/acces-comptes/{id}', [AccesCompteController::class, 'show'])->whereNumber('id');
+    Route::put('/acces-comptes/{id}', [AccesCompteController::class, 'update'])->whereNumber('id');
 
     // Scans
     Route::post('/scan/enregistrer', [ScanTenantController::class, 'enregistrer']);

@@ -2,8 +2,9 @@ import { apiFetch } from '@/services/http';
 
 /**
  * Rôles et permissions (sur le modèle de fripv2) : catalogue des permissions par onglet et par écran, groupes
- * (rôles) et accès d'un compte (groupes supplémentaires, exceptions). Réservé aux administrateurs, sauf le
- * catalogue.
+ * (rôles) et accès d'un compte (groupes supplémentaires, exceptions). Droits « roles » : voir, gérer les groupes
+ * (groupes), régler les accès (acces) ; administrateurs seulement par défaut. Un compte qui n'est pas administrateur
+ * n'accorde que des permissions qu'il a, et ne touche ni à ses propres accès ni à un administrateur (contrôlé par l'API).
  */
 
 export interface PermissionCatalogue {
@@ -56,6 +57,8 @@ export interface Groupe {
 export interface AccesCompte {
   compte: { id: number; nom: string; email: string; role: string; role_custom_id: number | null; actif: boolean };
   administrateur: boolean;
+  /** Le compte connecté peut régler ces accès (droit, ni les siens, ni ceux d'un administrateur). */
+  modifiable: boolean;
   role_principal: { id: number; nom: string; systeme: boolean } | null;
   groupes: number[];
   exceptions: Record<string, boolean>;
@@ -115,6 +118,22 @@ export const modifierGroupe = (id: number, groupe: DonneesGroupe) =>
   apiFetch<{ message: string }>(`/roles-custom/${id}`, { method: 'PUT', body: JSON.stringify(groupe) });
 export const supprimerGroupe = (id: number) =>
   apiFetch<{ message: string }>(`/roles-custom/${id}`, { method: 'DELETE' });
+
+export interface MembreGroupe {
+  id: number;
+  nom: string;
+  email: string;
+  role: string;
+  actif: boolean;
+  /** Rôle principal du compte (sinon groupe supplémentaire). */
+  principal: boolean;
+}
+
+export const getMembresGroupe = (id: number) => apiFetch<MembreGroupe[]>(`/roles-custom/${id}/membres`);
+
+/** Rôle personnalisé principal d'un compte ; null : retour au rôle système du compte. */
+export const attribuerRole = (compteId: number, roleId: number | null) =>
+  apiFetch<{ message: string }>(`/users/${compteId}/assign-role`, { method: 'POST', body: JSON.stringify({ role_id: roleId }) });
 
 export const getAccesCompte = (id: number) => apiFetch<AccesCompte>(`/acces-comptes/${id}`);
 export const enregistrerAccesCompte = (id: number, acces: { groupes: number[]; exceptions: Record<string, boolean> }) =>

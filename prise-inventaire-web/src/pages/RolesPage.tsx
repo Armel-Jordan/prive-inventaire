@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Lock, Plus, Save, Shield, Trash2, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Copy, Info, Lock, Plus, Save, Shield, Trash2, Users } from 'lucide-react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/i18n/useLanguage';
 import { messageErreur } from '@/lib/erreurs';
 import {
-  creerGroupe, getCatalogue, getGroupes, modifierGroupe, permissionsDu, supprimerGroupe, valeurDuGroupe, versApi,
-  type Groupe, type OngletCatalogue, type PermissionCatalogue,
+  creerGroupe, getCatalogue, getGroupes, getMembresGroupe, modifierGroupe, permissionsDu, supprimerGroupe, valeurDuGroupe, versApi,
+  type Groupe, type MembreGroupe, type OngletCatalogue, type PermissionCatalogue,
 } from '@/services/permissions';
 import MatricePermissions from '@/components/permissions/MatricePermissions';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -26,12 +27,20 @@ interface Edition {
 /**
  * Rôles et permissions, sur le modèle de fripv2 : les groupes (rôles système communs à toutes les entreprises,
  * et groupes de l'entreprise) et leurs permissions par onglet et par écran, droits de base et actions nommées.
+ * Droit de voir l'écran (roles.voir) ; de gérer les groupes (roles.groupes) : un compte qui n'est pas administrateur
+ * ne coche que des permissions qu'il a, et ne modifie pas ses propres groupes (l'API le contrôle aussi).
  */
 export default function RolesPage() {
   const { t, language } = useLanguage();
   const tp = t.permissions;
   const langue = language === 'en' ? 'en' : 'fr';
-  const { isAdmin } = usePermissions();
+  const { isAdmin, peut, permissions: miennes } = usePermissions();
+  const admin = isAdmin();
+  const gerer = peut('roles', 'groupes');
+  const mesGroupes = miennes?.groupes ?? [];
+  // Permission que le compte peut accorder : un administrateur, toutes ; sinon celles qu'il a lui-même.
+  const detient = (code: string) => admin || Boolean(miennes?.actions?.[code]);
+  const [membres, setMembres] = useState<{ id: number; liste: MembreGroupe[] } | null>(null);
   const { toasts, toast, dismiss } = useToast();
   const [catalogue, setCatalogue] = useState<OngletCatalogue[] | null>(null);
   const [groupes, setGroupes] = useState<Groupe[] | null>(null);
@@ -54,17 +63,29 @@ export default function RolesPage() {
     return () => { actif = false; };
   }, [version, tp.error]);
 
+  // Membres du groupe choisi (comptes de l'entreprise).
+  useEffect(() => {
+    if (selection === null) return;
+    let actif = true;
+    getMembresGroupe(selection).then(liste => { if (actif) setMembres({ id: selection, liste }); }, () => { if (actif) setMembres({ id: selection, liste: [] }); });
+    return () => { actif = false; };
+  }, [selection, version]);
+
   const toutes = useMemo(() => (catalogue ? permissionsDu(catalogue) : []), [catalogue]);
   const groupeChoisi = groupes?.find(g => g.id === selection) ?? null;
+  const membresChoisis = membres && membres.id === selection ? membres.liste : null;
 
   // Rôles système : libellé lisible plutôt que le nom technique (admin, manager…).
   const nomDe = (groupe: Pick<Groupe, 'nom' | 'is_system'>) => (groupe.is_system ? tp.systemRoles[groupe.nom as keyof typeof tp.systemRoles] ?? groupe.nom : groupe.nom);
 
   const valeursDe = (groupe: Groupe) => Object.fromEntries(toutes.map(p => [p.code, valeurDuGroupe(groupe, p)]));
 
+  // Ses propres groupes et les rôles système ne se modifient pas ici.
+  const modifiable = (groupe: Groupe) => gerer && !groupe.is_system && !mesGroupes.includes(groupe.id);
+
   const choisir = (groupe: Groupe) => {
     setSelection(groupe.id);
-    setEdition(groupe.is_system ? null : { id: groupe.id, nom: groupe.nom, description: groupe.description ?? '', actif: groupe.actif, valeurs: valeursDe(groupe) });
+    setEdition(modifiable(groupe) ? { id: groupe.id, nom: groupe.nom, description: groupe.description ?? '', actif: groupe.actif, valeurs: valeursDe(groupe) } : null);
   };
 
   const nouveau = (modele?: Groupe) => {
@@ -74,12 +95,17 @@ export default function RolesPage() {
       nom: modele ? `${nomDe(modele)} ${tp.copySuffix}` : '',
       description: modele?.description ?? '',
       actif: true,
-      valeurs: modele ? valeursDe(modele) : Object.fromEntries(toutes.map(p => [p.code, false])),
+      // Une copie ne garde que les permissions que le compte peut accorder.
+      valeurs: modele
+        ? Object.fromEntries(toutes.map(p => [p.code, valeurDuGroupe(modele, p) && detient(p.code)]))
+        : Object.fromEntries(toutes.map(p => [p.code, false])),
     });
   };
 
   const changer = (codes: string[], valeur: boolean) => {
-    setEdition(e => (e ? { ...e, valeurs: { ...e.valeurs, ...Object.fromEntries(codes.map(c => [c, valeur])) } } : e));
+    // Cocher : seulement les permissions détenues ; décocher (refuser) est toujours permis.
+    const retenus = valeur ? codes.filter(detient) : codes;
+    setEdition(e => (e ? { ...e, valeurs: { ...e.valeurs, ...Object.fromEntries(retenus.map(c => [c, valeur])) } } : e));
   };
 
   async function enregistrer() {
@@ -119,18 +145,19 @@ export default function RolesPage() {
     }
   }
 
-  if (!isAdmin()) {
+  if (!peut('roles', 'voir')) {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-xl">
           <Shield className="mx-auto text-red-500 mb-4" size={40} />
-          <p className="text-red-700">{tp.adminOnly}</p>
+          <p className="text-red-700">{tp.noRight}</p>
         </div>
       </div>
     );
   }
 
-  const lecture = groupeChoisi?.is_system ? valeursDe(groupeChoisi) : null;
+  // Groupe affiché sans pouvoir le modifier : rôle système, l'un de ses groupes, ou sans le droit de gérer.
+  const lecture = groupeChoisi && !edition ? valeursDe(groupeChoisi) : null;
   const caseDe = (permission: PermissionCatalogue) => {
     const coche = lecture ? lecture[permission.code] : Boolean(edition?.valeurs[permission.code]);
     return (
@@ -139,7 +166,7 @@ export default function RolesPage() {
         className="h-4 w-4 accent-blue-600"
         aria-label={permission[langue]}
         checked={coche}
-        disabled={!edition}
+        disabled={!edition || (!coche && !detient(permission.code))}
         onChange={e => changer([permission.code], e.target.checked)}
       />
     );
@@ -152,15 +179,19 @@ export default function RolesPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-4xl">{tp.subtitle}</p>
       </div>
       {erreur && <p role="alert" className="mb-4 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{erreur}</p>}
+      {!gerer && <p className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300"><Info size={15} /> {tp.readOnly}</p>}
+      {gerer && !admin && <p className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"><Info size={15} /> {tp.delegationNote}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-5 items-start">
         <aside className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
           <div className="flex items-center justify-between gap-2 p-3 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-semibold text-gray-800 dark:text-white">{tp.groups}</h2>
-            <button type="button" onClick={() => nouveau()} disabled={!catalogue}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
-              <Plus size={14} /> {tp.newGroup}
-            </button>
+            {gerer && (
+              <button type="button" onClick={() => nouveau()} disabled={!catalogue}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
+                <Plus size={14} /> {tp.newGroup}
+              </button>
+            )}
           </div>
           <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {(groupes ?? []).map(groupe => (
@@ -187,15 +218,20 @@ export default function RolesPage() {
             <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{tp.chooseGroup}</p>
           ) : (
             <>
-              {groupeChoisi?.is_system ? (
+              {groupeChoisi && !edition ? (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{nomDe(groupeChoisi)}</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{tp.systemNote}</p>
+                    {groupeChoisi.description && !groupeChoisi.is_system && <p className="text-sm text-gray-600 dark:text-gray-300">{groupeChoisi.description}</p>}
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {groupeChoisi.is_system ? tp.systemNote : mesGroupes.includes(groupeChoisi.id) ? tp.ownGroup : tp.readOnly}
+                    </p>
                   </div>
-                  <button type="button" onClick={() => nouveau(groupeChoisi)} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                    <Copy size={15} /> {tp.duplicate}
-                  </button>
+                  {gerer && (
+                    <button type="button" onClick={() => nouveau(groupeChoisi)} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      <Copy size={15} /> {tp.duplicate}
+                    </button>
+                  )}
                 </div>
               ) : edition && (
                 <div className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
@@ -229,6 +265,24 @@ export default function RolesPage() {
                 </div>
               )}
 
+              {groupeChoisi && membresChoisis && (
+                <div className="mb-4 text-sm">
+                  <p className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-200"><Users size={14} /> {tp.members} ({membresChoisis.length})</p>
+                  {membresChoisis.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400">{tp.noMembers}</p>
+                  ) : (
+                    <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                      {membresChoisis.map(m => (
+                        <li key={m.id} className={m.actif ? '' : 'opacity-60'}>
+                          <Link to={`/acces/${m.id}`} className="text-blue-600 hover:underline dark:text-blue-400">{m.nom}</Link>
+                          <span className="text-xs text-gray-500 dark:text-gray-400"> · {m.principal ? tp.memberMain : tp.memberExtra}{!m.actif && ` · ${tp.inactive}`}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               <MatricePermissions
                 catalogue={catalogue}
                 langue={langue}
@@ -239,6 +293,7 @@ export default function RolesPage() {
                     {tp.all}
                     <input type="checkbox" className="h-4 w-4 accent-blue-600"
                       checked={visibles.every(p => edition.valeurs[p.code])}
+                      disabled={!visibles.some(p => edition.valeurs[p.code] || detient(p.code))}
                       onChange={e => changer(visibles.map(p => p.code), e.target.checked)}
                       aria-label={`${tp.all} — ${module[langue]}`} />
                   </label>
