@@ -76,7 +76,7 @@ export default function BoutonHistorique({ entite, entiteId, titre, taille = 18,
                       {e.champs.map(c => (
                         <li key={c.champ}>
                           <span className="text-gray-500">{c.libelle} :</span>{' '}
-                          <span className="line-through decoration-gray-400">{valeur(c.avant, c.avant_texte)}</span>{' → '}
+                          <span className={valeur(c.avant, c.avant_texte) === '—' ? 'text-gray-400' : 'line-through decoration-gray-400'}>{valeur(c.avant, c.avant_texte)}</span>{' → '}
                           <span>{valeur(c.apres, c.apres_texte)}</span>
                         </li>
                       ))}
