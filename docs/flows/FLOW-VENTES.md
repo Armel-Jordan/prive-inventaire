@@ -519,6 +519,21 @@ Socle S4.5 du plan de parité fripv2.
 Code : `App\Services\IdentitesFigees` (accroché à l'enregistrement des quatre modèles), migration
 `2026_11_12_100106_identite_figee_documents`.
 
+### 2.19 Copier vers
+
+Socle S4.3 du plan de parité fripv2. Le détail d'un devis, d'une commande ou d'une facture propose « Copier vers :
+Devis, Commande, Facture » (les types que le compte peut créer). L'écran choisi s'ouvre sur un **nouveau document
+prérempli, rien n'étant enregistré** avant « Créer » (son enregistrement habituel, avec le droit de créer ce type) :
+- repris : client (et coordonnées du client de passage), notes, devise et taux, représentant, transporteur, groupe de
+  taxes, condition de paiement, contact et « Livrer à », n° de commande du client, date requise (livraison souhaitée
+  pour une commande), lignes (produit, quantité, unité) au **prix net** (la remise de la ligne y est comprise) ;
+- pas repris : numéro, statut, dates du document (celle du jour), échéance, n° de suivi, quantités livrées ou
+  facturées ; les taxes se recalculent.
+- **API** : `GET /{devis|commandes-client|factures}/{id}/copie?vers=devis|commande|facture` ; l'écran cible reçoit
+  `?copie=type:id`.
+
+Code : `CopieDocumentController` ; web : composant `MenuCopierVers`. Pas de lien « Copié de » enregistré pour l'instant.
+
 ---
 
 ## 3. Devis

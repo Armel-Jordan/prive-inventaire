@@ -1,10 +1,13 @@
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useSearchParams } from 'react-router-dom';
+import MenuCopierVers from '@/components/MenuCopierVers';
+import { preparerCopie, type DocumentCopiable } from '@/services/api';
 import BoutonPiecesJointes from '@/components/BoutonPiecesJointes';
 import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
 import { Plus, Eye, FileText, X, Send, Trash2, CheckCircle, XCircle, Link2, Copy, BellRing, Receipt, CopyPlus, Search } from 'lucide-react';
@@ -294,13 +297,14 @@ export default function DevisPage() {
     } catch { alert('Erreur lors de la suppression'); }
   };
 
-  const openEdit = (devis: DevisRecord) => {
-    setEditingId(devis.id);
+  // copie : un nouveau devis prérempli (« Copier vers », socle S4.3), daté du jour et valable 30 jours.
+  const openEdit = (devis: DevisRecord, copie = false) => {
+    setEditingId(copie ? null : devis.id);
     // Dates au format du champ (AAAA-MM-JJ) : l'horodatage complet de l'API vidait le champ.
     setFormData({
       client_id: String(devis.client_id),
-      date_devis: dateSaisie(devis.date_devis),
-      date_validite: dateSaisie(devis.date_validite),
+      date_devis: copie ? aujourdhui() : dateSaisie(devis.date_devis),
+      date_validite: copie ? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) : dateSaisie(devis.date_validite),
       notes: devis.notes || '',
       devise: devis.devise ?? '',
       taux: String(devis.taux_change ?? 1),
@@ -313,7 +317,7 @@ export default function DevisPage() {
     setConditionId(devis.condition_paiement_id ?? null);
     setDateRequise(dateSaisie(devis.date_requise ?? ''));
     setLignes(devis.lignes.map(l => ({
-      id: l.id,
+      id: copie ? undefined : l.id,
       produit_id: l.produit_id,
       quantite: l.quantite,
       prix_unitaire: Number(l.prix_unitaire),
@@ -321,6 +325,24 @@ export default function DevisPage() {
     })));
     setShowModal(true);
   };
+
+  // « Copier vers » (socle S4.3) : ?copie=type:id ouvre un nouveau document prérempli avec ce document.
+  const [parametresUrl, setParametresUrl] = useSearchParams();
+  const ouvrirCopie = useEffectEvent((document: DevisRecord | null) => {
+    if (!document) { alert(t.copyTo.error); return; }
+    openEdit(document, true);
+  });
+  useEffect(() => {
+    const [source, id] = (parametresUrl.get('copie') ?? '').split(':');
+    if (!source || !id) return;
+    let actif = true;
+    preparerCopie(source as DocumentCopiable, Number(id), 'devis').then(document => {
+      if (!actif) return;
+      ouvrirCopie(document as unknown as DevisRecord);
+      setParametresUrl(p => { p.delete('copie'); return p; }, { replace: true });
+    }, () => { if (actif) ouvrirCopie(null); });
+    return () => { actif = false; };
+  }, [parametresUrl, setParametresUrl]);
 
   const addLigne = () => setLignes([...lignes, { produit_id: 0, quantite: 1, prix_unitaire: 0, auto: true }]);
 
@@ -733,8 +755,9 @@ export default function DevisPage() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end mt-4">
-              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Fermer</button>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+              <MenuCopierVers source="devis" id={selectedDevis.id} />
+              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 ml-auto">Fermer</button>
             </div>
           </div>
         </div>

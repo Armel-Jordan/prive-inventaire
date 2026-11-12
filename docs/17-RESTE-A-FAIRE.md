@@ -507,7 +507,7 @@ fichiers du dossier [reste-a-faire/](./reste-a-faire/).
      personnalisé, n° de commande du client, contact, « Livrer à », condition de paiement et prioritaire faits le 26/10,
      groupe de taxes, date requise et poids estimé le 12/11, FLOW-VENTES §2.10 à §2.15 : S4.1 terminé ; S4.6 : bouton
      « Historique » et commentaires faits le 12/11, FLOW-VENTES §2.16 ; S4.5 identité figée et réimpression faits le
-     12/11, FLOW-VENTES §2.18 ; S5 export Excel des listes de vente et
+     12/11, FLOW-VENTES §2.18 ; S4.3 « Copier vers » fait le 12/11, FLOW-VENTES §2.19 ; S5 export Excel des listes de vente et
      des tiers fait le 12/11, FLOW-VENTES §2.17) (en-tête, lignes, copie, notes de
      bas de page, identité figée, historique, listes).
    - Ensuite : taxes du devis (DE1), cycle des commandes (CO1 à CO4), BL depuis la commande (BL1), puis F3, F4, F6 et F8.

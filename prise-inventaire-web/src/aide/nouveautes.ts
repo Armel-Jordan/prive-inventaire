@@ -10,6 +10,12 @@ export interface Nouveaute {
 export const NOUVEAUTES: Nouveaute[] = [
   {
     date: '2026-11-12',
+    fr: "Copier vers : depuis le détail d'un devis, d'une commande ou d'une facture, « Copier vers » ouvre un nouveau devis, une nouvelle commande ou une nouvelle facture prérempli (client, en-tête, lignes et prix), enregistré seulement à « Créer ».",
+    en: 'Copy to: from the details of a quote, order or invoice, “Copy to” opens a new quote, order or invoice pre-filled (customer, header, lines and prices), saved only on “Create”.',
+    lien: '/factures',
+  },
+  {
+    date: '2026-11-12',
     fr: "Identité figée : un devis envoyé, une commande soumise, une facture ou une note de crédit émise garde à l'impression les coordonnées de l'entreprise, le client et les libellés du jour ; une facture porte « Réimpression » à partir de sa deuxième copie.",
     en: 'Frozen identity: a sent quote, a submitted order, an issued invoice or credit note keeps, when printed, the company details, the customer and the labels of that day; an invoice shows “Reprint” from its second copy.',
     lien: '/factures',

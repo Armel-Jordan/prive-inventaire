@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\ConfigurationACompleterController;
 use App\Http\Controllers\Api\ConfigurationController;
 use App\Http\Controllers\Api\ConsignationController;
 use App\Http\Controllers\Api\ContratLocationController;
+use App\Http\Controllers\Api\CopieDocumentController;
 use App\Http\Controllers\Api\CourrielEnvoiController;
 use App\Http\Controllers\Api\CourrielModeleController;
 use App\Http\Controllers\Api\CourrielParametresController;
@@ -732,6 +733,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'devis');
+        // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
+        Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'devis');
         Route::get('/', [DevisController::class, 'index']);
         Route::post('/', [DevisController::class, 'store']);
         Route::get('/{devis}/pdf', [DocumentPdfController::class, 'devis']);
@@ -798,6 +801,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'commande_client');
+        // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
+        Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'commande_client');
         Route::get('/', [CommandeClientController::class, 'index']);
         Route::get('/{id}', [CommandeClientController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'commande']);
@@ -814,6 +819,8 @@ Route::middleware(['auth:sanctum', 'tenant', 'tenant.context', 'droits'])->group
         // Statut personnalisé (étiquette, phase 1.11c), même sur un document clos.
         Route::put('/{id}/statut-personnalise', [StatutPersonnaliseDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
         Route::put('/{id}/prioritaire', [PrioriteDocumentController::class, 'poser'])->whereNumber('id')->defaults('document', 'facture');
+        // « Copier vers » (socle S4.3) : le document prérempli d'un autre type, sans rien enregistrer.
+        Route::get('/{id}/copie', [CopieDocumentController::class, 'preparer'])->whereNumber('id')->defaults('document', 'facture');
         Route::get('/', [FactureController::class, 'index']);
         Route::get('/{id}', [FactureController::class, 'show']);
         Route::get('/{id}/pdf', [DocumentPdfController::class, 'facture']);

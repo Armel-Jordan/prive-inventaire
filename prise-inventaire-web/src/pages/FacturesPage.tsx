@@ -4,10 +4,12 @@ import BoutonExportExcel from '@/components/BoutonExportExcel';
 import BoutonHistorique from '@/components/BoutonHistorique';
 import BoutonCommentaires from '@/components/BoutonCommentaires';
 import { useCompteursCommentaires } from '@/hooks/useCompteursCommentaires';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
 import { useRechercheAdresse } from '@/hooks/useRechercheAdresse';
 import BoutonChampsPersonnalises from '@/components/BoutonChampsPersonnalises';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import MenuCopierVers from '@/components/MenuCopierVers';
+import { preparerCopie, type DocumentCopiable } from '@/services/api';
 import { ArchiveRestore, Eye, CreditCard, FileText, Pencil, ReceiptText, Send, Trash2, Plus, X, Search } from 'lucide-react';
 import BalisesFiche from '@/components/BalisesFiche';
 import BoutonRemarquesRapides from '@/components/BoutonRemarquesRapides';
@@ -293,36 +295,58 @@ export default function FacturesPage() {
   // déjà sur le document n'est pas proposé de nouveau).
   const ouvrirModification = async (id: number) => {
     try {
-      const facture = await getFacture(id);
-      setEditingId(facture.id);
-      setCreateForm({
-        client_id: String(facture.client_id),
-        date_facture: dateSaisie(facture.date_facture),
-        date_echeance: dateSaisie(facture.date_echeance ?? ''),
-        notes: facture.notes ?? '',
-        condition_paiement_id: facture.condition_paiement_id ? String(facture.condition_paiement_id) : '',
-        devise: facture.devise ?? '',
-        taux: String(facture.taux_change ?? 1),
-      });
-      setPassage(saisiePassage(facture));
-      setRepresentantId(facture.representant_id ?? null);
-      setTransporteurId(facture.transporteur_id ?? null);
-      setGroupeTaxeId(facture.groupe_taxe_id ?? null);
-      setNumeroSuivi(facture.numero_suivi ?? '');
-      setNumeroCommandeClient(facture.numero_commande_client ?? '');
-      setLivraison(livraisonDuDocument(facture));
-      setDateRequise(dateSaisie(facture.date_requise ?? ''));
-      setCreateLignes((facture.lignes ?? []).map(l => ({
-        produit_id: l.produit_id,
-        quantite: l.quantite,
-        prix_unitaire_ht: Number(l.prix_unitaire_ht),
-        unite: l.unite ?? null,
-      })));
-      setShowCreateModal(true);
+      remplirFacture(await getFacture(id));
     } catch (error) {
       signaler(error, t.invoiceEdit.loadError);
     }
   };
+
+  // Formulaire rempli avec une facture ; copie : une nouvelle facture préremplie (« Copier vers », socle S4.3), datée du jour.
+  const remplirFacture = (facture: Facture, copie = false) => {
+    setEditingId(copie ? null : facture.id);
+    setCreateForm({
+      client_id: String(facture.client_id),
+      date_facture: copie ? aujourdhui() : dateSaisie(facture.date_facture),
+      date_echeance: copie ? '' : dateSaisie(facture.date_echeance ?? ''),
+      notes: facture.notes ?? '',
+      condition_paiement_id: facture.condition_paiement_id ? String(facture.condition_paiement_id) : '',
+      devise: facture.devise ?? '',
+      taux: String(facture.taux_change ?? 1),
+    });
+    setPassage(saisiePassage(facture));
+    setRepresentantId(facture.representant_id ?? null);
+    setTransporteurId(facture.transporteur_id ?? null);
+    setGroupeTaxeId(facture.groupe_taxe_id ?? null);
+    setNumeroSuivi(copie ? '' : facture.numero_suivi ?? '');
+    setNumeroCommandeClient(facture.numero_commande_client ?? '');
+    setLivraison(livraisonDuDocument(facture));
+    setDateRequise(dateSaisie(facture.date_requise ?? ''));
+    setCreateLignes((facture.lignes ?? []).map(l => ({
+      produit_id: l.produit_id,
+      quantite: l.quantite,
+      prix_unitaire_ht: Number(l.prix_unitaire_ht),
+      unite: l.unite ?? null,
+    })));
+    setShowCreateModal(true);
+  };
+
+  // « Copier vers » (socle S4.3) : ?copie=type:id ouvre un nouveau document prérempli avec ce document.
+  const [parametresUrl, setParametresUrl] = useSearchParams();
+  const ouvrirCopie = useEffectEvent((document: Facture | null) => {
+    if (!document) { alert(t.copyTo.error); return; }
+    remplirFacture(document, true);
+  });
+  useEffect(() => {
+    const [source, id] = (parametresUrl.get('copie') ?? '').split(':');
+    if (!source || !id) return;
+    let actif = true;
+    preparerCopie(source as DocumentCopiable, Number(id), 'facture').then(document => {
+      if (!actif) return;
+      ouvrirCopie(document as unknown as Facture);
+      setParametresUrl(p => { p.delete('copie'); return p; }, { replace: true });
+    }, () => { if (actif) ouvrirCopie(null); });
+    return () => { actif = false; };
+  }, [parametresUrl, setParametresUrl]);
 
   const handleCreateFacture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -829,7 +853,8 @@ export default function FacturesPage() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+              <MenuCopierVers source="facture" id={selectedFacture.id} />
               <button
                 onClick={() => { setShowDetailModal(false); setSelectedFacture(null); }}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-white"
